@@ -10,7 +10,7 @@ Use skill `rust:rust-code-standards`.
 
 Use skill `rust:rust-test-standards`.
 
-Use skill `spec-tree:test`.
+Use skill `product-tree:test`.
 
 <objective>
 Rust tests for what the `/test` router selected, at the chosen level.

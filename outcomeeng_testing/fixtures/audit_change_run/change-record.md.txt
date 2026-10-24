@@ -24,8 +24,8 @@ Truth brought to a lower layer. `spx/13-plugin-and-runtime-conventions.adr.md` r
 - On 2026-09-27 two `change-auditor` sessions ran at once from one worktree, each against a different local draft. Both wrote files named `render.json`, `input.json` and `findings.json` into the dispatching session's scratch directory, which every subagent that session launches shares. One session read the other's file, and its run stayed unsealed. The SPX run journal itself held the correct candidate for each run.
 - Later change audits on 2026-09-27 again saved their rendered projection to a fixed `render.json` in that shared scratch directory, and one saved it to a fixed `ac_render.json` in the system temporary directory.
 - The rendered projection of one change audit measured about 55 KB on 2026-09-27. Each auditor that saved it to a file did so because the whole projection did not fit its result. Each also stated that `spx verification run render` reproduces the projection byte for byte from the sealed run.
-- `src/plugins/spec-tree/agents/change-auditor.md` directs the wrapper to return the run token and the rendered projection unchanged, and forbids editing files. It names no location for a working file.
-- `src/plugins/spec-tree/skills/audit-change/SKILL.md` passes every scope and finding payload over stdin and names no working file.
+- `src/plugins/product-tree/agents/change-auditor.md` directs the wrapper to return the run token and the rendered projection unchanged, and forbids editing files. It names no location for a working file.
+- `src/plugins/product-tree/skills/audit-change/SKILL.md` passes every scope and finding payload over stdin and names no working file.
 - On 2026-09-28 a `change-auditor` session auditing this Change's draft improvised a line that redirected `spx verification run input` into a file under `$TMPDIR` and removed it with `rm -f`, and it stopped at the operator's ask rule for `rm`. `audit-change` prescribes no `rm`.
 - `review-changes` runs every operation through its bundled Python runner and forbids invoking `spx journal`, `git`, `mktemp`, `rm`, `date`, `printf` and its scripts directly, because the runner is its only command boundary.
 
@@ -77,5 +77,5 @@ Intent attestation: attested by the operator on 2026-09-28.
 - [x] Slice the Change: confirm its repository boundary, dependencies and sequence with the accountable person.
 - [x] Advance to Executable: state the node's required state and evidence obligations, and the Activities that amend the spec, `audit-change` and the `change-auditor` wrapper.
 - [ ] Apply the Assertion operations to `spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`, route each new and amended assertion through `/verify` as Required state and evidence states, and pass the Validate commands.
-- [ ] In a separate Author session, add the runner under `src/plugins/spec-tree/skills/audit-change/scripts/`.
+- [ ] In a separate Author session, add the runner under `src/plugins/product-tree/skills/audit-change/scripts/`.
 - [ ] Close the Change `Applied` through `/close-change`.

@@ -30,7 +30,7 @@ from outcomeeng_testing.generators.sync_base import (
 )
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
-SKILLS_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills"
+SKILLS_DIR = REPO_ROOT / "src" / "plugins" / "product-tree" / "skills"
 SYNC_BASE_SCRIPTS_DIR = SKILLS_DIR / "sync-base" / "scripts"
 SYNC_BASE_MODULE_PATH = SYNC_BASE_SCRIPTS_DIR / "sync_base.py"
 CHANGESET_SCOPE_SCRIPTS_DIR = SKILLS_DIR / "scope-changeset" / "scripts"

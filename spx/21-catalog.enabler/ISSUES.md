@@ -8,7 +8,7 @@
 
 ## DEBT [evidence]: harness returns verdicts and derives the oracle from production (f-001 to f-008)
 
-Eight findings (all REJECT) from a `spec-tree:test-evidence-auditor` verdict on
+Eight findings (all REJECT) from a `product-tree:test-evidence-auditor` verdict on
 this node at head `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict
 carries no sealed run token. The findings sit on the harness
 `outcomeeng_testing/harnesses/plugin_catalog.py` and the test file

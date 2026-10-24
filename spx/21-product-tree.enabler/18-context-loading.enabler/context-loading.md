@@ -1,0 +1,49 @@
+---
+id: 01a0ebba-5f61-73ed-9937-44768f6d2055
+malleability: spec
+---
+
+# Context Loading
+
+PROVIDES deterministic context loading that walks the tree from product root to target, collecting all ancestor specs, lower-index sibling specs, ADRs/PDRs, cited methodology-governance decisions, coordination notes, guides, and local overlays
+SO THAT all implementation and authoring skills
+CAN operate with complete, verified context before any work begins
+
+## Assertions
+
+### Conformance
+
+- The product-tree plugin package ships the foundation-resource manifest governed by [`spx/21-product-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md`](spx/21-product-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md) at `skills/understand/manifest.json` in every generated tree, naming exactly one core foundation document and the ordered references, templates, and examples catalogs as package-relative paths ([test](tests/test_foundation_manifest.conformance.l1.py))
+- NEVER: the authored foundation-resource manifest and its generated-tree copies diverge, per [`spx/21-product-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md`](spx/21-product-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md) ([test](tests/test_foundation_manifest.conformance.l1.py))
+
+### Properties
+
+- The `/contextualize` skill produces the same context manifest for the same tree contents and target ([audit])
+
+### Compliance
+
+- Package checks reject a shipped foundation-resource manifest whose declared paths do not all resolve, whose catalogs carry a duplicate path, or whose catalogs omit a shipped reference, template, or example file ([test](tests/test_foundation_manifest.compliance.l1.py))
+- NEVER: the foundation-resource manifest carries content beyond paths and schema metadata, per [`spx/21-product-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md`](spx/21-product-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md) — package checks reject a content-bearing field ([test](tests/test_foundation_manifest.compliance.l1.py))
+- ALWAYS: a foundation-resource manifest shape change within a schema version is additive, and a breaking shape change increments `schema_version`, per [`spx/21-product-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md`](spx/21-product-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md) ([audit])
+- NEVER: the `/contextualize` skill runs `/sync-base`, fetches, rebases, or otherwise moves the checkout — it reads the checkout as it stands, so a Verifier's context load leaves the head it judges in place ([audit])
+- ALWAYS: the `/contextualize` skill presents a context-grounded answer only after it emits the `<PRODUCT_TREE_CONTEXT>` marker for that target; loading the skill or reading a pre-compaction summary supplies no context ([audit])
+- ALWAYS: before any filesystem lookup, the `/contextualize` skill accepts a target only when it is the canonical product-root address `spx/` or a full repository-relative node address whose segments each match `{index}-{slug}.{kind}` for one of the seven kinds, or the prior `enabler` and `outcome` forms a tree authored under a 3.x version still carries; it rejects a missing target, traversal segment, empty segment, or malformed node segment before deriving the read-set ([audit])
+- ALWAYS: the `/contextualize` skill derives the target read-set from the deterministic enumeration decided in [`spx/21-product-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`](spx/21-product-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md), reads the ordered read-set in its enumerated order, reads the guides and the lifecycle overlay outside that order, and lists the remaining local overlays without reading them ([audit])
+- ALWAYS: the `/contextualize` context manifest states the methodology source and exact version the repository follows, taken from the `methodology` block of the SPX CLI's context bundle (`spx spec context show --json`), so every session applies the declared methodology and its rules for the node under work, per [`spx/21-product-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md`](spx/21-product-tree.enabler/18-context-loading.enabler/13-context-enumeration.adr.md) ([audit])
+- NEVER: a skill or generated instruction surface derives the methodology version from a plugin distribution version, a proposal document, a changelog, or prose — the declaration the SPX CLI resolves is the only source ([audit])
+- ALWAYS: the `/contextualize` skill aborts with the missing file path and remediation guidance when a required ancestor spec is absent ([audit])
+- ALWAYS: when the canonical product-root target `spx/` addresses a tree with one product spec and no node directories, the `/contextualize` skill emits the product-root context manifest with `bootstrap=true`; a missing node target aborts, and new-node authoring contextualizes the existing parent ([audit])
+- ALWAYS: the `/contextualize` skill reads lower-index sibling specs as target constraints and lists same-index or higher-index siblings without reading them as constraints ([audit])
+- ALWAYS: the `/contextualize` skill reads every ADR/PDR in the target read-set without filtering by title relevance ([audit])
+- ALWAYS: the `/contextualize` skill includes full-path methodology-governance ADR/PDR citations from loaded specs and decisions in the target read-set, so specs outside the methodology subtree can depend on governance decisions that are not structural ancestors ([audit])
+- ALWAYS: the `/contextualize` skill lists target spec test links and co-located test files without reading test file bodies — test-body inspection belongs to `/test`, `/audit-tests`, and `/apply` ([audit])
+- ALWAYS: the `/contextualize` skill emits node, ADR, PDR, test, and coordination-note references as full paths from `spx/` — bare names and bare decision filenames are ambiguous because numeric prefixes are sibling-local ([audit])
+- ALWAYS: the `/contextualize` skill emits lifecycle continuation state in the context manifest — local lifecycle overlays read, default-branch completion boundary, the governed next workflow, a progress verdict rule, and a continuation action when a changeset is destined for the default branch — so context loading carries the merge obligation into the workflow that follows ([audit])
+- ALWAYS: the `/contextualize` skill treats the `PRODUCT_TREE_FOUNDATION` marker as absent after every compaction event until `/understand` re-emits it in the resuming conversation ([audit])
+- ALWAYS: the `/contextualize` skill requires a live `PRODUCT_TREE_FOUNDATION` marker before direct filesystem access to any path under `spx/`, or before reading, searching, listing, or changing any other product content — source or test files, generated output, evals, spec-declared configuration; operational-state commands under `spx session`, `spx worktree status`, `spx diagnose`, and no-patch Git status, history, and topology, and a skill's read of the `spx/local/` overlay or the passing-scope list it declares, remain available without the marker until their output is followed into product content ([audit])
+- ALWAYS: the `/understand` skill loads the truth hierarchy, node model, artifact placement, assertion model, ordering model, verification model — with malleability, state, and projection — coordination model, and imperfection protocol from one eager payload without mandatory secondary reference reads; operational references, templates, examples, and local overlays remain separately discoverable ([audit])
+- ALWAYS: the `/understand` skill reads the root instruction file from disk only when the live conversation does not already carry it complete — a harness that injects the whole file satisfies the step, and a truncated or absent injection requires the read ([audit])
+- NEVER: the `/contextualize` skill proceeds with partial context — it aborts if any required document is missing ([audit])
+- NEVER: the `/contextualize` skill adds a cited governance decision to the read-set from `PLAN.md`, `ISSUES.md`, or any other coordination-note prose ([audit])
+- NEVER: the `/contextualize` skill accepts a `PRODUCT_TREE_FOUNDATION` mention in a compaction summary, Handoff, prior-run description, or statement that `/understand` ran as evidence that the marker is live ([audit])
+- NEVER: the `/contextualize` skill infers implementation state from test imports — implementation state is unknown unless another workflow establishes it ([audit])

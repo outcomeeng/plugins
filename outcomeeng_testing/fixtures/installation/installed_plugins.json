@@ -1,11 +1,11 @@
 {
   "version": 2,
   "plugins": {
-    "spec-tree@outcomeeng": [
+    "product-tree@outcomeeng": [
       {
         "scope": "project",
         "projectPath": "/private/fixture-root/checkout-a",
-        "installPath": "/fixture-root/claude/plugins/cache/outcomeeng/spec-tree/0.96.0",
+        "installPath": "/fixture-root/claude/plugins/cache/outcomeeng/product-tree/0.96.0",
         "version": "0.96.0",
         "installedAt": "2026-09-16T18:47:57.173Z",
         "lastUpdated": "2026-09-16T18:47:57.173Z",
@@ -13,7 +13,7 @@
       },
       {
         "scope": "local",
-        "installPath": "/fixture-root/claude/plugins/cache/outcomeeng/spec-tree/0.96.0",
+        "installPath": "/fixture-root/claude/plugins/cache/outcomeeng/product-tree/0.96.0",
         "version": "0.96.0",
         "installedAt": "2026-09-16T18:47:58.557Z",
         "lastUpdated": "2026-09-16T18:47:58.557Z",

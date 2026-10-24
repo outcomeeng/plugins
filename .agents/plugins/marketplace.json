@@ -89,10 +89,10 @@
       "category": "Developer Tools"
     },
     {
-      "name": "spec-tree",
+      "name": "product-tree",
       "source": {
         "source": "local",
-        "path": "./dist/codex/spec-tree"
+        "path": "./dist/codex/product-tree"
       },
       "policy": {
         "installation": "AVAILABLE",

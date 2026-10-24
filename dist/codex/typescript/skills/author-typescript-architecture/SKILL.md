@@ -24,15 +24,15 @@ A binding TypeScript ADR whose testability constraints live as ALWAYS/NEVER rule
 </essential_principles>
 
 <context_loading>
-**For spec-tree work items: Load complete context before creating ADRs.**
+**For product-tree work items: Load complete context before creating ADRs.**
 
-When creating ADRs for a spec-tree work item (enabler/outcome), ensure complete hierarchical context is loaded:
+When creating ADRs for a product-tree work item (enabler/outcome), ensure complete hierarchical context is loaded:
 
-1. **Invoke `spec-tree:contextualize`** with the node path
+1. **Invoke `product-tree:contextualize`** with the node path
 2. **Verify all ancestor ADRs/PDRs are loaded** - Must understand and honor all decision records in hierarchy
 3. **Read the node spec** - Requirements, Test Strategy, and Outcomes sections
 
-**The `spec-tree:contextualize` skill provides:**
+**The `product-tree:contextualize` skill provides:**
 
 - Complete ADR/PDR hierarchy (product and ancestor decisions at all levels)
 - Node spec with requirements, test strategy, and outcomes
@@ -45,7 +45,7 @@ When creating ADRs for a spec-tree work item (enabler/outcome), ensure complete 
 - Must include testability constraints in `## Verification` (`### Audit` ALWAYS/NEVER rules for DI, no mocking)
 - Must document trade-offs and consequences
 
-**If NOT working on spec-tree work item**: Proceed directly with ADR creation using provided requirements.
+**If NOT working on product-tree work item**: Proceed directly with ADR creation using provided requirements.
 </context_loading>
 
 <input_context>
@@ -109,7 +109,7 @@ Execute these phases IN ORDER.
    - `AGENTS.md` - Product structure, navigation, work item management
 3. Read `/typescript-architecture-standards` for canonical ADR conventions
 4. Invoke `/typescript-test-standards` for canonical test standards
-5. Use skill `spec-tree:verify` for evidence routing. After test is selected, use skill `typescript:author-typescript-test` for TypeScript expression and patterns
+5. Use skill `product-tree:verify` for evidence routing. After test is selected, use skill `typescript:author-typescript-test` for TypeScript expression and patterns
 6. Read existing ADRs for consistency:
    - `spx/{NN}-{slug}.adr.md` - Product-level ADRs
    - ADRs interleaved within enabler/outcome nodes

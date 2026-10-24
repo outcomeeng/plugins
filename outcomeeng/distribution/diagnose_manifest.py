@@ -33,7 +33,7 @@ class MarketplaceField(StrEnum):
 
 
 class DiagnoseCheck(StrEnum):
-    """Checks selected by the spec-tree diagnose capability."""
+    """Checks selected by the product-tree diagnose capability."""
 
     SESSION_ENVIRONMENT = "session-environment"
     SPX_REACHABILITY = "spx-reachability"

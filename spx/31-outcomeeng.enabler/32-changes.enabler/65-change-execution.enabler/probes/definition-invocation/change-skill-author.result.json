@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "definition": "spec-tree:change-skill-author",
+  "definition": "product-tree:change-skill-author",
   "subjectCommit": "b05112746a7442a8c6ec7554af1fef923312aed7",
   "emittedDefinition": {
-    "path": "dist/claude/spec-tree/agents/change-skill-author.md",
+    "path": "dist/claude/product-tree/agents/change-skill-author.md",
     "sha256": "0674783ada2f15e4f95eece394fa6a683c473b40568ab2e68be0ee83939a3c91",
     "frontMatter": [
       "model: \"sonnet\"",
@@ -22,8 +22,8 @@
     "claudeCodeVersion": "2.1.302",
     "plugins": [
       {
-        "name": "spec-tree",
-        "path": "/Users/shz/Code/outcomeeng/plugins/worktrees/executor-380/dist/claude/spec-tree",
+        "name": "product-tree",
+        "path": "/Users/shz/Code/outcomeeng/plugins/worktrees/executor-380/dist/claude/product-tree",
         "version": "0.106.13"
       }
     ],
@@ -34,20 +34,20 @@
     "tool": "Agent",
     "input": {
       "description": "Launch change-skill-author",
-      "subagent_type": "spec-tree:change-skill-author",
+      "subagent_type": "product-tree:change-skill-author",
       "prompt": "not-a-target",
       "run_in_background": false
     }
   },
   "childStart": {
     "parentToolUseId": "toolu_01LobTcf5bxWg5HLBDdjTaQ4",
-    "subagentType": "spec-tree:change-skill-author",
+    "subagentType": "product-tree:change-skill-author",
     "taskMessage": "not-a-target",
     "timestamp": "2026-10-18T00:36:01.460Z"
   },
   "childResult": {
     "status": "completed",
-    "agentType": "spec-tree:change-skill-author",
+    "agentType": "product-tree:change-skill-author",
     "resolvedModel": "claude-sonnet-5-5",
     "totalDurationMs": 4735,
     "totalTokens": 18500,

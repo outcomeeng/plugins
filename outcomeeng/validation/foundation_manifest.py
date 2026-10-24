@@ -1,6 +1,6 @@
-"""Validate the spec-tree foundation-resource manifest in every generated tree.
+"""Validate the product-tree foundation-resource manifest in every generated tree.
 
-The spec-tree plugin identifies its methodology resource surface through
+The product-tree plugin identifies its methodology resource surface through
 ``skills/understand/manifest.json``: an integer ``schema_version``, exactly one
 package-relative core entry naming the consolidated foundation document, and
 the references, templates, and examples catalogs as ordered arrays of
@@ -15,7 +15,7 @@ Usage::
     python3 -m outcomeeng.validation.foundation_manifest [ROOT ...]
 
 Each ROOT is a repository root whose ``dist/{claude,codex}`` trees carry the
-spec-tree plugin; the current directory is the default.
+product-tree plugin; the current directory is the default.
 
 Exit codes:
     0 - every checked manifest satisfies the contract
@@ -40,7 +40,7 @@ from outcomeeng.distribution.contracts import (
     Target,
 )
 
-SPEC_TREE_PLUGIN_NAME: Final = "spec-tree"
+PRODUCT_TREE_PLUGIN_NAME: Final = "product-tree"
 UNDERSTAND_SKILL_NAME: Final = "understand"
 UNDERSTAND_SKILL_RELATIVE_DIR: Final = f"{SKILLS_SUBDIR_NAME}/{UNDERSTAND_SKILL_NAME}"
 MANIFEST_FILENAME: Final = "manifest.json"
@@ -197,17 +197,17 @@ def manifest_violations(plugin_root: Path) -> list[str]:
 
 
 def authored_plugin_root(repo_root: Path) -> Path:
-    """The authored spec-tree plugin root whose manifest ships verbatim."""
-    return repo_root / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME / SPEC_TREE_PLUGIN_NAME
+    """The authored product-tree plugin root whose manifest ships verbatim."""
+    return repo_root / SOURCE_ROOT_NAME / PLUGINS_DIR_NAME / PRODUCT_TREE_PLUGIN_NAME
 
 
 def shipped_plugin_root(repo_root: Path, target: Target) -> Path:
-    """The generated spec-tree plugin root for one build target."""
-    return repo_root / DIST_DIR_NAME / target.value / SPEC_TREE_PLUGIN_NAME
+    """The generated product-tree plugin root for one build target."""
+    return repo_root / DIST_DIR_NAME / target.value / PRODUCT_TREE_PLUGIN_NAME
 
 
 def iter_tree_violations(repo_root: Path) -> list[str]:
-    """Check the spec-tree plugin's manifest in each generated tree under a root."""
+    """Check the product-tree plugin's manifest in each generated tree under a root."""
     violations: list[str] = []
     for target in sorted(Target):
         plugin_root = shipped_plugin_root(repo_root, target)

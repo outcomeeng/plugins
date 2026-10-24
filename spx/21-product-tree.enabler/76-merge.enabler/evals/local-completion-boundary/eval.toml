@@ -1,0 +1,21 @@
+title = "local-completion-boundary"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/product-tree"
+owned_paths = [
+  "spx/15-merging.pdr.md",
+  "AGENTS.md",
+  "spx/local/merging.md",
+  "spx/21-product-tree.enabler/product-tree.md",
+  "spx/21-product-tree.enabler/76-merge.enabler/merge.md",
+  "spx/21-product-tree.enabler/76-merge.enabler/evals/local-completion-boundary/**",
+  "src/plugins/product-tree/skills/understand/**",
+  "src/plugins/product-tree/skills/merge/**",
+  "src/plugins/product-tree/skills/merging-standards/**",
+  "dist/claude/product-tree/skills/understand/**",
+  "dist/claude/product-tree/skills/merge/**",
+  "dist/claude/product-tree/skills/merging-standards/**",
+]
+smoke_cases = ["clean-green-ahead-continues", "terse-followup-continues"]
+threshold = 0.85
+trials = 1

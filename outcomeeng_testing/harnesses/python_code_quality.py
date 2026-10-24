@@ -28,8 +28,8 @@ from outcomeeng_testing.harnesses.changeset_scope import (
     commit_file,
 )
 from outcomeeng_testing.harnesses.gate import RecordingHandle
-from outcomeeng_testing.harnesses.spec_tree import (
-    marketplace_root_for_spec_tree_root_test,
+from outcomeeng_testing.harnesses.product_tree import (
+    marketplace_root_for_product_tree_root_test,
 )
 
 _FIXTURES: Final = Path(__file__).resolve().parents[1] / "fixtures"
@@ -74,7 +74,7 @@ def _gate_command(argv: tuple[str, ...]) -> tuple[str, ...]:
 def run_repository_pyright(test_file: str, fixture: Path) -> TypeCheckRun:
     """Type-check a copy of ``fixture`` with the gate's pyright and the repository's configuration."""
 
-    product_root = marketplace_root_for_spec_tree_root_test(test_file)
+    product_root = marketplace_root_for_product_tree_root_test(test_file)
     pyright = _gate_command(PYRIGHT_ARGV)
     with TemporaryDirectory() as directory:
         source = Path(directory) / fixture.name.removesuffix(INERT_SOURCE_SUFFIX)
@@ -102,7 +102,7 @@ def run_repository_pyright(test_file: str, fixture: Path) -> TypeCheckRun:
 def run_repository_mypy(test_file: str, fixture: Path) -> TypeCheckRun:
     """Type-check a copy of ``fixture`` with the gate's mypy and the repository's configuration."""
 
-    product_root = marketplace_root_for_spec_tree_root_test(test_file)
+    product_root = marketplace_root_for_product_tree_root_test(test_file)
     with TemporaryDirectory() as directory:
         source = Path(directory) / fixture.name.removesuffix(INERT_SOURCE_SUFFIX)
         shutil.copyfile(fixture, source)

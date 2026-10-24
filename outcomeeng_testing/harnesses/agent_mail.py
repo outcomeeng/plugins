@@ -1126,7 +1126,7 @@ def mail_pool() -> Iterator[MailPool]:
             capture_output=True,
         )
         _git_in(seed_checkout, "config", "user.email", "test@example.invalid")
-        _git_in(seed_checkout, "config", "user.name", "Spec Tree Test")
+        _git_in(seed_checkout, "config", "user.name", "Product Tree Test")
         _git_in(seed_checkout, "config", "commit.gpgsign", "false")
         (seed_checkout / "README.md").write_text("seed\n", encoding="utf-8")
         _git_in(seed_checkout, "add", "README.md")

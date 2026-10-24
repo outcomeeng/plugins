@@ -16,7 +16,7 @@ a truncated reference would pass. The same audit raised WARNING f-002 at
 host, and the `<plugin>_tmp/` prefix) mirror the implementation's regex comments
 and are not stated by the spec.
 
-The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
+The audit is a `product-tree:test-evidence-auditor` verdict on this node at head
 `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
 token.
 

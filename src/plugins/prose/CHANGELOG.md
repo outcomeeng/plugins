@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.13.2
+
+### Changed
+
+- **`/audit-prose` requires `product-tree:scope-changeset` and `product-tree:project-run-journal`, and `/author-prose` reads the governing prose ADR from the repository's product tree.** Before this change, the skills named `spec-tree:` skills and the spec tree, which stop resolving once the methodology plugin is installed under its new name.
+
 ## 0.13.1
 
 ### Changed

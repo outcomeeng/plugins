@@ -11,7 +11,7 @@ mcp_servers:
       - -y
       - "@modelcontextprotocol/server-docs"
 skills:
-  - spec-tree:review-changes
+  - product-tree:review-changes
 tools: Read
 ---
 

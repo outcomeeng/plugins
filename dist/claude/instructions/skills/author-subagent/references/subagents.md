@@ -18,11 +18,11 @@ name: spec-auditor
 description: ALWAYS invoke when the governing skill requests an audit of one spec node.
 model: "sonnet"
 effort: "medium"
-skills: spec-tree:audit-specs
+skills: product-tree:audit-specs
 ---
 
 <workflow>
-Invoke spec-tree:audit-specs with the supplied target.
+Invoke product-tree:audit-specs with the supplied target.
 Return the skill's complete structured verdict.
 </workflow>
 ```

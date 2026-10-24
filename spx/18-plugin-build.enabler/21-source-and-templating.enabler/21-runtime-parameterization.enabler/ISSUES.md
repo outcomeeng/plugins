@@ -26,7 +26,7 @@ Five findings (all REJECT) on `spx/18-plugin-build.enabler/21-source-and-templat
 - f-004 at line 279 of the harness: `conditional_renders_absent_capability_only_where_present` renders and returns the equality verdict together with its expected strings.
 - f-005 at line 324 of the harness: `registry_is_keyed_by_kind_with_explicit_guard_enforcement`, `registry_guard_contract_rejects_mismatched_enforcement`, and `_registry_contract_holds` return boolean verdicts.
 
-The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run token.
+The audit is a `product-tree:test-evidence-auditor` verdict on this node at head `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run token.
 
 [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md) governs the opposite arrangement: the linked executed test owns every behavioral predicate and assertion API call, and a harness exposes observations or resource handles, never verdicts.
 

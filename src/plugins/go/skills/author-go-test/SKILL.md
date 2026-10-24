@@ -10,10 +10,10 @@ allowed-tools: Read, Glob, Grep, Write, Edit, {{! tool('use_skill') !}}, Bash(go
 
 {!% require_skill 'go:go-test-standards' %!}
 
-{!% require_skill 'spec-tree:test' %!}
+{!% require_skill 'product-tree:test' %!}
 
 <objective>
-Go test files that supply evidence, at the level and assertion type `/test` selects, for a spec-tree node's assertions.
+Go test files that supply evidence, at the level and assertion type `/test` selects, for a product-tree node's assertions.
 </objective>
 
 <prerequisites>

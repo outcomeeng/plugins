@@ -1,11 +1,11 @@
 """Harness for review-changes scenario, property, and compliance tests.
 
 Provides the shared scaffolding consumed by every test file under
-``spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/tests/``:
+``spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/tests/``:
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. A single source
   keeps every test file from walking ``__file__.parents[...]`` to find the
-  generated ``dist/claude/spec-tree/skills/review-changes/scripts`` tree, which
+  generated ``dist/claude/product-tree/skills/review-changes/scripts`` tree, which
   carries the agent-tokens data file the build renders beside ``review_result.py``.
 - ``run_review_result_with_agent_tokens_file``. Runs a copy of the module beside
   an agent-tokens file in a chosen state, observing the load failure it reports.
@@ -76,13 +76,13 @@ def _standard_traceback_header() -> str:
 
 TRACEBACK_HEADER = _standard_traceback_header()
 
-SKILL_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "review-changes"
+SKILL_DIR = REPO_ROOT / "src" / "plugins" / "product-tree" / "skills" / "review-changes"
 SKILL_FILE = SKILL_DIR / "SKILL.md"
 # The scripts run from the generated tree: the build renders the agent-tokens data file
 # beside the one that reads it, so the authored directory alone cannot load that script.
 SCRIPTS_DIR = (
     DistTreeReader(REPO_ROOT).target_root(Target.CLAUDE)
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "review-changes"
     / "scripts"
@@ -100,23 +100,23 @@ JOURNAL_EMIT_SCRIPT = SCRIPTS_DIR / "journal_emit.py"
 REVIEW_RUN_SCRIPT = SCRIPTS_DIR / "review_run.py"
 
 WRAPPER_AGENT_PATH = (
-    REPO_ROOT / "src" / "plugins" / "spec-tree" / "agents" / "changes-reviewer.md"
+    REPO_ROOT / "src" / "plugins" / "product-tree" / "agents" / "changes-reviewer.md"
 )
 
 # Fixture rule citation: a real path-style citation that satisfies the
 # parser's rule-form check. Points at this verification skill's own spec so the citation
 # is stable and self-contained — no external rule required.
 FIXTURE_RULE_CITATION = (
-    "spx/21-spec-tree.enabler/68-reviewing.enabler/"
+    "spx/21-product-tree.enabler/68-reviewing.enabler/"
     "21-reviewing-changes.enabler/reviewing-changes.md:ALWAYS:1"
 )
 FIXTURE_ADR_RULE_CITATION = (
-    "spx/21-spec-tree.enabler/68-reviewing.enabler/"
+    "spx/21-product-tree.enabler/68-reviewing.enabler/"
     "21-reviewing-changes.enabler/21-script-decomposition.adr.md"
 )
 FIXTURE_AGENTS_RULE_CITATION = "AGENTS.md:critical-rules"
 FIXTURE_SKILL_RULE_CITATION = (
-    "plugins/spec-tree/skills/review-changes/SKILL.md:api-surface"
+    "plugins/product-tree/skills/review-changes/SKILL.md:api-surface"
 )
 FIXTURE_MALFORMED_RULE_CITATION = "record this in ISSUES.md"
 

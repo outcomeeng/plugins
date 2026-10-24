@@ -20,7 +20,7 @@ Known issues left by the `src/plugins/` → `dist/` build restructure. Coordinat
 
 ## 1. `spx/` spec references still cite the pre-restructure `plugins/` path
 
-The restructure migrated `AGENTS.md` references to `src/plugins/` but left `spx/` specs and decision records citing `plugins/spec-tree/skills/...`. Spec/decision files under `spx/` still use the old `plugins/` path — enumerate the live set with `grep -rln 'plugins/spec-tree' spx/` (the bare `plugins/`, not the migrated `src/plugins/`). Several matches are spec-assertion subjects and decision-record text, not only backtick citations — for example [`spx/21-spec-tree.enabler/17-audit.adr.md`](spx/21-spec-tree.enabler/17-audit.adr.md), `spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md`, and [`spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/13-changeset-derivation.adr.md`](spx/21-spec-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/13-changeset-derivation.adr.md). Authored skills now live at `src/plugins/spec-tree/skills/...`; the generated output is `dist/{claude,codex}/...`. Migrate the prose references to the authored-source path. These are backtick citations, not Markdown links, so `just check` does not flag them — a deliberate repo-wide reference migration is needed, separate from any single node's work.
+The restructure migrated `AGENTS.md` references to `src/plugins/` but left `spx/` specs and decision records citing `plugins/product-tree/skills/...`. Spec/decision files under `spx/` still use the old `plugins/` path — enumerate the live set with `grep -rln 'plugins/product-tree' spx/` (the bare `plugins/`, not the migrated `src/plugins/`). Several matches are spec-assertion subjects and decision-record text, not only backtick citations — for example [`spx/21-product-tree.enabler/17-audit.adr.md`](spx/21-product-tree.enabler/17-audit.adr.md), `spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md`, and [`spx/21-product-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/13-changeset-derivation.adr.md`](spx/21-product-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/13-changeset-derivation.adr.md). Authored skills now live at `src/plugins/product-tree/skills/...`; the generated output is `dist/{claude,codex}/...`. Migrate the prose references to the authored-source path. These are backtick citations, not Markdown links, so `just check` does not flag them — a deliberate repo-wide reference migration is needed, separate from any single node's work.
 
 ## 2. Codex rendering for Claude-authored argument syntax
 
@@ -108,9 +108,9 @@ test passing. The clause keeps the assertion true for the one corpus case
 the four assertions with `[test](...)` links, and covers the exception clause
 against emitted output alone.
 
-**Evidence**: `spec-tree:changes-reviewer` runs
+**Evidence**: `product-tree:changes-reviewer` runs
 `2026-09-18_03-20-58-166-8b80f274938c`, `2026-09-18_04-29-55-695-83f3737b9f22`,
-and `2026-09-18_13-02-51-809-99cdf563caa5` (debt, evidence) during Change #76; `spec-tree:test-evidence-auditor` finding f-004, severity `REJECT`, on `spx/18-plugin-build.enabler/43-target-emission.enabler` at head `133caf1aba9244c9f6f0706eecb2c0ccf3587b6f`, which names the same render-stage mutation surviving the portable-fields test, raised again as finding f-003 at head `7ca471d52f9b82779c3cf5ea454eea545b0c2e20` and as debt `portable-fields-exception-unfalsifiable` by `spec-tree:implementation-auditor` run `2026-09-30_13-32-44-300-3a68e92d2980`.
+and `2026-09-18_13-02-51-809-99cdf563caa5` (debt, evidence) during Change #76; `product-tree:test-evidence-auditor` finding f-004, severity `REJECT`, on `spx/18-plugin-build.enabler/43-target-emission.enabler` at head `133caf1aba9244c9f6f0706eecb2c0ccf3587b6f`, which names the same render-stage mutation surviving the portable-fields test, raised again as finding f-003 at head `7ca471d52f9b82779c3cf5ea454eea545b0c2e20` and as debt `portable-fields-exception-unfalsifiable` by `product-tree:implementation-auditor` run `2026-09-30_13-32-44-300-3a68e92d2980`.
 
 ## The plugin-build harness raises AssertionError for lifecycle failures
 
@@ -150,7 +150,7 @@ oracle:
   this defect and its settlement; this entry extends it to the compliance file
   and to the other two property tests and adds no second resolution for f-006.
 
-The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
+The audit is a `product-tree:test-evidence-auditor` verdict on this node at head
 `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
 token. One WARNING, f-007 at `tests/test_plugin_build.property.l1.py:20`,
 notes that `test_formatter_version_drift_cannot_change_existing_output` has no

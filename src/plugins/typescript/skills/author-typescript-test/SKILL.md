@@ -12,7 +12,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, {{! tool('use_skill') !}}, Bash(np
 
 {!% require_skill 'typescript:typescript-test-standards' %!}
 
-{!% require_skill 'spec-tree:test' %!}
+{!% require_skill 'product-tree:test' %!}
 
 <objective>
 TypeScript test files that supply evidence for a node specification's assertions.
@@ -61,7 +61,7 @@ Check mode -> WRITE or FIX -> Execute -> Verify -> Report
 
 **Step 1: Load Context**
 
-Require a live `<SPEC_TREE_FOUNDATION>` marker, invoking `/understand` when absent. Invoke `/contextualize` with the full node path and require the matching live `<SPEC_TREE_CONTEXT>` marker before reading test bodies or writing evidence. Use that context rather than reconstructing ancestor, sibling, or decision reads with shell commands.
+Require a live `<PRODUCT_TREE_FOUNDATION>` marker, invoking `/understand` when absent. Invoke `/contextualize` with the full node path and require the matching live `<PRODUCT_TREE_CONTEXT>` marker before reading test bodies or writing evidence. Use that context rather than reconstructing ancestor, sibling, or decision reads with shell commands.
 
 Extract from the spec:
 

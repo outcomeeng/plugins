@@ -20,7 +20,7 @@ test-l3:
 eval eval_toml:
     #!/usr/bin/env bash
     set -euo pipefail
-    plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/spec-tree"))' "{{eval_toml}}")}"
+    plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/product-tree"))' "{{eval_toml}}")}"
     model="${EVAL_MODEL:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; from outcomeeng_evals.definition import DEFAULT_MODEL; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("model", DEFAULT_MODEL))' "{{eval_toml}}")}"
     workers="${WORKERS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_WORKERS; print(DEFAULT_CI_WORKERS)')}"
     max_budget_usd="${MAX_BUDGET_USD:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_MAX_BUDGET_USD; print(DEFAULT_CI_MAX_BUDGET_USD)')}"
@@ -35,7 +35,7 @@ eval eval_toml:
 eval-case eval_toml case_id:
     #!/usr/bin/env bash
     set -euo pipefail
-    plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/spec-tree"))' "{{eval_toml}}")}"
+    plugin_dir="${PLUGIN_DIR:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("plugin_dir", "dist/claude/product-tree"))' "{{eval_toml}}")}"
     model="${EVAL_MODEL:-$(uv run python -c 'import sys, tomllib; from pathlib import Path; from outcomeeng_evals.definition import DEFAULT_MODEL; data = tomllib.loads(Path(sys.argv[1]).read_text(encoding="utf-8")); print(data.get("model", DEFAULT_MODEL))' "{{eval_toml}}")}"
     workers="${WORKERS:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_WORKERS; print(DEFAULT_CI_WORKERS)')}"
     max_budget_usd="${MAX_BUDGET_USD:-$(uv run python -c 'from outcomeeng_evals.ci_execution import DEFAULT_CI_MAX_BUDGET_USD; print(DEFAULT_CI_MAX_BUDGET_USD)')}"
@@ -74,11 +74,11 @@ eval-materialize-prompts-check root:
 
 # Regenerate the eval CI workflow's trigger paths from the eval definitions
 build-eval-triggers:
-    uv run outcomeeng-evals materialize-ci-triggers spx --workflow .github/workflows/spec-tree-evals.yml --repo-root .
+    uv run outcomeeng-evals materialize-ci-triggers spx --workflow .github/workflows/product-tree-evals.yml --repo-root .
 
 # Check the eval CI workflow's trigger paths for drift
 eval-triggers-check:
-    uv run outcomeeng-evals materialize-ci-triggers spx --workflow .github/workflows/spec-tree-evals.yml --repo-root . --check
+    uv run outcomeeng-evals materialize-ci-triggers spx --workflow .github/workflows/product-tree-evals.yml --repo-root . --check
 
 # Run deterministic validation only
 validation:
@@ -101,7 +101,7 @@ build-skills:
     # --no-cache: build the wheel from this worktree's own source, not a stale cross-worktree cached wheel.
     uv run --no-cache python -m outcomeeng.distribution.build src dist
 
-# Regenerate root CLAUDE.md + AGENTS.md managed Spec Tree instruction blocks from rendered harness templates
+# Regenerate root CLAUDE.md + AGENTS.md managed Product Tree instruction blocks from rendered harness templates
 build-instructions:
     uv run python -m outcomeeng.distribution.instruction_block --write
 
@@ -109,7 +109,7 @@ build-instructions:
 fmt-python *args:
     uv run ruff format {{args}}
 
-# Regenerate root CLAUDE.md + AGENTS.md managed Spec Tree instruction blocks and fail on drift (CI gate)
+# Regenerate root CLAUDE.md + AGENTS.md managed Product Tree instruction blocks and fail on drift (CI gate)
 instructions-check:
     uv run python -m outcomeeng.distribution.instruction_block
 

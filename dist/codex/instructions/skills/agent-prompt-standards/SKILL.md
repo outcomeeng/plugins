@@ -83,7 +83,7 @@ description: >-
 
 **NEVER constraint — add only when it disambiguates.** A NEVER line helps when:
 
-- The skill is the only one with that negative (e.g., `NEVER work on the spec tree without loading context` — only contextualizing says this)
+- The skill is the only one with that negative (e.g., `NEVER work on the product tree without loading context` — only contextualizing says this)
 - Claude has a strong built-in alternative the negative prevents (e.g., `NEVER run git commit without this skill` — Claude would otherwise run `git commit` directly)
 
 Omit NEVER when:

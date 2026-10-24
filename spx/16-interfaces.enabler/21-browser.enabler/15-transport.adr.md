@@ -6,7 +6,7 @@ The browser interface exchanges agent-side updates and user interactions over a 
 
 [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) forbids shipped plugin code from spawning a long-lived subprocess, daemon, keep-alive, or open-ended watcher, and forbids an agent-owned polling loop. A script-model transport — an agent-spawned long-lived HTTP server plus an agent-driven long-poll loop — violates both constraints. Inverting process ownership to Claude Code through `mcpServers` removes the agent-spawned process, and a blocking `wait_for_interaction` tool replaces the long-poll: the agent awaits one interaction per call while the runtime, not a poll loop, holds the wait.
 
-The decision binds the launch layer only. The transport-free state core — the monotonic revision counter, the append-only journal, the interaction lifecycle, and spec-tree integrity — and the browser shell are transport-agnostic, so the same core serves any launch model. Isolating transport in a replaceable launch layer is what lets the core be proven independently of the launch model.
+The decision binds the launch layer only. The transport-free state core — the monotonic revision counter, the append-only journal, the interaction lifecycle, and product-tree integrity — and the browser shell are transport-agnostic, so the same core serves any launch model. Isolating transport in a replaceable launch layer is what lets the core be proven independently of the launch model.
 
 ## Alternatives rejected
 

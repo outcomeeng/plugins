@@ -60,7 +60,7 @@ Line 19 of [`spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-cont
 
 Status: `accepted`.
 
-The node carries 12 assertion bullets, lines 14 through 25 of [`spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-controller.md`](spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-controller.md). The decompose skill's structural-quality checklist (`src/plugins/spec-tree/skills/decompose/SKILL.md`, Step 11) requires that no node exceed about 7 assertions without a recursive-decomposition issue, and the router decomposes an existing node with more than 7 assertions.
+The node carries 12 assertion bullets, lines 14 through 25 of [`spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-controller.md`](spx/43-coding-agents.enabler/21-usage-controller.enabler/usage-controller.md). The decompose skill's structural-quality checklist (`src/plugins/product-tree/skills/decompose/SKILL.md`, Step 11) requires that no node exceed about 7 assertions without a recursive-decomposition issue, and the router decomposes an existing node with more than 7 assertions.
 
 **Impact**: the node mixes independent concerns (scheduling and overlap, compaction and pause and resume thresholds, stop and ceiling, configuration, durable records) in one spec, so each concern is judged, evidenced, and changed together.
 

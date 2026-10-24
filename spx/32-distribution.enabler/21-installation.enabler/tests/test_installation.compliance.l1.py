@@ -25,7 +25,7 @@ from outcomeeng.distribution.installation import (
     InstallationMode,
     Operation,
     ReportField,
-    SPEC_TREE_PLUGIN,
+    PRODUCT_TREE_PLUGIN,
     STATE_ENV_NAMES,
     marketplace_plugin_identifier,
     marketplace_plugin_name,
@@ -286,7 +286,7 @@ def test_a_failed_inspection_stops_before_any_planned_operation() -> None:
 def test_invalid_installed_selection_never_reaches_a_state_changing_operation() -> None:
     for observation in observe_invalid_persistent_selections():
         assert observation.error is not None
-        assert SPEC_TREE_PLUGIN in observation.error
+        assert PRODUCT_TREE_PLUGIN in observation.error
         assert observation.attempted
         assert all(
             command.operation
@@ -388,7 +388,7 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
                 ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(
                     marketplace=marketplace,
                     agent=agent.value,
-                    plugin=SPEC_TREE_PLUGIN,
+                    plugin=PRODUCT_TREE_PLUGIN,
                 ),
             } in reported
             installs = [
@@ -424,7 +424,7 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
     assert announcements > 0
 
 
-def test_an_empty_selection_supplies_only_spec_tree_with_a_warning_and_disabled_codex_activation() -> (
+def test_an_empty_selection_supplies_only_product_tree_with_a_warning_and_disabled_codex_activation() -> (
     None
 ):
     observation = observe_persistent_plan(
@@ -438,22 +438,22 @@ def test_an_empty_selection_supplies_only_spec_tree_with_a_warning_and_disabled_
         if command.operation is Operation.PLUGIN_INSTALL
     ]
 
-    assert plan.claude_plugins == (SPEC_TREE_PLUGIN,)
-    assert plan.codex_plugins == (SPEC_TREE_PLUGIN,)
+    assert plan.claude_plugins == (PRODUCT_TREE_PLUGIN,)
+    assert plan.codex_plugins == (PRODUCT_TREE_PLUGIN,)
     assert {command.agent for command in installs} == set(Target)
-    assert {command.plugin for command in installs} == {SPEC_TREE_PLUGIN}
+    assert {command.plugin for command in installs} == {PRODUCT_TREE_PLUGIN}
     assert {(warning.agent, warning.message) for warning in plan.warnings} == {
         (
             agent,
             FIRST_INSTALL_WARNING.format(
                 marketplace=marketplace,
                 agent=agent.value,
-                plugin=SPEC_TREE_PLUGIN,
+                plugin=PRODUCT_TREE_PLUGIN,
             ),
         )
         for agent in Target
     }
-    assert plan.codex_disabled == (SPEC_TREE_PLUGIN,)
+    assert plan.codex_disabled == (PRODUCT_TREE_PLUGIN,)
 
 
 def test_an_empty_selection_writes_disabled_activation_into_the_selected_codex_home() -> (
@@ -466,7 +466,7 @@ def test_an_empty_selection_writes_disabled_activation_into_the_selected_codex_h
     written = tomllib.loads(observation.codex_config.decode("utf-8"))
     assert (
         written["plugins"][
-            marketplace_plugin_identifier(SPEC_TREE_PLUGIN, marketplace)
+            marketplace_plugin_identifier(PRODUCT_TREE_PLUGIN, marketplace)
         ]["enabled"]
         is False
     )

@@ -10,10 +10,10 @@ Use skill `go:go-code-standards`.
 
 Use skill `go:go-test-standards`.
 
-Use skill `spec-tree:test`.
+Use skill `product-tree:test`.
 
 <objective>
-Go test files that supply evidence, at the level and assertion type `/test` selects, for a spec-tree node's assertions.
+Go test files that supply evidence, at the level and assertion type `/test` selects, for a product-tree node's assertions.
 </objective>
 
 <prerequisites>

@@ -41,7 +41,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_SOURCE_FIELD,
     InstallationMode,
     Operation,
-    SPEC_TREE_PLUGIN,
+    PRODUCT_TREE_PLUGIN,
     SourceAction,
     marketplace_plugin_identifier,
 )
@@ -84,27 +84,27 @@ def generated_absent_plugins(checkout: Path) -> tuple[str, ...]:
 def generated_catalog_subset(
     catalog: Sequence[str],
     *,
-    include_spec_tree: bool,
+    include_product_tree: bool,
 ) -> frozenset[str]:
     """Select a nontrivial catalog-bounded subset with the requested validity."""
     selected = {
         plugin
         for index, plugin in enumerate(catalog)
-        if index % 2 == 0 and plugin != SPEC_TREE_PLUGIN
+        if index % 2 == 0 and plugin != PRODUCT_TREE_PLUGIN
     }
     if not selected:
-        selected.update(plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN)
-    if include_spec_tree:
-        selected.add(SPEC_TREE_PLUGIN)
+        selected.update(plugin for plugin in catalog if plugin != PRODUCT_TREE_PLUGIN)
+    if include_product_tree:
+        selected.add(PRODUCT_TREE_PLUGIN)
     else:
-        selected.discard(SPEC_TREE_PLUGIN)
+        selected.discard(PRODUCT_TREE_PLUGIN)
     return frozenset(selected)
 
 
 def generated_agent_subsets(
     checkout: Path,
     *,
-    include_spec_tree: bool,
+    include_product_tree: bool,
 ) -> Mapping[Target, frozenset[str]]:
     """Generate one catalog-bounded subset for every supported agent."""
     catalogs = {
@@ -116,7 +116,7 @@ def generated_agent_subsets(
     return {
         agent: generated_catalog_subset(
             catalog,
-            include_spec_tree=include_spec_tree,
+            include_product_tree=include_product_tree,
         )
         for agent, catalog in catalogs.items()
     }
@@ -140,13 +140,13 @@ def generated_valid_catalog_subsets(
     every subset cardinality in the domain while the domain grows linearly with
     the catalog instead of exponentially.
     """
-    if SPEC_TREE_PLUGIN not in catalog:
-        raise ValueError("catalog must contain spec-tree")
-    optional = tuple(plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN)
+    if PRODUCT_TREE_PLUGIN not in catalog:
+        raise ValueError("catalog must contain product-tree")
+    optional = tuple(plugin for plugin in catalog if plugin != PRODUCT_TREE_PLUGIN)
     return (
-        frozenset((SPEC_TREE_PLUGIN,)),
+        frozenset((PRODUCT_TREE_PLUGIN,)),
         *(
-            frozenset((SPEC_TREE_PLUGIN, *_catalog_window(optional, size - 1, size)))
+            frozenset((PRODUCT_TREE_PLUGIN, *_catalog_window(optional, size - 1, size)))
             for size in range(1, len(optional) + 1)
         ),
     )
@@ -156,7 +156,7 @@ def generated_invalid_catalog_subsets(
     catalog: Sequence[str],
 ) -> tuple[frozenset[str], ...]:
     """Generate one nonempty invalid subset per size class over rotating windows."""
-    optional = tuple(plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN)
+    optional = tuple(plugin for plugin in catalog if plugin != PRODUCT_TREE_PLUGIN)
     return tuple(
         frozenset(_catalog_window(optional, size - 1, size))
         for size in range(1, len(optional) + 1)
@@ -468,7 +468,7 @@ def generated_unresolved_target_records(
     the plugin-wide disposition from the rewrite's.
 
     The resolved plugin is recorded in the invocation checkout, so the
-    selection the plan validates carries `spec-tree`, and in another
+    selection the plan validates carries `product-tree`, and in another
     checkout, so the run that reports the unresolved plugin is observed
     moving another plugin's record through the rewrite beside it.
     """

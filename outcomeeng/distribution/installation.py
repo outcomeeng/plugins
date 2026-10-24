@@ -165,7 +165,7 @@ TOML_KEY_VALUE_SEPARATOR = "="
 CODEX_DISABLED_ENTRY = f"{CODEX_PLUGIN_ENABLED_FIELD} {TOML_KEY_VALUE_SEPARATOR} false"
 """The raw configuration line declaring a Codex plugin's home activation disabled."""
 CODEX_PLUGIN_MARKETPLACE_FIELD = "marketplaceName"
-SPEC_TREE_PLUGIN = "spec-tree"
+PRODUCT_TREE_PLUGIN = "product-tree"
 STDERR_WARNING_PREFIX = "warning: "
 """The prefix every warning line the run prints to stderr carries."""
 
@@ -1948,9 +1948,9 @@ def _isolated_selection(
             f"invalid {agent.value} isolated selection: plugins absent from the "
             f"committed catalog: {', '.join(sorted(unknown))}"
         )
-    if SPEC_TREE_PLUGIN not in selection:
+    if PRODUCT_TREE_PLUGIN not in selection:
         raise ValueError(
-            f"invalid {agent.value} isolated selection: `{SPEC_TREE_PLUGIN}` is required"
+            f"invalid {agent.value} isolated selection: `{PRODUCT_TREE_PLUGIN}` is required"
         )
     selected = frozenset(selection)
     return tuple(plugin for plugin in catalog if plugin in selected)
@@ -1970,16 +1970,16 @@ def _persistent_selection(
     flag travels to the plan and the first-install warning is raised from
     what the plan carries rather than from the inventory read here.
     """
-    if SPEC_TREE_PLUGIN not in catalog:
+    if PRODUCT_TREE_PLUGIN not in catalog:
         raise ValueError(
-            f"invalid {agent.value} catalog: `{SPEC_TREE_PLUGIN}` is required"
+            f"invalid {agent.value} catalog: `{PRODUCT_TREE_PLUGIN}` is required"
         )
     if not installed:
-        return (SPEC_TREE_PLUGIN,), True
-    if SPEC_TREE_PLUGIN not in installed:
+        return (PRODUCT_TREE_PLUGIN,), True
+    if PRODUCT_TREE_PLUGIN not in installed:
         raise ValueError(
             f"invalid {agent.value} installed selection: nonempty {marketplace} "
-            f"inventory must include `{SPEC_TREE_PLUGIN}`"
+            f"inventory must include `{PRODUCT_TREE_PLUGIN}`"
         )
     return tuple(plugin for plugin in catalog if plugin in installed), False
 
@@ -2007,7 +2007,7 @@ def _first_install_warnings(
             message=FIRST_INSTALL_WARNING.format(
                 marketplace=marketplace,
                 agent=agent.value,
-                plugin=SPEC_TREE_PLUGIN,
+                plugin=PRODUCT_TREE_PLUGIN,
             ),
         )
         for agent in Target
@@ -4265,7 +4265,7 @@ __all__ = [
     "ScopeSplitError",
     "SourceAction",
     "STATE_ENV_NAMES",
-    "SPEC_TREE_PLUGIN",
+    "PRODUCT_TREE_PLUGIN",
     "apply_agent_home_plan",
     "without_pending_plugins",
     "build_agent_home_plan",

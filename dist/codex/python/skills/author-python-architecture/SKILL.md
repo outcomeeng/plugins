@@ -21,7 +21,7 @@ Standards are pre-loaded by the `require_skill` directives above. `/python-archi
 
 - An ADR follows the authoritative template: title + decision stated directly, Rationale, Invariants (optional), Verification.
 - Testability constraints go under `## Verification`'s `### Audit` subsection as ALWAYS/NEVER rules — never in a separate Testing Strategy section.
-- Before writing any ADR, Use skill `spec-tree:verify` for verification routing and Use skill `python:author-python-test` for Python test authoring.
+- Before writing any ADR, Use skill `product-tree:verify` for verification routing and Use skill `python:author-python-test` for Python test authoring.
 
 </foundational_stance>
 
@@ -79,7 +79,7 @@ These principles guide every ADR. Each links to the reference carrying the full 
 - **Type safety first** — modern syntax (`X | None`, `list[str]`), no unjustified `Any`, protocols for structural typing, Pydantic at boundaries. See `${SKILL_DIR}/references/type-system-patterns.md`.
 - **Clean architecture** — DDD entities/value objects/aggregates, dependency injection through parameters not globals, single responsibility, no circular imports. See `${SKILL_DIR}/references/architecture-patterns.md`.
 - **Security by design** — validate at boundaries, no hardcoded secrets, array-arg subprocess (never `shell=True`), context-aware threat modeling. See `${SKILL_DIR}/references/security-patterns.md`.
-- **Testability by design** — design for dependency injection (no mocking), prefer pure functions and observable boundaries, and establish constraints that let `spec-tree:test` select the minimum execution level that gives confidence. ADRs never assign execution levels. See `${SKILL_DIR}/references/testability-patterns.md`.
+- **Testability by design** — design for dependency injection (no mocking), prefer pure functions and observable boundaries, and establish constraints that let `product-tree:test` select the minimum execution level that gives confidence. ADRs never assign execution levels. See `${SKILL_DIR}/references/testability-patterns.md`.
 
 </architectural_principles>
 
@@ -141,7 +141,7 @@ These patterns show how testability constraints appear under `## Verification`'s
 - ALWAYS: test infrastructure (generators, harnesses, fixtures) lives in `{product}_testing/`, NOT `tests/` -- generators and harnesses importable as a package, fixtures consumed by path ([audit:testing-package-outside-tests])
 - ALWAYS: `pyproject.toml` includes both packages: `packages = ["{product}", "{product}_testing"]` ([audit:pyproject-both-packages])
 - ALWAYS: pytest config uses `--import-mode=importlib` for multiple test directories ([audit:pytest-importlib-mode])
-- NEVER: test infrastructure in the `tests/` directory -- not importable by spec-tree co-located tests ([audit:no-infrastructure-in-tests])
+- NEVER: test infrastructure in the `tests/` directory -- not importable by product-tree co-located tests ([audit:no-infrastructure-in-tests])
 ```
 
 See `${SKILL_DIR}/references/test-infrastructure-patterns.md` for the full pattern.

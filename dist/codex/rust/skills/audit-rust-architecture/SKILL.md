@@ -50,7 +50,7 @@ This skill checks only the Rust-specific concerns:
 2. Mocking prohibition
 3. Level accuracy when testing levels are mentioned
 4. Rust anti-patterns
-5. Ancestor consistency for spec-tree work
+5. Ancestor consistency for product-tree work
 
 Section structure, atemporal voice, and per-rule tag validity are NOT this skill's concern — they are judged against the canonical decision template, outside this Rust-architecture subject.
 

@@ -14,7 +14,7 @@ from outcomeeng.distribution.installation import (
     ClaudeInstallRecord,
     FIRST_INSTALL_WARNING,
     ReportField,
-    SPEC_TREE_PLUGIN,
+    PRODUCT_TREE_PLUGIN,
     STDERR_WARNING_PREFIX,
 )
 from outcomeeng_testing.harnesses.installation import (
@@ -30,7 +30,7 @@ from outcomeeng_testing.harnesses.installation import (
 def _first_install_warning(agent: Target) -> str:
     """The bootstrap warning for one agent, named for this checkout's marketplace."""
     return FIRST_INSTALL_WARNING.format(
-        marketplace=MARKETPLACE, agent=agent.value, plugin=SPEC_TREE_PLUGIN
+        marketplace=MARKETPLACE, agent=agent.value, plugin=PRODUCT_TREE_PLUGIN
     )
 
 
@@ -43,8 +43,8 @@ def test_real_agent_clis_bootstrap_empty_persistent_state() -> None:
     assert observation.initial_project_settings is not None
     assert observation.exit_code == 0, observation.stderr
     document = json.loads(observation.stdout)
-    assert document[ReportField.CLAUDE_PLUGINS] == [SPEC_TREE_PLUGIN]
-    assert document[ReportField.CODEX_PLUGINS] == [SPEC_TREE_PLUGIN]
+    assert document[ReportField.CLAUDE_PLUGINS] == [PRODUCT_TREE_PLUGIN]
+    assert document[ReportField.CODEX_PLUGINS] == [PRODUCT_TREE_PLUGIN]
     assert document[ReportField.WARNINGS] == [
         {
             ReportField.AGENT: agent.value,
@@ -59,9 +59,9 @@ def test_real_agent_clis_bootstrap_empty_persistent_state() -> None:
     assert observation.codex_listing_exit_code == 0, observation.codex_listing_stderr
     assert observation.claude_plugins is not None
     assert observation.codex_plugins is not None
-    assert observation.claude_plugins.installed == {SPEC_TREE_PLUGIN}
-    assert observation.claude_plugins.enabled == {SPEC_TREE_PLUGIN}
-    assert observation.codex_plugins.installed == {SPEC_TREE_PLUGIN}
+    assert observation.claude_plugins.installed == {PRODUCT_TREE_PLUGIN}
+    assert observation.claude_plugins.enabled == {PRODUCT_TREE_PLUGIN}
+    assert observation.codex_plugins.installed == {PRODUCT_TREE_PLUGIN}
     assert observation.codex_plugins.enabled == frozenset()
 
 
@@ -85,8 +85,8 @@ def test_real_persistent_run_moves_a_second_checkout_record_without_entering_it(
     observation = observe_real_record_refresh()
 
     expected = {
-        (SPEC_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE, observation.invocation_checkout),
-        (SPEC_TREE_PLUGIN, CLAUDE_LOCAL_SCOPE, observation.other_checkout),
+        (PRODUCT_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE, observation.invocation_checkout),
+        (PRODUCT_TREE_PLUGIN, CLAUDE_LOCAL_SCOPE, observation.other_checkout),
     }
     recorded_before = {
         (record.plugin, record.scope, record.project_path)
@@ -108,14 +108,14 @@ def test_real_persistent_run_moves_a_second_checkout_record_without_entering_it(
     assert {command[ReportField.CWD] for command in document[ReportField.COMMANDS]} == {
         str(observation.invocation_checkout)
     }
-    target = document[ReportField.TARGET][ReportField.VERSIONS][SPEC_TREE_PLUGIN]
+    target = document[ReportField.TARGET][ReportField.VERSIONS][PRODUCT_TREE_PLUGIN]
     after = {
         (record.plugin, record.scope, record.project_path): record.version
         for record in observation.records_after
         if isinstance(record, ClaudeInstallRecord)
     }
     assert after[
-        (SPEC_TREE_PLUGIN, CLAUDE_LOCAL_SCOPE, observation.other_checkout)
+        (PRODUCT_TREE_PLUGIN, CLAUDE_LOCAL_SCOPE, observation.other_checkout)
     ] == (target)
     assert set(after) == {
         (record.plugin, record.scope, record.project_path)
@@ -150,18 +150,20 @@ def test_real_persistent_run_moves_records_at_differing_versions_to_one_version(
     before = {
         record: record.version
         for record in observation.records_before
-        if isinstance(record, ClaudeInstallRecord) and record.plugin == SPEC_TREE_PLUGIN
+        if isinstance(record, ClaudeInstallRecord)
+        and record.plugin == PRODUCT_TREE_PLUGIN
     }
     after = {
         record: record.version
         for record in observation.records_after
-        if isinstance(record, ClaudeInstallRecord) and record.plugin == SPEC_TREE_PLUGIN
+        if isinstance(record, ClaudeInstallRecord)
+        and record.plugin == PRODUCT_TREE_PLUGIN
     }
     assert before[observation.seeded_record] == observation.seeded_record.version
     assert len(set(before.values())) > 1
     assert observation.exit_code == 0, observation.stderr
     document = json.loads(observation.stdout)
-    target = document[ReportField.TARGET][ReportField.VERSIONS][SPEC_TREE_PLUGIN]
+    target = document[ReportField.TARGET][ReportField.VERSIONS][PRODUCT_TREE_PLUGIN]
     assert set(after.values()) == {target}
     assert after[observation.seeded_record] != observation.seeded_record.version
     assert document[ReportField.OFF_TARGET_RECORDS] == []
@@ -185,7 +187,7 @@ def test_real_run_moves_a_record_whose_directory_is_gone_and_exits_zero() -> Non
     assert not observation.gone_checkout_present_at_run
     assert observation.exit_code == 0, observation.stderr
     document = json.loads(observation.stdout)
-    target = document[ReportField.TARGET][ReportField.VERSIONS][SPEC_TREE_PLUGIN]
+    target = document[ReportField.TARGET][ReportField.VERSIONS][PRODUCT_TREE_PLUGIN]
     gone = {
         record: record.version
         for record in observation.records_after

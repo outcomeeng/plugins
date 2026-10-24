@@ -37,7 +37,7 @@ def _load_seed(path: str | None) -> Store:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if "rev" in data and "questions" in data:
         return Store(data)
-    # An `spx spec status --format json` projection seeds the real spec tree,
+    # An `spx spec status --format json` projection seeds the real product tree,
     # carrying derived node state through the adapter.
     if is_spx_projection(data):
         return Store(initial_state(tree=spx_projection_to_tree(data)))

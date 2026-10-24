@@ -1,12 +1,12 @@
 # Skill Structure
 
-## Plugin: `spec-tree`
+## Plugin: `product-tree`
 
-All skills in this document belong to the `spec-tree` plugin. Skill names have no suffix — they are invoked as `/understand`, `/author`, etc. (or fully qualified as `spec-tree:understand`).
+All skills in this document belong to the `product-tree` plugin. Skill names have no suffix — they are invoked as `/understand`, `/author`, etc. (or fully qualified as `product-tree:understand`).
 
 ## Design principles
 
-Three methodology steps drive all work. Audit gates operate within each step. See [`src/plugins/spec-tree/skills/understand/SKILL.md`](../../src/plugins/spec-tree/skills/understand/SKILL.md) for the authoritative inline foundation.
+Three methodology steps drive all work. Audit gates operate within each step. See [`src/plugins/product-tree/skills/understand/SKILL.md`](../../src/plugins/product-tree/skills/understand/SKILL.md) for the authoritative inline foundation.
 
 1. **Declare** — write specs: assertions, hypotheses, decisions. Node becomes Declared.
 2. **Spec** — establish test, evaluate, or audit evidence that makes assertions verifiable. Node becomes Specified.
@@ -19,7 +19,7 @@ Within these steps:
 - Foundation skills load once per live marker; compaction expires the marker and requires a reload.
 - `understand` is the single shared library: methodology, structure, templates.
 - `contextualize` handles deterministic context injection from tree structure.
-- Spec-tree action skills check for foundation markers before working; invoke foundations if absent.
+- Product tree action skills check for foundation markers before working; invoke foundations if absent.
 - `verify` is the public evidence entry point and selects test, evaluate, or audit from the real subject's verdict.
 - `test` remains the generic deterministic-evidence specialist invoked after `verify` selects test; `eval` owns generic eval authoring after its follow-on implementation.
 - `apply` orchestrates the full declare → spec → apply flow with audit gates at each step.
@@ -28,9 +28,9 @@ Within these steps:
 - Make conversational flow explicit and consistent across action skills.
 - Keep migration concerns in a separate optional structure document.
 
-## Spec Tree methodology
+## Product Tree methodology
 
-Outcome Engineering centers on the **Spec Tree** — a git-native product structure where each node co-locates a spec and its path-bearing evidence. The tree addresses three failure modes of agentic development: value drift, heuristic context, and spec-evidence drift.
+Outcome Engineering centers on the **Product Tree** — a git-native product structure where each node co-locates a spec and its path-bearing evidence. The tree addresses three failure modes of agentic development: value drift, heuristic context, and spec-evidence drift.
 
 Every outcome begins with a hypothesis about user behavior; every enabler declares a deterministic shared capability. Assertions define verifiable claims about the output. Nodes progress through four states: **Declared** (spec only), **Specified** (spec + evidence, implementation not started), **Failing** (implementation exists but evidence fails), and **Passing** (evidence passes).
 
@@ -38,7 +38,7 @@ The tree structure enables deterministic context injection: the path from root t
 
 ## Key concepts
 
-- **Spec Tree** — git-native product structure in `spx/`
+- **Product Tree** — git-native product structure in `spx/`
 - **Enabler nodes** (`.enabler`) — infrastructure that higher-index nodes depend on
 - **Outcome nodes** (`.outcome`) — hypotheses with testable assertions
 - **Deterministic context injection** — tree structure defines agent context
@@ -136,31 +136,31 @@ When a behavior spans multiple nodes, the assertion lives in the lowest common a
 
 ### Declare — write specs, decisions, and assertions
 
-#### 1. Understand Spec Tree context
+#### 1. Understand Product Tree context
 
 1a. Systematically ingest context to prepare for a discussion with the user.
 1b. Systematically ingest context to prepare for autonomous work.
 
-#### 2. Bootstrap a new Spec Tree
+#### 2. Bootstrap a new Product Tree
 
 2a. Interview user for product identity, hypothesis, and scope.
 2b. Scaffold `spx/` with product spec, CLAUDE.md, and top-level node stubs.
 
-#### 3. Author Spec Tree artifacts
+#### 3. Author Product Tree artifacts
 
 3a. Author from scratch from user conversation/prompt, including clarifying questions.
 3b. Extend existing artifacts with new requirements, outcomes, or decisions.
 
-#### 4. Decompose Spec Tree artifacts
+#### 4. Decompose Product Tree artifacts
 
 4a. Systematically decompose existing higher-level nodes to lower levels.
 
-#### 5. Refactor Spec Tree artifacts
+#### 5. Refactor Product Tree artifacts
 
 5a. Review and structurally refactor (move/re-scope content) through user conversation.
 5b. Factor common aspects into shared enablers at lower indices.
 
-#### 6. Align Spec Tree artifacts
+#### 6. Align Product Tree artifacts
 
 6a. Clarify/augment/align/deconflict artifacts while preserving product truth.
 
@@ -189,7 +189,7 @@ When a behavior spans multiple nodes, the assertion lives in the lowest common a
 
 ### Apply — write implementation and commit
 
-#### 10. Implement work items using spec-driven verification
+#### 10. Implement work items with verification evidence
 
 10a. Orchestrate architecture → evidence → code steps with agentic gates.
 10b. Load methodology and work item context as prerequisites.
@@ -209,10 +209,10 @@ Skills for building and maintaining the durable map — specs, decisions, assert
 
 Foundation skills emit live conversation markers so other skills can detect whether foundation context is present. Every compaction expires those markers and requires the foundation and active node context to load again.
 
-| Skill           | Owns                                                                                              | Marker                             | Status      |
-| --------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------- | ----------- |
-| `understand`    | Methodology, durable map worldview, decomposition semantics, ordering rules, all shared templates | `<SPEC_TREE_FOUNDATION>`           | Implemented |
-| `contextualize` | Deterministic context injection from tree structure, path validation, abort/remediation           | `<SPEC_TREE_CONTEXT target="...">` | Implemented |
+| Skill           | Owns                                                                                              | Marker                                | Status      |
+| --------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------- | ----------- |
+| `understand`    | Methodology, durable map worldview, decomposition semantics, ordering rules, all shared templates | `<PRODUCT_TREE_FOUNDATION>`           | Implemented |
+| `contextualize` | Deterministic context injection from tree structure, path validation, abort/remediation           | `<PRODUCT_TREE_CONTEXT target="...">` | Implemented |
 
 #### Action layer
 
@@ -220,7 +220,7 @@ Action skills do the work. Before starting, they check conversation history for 
 
 | Skill       | Use case | Scope                                                           | Status      |
 | ----------- | -------- | --------------------------------------------------------------- | ----------- |
-| `bootstrap` | 2        | Interview user, scaffold new spec tree                          | Implemented |
+| `bootstrap` | 2        | Interview user, scaffold new product tree                       | Implemented |
 | `author`    | 3        | Create/extend product/ADR/PDR/enabler/outcome from conversation | Implemented |
 | `decompose` | 4        | Systematically decompose higher-level nodes to lower levels     | Implemented |
 | `refactor`  | 5        | Structural moves, re-scoping, factoring shared enablers         | Implemented |
@@ -238,9 +238,9 @@ Skills for selecting and establishing evidence. `verify` is the public router; e
 | `eval-skill`  | 7        | Skill-producer eval specialization                                | `eval`           | Planned     |
 | `audit-tests` | 9        | Adversarial review of test evidence against spec assertions       | Auditor workflow | Implemented |
 
-`spec-tree:verify` is the public evidence surface. It classifies the real subject before any specialist chooses assertion type, execution level, language expression, producer specialization, or verifier. After test is selected, `spec-tree:test` owns generic test decisions and delegates only language-specific expression to the applicable language skill. The planned `spec-tree:eval` follows the same generic-to-specialist direction for eval authoring.
+`product-tree:verify` is the public evidence surface. It classifies the real subject before any specialist chooses assertion type, execution level, language expression, producer specialization, or verifier. After test is selected, `product-tree:test` owns generic test decisions and delegates only language-specific expression to the applicable language skill. The planned `product-tree:eval` follows the same generic-to-specialist direction for eval authoring.
 
-`spec-tree:audit-tests` is a **superset** of `test/audit-tests`. It incorporates the full adversarial review protocol (4 phases, binary verdict) and adds tree-level coverage analysis, cross-cutting assertion review, and decision record compliance from the full ancestor chain.
+`product-tree:audit-tests` is a **superset** of `test/audit-tests`. It incorporates the full adversarial review protocol (4 phases, binary verdict) and adds tree-level coverage analysis, cross-cutting assertion review, and decision record compliance from the full ancestor chain.
 
 ### Apply
 
@@ -258,7 +258,7 @@ Skills for writing implementation code and committing results. `apply` is an orc
 
 ### Declare
 
-- **`understand`** is the single shared library for all Spec Tree knowledge:
+- **`understand`** is the single shared library for all Product Tree knowledge:
   - Durable map worldview (specs are permanent product documentation)
   - Decomposition semantics (enabler vs outcome, nesting depth, when to extract shared enablers)
   - Structure and sparse integer ordering rules
@@ -279,13 +279,13 @@ Skills for writing implementation code and committing results. `apply` is an orc
   - Invokes `test` for deterministic behavior and `eval` for structured LLM-driven output
   - Records a pathless isolated-verifier requirement for audit
   - Contains no language-specific test ceremony or producer-specific eval ceremony
-- **`test`** owns spec-tree test writing (superset of `test/test`):
+- **`test`** owns product-tree test writing (superset of `test/test`):
   - Incorporates full testing methodology (5 stages, 5 factors, 7 exceptions)
   - Extracts typed assertions from spec nodes, determines what evidence is demanded
   - Analyzes evidence gaps across subtrees — which assertions lack tests, which links are broken
   - Generates test scaffolds from assertion types (Scenario → example-based, Property → property-based, etc.)
   - Loads deterministic context (ancestor ADRs/PDRs, lower-index siblings) before writing tests
-- **`audit-tests`** owns spec-tree test review (audit gate within spec step):
+- **`audit-tests`** owns product-tree test review (audit gate within spec step):
   - Incorporates full adversarial review protocol (4 phases, binary verdict)
   - Tree-level coverage: are all assertions across a subtree covered? Orphaned test files?
   - Cross-cutting assertion review: evidence at the right place for ancestor-level assertions
@@ -314,16 +314,16 @@ Skills for writing implementation code and committing results. `apply` is an orc
 
 Foundation skills emit XML markers into the conversation when loaded. All declare and spec skills check for these markers before starting work. Apply skills (`commit-changes`) operate independently; `manage-github-pr` checks the foundation marker so local lifecycle routing is known. This follows the same pattern as `claim-change` emitting `<CLAIMED_CHANGE>` for `release-change` and `close-change` to find.
 
-| Marker                                   | Emitted by      | Checked by                                            | Meaning                              |
-| ---------------------------------------- | --------------- | ----------------------------------------------------- | ------------------------------------ |
-| `<SPEC_TREE_FOUNDATION>`                 | `understand`    | Declare action skills, `verify`, evidence specialists | Methodology and templates are loaded |
-| `<SPEC_TREE_CONTEXT target="full/path">` | `contextualize` | Declare action skills, `verify`, evidence specialists | Target artifacts are loaded          |
+| Marker                                      | Emitted by      | Checked by                                            | Meaning                              |
+| ------------------------------------------- | --------------- | ----------------------------------------------------- | ------------------------------------ |
+| `<PRODUCT_TREE_FOUNDATION>`                 | `understand`    | Declare action skills, `verify`, evidence specialists | Methodology and templates are loaded |
+| `<PRODUCT_TREE_CONTEXT target="full/path">` | `contextualize` | Declare action skills, `verify`, evidence specialists | Target artifacts are loaded          |
 
 **Decision rule:**
 
-- No `<SPEC_TREE_FOUNDATION>` in conversation: invoke `understand`
-- No `<SPEC_TREE_CONTEXT>` matching current target: invoke `contextualize`
-- Target path changed since last `<SPEC_TREE_CONTEXT>`: re-invoke `contextualize`
+- No `<PRODUCT_TREE_FOUNDATION>` in conversation: invoke `understand`
+- No `<PRODUCT_TREE_CONTEXT>` matching current target: invoke `contextualize`
+- Target path changed since last `<PRODUCT_TREE_CONTEXT>`: re-invoke `contextualize`
 
 ## Template ownership
 
@@ -367,14 +367,14 @@ path.
 Declare action skills follow this interaction contract:
 
 1. **Intake** -- Ask for target path/scope and intended operation.
-2. **Foundation gate** -- Check for `<SPEC_TREE_FOUNDATION>` marker; invoke `understand` if absent.
-3. **Target context gate** -- Check for `<SPEC_TREE_CONTEXT>` matching target; invoke `contextualize` if absent or mismatched. Context is injected deterministically from tree structure. Abort with explicit remediation if required artifacts are missing.
+2. **Foundation gate** -- Check for `<PRODUCT_TREE_FOUNDATION>` marker; invoke `understand` if absent.
+3. **Target context gate** -- Check for `<PRODUCT_TREE_CONTEXT>` matching target; invoke `contextualize` if absent or mismatched. Context is injected deterministically from tree structure. Abort with explicit remediation if required artifacts are missing.
 4. **Plan** -- Present concise execution plan and expected outputs.
 5. **Execute** -- Perform workflow steps. Keep user in the loop at major decision points.
 6. **Evidence gate** -- Invoke `verify` so every assertion routes to current test, evaluate, or audit evidence.
 7. **Deliver** -- Summarize changes, decisions, and next actions.
 
-`apply` has its own 8-step flow that reuses steps 1–3 internally. `commit-changes` has no dependency on spec-tree foundations.
+`apply` has its own 8-step flow that reuses steps 1–3 internally. `commit-changes` has no dependency on product-tree foundations.
 
 ## Mode-specific flows
 
@@ -384,8 +384,8 @@ Each flow documents only what is unique to that mode. All declare action skills 
 
 #### `understand`
 
-1. Load Spec Tree methodology, structure semantics, and template index.
-2. Emit `<SPEC_TREE_FOUNDATION>` marker with loaded module summary.
+1. Load Product Tree methodology, structure semantics, and template index.
+2. Emit `<PRODUCT_TREE_FOUNDATION>` marker with loaded module summary.
 
 #### `contextualize`
 
@@ -395,7 +395,7 @@ Each flow documents only what is unique to that mode. All declare action skills 
 4. Include every applicable ADR, PDR, explicitly cited methodology-governance decision, guide file, and local lifecycle overlay without heuristic filtering.
 5. List linked tests and the applicable test-directory state without reading test bodies.
 6. If the exact product-root target has a product spec and no nodes, emit `bootstrap=true`; reject missing node targets.
-7. Emit `<SPEC_TREE_CONTEXT target="full/path">` with the complete manifest, sync-base status, and lifecycle continuation state.
+7. Emit `<PRODUCT_TREE_CONTEXT target="full/path">` with the complete manifest, sync-base status, and lifecycle continuation state.
 
 #### `bootstrap`
 
@@ -411,7 +411,7 @@ Each flow documents only what is unique to that mode. All declare action skills 
 1. Detect empty tree → invoke `bootstrap` if no product spec exists.
 2. Intake node type (enabler or outcome), intended location, and path.
 3. Clarify user intent and unresolved product decisions.
-4. Draft artifact using templates from `understand` and Spec Tree rules.
+4. Draft artifact using templates from `understand` and Product Tree rules.
 5. Validate atemporal voice, consistency, and testability (assertions link to test files for outcomes).
 6. Return draft, open decisions, and recommended next steps (decomposition or test creation).
 

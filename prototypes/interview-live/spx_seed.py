@@ -4,7 +4,7 @@
 The browser surface renders from the SPX CLI's JSON projection, never by
 re-deriving the tree. This adapter consumes `spx spec status --format json` and
 emits the prototype's `{tree, planned}` seed so the live surface renders this
-product's actual spec tree.
+product's actual product tree.
 
 Each projection node `{id, kind, order, slug, state, children}` maps to the
 prototype tree shape `{id, slug, kind, order, title, state, children}`, deriving

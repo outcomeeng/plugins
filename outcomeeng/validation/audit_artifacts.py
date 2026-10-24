@@ -23,7 +23,7 @@ PLUGIN_SURFACE_PATHS: Final = (
     CLAUDE_DIST_PLUGINS_DIR,
     CODEX_DIST_PLUGINS_DIR,
 )
-SPEC_TREE_PLUGIN_NAME: Final = "spec-tree"
+PRODUCT_TREE_PLUGIN_NAME: Final = "product-tree"
 SKILLS_DIR_NAME: Final = "skills"
 AGENTS_DIR_NAME: Final = "agents"
 SKILL_FILENAME: Final = "SKILL.md"
@@ -234,7 +234,7 @@ def check_wrapper_surface(surface: Path) -> list[str]:
     """Return implementation-wrapper violations for one plugin surface."""
     errors: list[str] = []
     wrapper_path = agent_artifact_path(
-        surface, SPEC_TREE_PLUGIN_NAME, IMPLEMENTATION_AUDITOR_STEM
+        surface, PRODUCT_TREE_PLUGIN_NAME, IMPLEMENTATION_AUDITOR_STEM
     )
     if not wrapper_path.is_file():
         errors.append(f"{wrapper_path}: wrapper missing")
@@ -309,7 +309,7 @@ def implementation_audit_runtime_directory(surface: Path) -> Path:
     """Return the implementation-audit runtime directory for ``surface``."""
     return (
         surface
-        / SPEC_TREE_PLUGIN_NAME
+        / PRODUCT_TREE_PLUGIN_NAME
         / SKILLS_DIR_NAME
         / IMPLEMENTATION_AUDIT_SKILL_NAME
     )
@@ -317,7 +317,7 @@ def implementation_audit_runtime_directory(surface: Path) -> Path:
 
 def audit_skill_runtime_directories(surface: Path) -> tuple[Path, ...]:
     """Return generic and language audit skill runtime directories."""
-    skills_dir = surface / SPEC_TREE_PLUGIN_NAME / SKILLS_DIR_NAME
+    skills_dir = surface / PRODUCT_TREE_PLUGIN_NAME / SKILLS_DIR_NAME
     runtime_directories = (
         {
             path

@@ -18,7 +18,7 @@
     "current": {
       "id": "q1",
       "text": "Which surface should drive the live interview?",
-      "options": ["spec tree", "flat coverage map"],
+      "options": ["product tree", "flat coverage map"],
       "choice": null
     },
     "settled": []

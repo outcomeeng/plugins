@@ -8,7 +8,7 @@
 
 **Settlement condition**: a decision names the owner of herdr response vocabulary the adapter does not read (the adapter, a separately owned herdr protocol module, or the captured fixture family), and the harness reads those names from that owner.
 
-**Evidence**: `spec-tree:test-evidence-auditor` finding `f-002` on head `7ad28895500e40c4c106c1c510a175a6b52ddda9`, rule `source-ownership`.
+**Evidence**: `product-tree:test-evidence-auditor` finding `f-002` on head `7ad28895500e40c4c106c1c510a175a6b52ddda9`, rule `source-ownership`.
 
 ## Captured responses whose run's exit code is not recorded
 
@@ -18,7 +18,7 @@
 
 **Settlement condition**: every response artifact in the family records its run's exit code in the provenance manifest, the success captures recaptured with it, and the harness replays no response without a recorded exit code.
 
-**Evidence**: `spec-tree:test-evidence-auditor` finding `f-003` on head `7ad28895500e40c4c106c1c510a175a6b52ddda9`, rule `source-ownership`, which the recapture of seven error envelopes with their exit codes repaired for every error envelope the harness replays.
+**Evidence**: `product-tree:test-evidence-auditor` finding `f-003` on head `7ad28895500e40c4c106c1c510a175a6b52ddda9`, rule `source-ownership`, which the recapture of seven error envelopes with their exit codes repaired for every error envelope the harness replays.
 
 ## The `/operate-herdr` surface carries three standing skill-audit warnings
 
@@ -42,7 +42,7 @@ The adapter gates a prompt as it gates stop only when the prompt's text, strippe
 
 **Settlement condition**: captured Claude Code and Codex behaviour establishes whether `/exit <args>` and `/quit <args>` end the session. If either does, every prompt whose first whitespace-delimited token is a session-ending command is gated; the decision, the spec, the `/operate-herdr` skill text, and the compliance test state that rule and exercise the leading-command case; and no prompt text `/orchestrate-change` sends without authorization falls under the widened rule. If neither does, the decision states that finding and the compliance test carries the leading-command case as a conforming example.
 
-**Evidence**: `spec-tree:changes-reviewer` run `2026-09-29_07-52-21-574-3e4ad71a1ae1` on head `af92dcd523770e15497e9b8bc2e8a3622d91f96b`, status `approved`, a security finding at severity `debt` against `src/plugins/coding-agents/skills/operate-herdr/scripts/herdr_environment.py:614` at that head; every line number in this entry's body is taken at head `9b68d8f2f3cfdff4b6de2bfc719aa6bf5ed1bef8`.
+**Evidence**: `product-tree:changes-reviewer` run `2026-09-29_07-52-21-574-3e4ad71a1ae1` on head `af92dcd523770e15497e9b8bc2e8a3622d91f96b`, status `approved`, a security finding at severity `debt` against `src/plugins/coding-agents/skills/operate-herdr/scripts/herdr_environment.py:614` at that head; every line number in this entry's body is taken at head `9b68d8f2f3cfdff4b6de2bfc719aa6bf5ed1bef8`.
 
 ## No capture shows open-worktree for a checkout herdr already has open
 
@@ -52,4 +52,4 @@ The adapter gates a prompt as it gates stop only when the prompt's text, strippe
 
 **Settlement condition**: a live `herdr` 0.9.1 capture of `open-worktree` for a checkout herdr already has open joins the fixture family with its provenance, and the `/operate-herdr` skill text and the decision's open-worktree invariant state what that capture shows.
 
-**Evidence**: `spec-tree:changes-reviewer` run `2026-09-29_08-45-32-122-cb34c99a7af7` on head `bf03df3c772699d0d467b0883e923222389b3aee`, finding `D1`, against `src/plugins/coding-agents/skills/operate-herdr/SKILL.md:34` and `:145`; line numbers are taken at that head.
+**Evidence**: `product-tree:changes-reviewer` run `2026-09-29_08-45-32-122-cb34c99a7af7` on head `bf03df3c772699d0d467b0883e923222389b3aee`, finding `D1`, against `src/plugins/coding-agents/skills/operate-herdr/SKILL.md:34` and `:145`; line numbers are taken at that head.

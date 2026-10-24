@@ -112,7 +112,7 @@ from outcomeeng.distribution.installation import (
     ScopeSplitClassification,
     ScopeSplitEntry,
     ScopeSplitError,
-    SPEC_TREE_PLUGIN,
+    PRODUCT_TREE_PLUGIN,
     STATE_ENV_NAMES,
     STATE_ROOT_OPTION,
     build_isolated_installation_plan,
@@ -1610,7 +1610,7 @@ class UncachedFetchObservation:
 
     Each cataloged plugin carries the install records its `FetchState` names
     and a plugin cache that holds the target version or lacks it. The
-    invocation checkout always records `spec-tree`, because a nonempty
+    invocation checkout always records `product-tree`, because a nonempty
     persistent selection must contain it, so that plugin's effective state
     names the invocation checkout regardless of the generated one. The run's
     attempted commands, the install-record document before and after, every
@@ -1625,7 +1625,7 @@ class UncachedFetchObservation:
     marketplace: str
     target_version: str
     states: Mapping[str, FetchState]
-    """The state each cataloged plugin met, `spec-tree` forced to record the invocation checkout."""
+    """The state each cataloged plugin met, `product-tree` forced to record the invocation checkout."""
     cases: tuple[tuple[dict[str, str], RecordDisposition], ...]
     cache_root: Path
     plan: InstallationPlan
@@ -1694,7 +1694,7 @@ def observe_uncached_fetch(
         states = {
             plugin: (
                 replace(state, invocation_records=True)
-                if plugin == SPEC_TREE_PLUGIN
+                if plugin == PRODUCT_TREE_PLUGIN
                 else state
             )
             for plugin in catalog
@@ -1851,7 +1851,7 @@ def observe_unlocated_registry_plan() -> UnlocatedRegistryObservation:
         preflight = build_persistent_preflight(mirror, environment)
         listing = generated_unlocated_registry_entry(MARKETPLACE)
         runner = RecordingRunner(
-            installed={agent: frozenset({SPEC_TREE_PLUGIN}) for agent in Target},
+            installed={agent: frozenset({PRODUCT_TREE_PLUGIN}) for agent in Target},
             claude_marketplace_listing=listing,
         )
         error: str | None = None
@@ -1890,13 +1890,13 @@ def observe_registry_shape_plan() -> RegistryShapeObservation:
                 preflight,
                 claude_marketplace_payload=payload,
                 claude_plugins_payload=_plugin_listing_payload(
-                    Target.CLAUDE, mirror, frozenset({SPEC_TREE_PLUGIN})
+                    Target.CLAUDE, mirror, frozenset({PRODUCT_TREE_PLUGIN})
                 ),
                 codex_marketplace_payload=codex_marketplace_listing_payload(
                     DECLARED_CODEX_SOURCE, marketplace
                 ),
                 codex_plugins_payload=_plugin_listing_payload(
-                    Target.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
+                    Target.CODEX, mirror, frozenset({PRODUCT_TREE_PLUGIN})
                 ),
             )
             documents[shape] = report_document(
@@ -1904,8 +1904,8 @@ def observe_registry_shape_plan() -> RegistryShapeObservation:
                     plans[shape],
                     RecordingRunner(
                         installed={
-                            Target.CLAUDE: frozenset({SPEC_TREE_PLUGIN}),
-                            Target.CODEX: frozenset({SPEC_TREE_PLUGIN}),
+                            Target.CLAUDE: frozenset({PRODUCT_TREE_PLUGIN}),
+                            Target.CODEX: frozenset({PRODUCT_TREE_PLUGIN}),
                         },
                         clone=clone,
                     ),
@@ -2249,8 +2249,8 @@ def observe_unreadable_source(
     and each agent's registry either carries the marketplace or does not, so
     the caller supplies the registry states the runs range over. Every run
     faces the same malformed settings and the same other checkout recording
-    `spec-tree` at an older version, in its own disposable agent state; a
-    state that asks for it also records `spec-tree` for the invocation
+    `product-tree` at an older version, in its own disposable agent state; a
+    state that asks for it also records `product-tree` for the invocation
     checkout itself. Each run's plan, warnings, commands, install-record
     document, target version, and exit code are the observations.
 
@@ -2306,19 +2306,19 @@ def _unreadable_source_case(
     marketplace = MARKETPLACE
     records = (
         generated_no_target_records(
-            marketplace, SPEC_TREE_PLUGIN, mirror, other, LISTED_VERSION
+            marketplace, PRODUCT_TREE_PLUGIN, mirror, other, LISTED_VERSION
         )
         if state.recorded
         else generated_other_checkout_records(
-            marketplace, SPEC_TREE_PLUGIN, other, LISTED_VERSION
+            marketplace, PRODUCT_TREE_PLUGIN, other, LISTED_VERSION
         )
     )
     target_version = served_version(len(records))
-    _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
+    _serve_clone_versions(clone, (PRODUCT_TREE_PLUGIN,), target_version)
     cache_root = (
         preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
     )
-    (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
+    (cache_root / PRODUCT_TREE_PLUGIN / target_version).mkdir(parents=True)
     record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
     record_file.parent.mkdir(parents=True, exist_ok=True)
     record_file.write_text(
@@ -2408,18 +2408,18 @@ def observe_defective_record_listing(
         marketplace = MARKETPLACE
         cases = generated_listing_defect_records(
             marketplace,
-            SPEC_TREE_PLUGIN,
+            PRODUCT_TREE_PLUGIN,
             other,
             defective,
             LISTED_VERSION,
             preflight.roots.checkout if invocation_checkout_recorded else None,
         )
         target_version = served_version(len(cases))
-        _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
+        _serve_clone_versions(clone, (PRODUCT_TREE_PLUGIN,), target_version)
         cache_root = (
             preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
         )
-        (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
+        (cache_root / PRODUCT_TREE_PLUGIN / target_version).mkdir(parents=True)
         record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
         record_file.parent.mkdir(parents=True, exist_ok=True)
         record_file.write_text(
@@ -2438,7 +2438,7 @@ def observe_defective_record_listing(
                 DECLARED_CODEX_SOURCE, marketplace
             ),
             codex_plugins_payload=_plugin_listing_payload(
-                Target.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
+                Target.CODEX, mirror, frozenset({PRODUCT_TREE_PLUGIN})
             ),
         )
         exit_code = main(
@@ -2675,23 +2675,23 @@ def observe_unresolved_target_record() -> UnresolvedTargetObservation:
         marketplace = MARKETPLACE
         catalog = _catalogs_from_documents(mirror)[Target.CLAUDE]
         unresolved_plugin = next(
-            plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN
+            plugin for plugin in catalog if plugin != PRODUCT_TREE_PLUGIN
         )
         cases = generated_unresolved_target_records(
             marketplace,
-            SPEC_TREE_PLUGIN,
+            PRODUCT_TREE_PLUGIN,
             unresolved_plugin,
             preflight.roots.checkout,
             other,
             LISTED_VERSION,
         )
         target_version = served_version(len(cases))
-        _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
+        _serve_clone_versions(clone, (PRODUCT_TREE_PLUGIN,), target_version)
         _unversion_clone_manifest(clone, unresolved_plugin)
         cache_root = (
             preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
         )
-        (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
+        (cache_root / PRODUCT_TREE_PLUGIN / target_version).mkdir(parents=True)
         record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
         record_file.parent.mkdir(parents=True, exist_ok=True)
         record_file.write_text(
@@ -2712,7 +2712,7 @@ def observe_unresolved_target_record() -> UnresolvedTargetObservation:
     return UnresolvedTargetObservation(
         checkout=preflight.roots.checkout,
         other_checkout=other.resolve(),
-        resolved_plugin=SPEC_TREE_PLUGIN,
+        resolved_plugin=PRODUCT_TREE_PLUGIN,
         unresolved_plugin=unresolved_plugin,
         cases=cases,
         listed_version=LISTED_VERSION,
@@ -2758,17 +2758,17 @@ def _run_no_target_refresh(
         marketplace = MARKETPLACE
         cases = generated_no_target_records(
             marketplace,
-            SPEC_TREE_PLUGIN,
+            PRODUCT_TREE_PLUGIN,
             preflight.roots.checkout,
             other,
             LISTED_VERSION,
         )
         target_version = served_version(len(cases))
-        _serve_clone_versions(clone, (SPEC_TREE_PLUGIN,), target_version)
+        _serve_clone_versions(clone, (PRODUCT_TREE_PLUGIN,), target_version)
         cache_root = (
             preflight.roots.claude_config / CLAUDE_PLUGIN_CACHE_RELATIVE / marketplace
         )
-        (cache_root / SPEC_TREE_PLUGIN / target_version).mkdir(parents=True)
+        (cache_root / PRODUCT_TREE_PLUGIN / target_version).mkdir(parents=True)
         record_file = preflight.roots.claude_config / CLAUDE_INSTALLED_PLUGINS_RELATIVE
         record_file.parent.mkdir(parents=True, exist_ok=True)
         record_file.write_text(
@@ -2865,7 +2865,7 @@ def observe_unreadable_head_record() -> UnreadableHeadObservation:
     return UnreadableHeadObservation(
         checkout=run.checkout,
         other_checkout=run.other_checkout,
-        plugin=SPEC_TREE_PLUGIN,
+        plugin=PRODUCT_TREE_PLUGIN,
         listed_version=LISTED_VERSION,
         served_version=run.target_version,
         operations=tuple(command.operation for command in run.runner.calls),
@@ -2877,7 +2877,7 @@ def observe_unreadable_head_record() -> UnreadableHeadObservation:
 def observe_local_record_bootstrap_plan() -> PersistentPlanObservation:
     """Plan a persistent run whose only Claude record is local scope at the checkout.
 
-    The checkout records `spec-tree` at local scope and nothing at project
+    The checkout records `product-tree` at local scope and nothing at project
     scope, so the inventory is nonempty without a project-scope member; the
     plan's install, enable, and update commands and its warnings are the
     observations the linked test judges.
@@ -2896,7 +2896,7 @@ def observe_local_record_bootstrap_plan() -> PersistentPlanObservation:
             [
                 {
                     CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
-                        SPEC_TREE_PLUGIN, MARKETPLACE
+                        PRODUCT_TREE_PLUGIN, MARKETPLACE
                     ),
                     CLAUDE_PLUGIN_ENABLED_FIELD: True,
                     CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_LOCAL_SCOPE,
@@ -2915,7 +2915,7 @@ def observe_local_record_bootstrap_plan() -> PersistentPlanObservation:
                 DECLARED_CODEX_SOURCE, MARKETPLACE
             ),
             codex_plugins_payload=_plugin_listing_payload(
-                Target.CODEX, mirror, frozenset({SPEC_TREE_PLUGIN})
+                Target.CODEX, mirror, frozenset({PRODUCT_TREE_PLUGIN})
             ),
         )
     return PersistentPlanObservation(
@@ -2998,7 +2998,7 @@ def observe_persistent_catalog_subset_plans() -> tuple[
             mappings: list[CatalogSubsetMapping] = []
             for selected in generated_persistent_catalog_selections(catalogs[agent]):
                 installed = {
-                    candidate: frozenset({SPEC_TREE_PLUGIN}) for candidate in Target
+                    candidate: frozenset({PRODUCT_TREE_PLUGIN}) for candidate in Target
                 }
                 installed[agent] = (
                     selected | {UNCATALOGED_PLUGIN} if selected else selected
@@ -3153,7 +3153,7 @@ def observe_agent_home_reconciliation() -> AgentHomeReconciliationObservation:
 @dataclass(frozen=True)
 class HomeSelectionChangeObservation:
     """Selected-home definitions across a run that selects every agent-bearing
-    plugin and a second run in which the non-`spec-tree` ones change state.
+    plugin and a second run in which the non-`product-tree` ones change state.
 
     `changed` names the plugins whose state the second run changes: pending
     publication in one case, dropped from the home selection in the other.
@@ -3212,7 +3212,7 @@ def observe_home_selection_change(
 ) -> HomeSelectionChangeObservation:
     """Install every agent-bearing plugin, then rerun with the others changed.
 
-    `spec-tree` stays selected and published in both runs, because a nonempty
+    `product-tree` stays selected and published in both runs, because a nonempty
     selection must contain it; every other plugin that ships a Codex
     definition is the changed set. Under `PENDING` each changed plugin's
     shipped definitions are edited before the second run, so a reconciliation
@@ -3232,10 +3232,10 @@ def observe_home_selection_change(
         foreign.parent.mkdir(parents=True, exist_ok=True)
         foreign.write_bytes(foreign_content)
         shipped_by_plugin = _shipped_definitions_by_plugin(mirror)
-        selected = frozenset(shipped_by_plugin) | {SPEC_TREE_PLUGIN}
-        changed = selected - {SPEC_TREE_PLUGIN}
+        selected = frozenset(shipped_by_plugin) | {PRODUCT_TREE_PLUGIN}
+        changed = selected - {PRODUCT_TREE_PLUGIN}
         if not changed:
-            raise RuntimeError("no plugin other than spec-tree ships a Codex agent")
+            raise RuntimeError("no plugin other than product-tree ships a Codex agent")
         installed = {agent: selected for agent in Target}
         execute_persistent_installation(
             mirror, environment, RecordingRunner(installed=installed)
@@ -3433,7 +3433,7 @@ def observe_scope_split() -> ScopeSplitObservation:
 
 
 def observe_invalid_persistent_selection() -> SelectionRejectionObservation:
-    """Expose nonempty selections without spec-tree at the mutation boundary."""
+    """Expose nonempty selections without product-tree at the mutation boundary."""
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
@@ -3441,7 +3441,7 @@ def observe_invalid_persistent_selection() -> SelectionRejectionObservation:
         mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
-        installed = generated_agent_subsets(mirror, include_spec_tree=False)
+        installed = generated_agent_subsets(mirror, include_product_tree=False)
         runner = RecordingRunner(installed=installed)
         rejection: str | None = None
         try:
@@ -3457,7 +3457,7 @@ def observe_invalid_persistent_selection() -> SelectionRejectionObservation:
 def observe_invalid_persistent_selections() -> tuple[
     SelectionRejectionObservation, ...
 ]:
-    """Expose every nonempty per-agent selection that omits spec-tree."""
+    """Expose every nonempty per-agent selection that omits product-tree."""
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
@@ -3470,7 +3470,7 @@ def observe_invalid_persistent_selections() -> tuple[
         for agent in Target:
             for selected in generated_invalid_catalog_subsets(catalogs[agent]):
                 installed = {
-                    candidate: frozenset({SPEC_TREE_PLUGIN}) for candidate in Target
+                    candidate: frozenset({PRODUCT_TREE_PLUGIN}) for candidate in Target
                 }
                 installed[agent] = selected
                 runner = RecordingRunner(installed=installed)
@@ -3491,7 +3491,7 @@ def observe_invalid_persistent_selections() -> tuple[
 def observe_invalid_isolated_selection() -> SelectionRejectionObservation:
     """Expose invalid isolated planning before any command can execute."""
     checkout = repository_root()
-    invalid = generated_agent_subsets(checkout, include_spec_tree=False)
+    invalid = generated_agent_subsets(checkout, include_product_tree=False)
     rejection: str | None = None
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
@@ -3523,7 +3523,7 @@ class IsolatedSubsetPlanObservation:
 def observe_isolated_subset_plan() -> IsolatedSubsetPlanObservation:
     """Build an isolated plan from one generated valid explicit subset."""
     checkout = repository_root()
-    subsets = generated_agent_subsets(checkout, include_spec_tree=True)
+    subsets = generated_agent_subsets(checkout, include_product_tree=True)
     claude_catalog = (checkout / CLAUDE_CATALOG_PATH).read_bytes()
     codex_catalog = (checkout / CODEX_CATALOG_PATH).read_bytes()
     with TemporaryDirectory() as temporary_directory:
@@ -3964,7 +3964,7 @@ class RealRecordRefreshObservation:
 def observe_real_record_refresh() -> RealRecordRefreshObservation:
     """Seed three checkouts' records with the real Claude Code CLI, then run the recipe.
 
-    The invocation checkout records `spec-tree` at project scope and is aged
+    The invocation checkout records `product-tree` at project scope and is aged
     to an older version; a second checkout records it at local scope at the
     current version, declaring the marketplace in its local settings; a third
     checkout records it at project scope, is aged the same way, and then has
@@ -3995,9 +3995,9 @@ def observe_real_record_refresh() -> RealRecordRefreshObservation:
         _install_claude_plugin(other, environment, CLAUDE_LOCAL_SCOPE)
         _install_claude_plugin(gone, environment, CLAUDE_PROJECT_SCOPE)
         seeded_record = _seed_older_record_version(
-            environment, SPEC_TREE_PLUGIN, invocation
+            environment, PRODUCT_TREE_PLUGIN, invocation
         )
-        _seed_older_record_version(environment, SPEC_TREE_PLUGIN, gone)
+        _seed_older_record_version(environment, PRODUCT_TREE_PLUGIN, gone)
         shutil.rmtree(gone)
         invocation_settings = invocation / CLAUDE_PROJECT_SETTINGS_PATH
         other_settings = other / CLAUDE_LOCAL_SETTINGS_PATH
@@ -4104,7 +4104,7 @@ def _recorded_install_path(
 def observe_real_uncached_fetch() -> RealUncachedFetchObservation:
     """Seed a second checkout's record of a plugin the cache then loses, and run the recipe.
 
-    The invocation checkout records `spec-tree`, which a nonempty persistent
+    The invocation checkout records `product-tree`, which a nonempty persistent
     selection requires. A second checkout records the first other cataloged
     plugin and is aged to an older version; the cache directory the install
     wrote for the current version is then removed, so no record names the
@@ -4115,7 +4115,7 @@ def observe_real_uncached_fetch() -> RealUncachedFetchObservation:
     plugin = next(
         name
         for name in _catalogs_from_documents(checkout)[Target.CLAUDE]
-        if name != SPEC_TREE_PLUGIN
+        if name != PRODUCT_TREE_PLUGIN
     )
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory).resolve()
@@ -4240,9 +4240,9 @@ def _install_claude_plugin(
     checkout: Path,
     environment: Mapping[str, str],
     scope: str,
-    plugin: str = SPEC_TREE_PLUGIN,
+    plugin: str = PRODUCT_TREE_PLUGIN,
 ) -> None:
-    """Install one plugin, `spec-tree` by default, at one scope from one checkout through the real CLI."""
+    """Install one plugin, `product-tree` by default, at one scope from one checkout through the real CLI."""
     result = _run_agent_process(
         (
             CLAUDE_EXECUTABLE,
@@ -4303,7 +4303,7 @@ def observe_real_installation() -> RealInstallationObservation:
             agent: subset & published
             for agent, subset in generated_agent_subsets(
                 persistent_mirror,
-                include_spec_tree=True,
+                include_product_tree=True,
             ).items()
         }
         _seed_persistent_plugins(
@@ -4381,7 +4381,7 @@ def observe_real_installation() -> RealInstallationObservation:
         mirror_installation_inputs(checkout, subset_mirror)
         subset_selections = generated_agent_subsets(
             subset_mirror,
-            include_spec_tree=True,
+            include_product_tree=True,
         )
         _write_catalog_selection(
             subset_mirror / CLAUDE_CATALOG_PATH,
@@ -5156,10 +5156,10 @@ tests. The governing architecture decision states the recapture condition.
 
 _UNRECORDED_UPDATE_STDERR_FIXTURE = CapturedCliWording(
     INSTALLATION_FIXTURES / "claude-code-2.1.296-plugin-update-unrecorded.stderr.txt",
-    plugin="spec-tree",
+    plugin="product-tree",
     marketplace="outcomeeng",
 )
-"""Claude Code 2.1.296 updating `spec-tree` in agent state holding no install record of it.
+"""Claude Code 2.1.296 updating `product-tree` in agent state holding no install record of it.
 
 A real native update failure that names no unpublished plugin, independent of
 the pending classifier. The governing architecture decision states the

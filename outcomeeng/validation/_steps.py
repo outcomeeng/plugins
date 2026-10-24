@@ -134,7 +134,7 @@ PYTEST_ARGV: Final = (
 # producers those definitions name; both fail the gate when the committed
 # artifact drifts from what the source now renders.
 EVALS_ROOT: Final = "spx"
-EVAL_TRIGGER_WORKFLOW: Final = ".github/workflows/spec-tree-evals.yml"
+EVAL_TRIGGER_WORKFLOW: Final = ".github/workflows/product-tree-evals.yml"
 EVAL_TRIGGERS_ARGV: Final = (
     "uv",
     "run",

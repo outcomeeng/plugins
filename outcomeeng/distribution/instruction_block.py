@@ -1,7 +1,7 @@
-"""Actionable Spec Tree root-instruction-block writer and drift reporter for the validation gate.
+"""Actionable Product Tree root-instruction-block writer and drift reporter for the validation gate.
 
 The ``just build-instructions`` recipe and the ``just instructions-check`` gate run this
-module to enforce the render-model ADR's gate: regenerate the managed Spec Tree instruction
+module to enforce the render-model ADR's gate: regenerate the managed Product Tree instruction
 blocks in root ``CLAUDE.md`` and ``AGENTS.md`` from the rendered harness templates committed
 under ``dist/``, remove retired ``spx/`` instruction files, then fail when any root
 instruction file drifts from its committed content. It is the instruction-block analogue of
@@ -35,15 +35,15 @@ REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 GENERATOR_RELATIVE_PATH: Final = (
     Path(DIST_DIR_NAME)
     / Target.CLAUDE.value
-    / "spec-tree/skills/update-instruction-block/scripts/instruction_block.py"
+    / "product-tree/skills/update-instruction-block/scripts/instruction_block.py"
 )
 GENERATOR_PATH: Final = REPO_ROOT / GENERATOR_RELATIVE_PATH
 AUTHORED_TEMPLATE_RELATIVE_PATH: Final = Path(
-    "src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md"
+    "src/plugins/product-tree/skills/update-instruction-block/templates/instruction-block.md"
 )
 AUTHORED_TEMPLATE_PATH: Final = REPO_ROOT / AUTHORED_TEMPLATE_RELATIVE_PATH
 DIST_TEMPLATE_RELATIVE_PATH: Final = Path(
-    "spec-tree/skills/update-instruction-block/templates/instruction-block.md"
+    "product-tree/skills/update-instruction-block/templates/instruction-block.md"
 )
 HEADER: Final = "root instruction blocks differ from a fresh render."
 REMEDIATION: Final = "Run `just build-instructions` and commit the regenerated root CLAUDE.md and AGENTS.md."
@@ -74,12 +74,12 @@ LEGACY_DIRECT_TEMPLATE_ARGUMENT: Final = "--template src/plugins"
 LEGACY_DIRECT_REPO_ROOT_ARGUMENT: Final = "--repo-root ."
 # Each *_POLICY_REQUIREMENTS tuple below asserts literal substrings of one authored
 # template section in
-# src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md.
+# src/plugins/product-tree/skills/update-instruction-block/templates/instruction-block.md.
 # Rewording a pinned section without updating its tuple in the same change fails the
 # render with a named missing requirement rather than a readable wording diff.
 FOUNDATION_POLICY_HEADING: Final = "### Before product-content access -> `/understand`"
 FOUNDATION_POLICY_REQUIREMENTS: Final = (
-    ("live foundation marker", "live `<SPEC_TREE_FOUNDATION>` marker"),
+    ("live foundation marker", "live `<PRODUCT_TREE_FOUNDATION>` marker"),
     ("spx path trigger", "anything under `spx/`"),
     ("source and test trigger", "source or test file"),
     ("session exemption", "`spx session` operations"),
@@ -158,7 +158,7 @@ AUTHORITY_HIERARCHY_POLICY_REQUIREMENTS: Final = (
     ),
     (
         "code reference prohibition",
-        "NEVER** reference Spec Tree specs or decisions from code comments or docstrings",
+        "NEVER** reference Product Tree specs or decisions from code comments or docstrings",
     ),
     (
         "repo overlay selection",

@@ -39,16 +39,16 @@ SKILL_PATH: Final = (
     REPO_ROOT
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "audit-assertions"
     / "SKILL.md"
 )
 PLUGIN_MANIFEST_PATH: Final = (
-    REPO_ROOT / "src" / "plugins" / "spec-tree" / ".claude-plugin" / "plugin.json"
+    REPO_ROOT / "src" / "plugins" / "product-tree" / ".claude-plugin" / "plugin.json"
 )
 NODE_SPEC_PATH: Final = (
-    "spx/21-spec-tree.enabler/68-audit.enabler/"
+    "spx/21-product-tree.enabler/68-audit.enabler/"
     "32-audit-assertions.enabler/audit-assertions.md"
 )
 
@@ -62,9 +62,9 @@ FINDING_EXPECTED: Final = "a named subject"
 _RUN_DRIVER: Final = {
     "producerKind": "agent",
     "agentName": ASSERTION_AUDITOR_AGENT_NAME,
-    "agentOwningPluginName": "spec-tree",
+    "agentOwningPluginName": "product-tree",
     "skillName": ASSERTION_AUDIT_SKILL_NAME,
-    "skillOwningPluginName": "spec-tree",
+    "skillOwningPluginName": "product-tree",
     "invocationRole": "run-driver",
 }
 _JSON_BLOCK: Final = re.compile(r"```json\n(.*?)\n```", re.DOTALL)
@@ -364,7 +364,7 @@ def _provenance_bindings() -> Mapping[str, str]:
     version = manifest["version"]
     if not isinstance(version, str):
         raise TypeError("plugin manifest carries no version string")
-    return {"spec-tree-plugin-version": version}
+    return {"product-tree-plugin-version": version}
 
 
 def _render(value: object, bindings: Mapping[str, str]) -> object:

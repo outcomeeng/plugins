@@ -8,14 +8,14 @@ The seven definitions `change-executor`, `change-author`, `change-verifier`, `ch
 
 ## Environment and preconditions
 
-- The generated tree `dist/claude/spec-tree` is built from the subject commit, and the working tree is clean.
-- Claude Code runs from an empty scratch directory outside every repository, with no setting source loaded, no session persistence, and `dist/claude/spec-tree` as its only spec-tree plugin.
+- The generated tree `dist/claude/product-tree` is built from the subject commit, and the working tree is clean.
+- Claude Code runs from an empty scratch directory outside every repository, with no setting source loaded, no session persistence, and `dist/claude/product-tree` as its only product-tree plugin.
 - The task message is the literal `not-a-target`, which no fronted skill accepts as a target, so each skill stops before it reads or writes a Change, a store, or a repository.
 
 ## Protocol
 
-1. From the scratch directory, for each definition `<name>`, pipe this prompt to `claude -p --plugin-dir <checkout>/dist/claude/spec-tree --setting-sources "" --no-session-persistence --output-format stream-json --verbose --max-budget-usd 2.00 --allowedTools Agent`: "Use the Agent tool exactly once to launch the subagent spec-tree:<name> with the prompt: not-a-target. Do nothing else. Then reply with that subagent's final result verbatim."
-2. From the stream, keep the parent's init event (model, the spec-tree plugin path, and whether the definition is listed), the one `Agent` launch, the child's first event with its `parent_tool_use_id` and `subagent_type`, and the launch's tool result.
+1. From the scratch directory, for each definition `<name>`, pipe this prompt to `claude -p --plugin-dir <checkout>/dist/claude/product-tree --setting-sources "" --no-session-persistence --output-format stream-json --verbose --max-budget-usd 2.00 --allowedTools Agent`: "Use the Agent tool exactly once to launch the subagent product-tree:<name> with the prompt: not-a-target. Do nothing else. Then reply with that subagent's final result verbatim."
+2. From the stream, keep the parent's init event (model, the product-tree plugin path, and whether the definition is listed), the one `Agent` launch, the child's first event with its `parent_tool_use_id` and `subagent_type`, and the launch's tool result.
 3. Record the emitted definition's path, front matter, and SHA-256 at the subject commit beside each run.
 
 ## Attested run
@@ -26,9 +26,9 @@ The seven definitions `change-executor`, `change-author`, `change-verifier`, `ch
 
 - Observations:
   - Each of the four round definitions carries its native `disallowedTools`: `Agent` and `AskUserQuestion`.
-  - Each parent session listed its definition, loaded spec-tree from `dist/claude/spec-tree`, and made exactly one `Agent` launch with `subagent_type` `spec-tree:<name>` and prompt `not-a-target`.
+  - Each parent session listed its definition, loaded product-tree from `dist/claude/product-tree`, and made exactly one `Agent` launch with `subagent_type` `product-tree:<name>` and prompt `not-a-target`.
   - Each child's first event carries the launch's `parent_tool_use_id` and the `subagent_type` of its definition, and each launch's tool result reports `status` `completed`, the `agentType` of its definition, and `resolvedModel` `claude-opus-5-5`, which the Standard profile's `model: opus` selects.
-  - `change-author` returned `blocked` with its question and blocked action. `change-verifier` relayed the missing-target stop of `spec-tree:verify`. `change-tester` stopped at Step 1 of `spec-tree:test` with its missing-target result. `change-implementer` returned `blocked` with reason `target-required` from step 1 of `spec-tree:implement-change`.
+  - `change-author` returned `blocked` with its question and blocked action. `change-verifier` relayed the missing-target stop of `product-tree:verify`. `change-tester` stopped at Step 1 of `product-tree:test` with its missing-target result. `change-implementer` returned `blocked` with reason `target-required` from step 1 of `product-tree:implement-change`.
   - No child wrote a file or ran a store command.
 - Artifacts:
   - [change-author.result.json](change-author.result.json)
@@ -44,22 +44,22 @@ This run records `change-executor`, whose emitted definition selects the Executo
 - Subject commit: `8a5ddbe8d21caa37a7db2d7d304b613c6805b9a8`
 - Observations:
   - The emitted definition carries `model: "sonnet"`, `effort: "high"`, and `disallowedTools: "AskUserQuestion"`.
-  - The parent session listed `spec-tree:change-executor`, loaded spec-tree from `dist/claude/spec-tree`, and made exactly one `Agent` launch with `subagent_type` `spec-tree:change-executor` and prompt `not-a-target`.
-  - The child's first event carries the launch's `parent_tool_use_id` and the `subagent_type` `spec-tree:change-executor`. The launch's tool result reports `status` `completed`, `agentType` `spec-tree:change-executor`, and `resolvedModel` `claude-sonnet-5-5`, which the Executor profile's `model: sonnet` selects.
-  - `change-executor` returned `not-held` from `spec-tree:execute-change` step 1. Its one tool call, loading `spec-tree:change-standards`, was refused by the probe's `--allowedTools Agent` grant, and the child reported that refusal without reconstructing the skill.
+  - The parent session listed `product-tree:change-executor`, loaded product-tree from `dist/claude/product-tree`, and made exactly one `Agent` launch with `subagent_type` `product-tree:change-executor` and prompt `not-a-target`.
+  - The child's first event carries the launch's `parent_tool_use_id` and the `subagent_type` `product-tree:change-executor`. The launch's tool result reports `status` `completed`, `agentType` `product-tree:change-executor`, and `resolvedModel` `claude-sonnet-5-5`, which the Executor profile's `model: sonnet` selects.
+  - `change-executor` returned `not-held` from `product-tree:execute-change` step 1. Its one tool call, loading `product-tree:change-standards`, was refused by the probe's `--allowedTools Agent` grant, and the child reported that refusal without reconstructing the skill.
   - The child wrote no file and ran no store command. The run cost USD 0.19 against the USD 2.00 ceiling.
 - Artifacts:
   - [change-executor.result.json](change-executor.result.json)
 
 ## Attested run: the instruction round definitions
 
-This run records `change-skill-author` and `change-subagent-author`, the two definitions that front skills of the `instructions` plugin. The protocol ran unchanged, from an empty scratch directory with `dist/claude/spec-tree` as the only spec-tree plugin and the protocol's `--max-budget-usd 2.00` ceiling.
+This run records `change-skill-author` and `change-subagent-author`, the two definitions that front skills of the `instructions` plugin. The protocol ran unchanged, from an empty scratch directory with `dist/claude/product-tree` as the only product-tree plugin and the protocol's `--max-budget-usd 2.00` ceiling.
 
 - Date: 2026-10-18
 - Subject commit: `b05112746a7442a8c6ec7554af1fef923312aed7` for both definitions. Their earlier runs, on `6cbb66684b7e53b3314237b60681e50016757ac9` and `0942beb61734927d2f07fc7b81c66209e27f876b`, covered definitions that fronted the skills under their earlier names; this run supersedes them and they are not retained.
 - Observations:
   - Each emitted definition carries `model: "sonnet"`, `effort: "medium"` and `disallowedTools: Agent, AskUserQuestion`, and preloads its fronted skill, `instructions:author-skill` and `instructions:author-subagent` respectively.
-  - Each parent session listed its definition, loaded spec-tree from `dist/claude/spec-tree`, and made exactly one `Agent` launch with `subagent_type` `spec-tree:<name>` and prompt `not-a-target`.
+  - Each parent session listed its definition, loaded product-tree from `dist/claude/product-tree`, and made exactly one `Agent` launch with `subagent_type` `product-tree:<name>` and prompt `not-a-target`.
   - Each child's first event carries the launch's `parent_tool_use_id`, and each launch's tool result reports `status` `completed`, the `agentType` of its definition, and `resolvedModel` `claude-sonnet-5-5`, which the Standard profile's `model: sonnet` selects.
   - Each child invoked its fronted skill with the task message. The probe installs no `instructions` plugin, so the Skill tool returned `Unknown skill: instructions:author-skill` and `Unknown skill: instructions:author-subagent`, and each child returned a `blocked` result naming the required skill and the exact failure.
   - No child wrote a file or ran a store command. The runs cost USD 0.20 and USD 0.18 against the USD 2.00 ceiling.

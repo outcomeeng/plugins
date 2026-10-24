@@ -106,7 +106,7 @@ The `name` field is the user invocation path (`/{skill-name}`). Match user speec
 
 **Rules:**
 
-- Use domain acronyms: `author` not `author-spec-tree-artifacts`
+- Use domain acronyms: `author` not `author-product-tree-artifacts`
 - Use terms users actually say: `test` not `python-unit-test-framework`
 - Think "CD-ROM" not "Compact Disc Read Only Memory"
 - Directory name MUST match: `skills/author/` → `name: author`
@@ -121,10 +121,10 @@ Treat generated runtime output and implementation names as lower-layer evidence,
 # ✅ Matches user speech
 name: author # Users say "author a spec"
 name: author-typescript-test # Users say "author a TypeScript test"
-name: bootstrap # Users say "bootstrap the spec tree"
+name: bootstrap # Users say "bootstrap the product tree"
 
 # ❌ Nobody says these
-name: author-spec-tree-artifacts # Too verbose
+name: author-product-tree-artifacts # Too verbose
 name: typescript-unit-framework # Wrong order
 ```
 

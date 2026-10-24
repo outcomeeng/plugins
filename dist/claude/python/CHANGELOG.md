@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.25.2
+
+### Changed
+
+- **The Python skills name the `product-tree` plugin and its markers.** `/audit-python-test` and `/author-python-test` require `product-tree:test` and `product-tree:audit-tests`, `/audit-python-test` requires the `<PRODUCT_TREE_CONTEXT>` marker, `/author-python-code` reads its context from `/product-tree:contextualize`, and the example harness in `/python-test-standards` is `ProductTreeEnv`. Before this change, the skills named `spec-tree:` skills, the `<SPEC_TREE_CONTEXT>` marker, and `SpecTreeEnv`.
+
 ## 0.25.1
 
 ### Changed

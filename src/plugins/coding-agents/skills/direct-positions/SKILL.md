@@ -45,7 +45,7 @@ The file's TOML front matter between `+++` lines sets keys, parsed as TOML. Its 
 | `compact_at_percent`           | 30                                                                                                                               |
 | `doorbell_start_delay_seconds` | 300                                                                                                                              |
 | `pace`                         | unset; no pacing applies                                                                                                         |
-| `resume_line`                  | a line naming `/spec-tree:understand`, the resume note, the expectations, and the mail channel                                   |
+| `resume_line`                  | a line naming `/product-tree:understand`, the resume note, the expectations, and the mail channel                                |
 
 A malformed file or an unknown key stops the skill with a message naming the file, the key, the value found, and the accepted form, and changes nothing.
 

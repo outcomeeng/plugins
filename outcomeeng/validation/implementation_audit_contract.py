@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from enum import StrEnum
 from typing import Final
 
-SPEC_TREE_PLUGIN_NAME: Final = "spec-tree"
+PRODUCT_TREE_PLUGIN_NAME: Final = "product-tree"
 IMPLEMENTATION_AUDITOR_AGENT_NAME: Final = "implementation-auditor"
 IMPLEMENTATION_AUDIT_SKILL_NAME: Final = "audit-implementation"
 IMPLEMENTATION_AUDIT_CLASS: Final = "implementation"
@@ -137,7 +137,7 @@ def implementation_audit_producer_identity(
     return {
         "producerKind": "skill",
         "agentName": IMPLEMENTATION_AUDITOR_AGENT_NAME,
-        "agentOwningPluginName": SPEC_TREE_PLUGIN_NAME,
+        "agentOwningPluginName": PRODUCT_TREE_PLUGIN_NAME,
         "skillName": implementation_audit_concern_skill_name(language, concern),
         "skillOwningPluginName": language,
         "invocationRole": "leaf-skill",
@@ -149,9 +149,9 @@ def implementation_audit_run_driver_identity() -> dict[str, object]:
     return {
         "producerKind": "agent",
         "agentName": IMPLEMENTATION_AUDITOR_AGENT_NAME,
-        "agentOwningPluginName": SPEC_TREE_PLUGIN_NAME,
+        "agentOwningPluginName": PRODUCT_TREE_PLUGIN_NAME,
         "skillName": IMPLEMENTATION_AUDIT_SKILL_NAME,
-        "skillOwningPluginName": SPEC_TREE_PLUGIN_NAME,
+        "skillOwningPluginName": PRODUCT_TREE_PLUGIN_NAME,
         "invocationRole": "run-driver",
     }
 

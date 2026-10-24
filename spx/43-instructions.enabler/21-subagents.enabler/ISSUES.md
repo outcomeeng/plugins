@@ -60,7 +60,7 @@ suite. Author `evals/invocation-scope/` (producer
 eval CI triggers with `just build-eval-triggers`, run it at the default budget, and
 restore the `[eval](evals/invocation-scope/eval.toml)` tag once it passes.
 
-## The governing-context rule speaks spec-tree vocabulary the instructions plugin does not define
+## The governing-context rule speaks product-tree vocabulary the instructions plugin does not define
 
 **Evidence:** `instructions:skill-auditor` finding `f-008` (WARNING) on
 `src/plugins/instructions/skills/subagent-standards/SKILL.md` at head
@@ -70,25 +70,25 @@ names the definition, and a declaration as an assertion in that node's spec or a
 on the path from the root that reaches it by index — uses vocabulary the `instructions`
 plugin neither defines nor loads.
 
-**Impact:** a repository that installs `instructions` without a spec tree resolves no
+**Impact:** a repository that installs `instructions` without a product tree resolves no
 governing context, so `/audit-subagent` reports every inheriting definition as declaring
 nothing. That is the standard's stated result for an undeclared boundary, so the verdict is
 not spurious, but the rule names no methodology and states no non-applicability.
 
 **Settlement condition:** the standard names the methodology its resolution rule assumes,
-or states how a definition with no governing spec tree is judged, and one typed skill audit
+or states how a definition with no governing product tree is judged, and one typed skill audit
 approves the wording. Deferred as a product-design question outside the changeset that
 amended the rule: the Change that amended it settled where a declaration lives, not how a
 tree-less consumer reads the rule.
 
 ## The marketplace's own definitions carry no inheritance declaration
 
-**Evidence:** `spec-tree:changes-reviewer` finding `F-001` (debt, consistency) in review
+**Evidence:** `product-tree:changes-reviewer` finding `F-001` (debt, consistency) in review
 run `2026-09-21_15-38-19-791-ab0ae6d854aa`, subject
 `src/plugins/instructions/agents/subagent-auditor.md`. The Claude rendering of
 `subagent-auditor` carries `tools` and no `permissionMode`, the shape that inherits the
 invoking session's execution policy, and no assertion under `spx/` names
-`subagent-auditor`, `skill-auditor`, or any `src/plugins/spec-tree/agents/*.md` wrapper —
+`subagent-auditor`, `skill-auditor`, or any `src/plugins/product-tree/agents/*.md` wrapper —
 the verification node names those wrappers only by directory — so no owning node resolves
 for them and none declares their inheritance.
 
@@ -96,7 +96,7 @@ for them and none declares their inheritance.
 Those definitions have always inherited the session's execution policy and their owning
 nodes have never named them; the rule made an existing silence legible rather than
 creating it. Closing it means adding an assertion, with linked evidence, to the owning node
-of every shipped definition across the instructions and spec-tree trees — a changeset whose
+of every shipped definition across the instructions and product-tree trees — a changeset whose
 coherence is those trees' specs, not this standard.
 
 **Settlement condition:** a Change adds, for each inheriting definition, the owning node's
@@ -142,7 +142,7 @@ in passive form, and one `subagent-auditor` run on each raises no such finding.
 
 ## The subagent auditor's verdict format keeps a zero finding count for approval
 
-**Evidence.** `spec-tree:changes-reviewer` run `2026-10-10_19-49-04-623-01d567a86f84` reported, as `debt` (`consistency`), that `<verdict_format>` in `src/plugins/instructions/skills/audit-subagent/SKILL.md` states that the projection's `findingCount` is zero for approval, while the same sentence admits `filed` findings under an approved run. `src/plugins/instructions/skills/audit-skill/SKILL.md` dropped that clause, and `src/plugins/spec-tree/skills/author-change/SKILL.md` step 4 requires `run.findingCount` to equal the number of `filed` entries on an approved run.
+**Evidence.** `product-tree:changes-reviewer` run `2026-10-10_19-49-04-623-01d567a86f84` reported, as `debt` (`consistency`), that `<verdict_format>` in `src/plugins/instructions/skills/audit-subagent/SKILL.md` states that the projection's `findingCount` is zero for approval, while the same sentence admits `filed` findings under an approved run. `src/plugins/instructions/skills/audit-skill/SKILL.md` dropped that clause, and `src/plugins/product-tree/skills/author-change/SKILL.md` step 4 requires `run.findingCount` to equal the number of `filed` entries on an approved run.
 
 **Impact.** An approved `audit-subagent` run that records a `filed` finding carries a nonzero `findingCount`, which contradicts the sentence and the sibling skill.
 

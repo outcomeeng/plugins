@@ -31,7 +31,7 @@ Read `$verb`, trim it, and match it against the table. One verb runs per invocat
 
 `help` names where a reader answers "what changed for me, and what must I now do?", reading from disk without network access.
 
-{!% if plugin_name == 'spec-tree' %!}This plugin carries two changelogs. Read one only when the reader asks what changed.
+{!% if plugin_name == 'product-tree' %!}This plugin carries two changelogs. Read one only when the reader asks what changed.
 
 | Line        | Records                                                  | Path                                                 |
 | ----------- | -------------------------------------------------------- | ---------------------------------------------------- |

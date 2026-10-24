@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "definition": "spec-tree:change-executor",
+  "definition": "product-tree:change-executor",
   "subjectCommit": "8a5ddbe8d21caa37a7db2d7d304b613c6805b9a8",
   "emittedDefinition": {
-    "path": "dist/claude/spec-tree/agents/change-executor.md",
+    "path": "dist/claude/product-tree/agents/change-executor.md",
     "sha256": "e2f5f6647dc26c7af58c3976baf829d126602cff68788961d49d8a7899048c41",
     "frontMatter": [
       "model: \"sonnet\"",
@@ -13,7 +13,7 @@
       "  ALWAYS select at session start when an agent session executes one claimed Executable Change as its Executor through `/execute-change`.",
       "disallowedTools: \"AskUserQuestion\"",
       "skills:",
-      "  - spec-tree:execute-change"
+      "  - product-tree:execute-change"
     ]
   },
   "parentSession": {
@@ -22,8 +22,8 @@
     "claudeCodeVersion": "2.1.288",
     "plugins": [
       {
-        "name": "spec-tree",
-        "path": "/Users/shz/Code/outcomeeng/plugins/worktrees/refiner/dist/claude/spec-tree",
+        "name": "product-tree",
+        "path": "/Users/shz/Code/outcomeeng/plugins/worktrees/refiner/dist/claude/product-tree",
         "version": "0.100.2"
       }
     ],
@@ -33,7 +33,7 @@
     "toolUseId": "toolu_018LfMNAavDsnLALWumJEFCF",
     "tool": "Agent",
     "input": {
-      "subagent_type": "spec-tree:change-executor",
+      "subagent_type": "product-tree:change-executor",
       "prompt": "not-a-target",
       "description": "Launch change-executor probe",
       "run_in_background": false
@@ -41,18 +41,18 @@
   },
   "childStart": {
     "parentToolUseId": "toolu_018LfMNAavDsnLALWumJEFCF",
-    "subagentType": "spec-tree:change-executor",
+    "subagentType": "product-tree:change-executor",
     "taskMessage": "not-a-target",
     "timestamp": "2026-10-03T19:34:03.053Z"
   },
   "childResult": {
     "status": "completed",
-    "agentType": "spec-tree:change-executor",
+    "agentType": "product-tree:change-executor",
     "resolvedModel": "claude-sonnet-5-5",
     "totalDurationMs": 7050,
     "totalTokens": 22374,
     "totalToolUseCount": 1,
-    "text": "**Result: `not-held`**\n\nExecution did not start, and nothing was written, launched, claimed, released or closed.\n\n- **Missing reference:** the target `not-a-target` is not an issue reference. Step 1 accepts `#N`, `owner/repo#N`, or an issue URL. No `<CLAIMED_CHANGE>` marker exists in this conversation either.\n- **Environment:** the working directory is `/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-refiner/81663c22-82f7-4208-9ca8-77253ce061dd/scratchpad/probe-335-change-executor`. It is not a git repository, so there is no worktree root to match against a claim.\n- **`spec-tree:change-standards` did not load:** invoking it with `Lifecycle` returned only the error `Execute skill: spec-tree:change-standards`. I did not rebuild its rules from memory, and I did not resolve the store or read any issue state.\n\nSupplying a valid claimed-Change reference, from a session whose worktree root holds that Change, would let execution proceed. The reference could be `#N`, `owner/repo#N`, or an issue URL.\n\n- **Change URL:** none\n- **Final head SHA:** none\n- **Rounds:** none launched\n- **Merge commit:** none\n- **Handoff comment:** none"
+    "text": "**Result: `not-held`**\n\nExecution did not start, and nothing was written, launched, claimed, released or closed.\n\n- **Missing reference:** the target `not-a-target` is not an issue reference. Step 1 accepts `#N`, `owner/repo#N`, or an issue URL. No `<CLAIMED_CHANGE>` marker exists in this conversation either.\n- **Environment:** the working directory is `/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-refiner/81663c22-82f7-4208-9ca8-77253ce061dd/scratchpad/probe-335-change-executor`. It is not a git repository, so there is no worktree root to match against a claim.\n- **`product-tree:change-standards` did not load:** invoking it with `Lifecycle` returned only the error `Execute skill: product-tree:change-standards`. I did not rebuild its rules from memory, and I did not resolve the store or read any issue state.\n\nSupplying a valid claimed-Change reference, from a session whose worktree root holds that Change, would let execution proceed. The reference could be `#N`, `owner/repo#N`, or an issue URL.\n\n- **Change URL:** none\n- **Final head SHA:** none\n- **Rounds:** none launched\n- **Merge commit:** none\n- **Handoff comment:** none"
   },
   "parentResult": {
     "subtype": "success",

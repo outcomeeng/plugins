@@ -36,7 +36,7 @@ def spx_projection_to_tree(projection: dict) -> list[dict]:
 
     Reads the projection's ``nodes`` list and maps each node recursively. A
     projection without ``nodes`` yields an empty forest rather than raising, so
-    a product with an empty spec tree seeds an empty browser.
+    a product with an empty product tree seeds an empty browser.
     """
     return [_node(n) for n in projection.get("nodes", [])]
 

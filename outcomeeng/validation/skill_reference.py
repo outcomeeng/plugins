@@ -87,9 +87,9 @@ CHANGE_IDENTITY: Final = re.compile(r"outcomeeng/changes#[0-9]+")
 # the Change that ships the skill and removes the exemption.
 EXEMPTED_REFERENCES: Final[Mapping[str, str]] = {
     "/probe": "outcomeeng/changes#363",
-    "spec-tree:probe": "outcomeeng/changes#363",
+    "product-tree:probe": "outcomeeng/changes#363",
     "/eval": "outcomeeng/changes#514",
-    "spec-tree:eval": "outcomeeng/changes#514",
+    "product-tree:eval": "outcomeeng/changes#514",
 }
 # Top-level filesystem directories, which a slash-prefixed token names as a path.
 FILESYSTEM_ROOTS: Final = frozenset(

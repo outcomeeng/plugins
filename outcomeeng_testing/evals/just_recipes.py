@@ -311,7 +311,7 @@ def write_producer_prompt_fixture(tmp_path: Path) -> tuple[Path, Path]:
                 "",
                 "[prompt_source]",
                 'kind = "producer-section"',
-                'producer = "src/plugins/spec-tree/skills/manage-pr/SKILL.md"',
+                'producer = "src/plugins/product-tree/skills/manage-pr/SKILL.md"',
                 'section = "pr_wait_and_reentry_policy"',
                 'template = "prompt.template.md"',
                 "",

@@ -297,7 +297,7 @@ Use generators for input domains that vary, compose, shrink, or explore more tha
 // testing/generators/{domain}.ts
 export function arbitraryNodePath(config: Config): fc.Arbitrary<string>;
 export function arbitraryDecisionPath(config: Config): fc.Arbitrary<string>;
-export function arbitrarySpecTree(config: Config): fc.Arbitrary<SpecTreeFixture>;
+export function arbitraryProductTree(config: Config): fc.Arbitrary<ProductTreeFixture>;
 ```
 
 Use `arbitrary*()` generator functions for tests that should search a domain with `assertProperty`. Use `createGenerated*()` functions only as single-sample wrappers around the same arbitrary when a full property loop would make local infrastructure evidence too expensive.
@@ -339,10 +339,10 @@ Use harnesses for tests that interact with external systems — filesystems, bro
 ```typescript
 // testing/harnesses/{domain}.ts
 
-// Filesystem harness: manages a temp product directory for spec-tree operations
+// Filesystem harness: manages a temp product directory for product-tree operations
 export async function withTestEnv(
   config: Config,
-  callback: (env: SpecTreeEnv) => Promise<void>,
+  callback: (env: ProductTreeEnv) => Promise<void>,
 ): Promise<void>;
 
 // Browser harness: wraps Playwright with page lifecycle management
@@ -400,7 +400,7 @@ import { createAuditResult } from "@testing/harnesses/factories";
 import { createHugoHarness } from "@testing/harnesses/hugo";
 ```
 
-Reusable setup, context management, generated domains, and inert fixtures live under `testing/`. Spec-tree `tests/` directories contain typed assertion files only.
+Reusable setup, context management, generated domains, and inert fixtures live under `testing/`. Product tree `tests/` directories contain typed assertion files only.
 
 </test_infrastructure>
 

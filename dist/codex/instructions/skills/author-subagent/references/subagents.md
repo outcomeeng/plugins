@@ -13,13 +13,13 @@ Use a thin wrapper when a skill owns the behavior. This example delegates spec
 auditing and preserves the skill's result contract.
 
 ```toml
-name = "spec-tree_spec-auditor"
+name = "product-tree_spec-auditor"
 description = "ALWAYS invoke when the governing skill requests an audit of one spec node."
 model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 developer_instructions = """
 <workflow>
-Invoke spec-tree:audit-specs with the supplied target.
+Invoke product-tree:audit-specs with the supplied target.
 Return the skill's complete structured verdict.
 </workflow>
 """

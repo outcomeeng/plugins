@@ -1,7 +1,7 @@
-"""Harness: invoke the spec-tree SessionStart hook as the runtime would.
+"""Harness: invoke the product-tree SessionStart hook as the runtime would.
 
 The shipped hook is the inline-guard command in
-``src/plugins/spec-tree/hooks/hooks.json``; it delegates to the ``spx`` CLI hook
+``src/plugins/product-tree/hooks/hooks.json``; it delegates to the ``spx`` CLI hook
 runner. This harness reads that command verbatim (so a test exercises the shipped
 artifact, not a copy) and runs it through ``/bin/sh`` with a controlled
 environment. ``CLAUDE_PROJECT_DIR`` and the working directory are set to the
@@ -30,25 +30,25 @@ from typing import Any
 from hypothesis import seed, settings
 
 from outcomeeng.validation.hook_contract import SESSION_START_EVENT
-from outcomeeng_testing.harnesses.spec_tree import (
-    marketplace_root_for_spec_tree_root_test,
+from outcomeeng_testing.harnesses.product_tree import (
+    marketplace_root_for_product_tree_root_test,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 # A shell variable name the harness may safely interpolate into a sourced script.
 _ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
-_HOOKS_JSON = ("src", "plugins", "spec-tree", "hooks", "hooks.json")
+_HOOKS_JSON = ("src", "plugins", "product-tree", "hooks", "hooks.json")
 HOOK_EVIDENCE_SEED = 20260728
 HOOK_EVIDENCE_EXAMPLES = 40
 HOOK_EVIDENCE_REPLAY_PATH = (
     "just test "
-    "spx/21-spec-tree.enabler/13-agent-environment.enabler/21-identity.enabler/tests"
+    "spx/21-product-tree.enabler/13-agent-environment.enabler/21-identity.enabler/tests"
 )
 
 # The hook's environment kill switch (hooks.json): set to "1" to short-circuit the
 # hook to a valid empty result before it probes for or invokes spx.
-KILL_SWITCH_ENV = "SPECTREE_SESSION_HOOK_DISABLED"
+KILL_SWITCH_ENV = "PRODUCT_TREE_SESSION_HOOK_DISABLED"
 KILL_SWITCH_DISABLED = "1"
 
 # The spx hook runner records this PID as the worktree claim's controlling
@@ -107,7 +107,7 @@ def session_start_workspace() -> Iterator[tuple[Path, Path]]:
 
 def _hooks_config(test_file: str | None = None) -> dict[str, Any]:
     root = (
-        marketplace_root_for_spec_tree_root_test(test_file)
+        marketplace_root_for_product_tree_root_test(test_file)
         if test_file is not None
         else Path(__file__).resolve().parents[2]
     )
@@ -118,7 +118,7 @@ def _hooks_config(test_file: str | None = None) -> dict[str, Any]:
 
 
 def session_start_events(test_file: str | None = None) -> list[str]:
-    """Return the hook event names the spec-tree plugin declares, in order."""
+    """Return the hook event names the product-tree plugin declares, in order."""
     return list(_hooks_config(test_file)["hooks"])
 
 

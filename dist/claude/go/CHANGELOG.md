@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.4.2
+
+### Changed
+
+- **The Go skills name the `product-tree` plugin and its markers.** `/audit-go-test`, `/author-go-test`, `/author-go-architecture`, and `/author-go-code` require `product-tree:test`, `product-tree:audit-tests`, `product-tree:verify`, and `product-tree:contextualize`, and `/audit-go-test` requires the `<PRODUCT_TREE_CONTEXT>` marker. `/author-go-code` produces code that complies with its governing spec. Before this change, the skills named `spec-tree:` skills and the `<SPEC_TREE_CONTEXT>` marker, which stop resolving once the methodology plugin is installed under its new name.
+
 ## 0.4.1
 
 ### Changed

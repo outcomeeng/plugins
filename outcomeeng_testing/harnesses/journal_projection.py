@@ -1,7 +1,7 @@
 """Harness for journal-projection tests.
 
 Loads the shared run-journal projection helper for the test files under
-``spx/21-spec-tree.enabler/16-verification.enabler/18-journal-projection.enabler/tests/``.
+``spx/21-product-tree.enabler/16-verification.enabler/18-journal-projection.enabler/tests/``.
 
 The helper is not importable as a package — it lives under ``src/plugins/``
 (authored plugin source) and the marketplace ships every plugin script under
@@ -27,7 +27,7 @@ PROJECTION_MODULE_PATH = (
     pathlib.Path(__file__).resolve().parents[2]
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "project-run-journal"
     / "scripts"

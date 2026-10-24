@@ -33,7 +33,7 @@ from outcomeeng_testing.harnesses.agent_conversion import (
     oracle_string,
     oracle_strings,
     parsed_toml_skill_config,
-    spec_tree_wrapper_agents,
+    product_tree_wrapper_agents,
     toml_compatible,
     toml_string,
     toml_table,
@@ -66,7 +66,7 @@ def test_agent_frontmatter_and_body_convert_to_codex_toml(tmp_path: Path) -> Non
 
 
 def test_journal_writing_auditors_inherit_codex_execution_policy() -> None:
-    sources = {source.name: source for source in spec_tree_wrapper_agents()}
+    sources = {source.name: source for source in product_tree_wrapper_agents()}
 
     for agent_name in ("change-auditor", "implementation-auditor"):
         source = sources[agent_name]

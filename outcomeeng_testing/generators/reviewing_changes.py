@@ -37,7 +37,7 @@ def rejected_rule_citation_cases() -> Iterator[RejectedRuleCitationCase]:
     )
     yield RejectedRuleCitationCase(
         "spec-assertion-without-index",
-        "spx/21-spec-tree.enabler/68-reviewing.enabler/"
+        "spx/21-product-tree.enabler/68-reviewing.enabler/"
         "21-reviewing-changes.enabler/reviewing-changes.md:SCENARIO",
     )
     yield RejectedRuleCitationCase(
@@ -45,21 +45,22 @@ def rejected_rule_citation_cases() -> Iterator[RejectedRuleCitationCase]:
     )
     yield RejectedRuleCitationCase(
         "decision-nonexistent-file",
-        "spx/21-spec-tree.enabler/68-reviewing.enabler/"
+        "spx/21-product-tree.enabler/68-reviewing.enabler/"
         "21-reviewing-changes.enabler/99-nonexistent.adr.md",
     )
     yield RejectedRuleCitationCase(
         "spec-assertion-beyond-declared-count",
-        "spx/21-spec-tree.enabler/68-reviewing.enabler/"
+        "spx/21-product-tree.enabler/68-reviewing.enabler/"
         "21-reviewing-changes.enabler/reviewing-changes.md:SCENARIO:999",
     )
     yield RejectedRuleCitationCase("wrong-tree-prefix", "spec/auth.md:ALWAYS:1")
     yield RejectedRuleCitationCase(
-        "plugin-skill-without-slug", "plugins/spec-tree/skills/review-changes/SKILL.md"
+        "plugin-skill-without-slug",
+        "plugins/product-tree/skills/review-changes/SKILL.md",
     )
     yield RejectedRuleCitationCase(
         "plugin-skill-unknown-slug",
-        "plugins/spec-tree/skills/review-changes/SKILL.md:not-a-real-rule-slug",
+        "plugins/product-tree/skills/review-changes/SKILL.md:not-a-real-rule-slug",
     )
     yield RejectedRuleCitationCase("root-rule-without-slug", "AGENTS.md")
     yield RejectedRuleCitationCase(

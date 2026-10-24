@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.16.4
+
+### Changed
+
+- **`/direct-positions` and `/orchestrate-change` name the `product-tree` plugin.** The resume line names `/product-tree:understand`, the Executor start selects the `product-tree` plugin's `change-executor` definition, and the claim runs through `product-tree:claim-change`. Before this change, each named `spec-tree`, which stops resolving once the methodology plugin is installed under its new name.
+
 ## 0.16.3
 
 ### Added

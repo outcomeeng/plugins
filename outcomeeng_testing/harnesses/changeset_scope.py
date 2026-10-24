@@ -49,7 +49,7 @@ CHANGESET_SCOPE_SCRIPTS_DIR = (
     REPO_ROOT
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "scope-changeset"
     / "scripts"
@@ -62,7 +62,7 @@ MERGE_CLASSIFIER_MODULE_PATH = (
     REPO_ROOT
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "merge"
     / "scripts"
@@ -73,7 +73,7 @@ COHERENCE_SCOPE_MODULE_PATH = (
     REPO_ROOT
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "audit-changeset-coherence"
     / "scripts"

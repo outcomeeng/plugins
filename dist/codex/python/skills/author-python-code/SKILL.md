@@ -38,7 +38,7 @@ Before invoking this skill:
 
 1. **Evidence must exist** - Established through `/verify`; when test is selected, expressed through `/test` and `/author-python-test`
 2. **Evidence must be reviewed** - Approved by the auditor matching each selected evidence type
-3. **Spec must be loaded** - Context from `/spec-tree:contextualize`
+3. **Spec must be loaded** - Context from `/product-tree:contextualize`
 4. **Standards are pre-loaded above**
 
 If required evidence does not exist or lacks approval, return to the evidence workflow.
@@ -69,7 +69,7 @@ Run the product's own canonical commands when it documents them — a `AGENTS.md
 `allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
 
 Resolve `<python-source-paths>` to the implementation paths declared by the product's package metadata and named by the governed test imports or eval producer contract. Never assume a package directory name.
-Set `{node_path}` to the canonical full node path established by the loaded spec-tree context.
+Set `{node_path}` to the canonical full node path established by the loaded product-tree context.
 
 **Step 1 — Understand the selected evidence.** Read `/verify`'s routing result for the node and handle every selected type:
 

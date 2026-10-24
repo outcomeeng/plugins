@@ -29,7 +29,7 @@ from outcomeeng_evals.producer_prompt import (
 
 PROMPT_FILENAME = MATERIALIZED_PROMPT_FILENAME
 PROMPT_TEMPLATE_FILENAME = "prompt.template.md"
-PRODUCER_RELATIVE_PATH = "dist/claude/spec-tree/skills/audit-adr/SKILL.md"
+PRODUCER_RELATIVE_PATH = "dist/claude/product-tree/skills/audit-adr/SKILL.md"
 COMPLETE_PRODUCER_FIXTURE_PATH = (
     Path(__file__).parent.parent / "fixtures" / "producer_prompt" / "base-skill.md"
 )

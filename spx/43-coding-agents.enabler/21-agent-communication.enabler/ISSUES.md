@@ -22,4 +22,4 @@ The spec, the message-record decision, and the bundled script render a label onl
 
 **Why separate**: the repair is a skill-surface edit, which carries its own skill-auditor gate and plugin version step, and the eval prompt belongs to `spx/43-coding-agents.enabler/32-inter-worktree-coordination.enabler`.
 
-**Evidence**: `spec-tree:changes-reviewer` run `2026-10-09_21-16-21-663-cb5623784a49` on head `f2e86d4c4637f466795d15c787f442fb1b79205c`, a `consistency` finding at `src/plugins/coding-agents/skills/message-agents/SKILL.md` line 24.
+**Evidence**: `product-tree:changes-reviewer` run `2026-10-09_21-16-21-663-cb5623784a49` on head `f2e86d4c4637f466795d15c787f442fb1b79205c`, a `consistency` finding at `src/plugins/coding-agents/skills/message-agents/SKILL.md` line 24.

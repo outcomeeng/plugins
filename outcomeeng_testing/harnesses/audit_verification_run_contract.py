@@ -27,7 +27,7 @@ from outcomeeng.validation.audit_artifacts import (
     RETIRED_LANGUAGE_AUDIT_SKILL_TEMPLATE,
     SKILL_FILENAME,
     SKILLS_DIR_NAME,
-    SPEC_TREE_PLUGIN_NAME,
+    PRODUCT_TREE_PLUGIN_NAME,
     check_audit_artifact_contract,
     check_audit_runtime_surface,
     check_language_concern_surface,
@@ -322,12 +322,12 @@ def audit_contract_rejects_retired_concern_wrapper() -> bool:
     )
 
 
-def audit_contract_rejects_language_wrapper_under_spec_tree() -> bool:
+def audit_contract_rejects_language_wrapper_under_product_tree() -> bool:
     """Reject every language wrapper filename under the generic host."""
     language = source_language()
     return all(
         _language_wrapper_filename_is_rejected(
-            SPEC_TREE_PLUGIN_NAME,
+            PRODUCT_TREE_PLUGIN_NAME,
             filename,
         )
         for filename in language_specific_auditor_filenames(language)
@@ -338,7 +338,7 @@ def audit_contract_rejects_unrecognized_language_specific_wrapper() -> bool:
     """Reject a language-specific wrapper without a matching code skill."""
     with _valid_surface() as surface:
         filename = f"java-{ImplementationAuditConcern.CODE.value}-auditor.md"
-        _touch(surface / SPEC_TREE_PLUGIN_NAME / AGENTS_DIR_NAME / filename)
+        _touch(surface / PRODUCT_TREE_PLUGIN_NAME / AGENTS_DIR_NAME / filename)
         return bool(check_wrapper_surface(surface))
 
 
@@ -381,7 +381,7 @@ def implementation_audit_unit_ids_are_subject_specific() -> bool:
     """Keep coverage and finding identity distinct for each subject path."""
     language = source_language()
     provenance = implementation_audit_provenance(
-        agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
+        agent_plugin_version=_plugin_version(PRODUCT_TREE_PLUGIN_NAME),
         language_plugin_version=_plugin_version(language),
         tool_version=REQUIRED_SPX_VERSION,
     )
@@ -426,7 +426,7 @@ def implementation_audit_payloads_reject_empty_subject() -> bool:
     language = source_language()
     concern = ImplementationAuditConcern.CODE
     provenance = implementation_audit_provenance(
-        agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
+        agent_plugin_version=_plugin_version(PRODUCT_TREE_PLUGIN_NAME),
         language_plugin_version=_plugin_version(language),
         tool_version=REQUIRED_SPX_VERSION,
     )
@@ -508,7 +508,7 @@ def audit_contract_rejects_missing_generated_surface() -> bool:
 def audit_contract_rejects_missing_generated_audit_host() -> bool:
     """Reject a generated surface missing the audit-owning plugin."""
     with _valid_repository_surfaces() as root:
-        rmtree(root / PLUGIN_SURFACE_PATHS[-1] / SPEC_TREE_PLUGIN_NAME)
+        rmtree(root / PLUGIN_SURFACE_PATHS[-1] / PRODUCT_TREE_PLUGIN_NAME)
         return bool(check_audit_artifact_contract(root))
 
 
@@ -518,7 +518,7 @@ def audit_contract_rejects_missing_single_surface_audit_host() -> bool:
         root = Path(temporary_directory)
         surface = root / PLUGIN_SURFACE_PATHS[0]
         _populate_valid_surface(surface, source_language())
-        rmtree(surface / SPEC_TREE_PLUGIN_NAME)
+        rmtree(surface / PRODUCT_TREE_PLUGIN_NAME)
         return bool(check_audit_artifact_contract(root))
 
 
@@ -579,7 +579,9 @@ def runtime_errors_with_extra_directory() -> list[str]:
 def runtime_errors_with_retired_artifact_in_other_skill() -> list[str]:
     """Observe validation with a retired file in another audit skill."""
     with _valid_surface() as surface:
-        runtime_dir = surface / SPEC_TREE_PLUGIN_NAME / SKILLS_DIR_NAME / "audit-tests"
+        runtime_dir = (
+            surface / PRODUCT_TREE_PLUGIN_NAME / SKILLS_DIR_NAME / "audit-tests"
+        )
         _touch(runtime_dir / SKILL_FILENAME)
         _touch(runtime_dir / "scripts" / RETIRED_AUDIT_RUNTIME_FILENAMES[0])
         return check_audit_runtime_surface(surface)
@@ -632,7 +634,7 @@ def _populate_valid_surface(surface: Path, language: str) -> None:
         _touch(_language_concern_path(surface, language, concern))
     _touch(
         surface
-        / SPEC_TREE_PLUGIN_NAME
+        / PRODUCT_TREE_PLUGIN_NAME
         / AGENTS_DIR_NAME
         / IMPLEMENTATION_AUDITOR_FILENAME
     )
@@ -652,7 +654,7 @@ def _language_concern_path(surface: Path, language: str, concern: str) -> Path:
 
 def _retired_implementation_wrapper_is_rejected(filename: str) -> bool:
     with _valid_surface() as surface:
-        _touch(surface / SPEC_TREE_PLUGIN_NAME / AGENTS_DIR_NAME / filename)
+        _touch(surface / PRODUCT_TREE_PLUGIN_NAME / AGENTS_DIR_NAME / filename)
         return bool(check_wrapper_surface(surface))
 
 
@@ -699,7 +701,7 @@ def _start_implementation_audit_run(
     language = source_language()
     probes = implementation_audit_verification_probes(language)
     provenance = implementation_audit_provenance(
-        agent_plugin_version=_plugin_version(SPEC_TREE_PLUGIN_NAME),
+        agent_plugin_version=_plugin_version(PRODUCT_TREE_PLUGIN_NAME),
         language_plugin_version=_plugin_version(language),
         tool_version=_spx_version(spx_command),
     )

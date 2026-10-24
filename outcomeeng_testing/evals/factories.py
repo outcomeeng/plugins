@@ -72,12 +72,12 @@ _DEFAULT_CASES_FILENAME = "cases.jsonl"
 _DEFAULT_PROMPT_FILENAME = "prompt.md"
 _DEFAULT_EVAL_FILENAME = "eval.toml"
 _DEFAULT_EVAL_RULE = "rule"
-_DEFAULT_PLUGIN_DIR = Path("dist/claude/spec-tree")
+_DEFAULT_PLUGIN_DIR = Path("dist/claude/product-tree")
 DEFAULT_DEFINITION_THRESHOLD = 0.95
 DEFAULT_DEFINITION_TRIALS = 3
 DEFAULT_PLAN_CASE_IDS = ("alpha", "beta")
-DEFAULT_CI_OWNED_PATH = "src/plugins/spec-tree/skills/manage-pr/**"
-DEFAULT_CI_CHANGED_PATH = "src/plugins/spec-tree/skills/manage-pr/SKILL.md"
+DEFAULT_CI_OWNED_PATH = "src/plugins/product-tree/skills/manage-pr/**"
+DEFAULT_CI_CHANGED_PATH = "src/plugins/product-tree/skills/manage-pr/SKILL.md"
 DEFAULT_CI_CHANGED_PATH_STATUS = "M"
 DEFAULT_CI_RENAMED_PATH = "docs/manage-pr.md"
 DEFAULT_CI_COPIED_PATH = "docs/copied-suite.py"
@@ -705,7 +705,7 @@ def assert_definition_accepts_owned_path_shapes_ci_matches_identically() -> None
     """
 
     exact = "AGENTS.md"
-    recursive = f"src/plugins/spec-tree/skills/merge{OWNED_PATH_RECURSIVE_SUFFIX}"
+    recursive = f"src/plugins/product-tree/skills/merge{OWNED_PATH_RECURSIVE_SUFFIX}"
     assert OWNED_PATH_ALPHABET.fullmatch(exact)
     assert OWNED_PATH_ALPHABET.fullmatch(
         recursive.removesuffix(OWNED_PATH_RECURSIVE_SUFFIX)
@@ -848,7 +848,7 @@ def assert_root_instruction_changes_select_full_suites() -> None:
     with TemporaryDirectory() as tmp:
         eval_toml = make_eval_dir(
             Path(tmp) / "evals" / "rule",
-            plugin_dir="dist/claude/spec-tree",
+            plugin_dir="dist/claude/product-tree",
             owned_paths=(DEFAULT_CI_OWNED_PATH,),
             smoke_case_ids=DEFAULT_PLAN_CASE_IDS,
         )
@@ -900,7 +900,7 @@ def make_default_ci_command_harness(tmp_path: Path) -> DefaultCiCommandHarness:
     eval_root = tmp_path / "evals"
     eval_toml = make_eval_dir(
         eval_root / "rule",
-        plugin_dir="dist/claude/spec-tree",
+        plugin_dir="dist/claude/product-tree",
         owned_paths=(DEFAULT_CI_OWNED_PATH,),
         smoke_case_ids=DEFAULT_PLAN_CASE_IDS,
     )

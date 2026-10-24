@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "definition": "spec-tree:change-subagent-author",
+  "definition": "product-tree:change-subagent-author",
   "subjectCommit": "b05112746a7442a8c6ec7554af1fef923312aed7",
   "emittedDefinition": {
-    "path": "dist/claude/spec-tree/agents/change-subagent-author.md",
+    "path": "dist/claude/product-tree/agents/change-subagent-author.md",
     "sha256": "fd6dbfee2281ea35978c2afad5fa09681dc538d22171e01deebbb619db92d478",
     "frontMatter": [
       "model: \"sonnet\"",
@@ -22,8 +22,8 @@
     "claudeCodeVersion": "2.1.302",
     "plugins": [
       {
-        "name": "spec-tree",
-        "path": "/Users/shz/Code/outcomeeng/plugins/worktrees/executor-380/dist/claude/spec-tree",
+        "name": "product-tree",
+        "path": "/Users/shz/Code/outcomeeng/plugins/worktrees/executor-380/dist/claude/product-tree",
         "version": "0.106.13"
       }
     ],
@@ -33,7 +33,7 @@
     "toolUseId": "toolu_01Mh5q15oQ4DxSCv4kJGZHoj",
     "tool": "Agent",
     "input": {
-      "subagent_type": "spec-tree:change-subagent-author",
+      "subagent_type": "product-tree:change-subagent-author",
       "prompt": "not-a-target",
       "description": "Launch change-subagent-author",
       "run_in_background": false
@@ -41,13 +41,13 @@
   },
   "childStart": {
     "parentToolUseId": "toolu_01Mh5q15oQ4DxSCv4kJGZHoj",
-    "subagentType": "spec-tree:change-subagent-author",
+    "subagentType": "product-tree:change-subagent-author",
     "taskMessage": "not-a-target",
     "timestamp": "2026-10-18T00:36:23.413Z"
   },
   "childResult": {
     "status": "completed",
-    "agentType": "spec-tree:change-subagent-author",
+    "agentType": "product-tree:change-subagent-author",
     "resolvedModel": "claude-sonnet-5-5",
     "totalDurationMs": 4657,
     "totalTokens": 18520,

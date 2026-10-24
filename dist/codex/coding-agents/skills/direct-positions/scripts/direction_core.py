@@ -55,7 +55,7 @@ GROUP_FIELDS = frozenset({"label", "environment", "cwd_prefix", "exclusions"})
 GROUP_OPTIONAL = frozenset({"exclusions"})
 GROUP_TEXTS = frozenset({"label", "cwd_prefix"})
 DEFAULT_RESUME_LINE = (
-    "Run /spec-tree:understand, read the resume note at {resume_note}, "
+    "Run /product-tree:understand, read the resume note at {resume_note}, "
     "read the expectations at {expectations}, and read the mail on {channel}."
 )
 DEFAULTS: Mapping[str, Any] = {

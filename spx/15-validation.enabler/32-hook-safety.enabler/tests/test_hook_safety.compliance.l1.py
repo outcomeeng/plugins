@@ -205,12 +205,12 @@ def test_blocking_event_violation_reported_once_per_event() -> None:
 
 def test_version_pinned_cache_path_is_flagged() -> None:
     # NEVER: pass a hook command naming a version-pinned plugin cache path.
-    pinned = "python3 /Users/dev/.claude/plugins/cache/outcomeeng/spec-tree/0.57.33/scripts/x.py || echo '{}'"
+    pinned = "python3 /Users/dev/.claude/plugins/cache/outcomeeng/product-tree/0.57.33/scripts/x.py || echo '{}'"
     assert hook_config_violations(config("SessionStart", command=pinned))
 
 
 def _write_config(root: Path, runtime: str, cfg: Mapping[str, object]) -> None:
-    path = root / runtime / "spec-tree" / "hooks" / "hooks.json"
+    path = root / runtime / "product-tree" / "hooks" / "hooks.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cfg), encoding="utf-8")
 

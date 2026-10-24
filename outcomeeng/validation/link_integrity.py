@@ -1,4 +1,4 @@
-"""Walk spec-tree markdown for evidence links and validate their targets.
+"""Walk product-tree markdown for evidence links and validate their targets.
 
 Two evidence mechanisms appear inline in spec assertions: ``[test](path)``
 references a pytest collectable; ``[eval](path)`` references an

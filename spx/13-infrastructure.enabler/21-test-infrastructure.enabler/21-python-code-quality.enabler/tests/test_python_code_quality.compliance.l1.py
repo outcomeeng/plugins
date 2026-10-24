@@ -18,8 +18,8 @@ from outcomeeng_testing.harnesses.l3_collection import (
 from outcomeeng_testing.harnesses.python_code_quality import (
     run_check_full_dispatch,
 )
-from outcomeeng_testing.harnesses.spec_tree import (
-    marketplace_root_for_spec_tree_root_test,
+from outcomeeng_testing.harnesses.product_tree import (
+    marketplace_root_for_product_tree_root_test,
     marketplace_top_level_packages,
 )
 
@@ -73,7 +73,7 @@ def test_a_check_full_recipe_that_skips_the_full_gate_is_detected() -> None:
 
 def test_type_checking_steps_target_product_packages() -> None:
     packages = marketplace_top_level_packages(
-        marketplace_root_for_spec_tree_root_test(__file__)
+        marketplace_root_for_product_tree_root_test(__file__)
     )
 
     assert packages

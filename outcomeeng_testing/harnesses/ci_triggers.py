@@ -46,7 +46,7 @@ CI_TRIGGERS_PROPERTY_TEST_PATH = (
 _EVAL_DIR_GLOB_SUFFIX = "/**"
 _WORKFLOW_INDENT = " " * 6
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-_EVAL_WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "spec-tree-evals.yml"
+_EVAL_WORKFLOW = _REPO_ROOT / ".github" / "workflows" / "product-tree-evals.yml"
 
 # Probe fixtures: arbitrary representatives of a suite slug, a path an eval
 # owns, and a path no eval owns. Named once so a reader sees which literal
@@ -98,7 +98,7 @@ def eval_trigger_repo(
                 f'title = "{suite}"\n'
                 'cases = "cases.jsonl"\n'
                 'prompt = "prompt.md"\n'
-                'plugin_dir = "dist/claude/spec-tree"\n'
+                'plugin_dir = "dist/claude/product-tree"\n'
                 f"owned_paths = [\n{owned_toml}]\n"
                 f'ci_policy = "{policy.value}"\n',
                 encoding="utf-8",

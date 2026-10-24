@@ -11,7 +11,7 @@ from outcomeeng_testing.harnesses.python_code_quality import (
     standard_mode_violation_fixture_path,
     strict_mode_violation_fixture_path,
 )
-from outcomeeng_testing.harnesses.spec_tree import (
+from outcomeeng_testing.harnesses.product_tree import (
     run_marketplace_command,
 )
 

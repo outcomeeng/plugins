@@ -53,12 +53,12 @@ from outcomeeng_testing.evals.factories import (
 from outcomeeng_testing.evals.fakes import RecordingRunner, StubModelRunner
 from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
 
-PLAN_PLUGIN_DIR: Final = "dist/claude/spec-tree"
-PLAN_OWNED_PATH_PATTERN: Final = "src/plugins/spec-tree/skills/manage-pr/**"
+PLAN_PLUGIN_DIR: Final = "dist/claude/product-tree"
+PLAN_OWNED_PATH_PATTERN: Final = "src/plugins/product-tree/skills/manage-pr/**"
 PLAN_SMOKE_CASE_ID: Final = "happy-path"
-PLAN_OWNED_PATH_CHANGE: Final = "src/plugins/spec-tree/skills/manage-pr/SKILL.md\n"
+PLAN_OWNED_PATH_CHANGE: Final = "src/plugins/product-tree/skills/manage-pr/SKILL.md\n"
 PLAN_RENAMED_OWNED_PATH_CHANGE: Final = (
-    "R100\tsrc/plugins/spec-tree/skills/manage-pr/SKILL.md\tdocs/manage-pr.md\n"
+    "R100\tsrc/plugins/product-tree/skills/manage-pr/SKILL.md\tdocs/manage-pr.md\n"
 )
 PLAN_HARNESS_PATH_CHANGE: Final = "outcomeeng_evals/suite.py\n"
 PLAN_TEST_GENERATOR_PATH_CHANGE: Final = "outcomeeng_testing/generators/gate.py\n"
@@ -645,7 +645,7 @@ def assert_plan_full_mode_excludes_manual_evals() -> None:
             root / "evals" / "manual",
             title="manual",
             plugin_dir=PLAN_PLUGIN_DIR,
-            owned_paths=("src/plugins/spec-tree/skills/review-changes/**",),
+            owned_paths=("src/plugins/product-tree/skills/review-changes/**",),
             smoke_case_ids=(PLAN_MANUAL_CASE_ID,),
             ci_policy="manual",
         )

@@ -191,8 +191,8 @@ def toolchain_module_token_literals() -> tuple[TokenLiteral, ...]:
 def build_sample_agent_token_tree() -> AgentTokenBuild:
     """Build a sample source tree into a temporary directory and observe the emitted tree.
 
-    The sample source carries two spec-tree scripts that name the data file,
-    each in a skill directory of its own, a spec-tree script that does not in
+    The sample source carries two product-tree scripts that name the data file,
+    each in a skill directory of its own, a product-tree script that does not in
     a scripts directory of its own, and a script of another plugin that names
     it.
     """

@@ -5,10 +5,10 @@ malleability: spec
 # Go
 
 PROVIDES the complete Go development workflow — architecture, testing, implementation, review, and concurrency and unsafe-boundary auditing
-SO THAT Go projects using spec-tree
+SO THAT Go projects using product-tree
 CAN produce implementations governed by ADRs, verified by evidence-based tests, and audited for quality and soundness
 
-The Go plugin composes foundational methodology with language-specific standards and workflows. The `audit-go-{code|test|architecture}` skills carry no language-specific auditor agent; `implementation-auditor` composes all three, `adr-auditor` composes `audit-go-architecture`, and `test-evidence-auditor` composes `audit-go-test`, per [`spx/21-spec-tree.enabler/17-audit.adr.md`](spx/21-spec-tree.enabler/17-audit.adr.md). Go concurrency soundness and `unsafe`/cgo boundary soundness are part of the Go code audit (`audit-go-code`). The Go test conventions the skills teach are decided in [`spx/43-go.enabler/15-go-testing.adr.md`](spx/43-go.enabler/15-go-testing.adr.md).
+The Go plugin composes foundational methodology with language-specific standards and workflows. The `audit-go-{code|test|architecture}` skills carry no language-specific auditor agent; `implementation-auditor` composes all three, `adr-auditor` composes `audit-go-architecture`, and `test-evidence-auditor` composes `audit-go-test`, per [`spx/21-product-tree.enabler/17-audit.adr.md`](spx/21-product-tree.enabler/17-audit.adr.md). Go concurrency soundness and `unsafe`/cgo boundary soundness are part of the Go code audit (`audit-go-code`). The Go test conventions the skills teach are decided in [`spx/43-go.enabler/15-go-testing.adr.md`](spx/43-go.enabler/15-go-testing.adr.md).
 
 ## Assertions
 

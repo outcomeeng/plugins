@@ -172,7 +172,7 @@ One JSON object per line, appended to `$OE_TRACE_PATH`.
   "run_id": "01J8X...",
   "instance_id": "01J8Y...",
   "parent_instance_id": null,
-  "skill": "spec-tree:applying",
+  "skill": "product-tree:applying",
   "skill_version": "v17",
   "state": "CONSTRAINTS_VALIDATED",
   "ok": true,
@@ -204,7 +204,7 @@ with trace.span("REPO_SCANNED", args={"root": root}):
     scan(root)
 
 # Sub-skill invocation
-with trace.child(skill="spec-tree:testing", version="v3") as child:
+with trace.child(skill="product-tree:testing", version="v3") as child:
     ...
 ```
 
@@ -225,7 +225,7 @@ with trace.child(skill="spec-tree:testing", version="v3") as child:
 ```yaml
 contract_version: 1
 
-skill: spec-tree:applying
+skill: product-tree:applying
 skill_version: v17
 mode: normative # normative | descriptive
 provenance: authored # authored | inferred
@@ -302,10 +302,10 @@ A sub-agent contract is a normal contract whose `states` are drawn from the sub-
 skill: subagent:apply-and-verify
 delegates:
   required:
-    - spec-tree:applying
-    - spec-tree:testing
+    - product-tree:applying
+    - product-tree:testing
   forbidden:
-    - spec-tree:bootstrapping
+    - product-tree:bootstrapping
 ```
 
 `delegates` is checked against `parent_instance_id` linkage, not against state names. This gives Layer 1 routing verification *inside* a sub-agent, which harness-level skill-invocation signals cannot see.
@@ -368,7 +368,7 @@ Every violation must carry `evidence` pointing at concrete `seq` values. A viola
 
 ```json
 {
-  "contract": "spec-tree:applying",
+  "contract": "product-tree:applying",
   "skill_version": "v17",
   "mode": "normative",
   "run_id": "01J8X...",

@@ -1,0 +1,269 @@
+---
+name: audit-eval-evidence
+description: >-
+  Eval-evidence audit methodology — judges whether a spec node's eval suite
+  provides evidence its `[eval]` assertions are fulfilled, covering case
+  quality, verdict schema fit, and producer coupling.
+argument-hint: "<spec-node-path>"
+allowed-tools: Read, Grep, Glob, Skill, Bash(git merge-base:*), Bash(git diff:*), Bash(git branch --show-current:*)
+---
+
+<objective>
+
+A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the eval-evidence model's producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence criteria, with each finding on touched text naming the assertion or eval artifact, the failed property, and the evidentiary gap, and every other finding returned as `FILED`.
+
+</objective>
+
+<constraints>
+
+- NEVER modify eval artifacts, skill bodies, prompts, cases, history, or any other file — this audit produces a verdict, never a fix or a commit.
+- NEVER run evals, tests, validation, coverage, linters, type-checkers, or other deterministic verification inside the audit — establish evidence quality by reading.
+- ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding — the author repairs from the finding alone, and a finding missing any of the three leaves the repair unbounded.
+- NEVER approve prompt-only simulation as evidence for skill, agent, classifier, or script behavior — a prompt that simulates the producer scores the simulation, never the shipped producer the assertion governs.
+- NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the eval evidence for it.
+- NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding with severity `FILED`, and NEVER raise a recorded finding's severity or let a `FILED` finding start to reject unless the run names a changed basis. `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `FILED` form.
+
+</constraints>
+
+<essential_principles>
+
+**PRODUCER COUPLING FIRST.**
+
+An eval that never exercises the actual producing skill, agent, classifier, or script will pass regardless of what that producer contains. Check coupling before oracle quality or run history. For claims about skill behavior, a prompt that merely asks for a simulated verdict while restating the desired rules is not evidence about the skill.
+
+Five properties must hold, checked in strict order: producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence. A suite missing any property has zero evidentiary value for the assertion it claims to verify.
+
+**JUDGE BY READING.**
+
+This audit runs no deterministic verification. Establish evidence quality by reading `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, relevant run summaries, and the producing artifact.
+
+**SCHEMA VERDICT.**
+
+PASS, FAIL, or UNKNOWN. If any required evidence property is missing for any `[eval]` assertion, FAIL.
+
+</essential_principles>
+
+<audit_workflow>
+
+Bind the spec-node target: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the target is the one the request text carries, and the empty substitution binds nothing. If the request carries no target, return `UNKNOWN` with all five gate rows `UNKNOWN`, each carrying one `REJECT` finding with rule `missing-target`, this skill's file as `file`, `line: null`, and a message naming the required spec-node path. Preserve the supplied target string and set `metadata.branch` to JSON `null`; never inspect an inferred scope.
+
+<step name="load_context">
+
+**Step 1: Load context**
+
+Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/evidence-model.md`
+
+Use skill `product-tree:contextualize` on the spec node whose eval evidence is being audited. This loads the spec's assertions, ancestor ADRs/PDRs, and hierarchy context.
+
+Do not proceed without a `<PRODUCT_TREE_CONTEXT>` marker. Run `git branch --show-current` for branch metadata; use JSON `null` when unavailable, and preserve an empty string for a detached HEAD.
+
+</step>
+
+<step name="map_assertions">
+
+**Step 2: Map `[eval]` assertions to eval artifacts**
+
+Read the spec's Assertions section. For each `[eval]` assertion, extract:
+
+| Field          | Extract                                                                                            |
+| -------------- | -------------------------------------------------------------------------------------------------- |
+| Assertion text | The claim being evaluated                                                                          |
+| Eval link      | Path from `([eval](path/to/eval.toml))`                                                            |
+| Eval directory | Directory containing `eval.toml`, prompt, and cases                                                |
+| Producer       | The skill, agent, classifier, script, or command the assertion claims emits the structured verdict |
+| Link status    | File exists or missing                                                                             |
+
+Attribute a missing eval definition to `gate-1-producer-coupling`, a missing prompt to `gate-1-producer-coupling`, missing cases to `gate-2-oracle-quality`, and missing history to `gate-5-run-evidence`. Mark that row `FAIL` and add a `REJECT` finding naming the assertion, missing path, and failed evidence property. Inspect the remaining available artifacts; mark any other property that the absence prevents inspecting `UNKNOWN` with a finding explaining the missing prerequisite. A known failure takes precedence over an unknown result for the same row.
+
+Skip `[test]`, `[audit:{rule-slug}]`, and the pathless `[audit]` that the foundation admits for a toolchain without slug support. They belong to their own evidence lanes.
+
+When the target has no `[eval]` assertions, return `UNKNOWN` with all five gate rows `UNKNOWN`, each carrying an `INFO` finding with rule `no-eval-assertions` at the target spec explaining that no eval evidence is applicable. Preserve the target and established branch metadata; never imply that evidence was inspected.
+
+</step>
+
+<step name="audit_producer_coupling">
+
+**Step 3a: Producer coupling**
+
+Classify how the eval reaches the producer:
+
+| Category         | Definition                                                                                  | Verdict                                                                |
+| ---------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Direct           | The eval runner invokes the producing skill, agent, classifier, script, or command directly | Proceed                                                                |
+| Harness-mediated | The eval invokes a harness that loads and runs the producer without replacing its behavior  | Proceed after verifying the harness chain                              |
+| Prompt-loaded    | The prompt loads the producer body as context while the case drives a verdict task          | Proceed only when the artifact under audit is the loaded producer text |
+| Simulation       | The prompt restates the desired policy or asks for a simulated verdict without the producer | REJECT                                                                 |
+| False            | Metadata names the producer but the prompt or harness never uses it                         | REJECT                                                                 |
+| Unknown          | The artifact path cannot establish how the producer is reached                              | REJECT                                                                 |
+
+When `eval.toml` declares `prompt_source.kind = "producer-section"`, treat the materialized prompt as Prompt-loaded only after verifying the producer path, selected section, and prompt template exist and `prompt.md` is current with that source. The selected producer section is the artifact under audit for that suite; a mutation to that section must change the materialized prompt. Do not require the eval runner to invoke the whole skill, agent, classifier, or script when the assertion is about the selected section's behavior: the loaded section is the producer artifact for that suite. A hand-authored prompt that copies the same policy without `prompt_source` remains Simulation.
+
+Apply the evidence model's `<producer_coupling>` counterfactual reading procedure. If the eval would still pass after the identified producer mutation, classify as Simulation or False and REJECT.
+
+</step>
+
+<step name="audit_oracle_independence">
+
+**Step 3b: Oracle independence**
+
+Read `prompt.md` and `cases.jsonl` side by side. Check whether the prompt sent to the producer leaks the expected verdict, expected finding IDs, exact answer table, or rule mapping in a way that makes the case self-answering.
+
+Expected fields belong in the grader input, not in the task prompt the producer answers. A case may include expected verdict data for deterministic scoring; the model-facing prompt must still require the producer to infer the verdict from the scenario and its own methodology.
+
+Self-answering prompt or case construction is REJECT — "oracle leakage."
+
+</step>
+
+<step name="audit_alignment">
+
+**Step 3c: Assertion alignment**
+
+Read the spec assertion, the eval cases, and the expected verdict fields. Answer:
+
+1. Does each expected verdict field correspond to behavior the assertion claims?
+2. Do the negative cases target the assertion's failure mode?
+3. Could the assertion be unfulfilled while the eval suite passes?
+
+If the assertion could be unfulfilled while the suite passes, REJECT — "misaligned."
+
+</step>
+
+<step name="audit_falsifiability">
+
+**Step 3d: Falsifiability**
+
+Name a concrete mutation to the producing artifact that would make at least one case fail. For `producer-section` suites, the mutation targets the selected producer section and reaches the eval through prompt materialization. Write it down:
+
+```text
+Producer: the /manage-pr skill's post-merge guidance section
+Mutation: replace the post-merge marketplace sync rule with unrelated text
+Impact: the post-merge-sync-required case returns REJECT because the producer omits the required follow-up
+```
+
+Cannot name a mutation to the producer that changes the eval result -> REJECT — "unfalsifiable."
+
+</step>
+
+<step name="audit_run_evidence">
+
+**Step 3e: Run evidence**
+
+Read `history.jsonl` and, when available, the referenced run summary. Check that the committed history contains a successful run for the current eval definition, threshold, and case set.
+
+Budget-exhausted, timeout, interrupted, or infrastructure-failed runs are operational evidence only. They do not prove behavior. A passing history row for a stale prompt, stale case set, or different producer does not prove the current assertion.
+
+Missing or stale run evidence is REJECT — "missing run evidence" or "stale run evidence."
+
+</step>
+
+<step name="verdict">
+
+**Step 4: Issue verdict**
+
+Scan all findings across all `[eval]` assertions and classify each as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states: a finding on touched text keeps severity `REJECT`, and every other finding becomes `FILED`. If any assertion has a property failure on touched text: FAIL.
+
+</step>
+
+</audit_workflow>
+
+<verdict_format>
+
+Always include `metadata.branch`: the output of `git branch --show-current`, an empty string for a detached HEAD, or JSON `null` when unavailable.
+
+Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
+
+Emit all five gate rows exactly once. Derive `overall` in order: `FAIL` if any gate is `FAIL`; otherwise `UNKNOWN` if any gate is `UNKNOWN`; otherwise `PASS`. Findings within each row carry severity `REJECT` for failed evidence properties on touched text, `FILED` for a finding outside touched text, which fails no row and additionally carries `key`, `baseRefEvidence`, and `issuesEntry` (`path`, `heading`), and `WARNING` or `INFO` for non-blocking observations.
+
+```json
+{
+  "schema_version": 1,
+  "skill": "audit-eval-evidence",
+  "target": "<spec-node-path>",
+  "overall": "PASS | FAIL | UNKNOWN",
+  "rows": [
+    {
+      "name": "gate-1-producer-coupling",
+      "status": "PASS | FAIL | UNKNOWN",
+      "findings": [
+        {
+          "id": "f-001",
+          "file": "<eval-artifact-or-producer-file>",
+          "line": null,
+          "rule": "producer-coupling",
+          "severity": "REJECT | FILED | WARNING | INFO",
+          "message": "<one-line evidentiary gap>"
+        },
+        {
+          "id": "f-002",
+          "file": "<eval-artifact-or-producer-file>",
+          "line": null,
+          "rule": "producer-coupling",
+          "severity": "FILED",
+          "message": "<one-line evidentiary gap>",
+          "key": "<file>:<assertion>:<rule>",
+          "baseRefEvidence": "<base>..<head>",
+          "issuesEntry": { "path": "<governing-node>/ISSUES.md", "heading": "<entry heading>" }
+        }
+      ]
+    },
+    {
+      "name": "gate-2-oracle-quality",
+      "status": "PASS | FAIL | UNKNOWN",
+      "findings": []
+    },
+    {
+      "name": "gate-3-assertion-alignment",
+      "status": "PASS | FAIL | UNKNOWN",
+      "findings": []
+    },
+    {
+      "name": "gate-4-falsifiability",
+      "status": "PASS | FAIL | UNKNOWN",
+      "findings": []
+    },
+    {
+      "name": "gate-5-run-evidence",
+      "status": "PASS | FAIL | UNKNOWN",
+      "findings": []
+    }
+  ],
+  "metadata": { "branch": null }
+}
+```
+
+</verdict_format>
+
+<failure_modes>
+
+**Failure 1: Approved a prompt-only skill simulation**
+
+Claude accepted an eval that asked Claude to simulate a skill verdict from inline rules while never loading or invoking the real skill. Replacing the real skill body with unrelated text did not change the eval result, so the eval proved the prompt's rubric, not the skill.
+
+How to avoid: Step 3a checks producer coupling first. Prompt-only simulation is REJECT for claims about producer behavior.
+
+**Failure 2: Treated a budget failure as behavioral evidence**
+
+Claude read a budget-exhausted eval run and treated the failed suite as evidence the rule was wrong. The run never completed enough cases to prove behavior.
+
+How to avoid: Step 3e separates operational failures from behavioral pass evidence. Budget, timeout, and interruption rows never prove assertion fulfillment.
+
+</failure_modes>
+
+<success_criteria>
+
+The verdict is sound when:
+
+- Every `[eval]` assertion's suite was judged on all five evidence properties with none skipped — producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence.
+- The verdict states an overall PASS/FAIL/UNKNOWN through the JSON `overall` field and every applicable gate row carries its determination.
+- Each REJECT finding lies on touched text and is falsifiable: it names the assertion or eval artifact, the failed evidence property, the evidentiary gap, and how the eval could pass while the assertion is unfulfilled; every finding outside touched text appears as `FILED` with its key, `baseRefEvidence`, and `issuesEntry`.
+- No deterministic command was run inside the audit; evidence quality was established by reading the eval artifacts, producing artifact, and committed run summaries.
+- The same target, governing requirements, eval artifacts, and run evidence produce the same gate statuses and overall verdict.
+
+</success_criteria>
+
+<reference_guides>
+
+- `${CLAUDE_SKILL_DIR}/references/evidence-model.md` — eval evidence properties, artifact taxonomy, and rejection categories.
+- `${CLAUDE_SKILL_DIR}/references/touched-text.md` — touched text, finding key, severity retention, and the `FILED` finding form.
+
+</reference_guides>

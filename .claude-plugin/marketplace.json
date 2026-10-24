@@ -34,9 +34,9 @@
       "description": "Prose craft through a matched triple (/author-prose-architecture, /author-prose, /audit-prose) over caller-supplied kind layers: interface, documentation, copy"
     },
     {
-      "name": "spec-tree",
-      "source": "./dist/claude/spec-tree",
-      "description": "Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-eval-evidence, /audit-adr, /audit-pdr, /audit-implementation, /audit-specs, /audit-changeset-coherence, /apply, /commit-changes, /claim-change, /release-change, /close-change, /refocus, /diagnose"
+      "name": "product-tree",
+      "source": "./dist/claude/product-tree",
+      "description": "Product Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-eval-evidence, /audit-adr, /audit-pdr, /audit-implementation, /audit-specs, /audit-changeset-coherence, /apply, /commit-changes, /claim-change, /release-change, /close-change, /refocus, /diagnose"
     },
     {
       "name": "coding-agents",

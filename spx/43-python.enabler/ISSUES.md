@@ -30,7 +30,7 @@
 
 **Evidence**: `run-2026-10-16_23-46-46-029-7adab72f9537.jsonl`, finding `composed_dependency_form`, severity blocking.
 
-**Settlement condition.** Each dependency reads ``Use skill `spec-tree:author`.`` and ``Use skill `spec-tree:understand`.``, and the changeset passes `instructions:skill-auditor` over the skill.
+**Settlement condition.** Each dependency reads ``Use skill `product-tree:author`.`` and ``Use skill `product-tree:understand`.``, and the changeset passes `instructions:skill-auditor` over the skill.
 
 ## `author-python-architecture` states one property twice
 

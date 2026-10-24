@@ -1,14 +1,14 @@
 # TypeScript Workflow
 
 PROVIDES operational TypeScript workflows for implementation, remediation, code review, test review, and architecture review
-SO THAT TypeScript projects using spec-tree
+SO THAT TypeScript projects using product-tree
 CAN turn specs, decisions, and test standards into source changes that survive adversarial audit
 
 ## Assertions
 
 ### Compliance
 
-- ALWAYS: TypeScript implementation work starts from complete spec-tree context, governing ADRs/PDRs, and lower-index TypeScript standards — code follows declared product truth rather than local precedent ([audit])
+- ALWAYS: TypeScript implementation work starts from complete product-tree context, governing ADRs/PDRs, and lower-index TypeScript standards — code follows declared product truth rather than local precedent ([audit])
 - ALWAYS: TypeScript coding workflows distinguish discovery from authority — code search locates artifacts to reuse, while specs, decisions, local instructions, and skills decide how the work is done ([audit])
 - ALWAYS: implementation and remediation workflows keep source changes aligned with TypeScript architecture standards, product validation commands, and TypeScript test standards — lower-index enablers provide the rules this workflow consumes ([audit])
 - ALWAYS: TypeScript code uses strict static types, typed boundaries for unknown input, source-owned vocabulary, and injected side-effect dependencies — source modules expose contracts that callers and tests can observe without replacement mocks ([audit])

@@ -169,9 +169,9 @@ from tempfile import TemporaryDirectory
 
 
 @contextmanager
-def with_test_env(config: Config) -> Iterator[SpecTreeEnv]:
+def with_test_env(config: Config) -> Iterator[ProductTreeEnv]:
     with TemporaryDirectory() as tmp:
-        env = SpecTreeEnv(root=Path(tmp), config=config)
+        env = ProductTreeEnv(root=Path(tmp), config=config)
         env.initialize()
         yield env
 ```

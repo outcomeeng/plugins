@@ -1,0 +1,211 @@
+---
+name: open-pr
+user-invocable: false
+description: >-
+  PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and the first management pass. Invoked by exact name as a composed lifecycle protocol.
+allowed-tools: Read, Write, Glob, Grep, collaboration.spawn_agent, collaboration.wait_agent, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(git status:*), Bash(gh repo view:*), Bash(git remote get-url origin), Bash(git fetch:*), Bash(git merge-base:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(gh pr view:*), Bash(git branch --show-current), Bash(git push -u origin HEAD:refs/heads/*), Bash(git log:*), Bash(gh pr create:*), Bash(gh pr checks:*), Bash(mktemp -d), Bash(printf:*)
+---
+
+<objective>
+A pull request opened ready for review.
+</objective>
+
+<project_specialization>
+After loading this skill, check whether `spx/local/open-pr.md` exists at the repository root. Read it if present and apply it as a product-specific addition to this flow (extra pre-flight checks, additional required body sections, project-specific push commands).
+
+The overlay MUST NOT: skip or weaken the local deterministic-verification, evidence-auditor, or local-review predicates of `VERIFICATION_READINESS`, open the PR before `VERIFICATION_READINESS` holds, open the PR as a draft gating step, or weaken the upstream-safety check.
+
+Production-relevance recognition, merge command, and local deterministic verification scope live in `spx/local/merging.md`, so /manage-pr and /open-pr see the same rules. The local deterministic-verification commands come from the project's own `AGENTS.md` convention, with the overlay allowed to centralize scope and escalation cases.
+</project_specialization>
+
+<the_opening_flow>
+
+Walk these steps in order. Every step is a routine workflow operation — verify, review, push, open — and runs directly. The opening flow contains no operator-confirmation pauses.
+
+**Step 0 — Load references.** Use skill `product-tree:merging-standards`. It supplies the shared vocabulary. Use skill `product-tree:commit-changes`. It supplies the commit type and scope classification. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 1; invoking the compact loader alone does not load the tagged policy sections used below.
+
+**Step 1 — GATE: Pre-flight.** Run `spx worktree status` from the assigned root and require a fresh passing /merging-standards `<occupancy_preflight>` before any checkout-sensitive mutation. Run `<repository_target_gate>`, every overlay-declared preflight check per `<overlay_safety_checks>`, then `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition. Run this step before the push even when an earlier lifecycle entry already ran a preflight before branch or commit work; the later check guards the checkout state at publication time.
+
+<repository_target_gate>
+
+`gh pr create` names no repository, so it opens the PR against whatever `gh` resolves as the base — and for a fork `gh` resolves that to the **parent**, not to the repository the branch was pushed to. A flow that never resolves the target can therefore publish a branch to one repository and open a PR against a different organization's. Resolve both repositories and the operator's access class before the push, never after:
+
+```bash
+pr_target=$(gh repo view --json isFork,parent,nameWithOwner --jq 'if .isFork then .parent.nameWithOwner else .nameWithOwner end')
+push_target=$(gh repo view "$(git remote get-url origin)" --json nameWithOwner --jq '.nameWithOwner')
+access=$(gh repo view "$pr_target" --json viewerPermission --jq '.viewerPermission')
+printf 'pr_target=%s push_target=%s access=%s\n' "$pr_target" "$push_target" "$access"
+```
+
+Every condition below must hold, each reported with the exact resolved values:
+
+- `access` is `ADMIN`, `MAINTAIN`, or `WRITE`. `READ`, `NONE`, or an empty result STOPS the flow — a pull request is never opened against a repository the operator does not control.
+- `pr_target` equals `push_target`. A difference means the checkout is a fork and `gh` has resolved the base to the upstream. STOP, name both repositories, and return the decision to the operator; never open the PR against an upstream on the strength of a resolved default.
+
+`pr_target` reads `isFork` and `parent` rather than `nameWithOwner` alone, because `gh repo view` with no argument reports the checkout's own repository — for a fork, the fork. `push_target` resolves the same repository through the `origin` URL, so comparing the two bare names returns equal for every checkout, fork included, and the gate the comparison implements would pass without ever examining the case it exists to catch. Selecting the parent when `isFork` is true makes `pr_target` the repository `gh pr create` will actually open against.
+
+Access class comes from `viewerPermission` alone. A remote URL, the authenticated account name, or a successful push proves nothing about it: the operator owns repositories across several organizations, and neither `git remote` nor the account identity reports the permission that governs this one.
+
+</repository_target_gate>
+
+**Step 2 — GATE: Classify topology.** Run /merging-standards `<branch_topology>` peer or stacked gate. Repair or reclassify before pushing if the gate fails.
+
+<step name="verification_readiness_decision">
+
+**Step 3 — GATE: Evaluate `VERIFICATION_READINESS`.** Per /merging-standards `<authority_gates>`, the PR opens ready only when `VERIFICATION_READINESS` holds — all predicates below.
+
+*(a) Deterministic verification.* Run the project's local deterministic verification per /merging-standards `<local_deterministic_scope>` — validation and testing for the touched scope, escalating only when the overlay or risk evidence requires a wider local run. Capture verbose stdout/stderr in a log file inside a `mktemp -d` directory, inspect only the exit status, summary, and failing sections, and leave the directory in place. It must report success; fix failures and re-run until green.
+
+Invoke `/commit-changes` after deterministic verification passes and before any evidence Auditor or Reviewer agent session is dispatched. Confirm the worktree is clean and record the full checkpoint `HEAD`. After any further change, commit the new version before another evidence Auditor or Reviewer agent session reads it.
+
+*(b) Evidence-auditor predicates.* For each evidence Auditor the merge composition in /merging-standards `<authority_gates>` selects, apply /merging-standards `<verification_dispatch_readiness>`, then dispatch it for the exact committed changeset as the `<authority_gates>` evidence-audit predicate directs: `product-tree_test-evidence-auditor` and `product-tree_eval-evidence-auditor`, each for the owning node that predicate names. Handle rejected, failing, or unknown verdicts per /merging-standards `<auditor_verdicts>`: repair the defect class, re-run deterministic verification, create a new checkpoint, and re-run that Auditor within the gate cap /merging-standards `<authority_gates>` states. A second counted rejection on an Auditor's gate stops the flow before the push, reporting the gate, both results with the run token of each Verifier that records a run, and the outstanding defect class; NEVER launch that Auditor a third time.
+
+*(c) Local review within the gate cap.* When the merge composition in /merging-standards `<authority_gates>` selects the local review, apply /merging-standards `<verification_dispatch_readiness>`, then run the `product-tree_changes-reviewer` agent on the exact committed changeset — it runs in an isolated agent session, so the verdict is not biased by work performed in the Author's agent session. Invoke it per /merging-standards `<local_review_invocation>` with only the raw committed scope and no interpretive scope, severity pre-filter, or instruction on what to emphasize; the Reviewer reads the repository's own instructions and the shared taxonomy itself. The Reviewer emits findings only (no decision/verdict); process its findings by **validity and phase** per /merging-standards `<review_classification>` — this is the before-open phase:
+
+- **Validate each finding** against its cited rule, the product-local / language / product-tree governance, and the PDR/ADR decisions. Drop any finding the citation does not support.
+- **Apply every valid `BLOCKING` finding that belongs; route every `DEBT` finding on touched or invalidated text to its ruling.** Treat each valid finding as defect-class evidence: sweep the touched node(s) for parallel instances under the clause the finding cites, as the cited standard defines it, and the same source contract, evidence pattern, lifecycle step, or generated-source relationship. Fix the cited site and every instance that clause covers, change nothing the clause does not require, record each repair's clause and the check that shows its class closed for the next `VERIFICATION_DISPATCH_READY` record, commit via /commit-changes, and re-invoke the Reviewer within the gate cap /merging-standards `<authority_gates>` states. A second counted rejection of the local review stops the flow before the push, reporting both results with the run token of each Verifier that records a run and the outstanding defect class; NEVER invoke the Reviewer a third time. When a valid `BLOCKING` finding's fix is too large to belong in this changeset, **split it out** — the work leaves the diff, recorded in the owning node's `ISSUES.md` with a reason naming why it is large — instead of applying it here. A `DEBT` finding on text the changeset touches or invalidates waits for a ruling per /merging-standards `<authority_gates>`; apply it only as the ruling directs, record the ruling before the PR exists in the commit-message form the recording-a-ruling bullet of the debt rulings paragraph of /merging-standards `<authority_gates>` states, record a finding a ruling accepts once in the governing node's `ISSUES.md` under a heading that ends with its entry key as three code spans per the accepted-finding paragraph of /merging-standards `<authority_gates>`, and it counts toward no gate's rejection cap.
+- **Passed** when the committed changeset carries no unapplied valid `BLOCKING` finding that belongs and no `DEBT` finding on touched or invalidated text without a ruling or `TRACKED` label. Severity never decides a `BLOCKING` finding; validity and the before-open phase do, and a ruling decides a `DEBT` finding.
+
+The iteration accumulates commits on the branch — the eventual push at Step 4 sends them all. After every iteration that commits, re-run /merging-standards `<branch_hygiene>`, re-run local deterministic verification, and re-run the evidence-auditor predicates for touched evidence surfaces and the local review where the merge composition selects them — all `VERIFICATION_READINESS` predicates must hold together on the exact tree the push publishes (the joint gating of /manage-pr Step 6: a verification-driven fix is a diff the review has not seen, an evidence-audit fix changes the evidence surface, and a review-driven fix is a tree verification has not covered). Every agentic re-run counts toward its own gate's cap; deterministic verification re-runs outside the cap. When a gate reaches its second counted rejection before one tree passes every predicate, the flow stops with no push and no PR, reporting that gate, both results with the run token of each Verifier that records a run, and the outstanding defect class. `VERIFICATION_READINESS` holds only when (a), (b), and (c) hold; only then proceed. The before-open pass is the strictest point in the lifecycle: every valid `BLOCKING` finding that belongs is applied here, every `DEBT` finding on touched or invalidated text is ruled, and only split-out work survives to the CI review, which on the open PR must show no unresolved finding on touched or invalidated text (a `BLOCKING` finding fixed, dropped as unbacked, or deferred by a recorded `ISSUES.md` entry naming why its fix is a separate larger concern; a `DEBT` finding ruled or labeled `TRACKED`).
+
+</step>
+
+**Step 4 — GATE: Push.** Use the explicit destination ref form from /merging-standards `<push_semantics>`:
+
+```bash
+branch=$(git branch --show-current)
+git push -u origin HEAD:refs/heads/"${branch}"
+```
+
+If the product defines a custom branch-push command, follow AGENTS.md instead — the explicit destination ref must remain part of any custom command.
+
+**Step 5 — GATE: Open the PR ready.** The PR body is a payload: it spans lines and carries code spans, quotes, or shell metacharacters. It reaches `gh` through a file, never through a heredoc, a pipe, or an inline `--body` argument.
+
+- ALWAYS: write the body with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to this agent and branch, such as `pr-body-<branch-slug>-<agent-session-id>.md`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
+- ALWAYS: pass the file with `--body-file <body-file>`, with the path written out literally.
+- NEVER: remove the body file; the harness clears its scratch directory.
+- NEVER: place the body file in the repository, in a fixed path, or in a directory shared by other sessions.
+
+The PR opens `ready_for_review` because `VERIFICATION_READINESS` holds (Step 3); `gh pr create` defaults to ready, so no draft flag is passed. Write the body from `<body_template>` to the file, then run:
+
+```bash
+GIT_TERMINAL_PROMPT=0 gh pr create --title "<commit-subject under 70 chars per /commit-changes>" --body-file <body-file> --head <branch>
+```
+
+Resolve `<branch>` with `git branch --show-current` first and write it literally.
+
+Flag rationale:
+
+- No `--draft` — the PR opens ready per /merging-standards `<authority_gates>`; `VERIFICATION_READINESS` (Step 3) is the gate that earns the open, and opening ready fires every CI review (Codex and the CI review) at once. A stacked PR is the one exception — pass `--draft` only when `<branch_topology>` holds it draft until its base merges.
+- `--title` and `--body-file` — explicit title plus body from the scratch file; matches /commit-changes conventions.
+- `--head` — the feature branch, stated explicitly so the head ref never depends on gh's inference. It suppresses gh's fork/push-target prompt, which is safe only because `<repository_target_gate>` has already resolved and checked both repositories; without that gate the suppressed prompt would hide a cross-repository target rather than settle it.
+- `--base` — omit only for peer branches targeting the repo default; specify the previous stack branch for stacked PRs.
+- `GIT_TERMINAL_PROMPT=0` — disables git credential prompts. (gh detects non-TTY stdin/stdout and skips its own prompts automatically; no `GH_*` env var is needed.)
+
+The file carries the body verbatim, so backticks, `$variables`, quotes, and `!` pass through literally. Never embed multi-line content in `--body "..."` — gh does not expand `\n` escapes. Never use command substitution or post-hoc text substitution to assemble or repair the body; rewrite the file.
+
+Do not use `--fill`. If both `--fill` and `--body-file` are passed, the explicit body wins; `--fill` is then dead weight.
+
+**Step 6 — Start the first management pass.** Use skill `product-tree:manage-pr`. Resolve the PR number, then invoke `/manage-pr` on that PR. `/manage-pr` owns pending checks, CI review waits, reinspection, merge gates, and post-merge closeout evidence.
+
+**Exit.** Surface the PR URL. The managing flow takes over.
+
+</the_opening_flow>
+
+<title_format>
+
+The PR title is one commit-subject line under 70 characters per /commit-changes:
+
+- Single commit on the branch -> use that commit's subject as-is.
+- Multiple commits -> synthesize one subject capturing the dominant type and scope. Read `git log --format=%s <base>..HEAD`, pick the dominant type from /commit-changes `<commit_types>`, write a description that summarizes the change across the commits (not a commit list).
+
+Examples:
+
+```text
+feat(auth): add OAuth2 token refresh
+feat(auth): add SMS and authenticator-app two-factor support
+refactor: extract validation into dedicated module
+fix(parser): handle nested expressions and empty operands
+```
+
+</title_format>
+
+<body_template>
+
+The PR body is markdown prose written to the scratch body file `<body-file>` of Step 5. Default template:
+
+```text
+## Summary
+
+- <one or two short bullets describing the change at a glance>
+
+## Background
+
+<context: what motivated this change, what problem it solves, what user-visible behavior it affects>
+
+## Changes
+
+- <bulleted list of what was modified, grouped by area>
+
+## Test plan
+
+- [ ] <verification step the Reviewer can run>
+- [ ] <additional check>
+
+## Refs
+
+- <full spec node path>
+- <issue refs, e.g. Closes #123>
+```
+
+Adapt by change type:
+
+| Change type | Adaptation                                                                                |
+| ----------- | ----------------------------------------------------------------------------------------- |
+| Bug fix     | Add a **Root cause** subsection in Background. Test plan includes the failing repro.      |
+| Feature     | Expand Summary into a short user-facing description. Test plan lists acceptance criteria. |
+| Refactor    | State the no-behavior-change invariant. Test plan: "existing tests still pass".           |
+| Spec        | Link the spec nodes affected; describe what is now declared.                              |
+| Docs        | Drop Test plan; describe what readers gain.                                               |
+
+Body explains WHY for the Reviewer; the diff already shows WHAT. Reference spec nodes by full path from `spx/`. No `<self_reference>` violations per /merging-standards.
+
+</body_template>
+
+<shell_scope>
+
+The narrow Bash grants in frontmatter authorize approval-free execution. Run required consumer-declared commands from the product's root guide or active PR-opening specialization through normal harness per-call approval when they fall outside those grants, then continue the governed step without a separate lifecycle confirmation. When the harness exposes no approval path, stop with `MERGE_BLOCKED:project-command-approval-unavailable`, naming the command and declaring surface; never skip the command, widen `allowed-tools` during execution, or add repository-specific grants to this portable skill.
+
+</shell_scope>
+
+<failure_modes>
+
+**Opened a PR gated on an earlier tree.** Claude established `VERIFICATION_READINESS`, then committed fixes during the repair iterations, and opened the PR without re-running deterministic verification and the evidence-auditor predicates and local review the merge composition selects on the final accumulated tree — so the opened diff was gated at an earlier state than the one CI receives. After every iteration that commits, re-run /merging-standards `<branch_hygiene>`, local deterministic verification, and the evidence-auditor predicates and local review the merge composition selects, treating `VERIFICATION_READINESS` as holding only when all predicates pass together on the exact tree the push publishes — never with the later-fixed predicate established before the last commit (Step 3).
+
+**Push rejection after local readiness.** Claude reached `VERIFICATION_READINESS`, then the explicit destination push was rejected because the remote branch advanced or credentials failed. For a remote advancement: Use skill `product-tree:sync-base`. Re-run it, re-establish `VERIFICATION_READINESS` on the resulting tree, and push again; for credentials or permission failure, stop with the exact command output and no PR mutation.
+
+**Duplicate PR already exists.** Claude attempted `gh pr create` even though the branch already had an open PR. Detect an existing PR before creation or classify the `gh pr create` failure; switch to /manage-pr for that PR instead of opening a second PR or changing the branch name.
+
+**Stacked topology opened ready too early.** Claude treated a stacked branch like a peer branch and opened it ready against the default base. When `<branch_topology>` classifies a stack, set the previous stack branch as `--base` and keep the PR draft until its base merges; do not satisfy `VERIFICATION_READINESS` against the wrong base.
+
+**Repair stall.** Claude repeated deterministic, evidence-audit, and review fixes without reaching one tree where all predicates held. Stop when a gate reaches its second counted rejection or when the next fix would expand the changeset beyond the requested scope, record the split-out `BLOCKING` finding's concern in the owning node's `ISSUES.md`, and run one final deterministic verification and the evidence-auditor predicates and review the merge composition selects on the narrowed branch before opening.
+
+</failure_modes>
+
+<success_criteria>
+
+The opening flow has succeeded when:
+
+- /merging-standards and /commit-changes are loaded before the flow begins, `merge-policy.md` is read directly from /merging-standards `<reference_index>` before any tagged policy section is used, and a fresh `spx worktree status` reading passes `<occupancy_preflight>` before checkout-sensitive mutation.
+- `<repository_target_gate>` passed before push: `pr_target` and `push_target` were resolved and equal, and `viewerPermission` on `pr_target` returned `ADMIN`, `MAINTAIN`, or `WRITE`. All three values appear verbatim in the report.
+- /merging-standards `<branch_hygiene>` and `<branch_topology>` gates pass before push.
+- `VERIFICATION_READINESS` held before the PR opened: local deterministic verification passed on the diff that will be pushed, every evidence-auditor predicate the merge composition selects passed, and the local review passed within the gate cap where the composition selects it — every valid `BLOCKING` finding that belongs was applied, any valid `BLOCKING` finding too large to belong was split out (recorded in the owning node's `ISSUES.md`), every `DEBT` finding on touched or invalidated text has a ruling that was acted on, and unbacked findings were dropped. Severity did not gate a `BLOCKING` finding; validity and the before-open phase did, and rulings decided `DEBT` findings.
+- Push uses the explicit destination ref form from /merging-standards `<push_semantics>`.
+- Title is one commit-subject line under 70 chars per /commit-changes.
+- Body is written to a scratch file and delivered to gh via `--body-file <body-file>` (real newlines), with no heredoc, pipe, or inline form.
+- The PR is opened `ready_for_review` (`gh pr create` with no `--draft`) once `VERIFICATION_READINESS` holds — except a stacked PR held draft per `<branch_topology>`.
+- The first management pass starts after the PR opens; `/manage-pr` owns any pending checks, CI review waits, reinspection, merge gates, and post-merge closeout evidence, including /merging-standards `<pr_check_wait>`.
+- PR URL is surfaced to the user.
+- No `<self_reference>` violation per /merging-standards.
+
+</success_criteria>

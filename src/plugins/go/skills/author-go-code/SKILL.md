@@ -11,7 +11,7 @@ allowed-tools: Read, Write, Glob, Grep, Edit, {{! tool('use_skill') !}}, Bash(go
 {!% require_skill 'go:go-test-standards' %!}
 
 <objective>
-Go implementation code with spec-driven behavior, explicit seams, and full validation passing.
+Go implementation code that complies with its governing spec, with explicit seams and full validation passing.
 </objective>
 
 <bundled_files>
@@ -21,9 +21,9 @@ References live at `${CLAUDE_SKILL_DIR}/references/` and workflows at `${CLAUDE_
 <quick_start>
 
 1. Read the repo-local Go overlays when present; the standards above are already loaded.
-2. Follow `<context_loading>` when this is a spec-tree work item.
+2. Follow `<context_loading>` when this is a product-tree work item.
 3. Read `${CLAUDE_SKILL_DIR}/workflows/implementation.md` for new work or `${CLAUDE_SKILL_DIR}/workflows/remediation.md` for review feedback.
-4. When behavior changes require new or revised evidence: Use skill `spec-tree:verify`. After it selects test: Use skill `go:author-go-test` for Go expression.
+4. When behavior changes require new or revised evidence: Use skill `product-tree:verify`. After it selects test: Use skill `go:author-go-test` for Go expression.
 5. Finish with the repository validation sequence or, if none is published, `gofmt -l .`, `go vet ./...`, the repository's linter, and `go test -race ./...`.
 
 `allowed-tools` preapproves only the listed raw-tool fallbacks. A repository-canonical wrapper outside those patterns uses the runtime's normal per-call approval path; NEVER select a fallback merely to avoid that approval.
@@ -52,7 +52,7 @@ Check for `spx/local/go.md` and `spx/local/go-tests.md` at the repository root. 
 Use guidance in this order:
 
 1. this skill and its loaded Go standards
-2. loaded ADRs, PDRs, and spec-tree artifacts
+2. loaded ADRs, PDRs, and product-tree artifacts
 3. `{{! file('root_guide') !}}`, `README.md`, `docs/`, and other product documentation
 4. selected test, eval, or pathless audit evidence
 5. existing code as the lowest-layer reference
@@ -85,7 +85,7 @@ Before implementation, confirm:
 </codebase_discovery>
 
 <testing_methodology>
-Use skill `spec-tree:verify` before adding or revising evidence. When it selects test: Use skill `go:author-go-test` for Go expression, then follow RED/GREEN. When it selects evaluate, read the eval definition, cases, materialized prompt, real producer contract, selected product command, and threshold; run that command before and after implementation. When it selects audit, preserve the pathless requirement for the isolated verifier without inventing a test. If the change alters behavior and no evidence already proves that behavior, establish the selected evidence first.
+Use skill `product-tree:verify` before adding or revising evidence. When it selects test: Use skill `go:author-go-test` for Go expression, then follow RED/GREEN. When it selects evaluate, read the eval definition, cases, materialized prompt, real producer contract, selected product command, and threshold; run that command before and after implementation. When it selects audit, preserve the pathless requirement for the isolated verifier without inventing a test. If the change alters behavior and no evidence already proves that behavior, establish the selected evidence first.
 
 Use `/go-test-standards` as the canonical source for filenames, evidence levels, controlled implementations, property tests, toolchain-oracle evidence, fixture placement, and coverage expectations. Keep production code aligned with those constraints instead of re-declaring test policy here.
 </testing_methodology>
@@ -97,13 +97,13 @@ For each `/verify` routing row whose verification type is audit, re-read the rou
 </audit_requirement_handoff>
 
 <context_loading>
-If this work belongs to a spec-tree node:
+If this work belongs to a product-tree node:
 
-1. invoke `spec-tree:contextualize` with the full path
+1. invoke `product-tree:contextualize` with the full path
 2. abort if required context is missing
 3. implement only after the context is loaded
 
-If the work is outside the spec tree, proceed with the provided requirements and repository context.
+If the work is outside the product tree, proceed with the provided requirements and repository context.
 </context_loading>
 
 <reference_guides>

@@ -27,17 +27,17 @@ regenerate = "just build-skills"
 
 [[relation]]
 outputs = [
-  { file = "CLAUDE.md", begin = "<!-- SPEC-TREE v", end = "<!-- /SPEC-TREE -->" },
-  { file = "AGENTS.md", begin = "<!-- SPEC-TREE v", end = "<!-- /SPEC-TREE -->" },
+  { file = "CLAUDE.md", begin = "<!-- PRODUCT-TREE v", end = "<!-- /PRODUCT-TREE -->" },
+  { file = "AGENTS.md", begin = "<!-- PRODUCT-TREE v", end = "<!-- /PRODUCT-TREE -->" },
 ]
 sources = [
-  "dist/claude/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
-  "dist/codex/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
+  "dist/claude/product-tree/skills/update-instruction-block/templates/instruction-block.md",
+  "dist/codex/product-tree/skills/update-instruction-block/templates/instruction-block.md",
   "spx/**/tests/*",
 ]
 generator = [
   "outcomeeng/distribution/instruction_block.py",
-  "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py",
+  "src/plugins/product-tree/skills/update-instruction-block/scripts/instruction_block.py",
 ]
 regenerate = "just build-instructions"
 
@@ -47,13 +47,13 @@ regenerate = "just build-instructions"
 # always touches a source and stays judged as evidence.
 [[relation]]
 outputs = [
-  { file = "CLAUDE.md", begin = "<!-- SPEC-TREE:shared", end = "<!-- /SPEC-TREE:shared" },
-  { file = "AGENTS.md", begin = "<!-- SPEC-TREE:shared", end = "<!-- /SPEC-TREE:shared" },
+  { file = "CLAUDE.md", begin = "<!-- PRODUCT-TREE:shared", end = "<!-- /PRODUCT-TREE:shared" },
+  { file = "AGENTS.md", begin = "<!-- PRODUCT-TREE:shared", end = "<!-- /PRODUCT-TREE:shared" },
 ]
 sources = ["CLAUDE.md", "AGENTS.md"]
 generator = [
   "outcomeeng/distribution/instruction_block.py",
-  "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py",
+  "src/plugins/product-tree/skills/update-instruction-block/scripts/instruction_block.py",
 ]
 regenerate = "just build-instructions"
 
@@ -71,7 +71,7 @@ regenerate = "just docs"
 
 [[relation]]
 outputs = [
-  { file = ".github/workflows/spec-tree-evals.yml", begin = "# BEGIN eval-trigger-paths", end = "# END eval-trigger-paths" },
+  { file = ".github/workflows/product-tree-evals.yml", begin = "# BEGIN eval-trigger-paths", end = "# END eval-trigger-paths" },
 ]
 sources = ["spx/**/evals/**/eval.toml"]
 generator = ["outcomeeng_evals/**"]

@@ -65,7 +65,7 @@ def dist_drift_repo() -> Iterator[DistDriftRepo]:
         repo = Path(tmp)
         _git(repo, "init", "-b", "main")
         _git(repo, "config", "user.email", "test@example.invalid")
-        _git(repo, "config", "user.name", "Spec Tree Test")
+        _git(repo, "config", "user.name", "Product Tree Test")
         # Disable commit signing locally so the seed commit succeeds regardless
         # of a contributor's global commit.gpgsign (no signing key in this repo).
         _git(repo, "config", "commit.gpgsign", "false")

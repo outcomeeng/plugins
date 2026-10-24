@@ -2,7 +2,7 @@
 
 ## Opening decision statement of the merging PDR runs seven sentences
 
-Rule `declaration-form`, severity WARNING, unit [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md), unit label "opening decision statement". Standing finding under properties 11 and 13 of [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md), found by the `spec-tree:pdr-auditor` run 1 of 2 on head `c5c7a2e7a1d800106ebcffb7e8dc8dc486a80db5`.
+Rule `declaration-form`, severity WARNING, unit [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md), unit label "opening decision statement". Standing finding under properties 11 and 13 of [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md), found by the `product-tree:pdr-auditor` run 1 of 2 on head `c5c7a2e7a1d800106ebcffb7e8dc8dc486a80db5`.
 
 **Evidence**: the opening decision statement of [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) runs seven sentences where the PDR template asks for one to three. The text lies outside the changeset: [`git diff 810ea183243253d88d5c00c315c6a4684ef0f78f...c5c7a2e7a1d800106ebcffb7e8dc8dc486a80db5 -- spx/15-merging.pdr.md`](spx/15-merging.pdr.md) changes only lines 32 and 42 to 44, and the opening statement sits on line 3.
 
@@ -22,7 +22,7 @@ Category consistency, severity debt, finding F-001 of local review run 2026-10-1
 
 ## The shipped Change standards trail the methodology's refinement chapter and admit no form for a mechanical rename
 
-Rules `spec-mutations`, `store-independence`, and criterion `framed-spec-mutations` of the `spec-tree:change-standards` skill at plugin version 0.107.1, raised by the `spec-tree:change-auditor` run 2026-10-24_15-17-02-291-b49d5f0cea67 on the record of Change [#767](https://github.com/outcomeeng/changes/issues/767).
+Rules `spec-mutations`, `store-independence`, and criterion `framed-spec-mutations` of the `product-tree:change-standards` skill at plugin version 0.107.1, raised by the `product-tree:change-auditor` run 2026-10-24_15-17-02-291-b49d5f0cea67 on the record of Change [#767](https://github.com/outcomeeng/changes/issues/767).
 
 **Evidence**: the skill names the chapter at `versions/4.0/methodology/change/changes.md`, requires a Framed Spec mutations block to list the Node's assertions as bare bullets, caps the Intent at 60 words, and calls the fourth Maturity Executable. The chapter of `outcomeeng/methodology` at `versions/4.0/methodology/refinement/changes.md`, where it has lived since 2026-10-17, requires each assertion the Change adds, replaces, or removes as an `added:`, `replaced:`, or `removed:` bullet with the exact old and new text, caps the Intent at 120 words, and calls the fourth Maturity Applicable. Neither admits a block that states one substitution mapping for a rename whose per-assertion text a committed file carries: for Change #767 that text runs past 280,000 characters against a store body of 65,536, so the record names the Nodes and the mapping and [`spx/knowledge/product-tree-rename.md`](knowledge/product-tree-rename.md) carries the assertions.
 

@@ -22,7 +22,7 @@ from outcomeeng.distribution.orchestration import (
     CLAUDE_DIST_PLUGINS_DIR,
     SOURCE_PLUGINS_DIR,
 )
-from outcomeeng.validation.audit_artifacts import SPEC_TREE_PLUGIN_NAME
+from outcomeeng.validation.audit_artifacts import PRODUCT_TREE_PLUGIN_NAME
 from outcomeeng.validation.plugins import (
     CATALOGS,
     CATALOG_PLUGINS_FIELD,
@@ -424,7 +424,7 @@ def _sample_plugin_names(count: int) -> tuple[str, ...]:
         plugin_dir.name
         for plugin_dir in sorted((REPO_ROOT / SOURCE_PLUGINS_DIR).iterdir())
         if plugin_dir.is_dir()
-        and plugin_dir.name != SPEC_TREE_PLUGIN_NAME
+        and plugin_dir.name != PRODUCT_TREE_PLUGIN_NAME
         and (plugin_dir / ".claude-plugin" / "plugin.json").is_file()
     )[:count]
 

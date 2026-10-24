@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Final
 
 TEST_INFRASTRUCTURE_PACKAGE: Final = "outcomeeng_testing"
-SPEC_TREE_ROOT: Final = "spx"
+PRODUCT_TREE_ROOT: Final = "spx"
 TESTS_DIRECTORY_NAME: Final = "tests"
 CONFTEST_FILENAME: Final = "conftest.py"
 PACKAGE_INIT_FILENAME: Final = "__init__.py"
@@ -245,7 +245,7 @@ def index_test_infrastructure(
         },
         test_sources={
             path.relative_to(repo).as_posix(): path.read_text(encoding="utf-8")
-            for path in _executed_test_files(repo / SPEC_TREE_ROOT)
+            for path in _executed_test_files(repo / PRODUCT_TREE_ROOT)
         },
         conftest_sources=tuple(
             path.read_text(encoding="utf-8") for path in _conftest_files(repo)
@@ -302,6 +302,6 @@ def _conftest_files(repo: Path) -> Iterator[Path]:
     root_conftest = repo / CONFTEST_FILENAME
     if root_conftest.is_file():
         yield root_conftest
-    spec_dir = repo / SPEC_TREE_ROOT
+    spec_dir = repo / PRODUCT_TREE_ROOT
     if spec_dir.is_dir():
         yield from sorted(spec_dir.rglob(CONFTEST_FILENAME))

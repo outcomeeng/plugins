@@ -10,7 +10,7 @@ Implementation audit `019f2777-97ab-7a03-89d3-30e61c4c820e` raised a decompositi
 - target cleanup and copy behavior
 - workflow compliance for distribution triggers and interpreter selection
 
-The audit cited `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`, whose decomposition rule treats more than roughly seven assertions as a signal for analysis and separates independent concerns when each concern has a meaningful validation boundary.
+The audit cited `spx/21-product-tree.enabler/54-decomposing.enabler/decomposing.md`, whose decomposition rule treats more than roughly seven assertions as a signal for analysis and separates independent concerns when each concern has a meaningful validation boundary.
 
 Revisit condition: when structural work on `spx/32-distribution.enabler` is scheduled, invoke `/decompose` on the distribution node. Split the skill-copying behavior and workflow-compliance concerns into focused child nodes when the ordering-evidence matrix supports the split.
 
@@ -22,7 +22,7 @@ Defect class: `predicate-ownership`.
 
 Finding: `outcomeeng_testing/harnesses/distribution.py` returns pass or fail as a bare `bool` from `skill_collection_returns_complete_metadata`, `plugin_without_skills_is_skipped`, `skill_without_manifest_is_skipped`, `directive_description_is_cleaned`, `target_cleanup_preserves_only_git_metadata`, `skill_copy_skips_broken_symlinks`, `distribution_workflow_uses_runtime_and_source_paths`, and `distribution_workflow_uses_project_python`, and `_generated_skill_collection_union_holds` calls `assert` itself. The predicate-seam rule of `/test-evidence-standards` reserves every pass-or-fail decision for the linked test; infrastructure returns observations.
 
-Evidence: `spec-tree:test-evidence-auditor` finding f-004, severity `REJECT`, raised against `spx/18-plugin-build.enabler/43-target-emission.enabler` at head `c2d6ad239f6e60a90a2c172eafb80d0cba83477b` during Change #200, because that node's harness imports this module. Change #200 does not change the module.
+Evidence: `product-tree:test-evidence-auditor` finding f-004, severity `REJECT`, raised against `spx/18-plugin-build.enabler/43-target-emission.enabler` at head `c2d6ad239f6e60a90a2c172eafb80d0cba83477b` during Change #200, because that node's harness imports this module. Change #200 does not change the module.
 
 Impact: a failing distribution test reports a bare `False` instead of the observed value, and every node whose evidence chain imports this harness carries the finding into its own test-evidence audit.
 
@@ -48,7 +48,7 @@ Nine findings (all REJECT, assertion-seam, predicate ownership) on the tests und
 - f-008 `test_distribution_workflow.compliance.l1.py:8` `distribution_workflow_uses_runtime_and_source_paths` builds the violating variants and evaluates the predicates in the harness.
 - f-009 `test_distribution_workflow.compliance.l1.py:12` `distribution_workflow_uses_project_python` likewise.
 
-The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run token.
+The audit is a `product-tree:test-evidence-auditor` verdict on this node at head `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run token.
 
 **Resolution shape**: the harness returns observations and handles, and each linked test owns its predicate and expected value.
 

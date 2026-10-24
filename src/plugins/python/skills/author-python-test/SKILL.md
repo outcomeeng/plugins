@@ -10,10 +10,10 @@ allowed-tools: Read, Write, Edit, Glob, Grep, {{! tool('use_skill') !}}, Bash(py
 
 {!% require_skill 'python:python-test-standards' %!}
 
-{!% require_skill 'spec-tree:test' %!}
+{!% require_skill 'product-tree:test' %!}
 
 <objective>
-Python test files that supply evidence for a spec-tree node's assertions.
+Python test files that supply evidence for a product-tree node's assertions.
 </objective>
 
 <mode_detection>
@@ -31,7 +31,7 @@ NEVER create a test workaround for code that lacks source-owned contracts, typed
 <write_workflow>
 Run this workflow for new Python tests:
 
-1. Read the target node spec and applicable decisions through the spec-tree context already loaded for the work.
+1. Read the target node spec and applicable decisions through the product-tree context already loaded for the work.
 2. Receive the assertion type, execution level, and any Stage 5 exception already selected through `/verify` and `/test`; do not route evidence from the language specialist.
 3. Apply the source-contract-first gate in `<source_contract_gate>`: inspect the code under test and identify the production contract the test will exercise.
 4. If the production contract does not expose the needed value, registry, constructor, schema, pure function, protocol, or collaborator boundary, update the code under test before writing the test.

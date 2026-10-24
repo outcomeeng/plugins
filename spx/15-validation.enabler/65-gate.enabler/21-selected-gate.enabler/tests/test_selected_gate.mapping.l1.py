@@ -16,7 +16,7 @@ from outcomeeng.validation import (
 )
 from outcomeeng.validation.infrastructure_index import (
     InfrastructureReach,
-    SPEC_TREE_ROOT,
+    PRODUCT_TREE_ROOT,
 )
 from outcomeeng.validation.selected_gate import (
     PATH_CATEGORY_PATTERNS,
@@ -205,7 +205,7 @@ def test_every_evidence_link_path_category_selects_link_validation(
 ) -> None:
     path = path_from_pattern(pattern)
     inside = build_selected_gate_plan((path,))
-    outside = build_selected_gate_plan((path.removeprefix(f"{SPEC_TREE_ROOT}/"),))
+    outside = build_selected_gate_plan((path.removeprefix(f"{PRODUCT_TREE_ROOT}/"),))
 
     assert EVAL_LINKS_ARGV in _argvs(inside)
     assert EVAL_LINKS_ARGV not in _argvs(outside)

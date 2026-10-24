@@ -8,7 +8,7 @@ Known defects, contradictions and gaps in this node. Coordination note; not spec
 
 Moving the guard is not a text edit. The skill declares narrow prefix-matched grants (`Bash(gh pr create:*)`, `Bash(git push:*)`, `Bash(git push -u origin HEAD:refs/heads/*)`), and an `ENV=value` prefix changes the command string the grant matches. Whether Claude Code's matcher tolerates an environment-variable prefix decides between three fixes: move the variable, drop it, or reach non-interactivity through `git -c` configuration.
 
-**Settlement condition.** The matcher's treatment of an environment-variable prefix is established, and one fix applies across this skill and `src/plugins/spec-tree/skills/open-pr/SKILL.md` in the same change, with each plugin gated by `instructions:skill-auditor`. The entry for the spec-tree side is in `spx/21-spec-tree.enabler/76-merge.enabler/32-github-pr.enabler/ISSUES.md`.
+**Settlement condition.** The matcher's treatment of an environment-variable prefix is established, and one fix applies across this skill and `src/plugins/product-tree/skills/open-pr/SKILL.md` in the same change, with each plugin gated by `instructions:skill-auditor`. The entry for the product-tree side is in `spx/21-product-tree.enabler/76-merge.enabler/32-github-pr.enabler/ISSUES.md`.
 
 ## `manage-upstream-pr` carries five skill-audit debt findings
 

@@ -27,8 +27,8 @@ coding-agents plugin; the toolchain loads that module by path, and no toolchain
 module declares an agent token. The build's target registry takes every target's
 value from that owner: it selects the owner's tokens that are generated-output
 targets, `claude` and `codex`, and spells no token itself. The build renders the
-owner's agent tokens into a data file beside each spec-tree script that reads
-them, because a shipped spec-tree script imports nothing from another plugin's
+owner's agent tokens into a data file beside each product-tree script that reads
+them, because a shipped product-tree script imports nothing from another plugin's
 files, as [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md)
 states.
 
@@ -54,7 +54,7 @@ renamed. The coding-agents plugin owns the tokens because it owns the agents the
 tokens name. The build already takes every plugin's authored source under
 `src/plugins/` as its input, so loading one module of that source by path adds
 no relation between the build and the coding-agents plugin that the build does
-not already have. A spec-tree script cannot import that module, because a
+not already have. A product-tree script cannot import that module, because a
 plugin's runtime relies only on its own installed tree; the build, which reads
 the owner, renders its tokens into a data file beside the script, so the
 script's copy is a rendering of the declaration and never a second declaration.
@@ -71,7 +71,7 @@ script's copy is a rendering of the declaration and never a second declaration.
 
 ### Audit
 
-- ALWAYS: the build derives its targets from the coding-agents agent-token module and renders its tokens beside each spec-tree script that reads them; no toolchain module and no authored spec-tree script declares an agent token ([audit])
+- ALWAYS: the build derives its targets from the coding-agents agent-token module and renders its tokens beside each product-tree script that reads them; no toolchain module and no authored product-tree script declares an agent token ([audit])
 - ALWAYS: define each model identifier once in the Python configuration owner;
   profiles reference that identity and keep each harness's complete native
   settings together, with distinct harness-specific types for reasoning controls

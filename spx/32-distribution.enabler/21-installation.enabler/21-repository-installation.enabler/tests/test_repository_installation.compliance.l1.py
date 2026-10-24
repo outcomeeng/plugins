@@ -30,7 +30,7 @@ from outcomeeng.distribution.installation import (
     CODEX_CONFIG_PATH,
     CODEX_EXEC_SUBCOMMAND,
     FIRST_INSTALL_WARNING,
-    SPEC_TREE_PLUGIN,
+    PRODUCT_TREE_PLUGIN,
     Operation,
     UNREADABLE_HEAD_RECORD_WARNING,
     CLAUDE_PROJECT_SCOPE,
@@ -914,12 +914,12 @@ def test_a_local_scope_record_for_the_checkout_suppresses_the_bootstrap_install(
         for command in claude_commands
     )
     assert [(command.plugin, command.argv[-1], command.cwd) for command in updates] == [
-        (SPEC_TREE_PLUGIN, CLAUDE_LOCAL_SCOPE, observation.plan.roots.checkout)
+        (PRODUCT_TREE_PLUGIN, CLAUDE_LOCAL_SCOPE, observation.plan.roots.checkout)
     ]
     assert FIRST_INSTALL_WARNING.format(
         marketplace=observation.plan.roots.marketplace,
         agent=Target.CLAUDE.value,
-        plugin=SPEC_TREE_PLUGIN,
+        plugin=PRODUCT_TREE_PLUGIN,
     ) not in [warning.message for warning in observation.plan.warnings]
 
 
@@ -1207,7 +1207,7 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
                 ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(
                     marketplace=MARKETPLACE,
                     agent=agent.value,
-                    plugin=SPEC_TREE_PLUGIN,
+                    plugin=PRODUCT_TREE_PLUGIN,
                 ),
             } in reported
             installs = [

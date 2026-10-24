@@ -190,7 +190,10 @@ TOOLS = [
                     "type": "object",
                     "description": "Question set: {current, planned, settled}.",
                 },
-                "tree": {"type": "array", "description": "Spec-tree nodes to render."},
+                "tree": {
+                    "type": "array",
+                    "description": "Product tree nodes to render.",
+                },
             },
         },
     },

@@ -15,12 +15,12 @@ auditing and preserves the skill's result contract.
 {!% if target == 'codex' %!}
 
 ```toml
-name = "{{! subagent_name('spec-tree', 'spec-auditor') !}}"
+name = "{{! subagent_name('product-tree', 'spec-auditor') !}}"
 description = "ALWAYS invoke when the governing skill requests an audit of one spec node."
 {{! profile_config('standard') !}}
 developer_instructions = """
 <workflow>
-Invoke spec-tree:audit-specs with the supplied target.
+Invoke product-tree:audit-specs with the supplied target.
 Return the skill's complete structured verdict.
 </workflow>
 """
@@ -33,11 +33,11 @@ Return the skill's complete structured verdict.
 name: spec-auditor
 description: ALWAYS invoke when the governing skill requests an audit of one spec node.
 {{! profile_config('standard') !}}
-skills: spec-tree:audit-specs
+skills: product-tree:audit-specs
 ---
 
 <workflow>
-Invoke spec-tree:audit-specs with the supplied target.
+Invoke product-tree:audit-specs with the supplied target.
 Return the skill's complete structured verdict.
 </workflow>
 ```

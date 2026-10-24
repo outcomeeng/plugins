@@ -11,7 +11,7 @@ Use skill `rust:rust-code-standards`.
 Use skill `rust:rust-architecture-standards`.
 
 <objective>
-A Rust ADR that follows the standard Rust architecture template, preserves spec-tree hierarchy constraints, and encodes testability as `## Verification` `### Audit` rules.
+A Rust ADR that follows the standard Rust architecture template, preserves product-tree hierarchy constraints, and encodes testability as `## Verification` `### Audit` rules.
 </objective>
 
 <essential_principles>
@@ -29,15 +29,15 @@ After reading those standards, check for `spx/local/rust.md` and `spx/local/rust
 </essential_principles>
 
 <context_loading>
-**For spec-tree work items: Load complete context before creating ADRs.**
+**For product-tree work items: Load complete context before creating ADRs.**
 
-When creating ADRs for a spec-tree work item (enabler/outcome), ensure complete hierarchical context is loaded:
+When creating ADRs for a product-tree work item (enabler/outcome), ensure complete hierarchical context is loaded:
 
-1. **Invoke `spec-tree:contextualize`** with the node path
+1. **Invoke `product-tree:contextualize`** with the node path
 2. **Verify all ancestor ADRs/PDRs are loaded** - Must understand and honor all decision records in hierarchy
 3. **Read the node spec** - Requirements, Test Strategy, and Outcomes sections
 
-**The `spec-tree:contextualize` skill provides:**
+**The `product-tree:contextualize` skill provides:**
 
 - Complete ADR/PDR hierarchy (product and ancestor decisions at all levels)
 - Node spec with requirements, test strategy, and outcomes
@@ -50,7 +50,7 @@ When creating ADRs for a spec-tree work item (enabler/outcome), ensure complete 
 - Must include testability constraints in `## Verification` (`### Audit` ALWAYS/NEVER rules for DI, no mocking)
 - Must document trade-offs and consequences
 
-**If NOT working on spec-tree work item**: Proceed directly with ADR creation using provided requirements.
+**If NOT working on product-tree work item**: Proceed directly with ADR creation using provided requirements.
 </context_loading>
 
 <input_context>
@@ -69,7 +69,7 @@ Read these files to understand product structure and workflow:
 
 - `AGENTS.md` - Product navigation, work item status, BSP dependencies
 
-For evidence routing, use skill `spec-tree:verify`. After test is selected, use skill `rust:rust-test-standards` and use skill `rust:author-rust-test` for Rust expression.
+For evidence routing, use skill `product-tree:verify`. After test is selected, use skill `rust:rust-test-standards` and use skill `rust:author-rust-test` for Rust expression.
 
 **3. Existing Decisions**
 
@@ -117,7 +117,7 @@ Execute these phases IN ORDER.
 3. Use skill `rust:rust-code-standards`, then use skill `rust:rust-architecture-standards`
 4. Read `spx/local/rust.md` and `spx/local/rust-architecture.md` if they exist
 5. Read `/rust-test-standards`, then `spx/local/rust-tests.md` if it exists
-6. Use skill `spec-tree:verify` for evidence routing; after test is selected, use skill `rust:author-rust-test` for Rust expression
+6. Use skill `product-tree:verify` for evidence routing; after test is selected, use skill `rust:author-rust-test` for Rust expression
 7. Read existing ADRs for consistency:
    - `spx/{NN}-{slug}.adr.md` - Product-level ADRs
    - ADRs interleaved within enabler/outcome nodes

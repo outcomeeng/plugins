@@ -40,7 +40,7 @@ INIT_WORKTREES_MODULE_PATH = (
     REPO_ROOT
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "init-worktrees"
     / "scripts"
@@ -108,7 +108,7 @@ class ProvisioningEnv:
             capture_output=True,
         )
         _git(checkout, "config", "user.email", "test@example.invalid")
-        _git(checkout, "config", "user.name", "Spec Tree Test")
+        _git(checkout, "config", "user.name", "Product Tree Test")
         _git(checkout, "config", "commit.gpgsign", "false")
         return checkout
 
@@ -247,7 +247,7 @@ def provisioning_env(
             capture_output=True,
         )
         _git(seed, "config", "user.email", "test@example.invalid")
-        _git(seed, "config", "user.name", "Spec Tree Test")
+        _git(seed, "config", "user.name", "Product Tree Test")
         _git(seed, "config", "commit.gpgsign", "false")
         (seed / "README.md").write_text("seed\n", encoding="utf-8")
         _git(seed, "add", "README.md")

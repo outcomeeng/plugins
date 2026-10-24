@@ -58,7 +58,7 @@ def safe_config() -> dict[str, object]:
 
 
 def test_blocking_hook_is_reported_with_location(tmp_path: Path) -> None:
-    write_hooks(tmp_path, "dist/claude", "spec-tree", blocking_config())
+    write_hooks(tmp_path, "dist/claude", "product-tree", blocking_config())
 
     violations = iter_tree_violations(tmp_path)
 
@@ -66,14 +66,14 @@ def test_blocking_hook_is_reported_with_location(tmp_path: Path) -> None:
         "a blocking-capable hook must produce a non-empty report (non-zero exit)"
     )
     report = "\n".join(violations)
-    assert "spec-tree" in report  # plugin
+    assert "product-tree" in report  # plugin
     assert "hooks.json" in report  # file
     assert "PreToolUse" in report  # event
 
 
 def test_clean_tree_reports_nothing(tmp_path: Path) -> None:
-    write_hooks(tmp_path, "dist/claude", "spec-tree", safe_config())
-    write_hooks(tmp_path, "dist/codex", "spec-tree", safe_config())
+    write_hooks(tmp_path, "dist/claude", "product-tree", safe_config())
+    write_hooks(tmp_path, "dist/codex", "product-tree", safe_config())
 
     assert iter_tree_violations(tmp_path) == []
 
@@ -96,7 +96,7 @@ def guarded_substituted_config() -> dict[str, object]:
 def test_guarded_substituted_path_hook_reports_nothing(tmp_path: Path) -> None:
     # Scenario witness for the assertion's "uses a guarded command" clause: a guarded
     # substituted-path invocation in an otherwise clean tree produces no violations.
-    write_hooks(tmp_path, "dist/claude", "spec-tree", guarded_substituted_config())
+    write_hooks(tmp_path, "dist/claude", "product-tree", guarded_substituted_config())
 
     assert iter_tree_violations(tmp_path) == []
 
@@ -107,18 +107,18 @@ def test_main_reports_location_and_exits_non_zero(
     # The first scenario assertion couples both halves: reports plugin/file/event AND
     # exits non-zero. Verify them together at the CLI entry point.
     root = tmp_path / "dist/claude"
-    write_hooks(tmp_path, "dist/claude", "spec-tree", blocking_config())
+    write_hooks(tmp_path, "dist/claude", "product-tree", blocking_config())
 
     code = main([str(root)])
     err = capsys.readouterr().err
 
     assert code == 1
-    assert "spec-tree" in err and "hooks.json" in err and "PreToolUse" in err
+    assert "product-tree" in err and "hooks.json" in err and "PreToolUse" in err
 
 
 def test_main_exits_zero_for_a_clean_tree(tmp_path: Path) -> None:
     # The assertion frames "the dist trees" (plural): exercise both at the CLI entry.
-    write_hooks(tmp_path, "dist/claude", "spec-tree", safe_config())
-    write_hooks(tmp_path, "dist/codex", "spec-tree", safe_config())
+    write_hooks(tmp_path, "dist/claude", "product-tree", safe_config())
+    write_hooks(tmp_path, "dist/codex", "product-tree", safe_config())
 
     assert main([str(tmp_path / "dist/claude"), str(tmp_path / "dist/codex")]) == 0
