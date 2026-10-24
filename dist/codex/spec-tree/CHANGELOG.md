@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Fixed
 
-- **Auditor agents run the skills their methodology composes.** The seven auditor agents (`adr-auditor`, `assertion-auditor`, `eval-evidence-auditor`, `implementation-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`) ban spawning another agent or verifier and invoking an agent CLI, and direct the auditor to invoke every skill its loaded methodology directs in its own context, because a skill invocation is never a nested audit. Before this change the ban named a "nested audit", and a `test-evidence-auditor` read the `audit-{lang}-test` invocation `audit-tests` requires as one and skipped the language test concern.
+- **Auditor agents run the skills their methodology composes.** The seven auditor agents (`adr-auditor`, `assertion-auditor`, `eval-evidence-auditor`, `implementation-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`) ban spawning another agent or verifier and invoking an agent CLI, and direct the auditor to invoke every audit or standards skill its loaded methodology composes into its judgment, in its own context, because a skill invocation is never a nested audit. Before this change the ban named a "nested audit", and a `test-evidence-auditor` read the `audit-{lang}-test` invocation `audit-tests` requires as one and skipped the language test concern.
 
 ## 0.107.1
 

@@ -24,7 +24,7 @@ Run the `spec-tree:audit-tests` methodology in this already-dispatched, isolated
 <constraints>
 
 - Read-only — produce verdicts, not code changes
-- The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent or verifier, and NEVER invoke `codex exec`, `claude`, or any other agent CLI. Invoke every skill the loaded methodology directs, in this context; a skill invocation is never a nested audit. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
+- The audit completes in THIS context. NEVER search for, dispatch, or spawn another agent or verifier, and NEVER invoke `codex exec`, `claude`, or any other agent CLI. Invoke every audit or standards skill the loaded methodology composes into its judgment, in this context; a skill invocation is never a nested audit. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
 - Load `spec-tree:audit-tests` before relying on its methodology; if it cannot load, report the exact availability failure instead of auditing from remembered methodology.
 - MUST preserve the supplied spec node path unchanged; the invoked skill discovers its evidence scope.
 - MUST let `spec-tree:audit-tests` own the evidence-property checks, language composition, finding shape, and verdict calculation.
