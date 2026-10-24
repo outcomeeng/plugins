@@ -26,11 +26,16 @@ from outcomeeng.distribution.contracts import (
     Target,
 )
 from outcomeeng.validation._model import Recipe, Step
+from outcomeeng.validation.infrastructure_index import (
+    EXECUTED_TEST_PREFIX,
+    PYTHON_SUFFIX,
+    SPEC_TREE_ROOT,
+    TESTS_DIRECTORY_NAME,
+)
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 # The directories `[tool.pytest.ini_options] testpaths` collects.
-TEST_ROOTS: Final = ("spx", "tests")
-TEST_FILE_PREFIX: Final = "test_"
+TEST_ROOTS: Final = (SPEC_TREE_ROOT, TESTS_DIRECTORY_NAME)
 PYTHON_SOURCE_PATHS: Final = ("outcomeeng", "outcomeeng_testing", "outcomeeng_evals")
 INSTRUCTION_BLOCK_ARGV: Final = _INSTRUCTION_BLOCK_ARGV
 
@@ -99,7 +104,6 @@ EXECUTION_LEVEL_L2: Final = "l2"
 EXECUTION_LEVEL_L3: Final = "l3"
 EXECUTION_LEVELS: Final = (EXECUTION_LEVEL_L1, EXECUTION_LEVEL_L2, EXECUTION_LEVEL_L3)
 ON_DEMAND_LEVEL: Final = EXECUTION_LEVEL_L3
-TEST_FILE_SUFFIX: Final = ".py"
 TEST_FILE_NAME_SEPARATOR: Final = "."
 # `test_{subject}.{evidence}.{level}[.{runner}].py`: the level is the third
 # dot-separated segment of the file name.
@@ -112,8 +116,8 @@ PYTEST_IGNORE_GLOB_OPTION: Final = "--ignore-glob"
 ON_DEMAND_EXCLUSION_ARGV: Final = tuple(
     f"{PYTEST_IGNORE_GLOB_OPTION}=*{TEST_FILE_NAME_SEPARATOR}{ON_DEMAND_LEVEL}{tail}"
     for tail in (
-        TEST_FILE_SUFFIX,
-        f"{TEST_FILE_NAME_SEPARATOR}*{TEST_FILE_SUFFIX}",
+        PYTHON_SUFFIX,
+        f"{TEST_FILE_NAME_SEPARATOR}*{PYTHON_SUFFIX}",
     )
 )
 PYTEST_ARGV: Final = (
@@ -377,10 +381,7 @@ def test_file_level(path: str) -> str | None:
 
     name = PurePosixPath(path.split(PYTEST_NODE_ID_SEPARATOR, maxsplit=1)[0]).name
     segments = name.split(TEST_FILE_NAME_SEPARATOR)
-    if (
-        len(segments) <= TEST_FILE_LEVEL_INDEX + 1
-        or segments[-1] != TEST_FILE_SUFFIX[1:]
-    ):
+    if len(segments) <= TEST_FILE_LEVEL_INDEX + 1 or segments[-1] != PYTHON_SUFFIX[1:]:
         return None
     level = segments[TEST_FILE_LEVEL_INDEX]
     return level if level in EXECUTION_LEVELS else None
@@ -418,7 +419,8 @@ def discover_on_demand_tests(root: Path) -> tuple[str, ...]:
             path.relative_to(root).as_posix()
             for test_root in TEST_ROOTS
             if (root / test_root).is_dir()
-            for path in (root / test_root).rglob(f"*{TEST_FILE_SUFFIX}")
-            if path.name.startswith(TEST_FILE_PREFIX) and is_on_demand_test(path.name)
+            for path in (root / test_root).rglob(f"*{PYTHON_SUFFIX}")
+            if path.name.startswith(EXECUTED_TEST_PREFIX)
+            and is_on_demand_test(path.name)
         )
     )
