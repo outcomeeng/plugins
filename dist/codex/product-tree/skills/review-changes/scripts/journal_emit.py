@@ -29,6 +29,26 @@ Review findings map into the shared projection as findings: ``blocking`` is a
 rejecting finding, while ``debt`` is a warning finding. A review carries no
 decision or verdict field; terminal status belongs to the channel projection
 over the recorded event prefix.
+
+Tested with:
+
+- ``metadata`` -> prints the run metadata for the current worktree and env refs.
+- ``scope-entered`` with valid metadata JSON -> prints the scope-entered event.
+- ``scope-entered`` with invalid metadata JSON -> exits 1 and names the invalid
+  field on stderr.
+- ``scope-advanced --unit <file>`` -> prints a scope-advanced event naming the file.
+- ``finding-reported`` with a conforming finding JSON on stdin -> prints the
+  finding-reported event.
+- ``finding-reported`` with malformed finding JSON -> exits 1 with the parse
+  error on stderr and prints no event.
+- ``run-completed`` with an event-prefix array on stdin -> prints the terminal
+  run-completed event with the derived status.
+- ``run-completed`` with a non-array event prefix -> exits 1 with
+  ``event prefix must be a JSON array`` on stderr.
+- ``run-completed`` with invalid metadata JSON -> exits 1 and names the invalid
+  field on stderr.
+- ``render`` with an empty prefix array -> prints the approved rollup with zero
+  blocking and zero debt counts as JSON.
 """
 
 from __future__ import annotations

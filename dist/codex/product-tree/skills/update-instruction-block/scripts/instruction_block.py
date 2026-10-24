@@ -11,7 +11,7 @@ generated files under ``spx/``. Each root file is three content kinds:
   differ by agent harness are authored once as ``<!-- harness:NAME -->`` blocks rendered only
   into that harness's block, mirroring the ``<!-- lang:NAME -->`` language blocks. The router
   carries the product-neutral routing and an instruction to read the whole file, so a product's
-  own commands are content the agent reads, not data the router resolves.
+  own commands are content read from the file, not data the router resolves.
 - **`shared` regions**, delimited by ``<!-- PRODUCT-TREE:shared {name} -->`` and
   ``<!-- /PRODUCT-TREE:shared {name} -->``, present in both root files under the same name and kept
   byte-identical. A diverged region is reconciled by whole-side replacement: the more-recently
@@ -935,8 +935,8 @@ def _longest_identical_line_span(text_a: str, text_b: str) -> tuple[int, int, in
     line boundaries in *both* texts so a wrap never splits a line: a ``difflib`` match is a
     byte-level common substring that can begin or end mid-line — independently in each file, since
     one file may carry a harness-specific prefix on the shared line — and wrapping there would
-    break a word across the shared-region boundary and alter the independent content the model
-    preserves. Every matching block is snapped and the largest post-snap span wins, not just the
+    break a word across the shared-region boundary and alter the independent content, which
+    stays verbatim. Every matching block is snapped and the largest post-snap span wins, not just the
     single byte-longest match, which can be a very long near-duplicate line that snaps away to
     nothing while a shorter but whole-line-aligned block elsewhere is the real biggest shared span.
     An empty span (no whole line in common) returns all zeros.
@@ -1124,7 +1124,7 @@ def _strip_managed_block(text: str) -> str:
 def prepend_router_block(block: str, body: str) -> str:
     """Return a document whose router block is first, followed by the product content.
 
-    The router is always the first content of the file, so the reading agent reaches its
+    The router is always the first content of the file, so a reader reaches its
     read-the-whole-file instruction before anything else. Exactly one trailing newline.
     """
     router = block.strip("\n")
@@ -1355,7 +1355,7 @@ def instruction_status(
         return InstructionStatus.STALE
     bounds = router_block_bounds(text)
     if bounds is None or bounds[0] != 0:
-        # The router block must be the first content of the file so a reading agent reaches its
+        # The router block must be the first content of the file so a reader reaches its
         # read-the-whole-file instruction before any product content; a router preceded by prose
         # is stale, and a re-render moves it back to the top.
         return InstructionStatus.STALE

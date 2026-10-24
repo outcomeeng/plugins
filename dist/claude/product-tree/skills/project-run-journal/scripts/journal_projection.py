@@ -195,13 +195,23 @@ def run_from_metadata(metadata: RunMetadata) -> RunResult:
         started_at=metadata.started_at,
         completed_at=metadata.completed_at,
         output_paths=metadata.output_paths,
-        target_kind=(
-            JournalTargetKind.BRANCH
-            if metadata.target_kind is None
-            else JournalTargetKind(metadata.target_kind)
-        ),
+        target_kind=_target_kind(metadata.target_kind),
         pull_request_number=metadata.pull_request_number,
     )
+
+
+def _target_kind(value: object) -> JournalTargetKind:
+    if value is None:
+        return JournalTargetKind.BRANCH
+    try:
+        return JournalTargetKind(value)
+    except ValueError:
+        accepted = ", ".join(repr(kind.value) for kind in JournalTargetKind)
+        raise ValueError(
+            f"{RUN_STATE_TARGET_KIND} must be one of {accepted}; received "
+            f"{_received(value)}. Set {RUN_STATE_TARGET_KIND!r} to one of the "
+            "accepted values."
+        ) from None
 
 
 def run_metadata_from_json(text: str) -> RunMetadata:
@@ -233,24 +243,54 @@ def run_metadata_from_json(text: str) -> RunMetadata:
     )
 
 
+_RECEIVED_LIMIT = 80
+
+
+def _received(value: object) -> str:
+    """Describe a received value by type and a bounded repr."""
+    text = repr(value)
+    if len(text) > _RECEIVED_LIMIT:
+        text = f"{text[:_RECEIVED_LIMIT]}..."
+    return f"{type(value).__name__} {text}"
+
+
 def _require_json_object(text: str, *, name: str) -> dict[str, Any]:
-    value = json.loads(text)
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"{name} is not valid JSON: {exc.msg} at line {exc.lineno} column "
+            f"{exc.colno}. Pass the run identity as one JSON object, for "
+            "example the output of the run-identity derivation step."
+        ) from exc
     if not isinstance(value, dict):
-        raise ValueError(f"{name} must be a JSON object")
+        raise ValueError(
+            f"{name} must be a JSON object; received {_received(value)}. "
+            "Pass the run identity as a JSON object with one key per run-state "
+            "field."
+        )
     return value
 
 
 def _require_metadata_string(data: Mapping[str, Any], key: str) -> str:
     value = data.get(key)
     if not isinstance(value, str) or value == "":
-        raise ValueError(f"metadata {key!r} must be a non-empty string")
+        raise ValueError(
+            f"metadata {key!r} must be a non-empty string; received "
+            f"{_received(value)}. Set {key!r} to a non-empty string in the "
+            "run-identity JSON."
+        )
     return value
 
 
 def _require_metadata_mapping(data: Mapping[str, Any], key: str) -> Mapping[str, Any]:
     value = data.get(key)
     if not isinstance(value, dict):
-        raise ValueError(f"metadata {key!r} must be a JSON object")
+        raise ValueError(
+            f"metadata {key!r} must be a JSON object; received "
+            f"{_received(value)}. Set {key!r} to a JSON object in the "
+            "run-identity JSON."
+        )
     return value
 
 
@@ -261,7 +301,11 @@ def _require_metadata_string_tuple(
     if not isinstance(value, list) or not all(
         isinstance(item, str) and item for item in value
     ):
-        raise ValueError(f"metadata {key!r} must be a JSON array of non-empty strings")
+        raise ValueError(
+            f"metadata {key!r} must be a JSON array of non-empty strings; "
+            f"received {_received(value)}. Set {key!r} to an array whose "
+            "entries are all non-empty strings."
+        )
     return tuple(value)
 
 
@@ -272,7 +316,11 @@ def _optional_metadata_string_tuple(
     if not isinstance(value, list) or not all(
         isinstance(item, str) and item for item in value
     ):
-        raise ValueError(f"metadata {key!r} must be a JSON array of non-empty strings")
+        raise ValueError(
+            f"metadata {key!r} must be a JSON array of non-empty strings when "
+            f"present; received {_received(value)}. Set {key!r} to an array "
+            "whose entries are all non-empty strings, or omit it."
+        )
     return tuple(value)
 
 
@@ -281,7 +329,11 @@ def _optional_metadata_positive_int(data: Mapping[str, Any], key: str) -> int | 
     if value is None:
         return None
     if not isinstance(value, int) or value <= 0:
-        raise ValueError(f"metadata {key!r} must be a positive integer when present")
+        raise ValueError(
+            f"metadata {key!r} must be a positive integer when present; "
+            f"received {_received(value)}. Set {key!r} to a positive integer, "
+            "or omit it."
+        )
     return value
 
 
@@ -436,18 +488,33 @@ def _require_run_state(run: RunResult) -> None:
     }
     for field, value in string_fields.items():
         if value == "":
-            raise ValueError(f"{field} must be a non-empty string")
+            raise ValueError(
+                f"{field} must be a non-empty string; received {_received(value)}. "
+                f"Set {field!r} on the run result before building the run-state "
+                "record."
+            )
     if run.base_sha == "":
-        raise ValueError(f"{RUN_STATE_BASE_SHA} must be non-empty when present")
+        raise ValueError(
+            f"{RUN_STATE_BASE_SHA} must be non-empty when present; received "
+            f"{_received(run.base_sha)}. Set it to the base commit SHA, or "
+            "leave it None."
+        )
     if not run.participants:
-        raise ValueError(f"{RUN_STATE_PARTICIPANTS} must contain at least one entry")
+        raise ValueError(
+            f"{RUN_STATE_PARTICIPANTS} must contain at least one entry; received "
+            f"{_received(run.participants)}. Name each participant of the run."
+        )
     if not all(run.participants):
         raise ValueError(
-            f"{RUN_STATE_PARTICIPANTS} must contain only non-empty strings"
+            f"{RUN_STATE_PARTICIPANTS} must contain only non-empty strings; "
+            f"received {_received(run.participants)}. Remove or fill the empty "
+            "entries."
         )
     if not all(run.output_paths):
         raise ValueError(
-            f"{RUN_STATE_OUTPUT_PATHS} must contain only non-empty strings"
+            f"{RUN_STATE_OUTPUT_PATHS} must contain only non-empty strings; "
+            f"received {_received(run.output_paths)}. Remove or fill the empty "
+            "entries."
         )
 
 

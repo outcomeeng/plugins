@@ -228,23 +228,21 @@ when that lands first.
 **Evidence**: surfaced by the test-evidence audit on PR #549 as the same
 pattern used identically in this file.
 
-## `changes-reviewer` cannot carry an explicit scope into its owning skill
+## `changes-reviewer` emitted runtimes lack an enforced capability boundary
 
 The configured-agent audit of
 `src/plugins/product-tree/agents/changes-reviewer.md` during Change #76 rejected
-two related boundaries. The wrapper resolves a branch, range, or pull-request
-scope and exports `SPX_VERIFY_*` variables in a Bash process, then invokes
-`product-tree:review-changes` outside that process. Those exports do not survive
-into the later skill invocation, so an explicitly requested scope can silently
-fall back to the skill's worktree-default scope. The source also grants
-unrestricted `Bash`; the generated Codex definition carries no `sandbox_mode`,
-so its read-only instruction is guidance rather than an enforced boundary.
+two related boundaries. The scope hand-off is settled: the wrapper exports
+nothing and hands the resolved `SPX_VERIFY_*` assignments to
+`product-tree:review-changes` as literal prefixes on its single `review_run.py
+start` command line, which that skill's input contract and `allowed-tools` grant
+accept. What remains open is the enforced capability boundary: the generated
+Codex definition carries no `sandbox_mode`, so its read-only instruction is
+guidance rather than an enforced boundary.
 
-**Required handling**: define one supported hand-off that makes the resolved
-scope available when `product-tree:review-changes` begins, and give each emitted
-runtime an enforced capability boundary limited to the review runner's required
-operations. Retain a minimal invocation that supplies a non-default scope and
-shows the skill reviewed that exact scope.
+**Required handling**: give each emitted runtime an enforced capability boundary
+limited to the review runner's required operations. Retain a minimal invocation
+that supplies a non-default scope and shows the skill reviewed that exact scope.
 
 **Evidence**: `instructions:subagent-auditor` findings `f-001` and `f-002`
 against `src/plugins/product-tree/agents/changes-reviewer.md` on Change #76 head

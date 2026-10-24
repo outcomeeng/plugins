@@ -1,3 +1,19 @@
+Contents:
+
+- Failure 3: every changed file extension became a required partition
+- Failure 4: a finding was reported only in prose
+- Failure 6: scope events were persisted concurrently
+- Failure 7: an implementation code scope used semantic aliases instead of SPX fields
+- Failure 8: an unquoted idempotency key split the command
+- Failure 9: deterministic verification ran inside the audit
+- Failure 11: a truncated bulk read became missing coverage
+- Failure 12: one commit's patch stood in for the changeset
+- Failure 13: a finding was raised before its governing standards were read
+- Failure 14: the resolved path inventory was corrupted by being retyped
+- Failure 17: kinds were discovered by invoking skills that did not exist
+- Failure 18: a preloaded skill's empty argument was read as the target
+- Failure 19: a retyped payload path voided the run
+
 <objective>
 
 The long tail of operational failure modes of the implementation audit. A failed preparation, concern invocation, payload submission, or projection that matches one below keeps its exact diagnostic and takes no retry beyond the one absent-payload rerun the payload contract allows.

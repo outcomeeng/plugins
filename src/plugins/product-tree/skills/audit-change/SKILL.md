@@ -354,12 +354,13 @@ though the front matter carried the exact closed key set. Compatibility depends
 only on that key set. Audit every value and body violation once the boundary
 admits the candidate.
 
-**Concurrent audits cross-read each other's working files.** Two change audits
-started from one worktree each saved the rendered projection and retained input
-to fixed names such as `render.json` in a shared scratch directory, and one
-audit read the other's file. Another audit redirected retained input into a
-temporary file and stopped at the ask rule for `rm`. Pass every payload to
-the runner in a uniquely named request file and read every result on stdout, and return the `finish` result, whose
+**Concurrent audits cross-read each other's working files.** Claude saved the
+rendered projection and retained input to fixed names such as `render.json` in
+a shared scratch directory while a second change audit ran from the same
+worktree, and one audit read the other's file. In another run Claude
+redirected retained input into a temporary file and stopped at the ask rule
+for `rm`. Pass every payload to the runner in a uniquely named request file
+and read every result on stdout, and return the `finish` result, whose
 `renderCommand` reproduces the complete projection from the sealed run.
 
 </failure_modes>

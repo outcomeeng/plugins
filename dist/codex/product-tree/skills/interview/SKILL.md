@@ -188,6 +188,8 @@ How to avoid: Complete the Pre-Analysis Protocol and share its brief before the 
 
 Claude framed a question — "should the parser tolerate trailing commas?" — whose answer the loaded spec and the existing parser already fixed. The operator answered the obvious, and the turn produced nothing the code did not already say. A variant: Claude reasoned to a clear recommendation, then asked anyway "to confirm", staging a decision it had already made.
 
+Why it failed: Claude framed a question before reasoning the decision through, so it never checked whether the loaded evidence already fixed the answer, and treated asking as a substitute for deciding.
+
 How to avoid: Decide-First Protocol. Reason the decision through first. Ask only when the answer is operator-owned and the evidence does not settle it. When one defensible answer remains, take it and state the call — do not ask to ratify it.
 
 **Failure 7: Strawman options and false balance**

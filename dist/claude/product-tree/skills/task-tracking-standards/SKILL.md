@@ -11,7 +11,7 @@ One shared standard for routing heartbeat and timer creation that keeps active r
 </objective>
 
 <reference_note>
-This is a reference skill. Skills that create, update, or delete a heartbeat or timer state the dependency as ``Use skill `product-tree:task-tracking-standards`.``; `<when_to_load>` names the moments. The heartbeat is the runtime tool; this skill owns the rules for using that tool. Do not load this skill for GitHub PR check/review waits governed by /merging-standards; those use `gh pr checks <pr-number> --watch --fail-fast --interval 30` directly.
+This is a reference skill; `<when_to_load>` names the moments it applies. The heartbeat is the runtime tool; this skill owns the rules for using that tool. GitHub PR check/review waits fall outside it: they use `gh pr checks <pr-number> --watch --fail-fast --interval 30` directly.
 </reference_note>
 
 <when_to_load>
@@ -27,9 +27,8 @@ Load this skill before any workflow:
 <principles>
 - Runtime tracking is a coordination handle for the next wake-up. Keep it sparse.
 - Durable facts stay in GitHub, the repository, the product tree, and command output. Re-read those sources on wake-up; conversation memory is not durable and is not a fact source.
-- Heartbeat text points to authoritative state; it never copies the full state.
-- The continuation prompt is a pointer, never a payload: it names the skills to reload and the pointers each skill must handle (the work-item identifiers, plus the repository when a cold reader needs it to resolve them), and nothing else.
-- Never assume conversation memory survives to the next fire. Compaction, session resumption, and a fresh automation thread each discard it, and none can be anticipated when the prompt is written. The wake-up reconstructs the directive, the plan, the finding assessments, and the next action by reloading the named skills and re-reading the durable artifacts (PR body, commits, PLAN.md, ISSUES.md) and live state. If the next fire must know something, write it to a durable artifact — never to the prompt, never to hoped-for retained memory.
+- The continuation prompt is a pointer, never a payload; `<heartbeat_payload>` defines its content.
+- Never assume conversation memory survives to the next fire. Compaction, session resumption, and a fresh automation thread each discard it, and none can be anticipated when the prompt is written.
 - On wake-up, reload the named workflow skills, this skill, repository instructions, and authoritative state before acting. The reload is mandatory recovery: the protocol a skill carries cannot be assumed to have survived in context, so re-invoking restores it.
 - A failed check keeps the work active. Fetch failed logs once, classify the layer, then continue the repair loop or ask for the exact missing approval, credential, or judgment.
 - "Stop before retrying" means classify before rerunning the same external job. It never means abandon active work.
@@ -56,7 +55,7 @@ The continuation prompt carries exactly two things:
 1. **The skills to reload** — the owning workflow skill and the references it depends on, always including this skill. The reloaded skill bodies supply the protocol; the prompt does not.
 2. **The pointers each skill must handle** — the work-item identifiers the skill resumes from (PR number, run id, branch, issue, or rollout id), plus the repository when a cold reader needs it to resolve them. The pointers say what each skill operates on; the skill resolves everything else from them.
 
-It carries nothing else. The wake-up reconstructs the directive, the plan, the finding assessments, the next action, and the stop condition by reloading the named skills and re-reading the durable artifacts (PR body, commits, `PLAN.md`, `ISSUES.md`) and live state. The prompt is not a memory: it is re-sent unchanged on every fire, it would be stale by fire time, and conversation memory is never assumed to survive (compaction, resumption, or a fresh thread can discard it, none anticipable). So the directive, the finding assessments, and the rationale never appear in the prompt — if the next fire must know something, it is written to a durable artifact (`PLAN.md` / `ISSUES.md`), the source the wake-up already re-reads.
+It carries nothing else. The wake-up reconstructs the directive, the plan, the finding assessments, the next action, and the stop condition by reloading the named skills and re-reading the durable artifacts (PR body, commits, `PLAN.md`, `ISSUES.md`) and live state. The prompt is re-sent unchanged on every fire and would be stale by fire time, so the directive, the finding assessments, and the rationale never appear in it. If the next fire must know something, write it to a durable artifact (`PLAN.md` / `ISSUES.md`), the source the wake-up already re-reads.
 
 A re-entry into a context that still holds the prior conversation can be as terse as the re-entry command plus the work-item pointer; a cold reader (a fresh thread) needs the repository and the skills named explicitly so the pointers resolve. The two differ only in how much a reader needs to resolve the same pointers — neither carries state.
 </heartbeat_payload>
@@ -70,18 +69,17 @@ NEVER copy these into a heartbeat:
 - expected future check conclusions that can be read from GitHub
 - repository policy text available from CLAUDE.md, local overlays, or skills
 - detailed implementation rationale already captured in commits, specs, or comments
-- the directive, the finding assessments, the rationale, or any reasoning the wake-up reconstructs from the reloaded skills and durable artifacts — the prompt names skills and pointers only
 
 </stale_context_boundary>
 
 <lifecycle>
 Create tracking when active work is blocked only by time, external convergence, or a delayed repository-governed action whose governing skill has no foreground wait command.
 
-Refresh tracking on a new commit, run id, work-item id, blocker, approval boundary, failure classification, or next repository action. Refreshing re-schedules the next fire and updates the pointer when the work-item id itself changes; it never writes the blocker, approval boundary, or failure classification into the prompt — that state is reconstructed on wake-up, and anything a later fire needs is written to a durable artifact.
+Refresh tracking on a new commit, run id, work-item id, blocker, approval boundary, failure classification, or next repository action. Refreshing re-schedules the next fire and updates the pointer when the work-item id itself changes.
 
-Keep tracking active when state is queued, in progress, pending, retry-after-classification, awaiting deterministic local repair, or waiting for external convergence, excluding GitHub PR check waits governed by /merging-standards.
+Keep tracking active when state is queued, in progress, pending, retry-after-classification, awaiting deterministic local repair, or waiting for external convergence, excluding GitHub PR check waits.
 
-Convert tracking to a repair path when a failure is deterministic and can be fixed locally. The next fire re-sends the same skills-and-pointers prompt unchanged; the failed layer, the log source, and the next repair checkpoint are written to `PLAN.md` / `ISSUES.md` so the next fire reconstructs them from there.
+Convert tracking to a repair path when a failure is deterministic and can be fixed locally. Write the failed layer, the log source, and the next repair checkpoint to `PLAN.md` / `ISSUES.md`.
 
 Delete tracking when the PR is merged and every declared deploy or release phase has completed or no-oped, the work item is closed, the task acceptance condition is met, or the only remaining step is operator approval and the owning workflow says to stop for approval.
 </lifecycle>
@@ -89,7 +87,7 @@ Delete tracking when the PR is merged and every declared deploy or release phase
 <runtime_timer>
 Use the runtime timer or heartbeat tool when available. Select the tool by runtime:
 
-- **Claude Code:** `ScheduleWakeup` for a single delayed re-check, or `/loop` for recurring re-inspection. The prompt names the owning skill and the pointers it handles per `<heartbeat_payload>`; the wake-up reloads the skill and reconstructs state from the durable artifacts and live state. `ScheduleWakeup`'s instruction to "pass the same input verbatim each turn" means re-send that same skills-and-pointers prompt every fire; it never means expand it into a self-contained directive.
+- **Claude Code:** `ScheduleWakeup` for a single delayed re-check, or `/loop` for recurring re-inspection. `ScheduleWakeup`'s instruction to "pass the same input verbatim each turn" means re-send that same skills-and-pointers prompt every fire; it never means expand it into a self-contained directive.
 - **Codex:** use a timer or automation capability only when the active harness exposes and documents one. When none is exposed, report the exact external condition and durable work-item pointer, keep the work active, end the turn, and resume only from operator re-entry or an external completion notification. Never manufacture a shell timer.
 
 A scheduled heartbeat is the turn's continuation, not its close. When a scheduled wake-up is the next action, do not append a structured question to close the turn — the wake-up is the continuation. End such a turn by reporting status and the scheduled re-check, with no question and no trailing prose offer.
@@ -127,7 +125,6 @@ Cold re-entry (a fresh thread) — name the repository, the skills to reload, an
 Resume <owning skill> (+ /task-tracking-standards) for <repo path> <work-item pointer>. Reload the skills, re-read the durable artifacts (PR body, commits, PLAN.md, ISSUES.md) and live state, and continue from there.
 ```
 
-Neither form carries the directive, the finding assessments, or the rationale; those are reconstructed, and anything the next fire needs lives in a durable artifact.
 </prompt_template>
 
 <failure_modes>
@@ -141,7 +138,7 @@ Neither form carries the directive, the finding assessments, or the rationale; t
 
 - **What happened:** Claude copied the current directive, plan, and finding assessments into a heartbeat prompt.
 - **Why it failed:** The branch advanced before the wake-up, so the prompt resumed stale conclusions against a new head.
-- **How to avoid:** Carry only skills and pointers; write any required continuation facts to durable artifacts that the wake-up re-reads.
+- **How to avoid:** Build the prompt as `<heartbeat_payload>` defines it.
 
 **Local background polling**
 
@@ -154,7 +151,7 @@ Neither form carries the directive, the finding assessments, or the rationale; t
 <failure_handling>
 
 - Queued, in-progress, and pending states outside the PR-check lifecycle: report material changes, refresh the heartbeat, and continue on the next wake-up.
-- Failed, cancelled, or timed-out external work: fetch failed logs once, classify the failed layer, write the failed layer, log source, and next repair checkpoint to `PLAN.md` / `ISSUES.md` (never into the prompt), and keep the work active unless the next step requires operator approval, credentials, or judgment.
+- Failed, cancelled, or timed-out external work: fetch failed logs once, classify the failed layer, write the failed layer, log source, and next repair checkpoint to `PLAN.md` / `ISSUES.md`, and keep the work active unless the next step requires operator approval, credentials, or judgment.
 - Missing approval: stop the work item at the approval boundary, delete heartbeat tracking, and ask with the identifiers, effect, and non-effect required by the owning workflow.
 
 </failure_handling>
@@ -162,8 +159,7 @@ Neither form carries the directive, the finding assessments, or the rationale; t
 <success_criteria>
 Tracking is correct when:
 
-- every heartbeat-producing skill loads this skill before mutating runtime tracking
-- the continuation prompt carries only the skills to reload and the pointers each handles — never the directive, finding assessments, or rationale, which are reconstructed on wake-up; anything the next fire needs is written to a durable artifact
+- the continuation prompt matches `<heartbeat_payload>`
 - wake-ups reload the named skills and re-read authoritative state before acting, never assuming conversation memory survived
 - failed checks stay in the active workflow until classified and repaired or blocked by an explicit operator decision
 - shell `sleep`, polling loops, `gh run watch`, background keep-alives, backgrounded watchers, and duplicate heartbeats are absent

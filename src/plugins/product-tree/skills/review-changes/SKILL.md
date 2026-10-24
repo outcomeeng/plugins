@@ -3,6 +3,7 @@ name: review-changes
 description: ALWAYS invoke this skill when reviewing working changes on a branch against a base ref. NEVER review changes by hand-formatting JSON or by reading persisted review artifacts directly.
 allowed-tools:
   - Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py":*)
+  - Bash(SPX_VERIFY_*=* python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py":*)
   - Read
   - Grep
   - Glob
@@ -10,12 +11,12 @@ allowed-tools:
 ---
 
 <objective>
-A sealed `spx journal --type review` run whose terminal event records review status and finding counts, with the run token returned to the caller.
+A sealed `spx journal --type review` run whose terminal event records review status, finding counts, and each unread file, with the raw run token printed by `finish` as the skill's output.
 </objective>
 
 <inputs>
 
-Review scope is discovered from the current worktree. Reusable gate evidence requires the exact current version to be committed and the worktree to be clean. Explicit advisory feedback may include staged, unstaged, or untracked work, and the resulting review supplies no reusable gate evidence. Export `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` to select a non-default range. Branch and target identity variables may also be exported.
+Review scope is discovered from the current worktree. Reusable gate evidence requires the exact current version to be committed and the worktree to be clean. Explicit advisory feedback may include staged, unstaged, or untracked work, and the resulting review supplies no reusable gate evidence. The input may supply the resolved scope as literal `SPX_VERIFY_BASE_REF`, `SPX_VERIFY_HEAD_REF`, `SPX_VERIFY_BRANCH`, `SPX_VERIFY_TARGET_KIND`, and `SPX_VERIFY_PULL_REQUEST_NUMBER` assignments, each written as a prefix on the single `review_run.py start` command line, because a shell export does not persist across Bash calls. `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` select a non-default range; the other three record branch and target identity.
 
 </inputs>
 
@@ -24,15 +25,15 @@ Review scope is discovered from the current worktree. Reusable gate evidence req
 Invoke only the bundled runner:
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py" start
+[SPX_VERIFY_*=<value> ...] python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py" start
 python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py" append-scope --state "<statePath>" "<changed-file>"
 python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py" append-finding --state "<statePath>" < "<finding-file>"
 python3 "${CLAUDE_SKILL_DIR}/scripts/review_run.py" finish --state "<statePath>" --unread "<unread-file>"
 ```
 
-Pass `--unread "<unread-file>"` once for each changed file Claude did not read, and omit it when Claude read every changed file.
+The bracketed `SPX_VERIFY_*=<value>` assignments are optional and appear only when the input supplies them, each as a literal prefix on the `start` command line; omit the brackets. Pass `--unread "<unread-file>"` once for each changed file Claude did not read, and omit it when Claude read every changed file.
 
-`start` fetches a git-derived or `origin/` base and refuses a head behind the fetched `origin/<base>` tip before any journal exists — the dedicated stale-base exit code with a `stale-base` JSON diagnostic on stderr and no run state; an exported local ref or commit is compared as given — and otherwise computes the diff bundle, opens the review journal, appends the scope-entered event, and returns JSON containing `statePath`, `runToken`, `diffPath`, `manifestPath`, and `changedFiles`. Report the refusal as a `stale-base` block carrying the diagnostic verbatim and stop.
+`start` fetches a git-derived or `origin/` base and refuses a head behind the fetched `origin/<base>` tip before any journal exists — the dedicated stale-base exit code with a `stale-base` JSON diagnostic on stderr and no run state; a supplied local ref or commit is compared as given — and otherwise computes the diff bundle, opens the review journal, appends the scope-entered event, and returns JSON containing `statePath`, `runToken`, `diffPath`, `manifestPath`, and `changedFiles`. Report the refusal as a `stale-base` block carrying the diagnostic verbatim and stop.
 
 `append-scope` appends one scope-advanced event for a changed file only after Claude has read that file; a file Claude has not read gets no scope-advanced event.
 
@@ -66,7 +67,7 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 5. Before judging any `debt` finding, locate and read the `ISSUES.md` of each governing node of the changed files per the prompt's `<tracked_debt>` section.
 6. When a finding is raised, immediately write that one finding JSON object to its own scratch file and pass it to `append-finding` through the input redirect, following `<finding_payload>`. Do not collect findings into a later batch. Set the finding's `unit` and `tracked` fields as the prompt's `<finding_shape>` and `<tracked_debt>` direct.
 7. When review is complete, call `finish`, passing `--unread` for each changed file Claude did not read.
-8. Report only the raw `runToken` to the caller.
+8. Output only the raw `runToken` that `finish` printed.
 
 </workflow>
 
@@ -92,7 +93,7 @@ A finding is a payload: it carries code spans, quotes, and JSON.
 - NEVER load a review prompt other than `${CLAUDE_SKILL_DIR}/references/review-prompt.md` — one prompt keeps every review run comparable.
 - NEVER read `REVIEW.md`, `REVIEW.example.md`, or another repository-root review prompt.
 - NEVER append praise, acknowledgements, open questions, verdicts, or prose summaries to the review stream — it carries findings only.
-- NEVER render, summarize, count, or restate findings for the caller. The sealed journal prefix is the review authority.
+- NEVER render, summarize, count, or restate findings in the output. The sealed journal prefix is the review authority.
 
 </constraints>
 
@@ -118,7 +119,7 @@ A finding is a payload: it carries code spans, quotes, and JSON.
 
 - [ ] The final output is exactly the raw `runToken` returned by `finish`.
 - [ ] The sealed journal prefix contains a terminal run-completed event.
-- [ ] The terminal run-completed event records review status and finding counts, and names each unread file.
+- [ ] Every changed file is either advanced after being read or named unread, so no unread file is sealed `approved`.
 - [ ] The final output contains no rendered findings, count line, verdict, or summary.
 - [ ] A non-zero runner exit is reported with its stderr instead of a partial review result.
 

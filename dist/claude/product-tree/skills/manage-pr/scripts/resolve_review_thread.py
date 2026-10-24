@@ -78,26 +78,44 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def validate_thread_id(thread_id: str) -> str:
     if not NODE_ID_PATTERN.fullmatch(thread_id):
-        raise ValueError("thread_id must be a GitHub node ID")
+        raise ValueError(
+            f"thread_id must be a GitHub node ID matching {NODE_ID_PATTERN.pattern}, "
+            f"got {thread_id!r}. Pass the review-thread node ID, for example "
+            "PRRT_kwDOABCDEF, from the pull-request review-thread listing."
+        )
     return thread_id
 
 
 def validate_repository(repository: str | None) -> tuple[str, str]:
     if repository is None or not REPOSITORY_PATTERN.fullmatch(repository):
-        raise ValueError("repo must be in owner/name form")
+        raise ValueError(
+            f"--repo must be in owner/name form matching {REPOSITORY_PATTERN.pattern}, "
+            f"got {repository!r}. Pass --repo <owner>/<repo>, for example "
+            "outcomeeng/plugins."
+        )
     owner, repo = repository.split("/", 1)
     return owner, repo
 
 
 def validate_number(value: str | None, name: str) -> int:
     if value is None or not NUMBER_PATTERN.fullmatch(value):
-        raise ValueError(f"{name} must be a positive integer")
+        raise ValueError(
+            f"--{name} must be a positive integer matching {NUMBER_PATTERN.pattern}, "
+            f"got {value!r}. Pass --{name} <number> with the number from the "
+            "pull-request URL, for example 405."
+        )
     return int(value)
 
 
 def validate_comment_id(comment_id: str | None) -> str:
     if comment_id is None or not COMMENT_ID_PATTERN.fullmatch(comment_id):
-        raise ValueError("review_comment_id must be a database ID or GitHub node ID")
+        raise ValueError(
+            "--review-comment-id must be a database ID or GitHub node ID matching "
+            f"{COMMENT_ID_PATTERN.pattern}, got {comment_id!r}. Pass the id field "
+            "of a review comment from "
+            "gh api repos/<owner>/<repo>/pulls/<pr-number>/comments, "
+            "for example 12345."
+        )
     return comment_id
 
 
@@ -105,7 +123,11 @@ def validate_host(host: str | None) -> str | None:
     if host is None:
         return None
     if not HOST_PATTERN.fullmatch(host):
-        raise ValueError("host must be a GitHub hostname")
+        raise ValueError(
+            f"--host must be a GitHub hostname matching {HOST_PATTERN.pattern}, "
+            f"got {host!r}. Pass the bare hostname without scheme or path, for "
+            "example ghe.example.com."
+        )
     return host
 
 
@@ -234,7 +256,15 @@ def iter_thread_comments(
     for thread in threads:
         if not isinstance(thread, dict):
             continue
-        thread_id = validate_thread_id(str(thread.get("id")))
+        response_id = str(thread.get("id"))
+        if not NODE_ID_PATTERN.fullmatch(response_id):
+            raise ValueError(
+                "GitHub response reviewThreads.nodes[].id must be a node ID "
+                f"matching {NODE_ID_PATTERN.pattern}, got {response_id!r}. "
+                "Re-run the command; if the value persists, the GitHub host "
+                "returned an unexpected payload shape."
+            )
+        thread_id = response_id
         comments = thread.get("comments")
         if isinstance(comments, dict):
             yield thread_id, comments
@@ -270,7 +300,11 @@ def find_thread_id(
         end_cursor = next_threads_cursor(review_threads)
         if end_cursor is None:
             raise ValueError(
-                "review comment was not found after complete review-thread pagination"
+                "review comment was not found after complete review-thread pagination: "
+                f"searched repo {owner}/{repo}, pull request {pr_number}, "
+                f"review comment id {comment_id!r}. Check the id against "
+                f"gh api repos/{owner}/{repo}/pulls/{pr_number}/comments, "
+                "or pass the thread node ID directly."
             )
         fields["threadsAfter"] = end_cursor
 
@@ -291,7 +325,12 @@ def main(
                 or args.review_comment_id is not None
             ):
                 raise ValueError(
-                    "pass either thread_id or --repo/--pr/--review-comment-id"
+                    "pass either thread_id or --repo/--pr/--review-comment-id, "
+                    f"got thread_id {args.thread_id!r} together with "
+                    f"--repo {args.repo!r}, --pr {args.pr!r}, "
+                    f"--review-comment-id {args.review_comment_id!r}. "
+                    "Drop the thread_id argument to discover the thread, or drop "
+                    "the three discovery options to resolve it directly."
                 )
             thread_id = validate_thread_id(args.thread_id)
         else:

@@ -239,8 +239,8 @@ def _names_commit_not_branch(value: str, repo: pathlib.Path) -> bool:
 def _branch_identity(repo: pathlib.Path) -> str:
     """The run's branch identity: a branch name, never a commit.
 
-    An exported branch value that names a commit and no branch ref, as a
-    commit-range input exports, yields the checked-out branch.
+    A branch value in the process environment that names a commit and no
+    branch ref, as a commit-range input supplies, yields the checked-out branch.
     """
     exported = os.environ.get(ENV_BRANCH, "").strip()
     if exported and not _names_commit_not_branch(exported, repo):

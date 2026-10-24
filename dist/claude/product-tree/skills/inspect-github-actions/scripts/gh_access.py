@@ -171,15 +171,31 @@ def main(argv: list[str]) -> int:
     if owner_repo is None:
         remote = detect_remote_url()
         if remote is None:
-            error = "no git remote 'origin' found and no OWNER/REPO argument provided"
+            error = (
+                "no git remote 'origin' found and no OWNER/REPO argument provided. "
+                "Next action: run from inside a checkout that has an origin remote "
+                "(git remote add origin <url>), or pass the repository explicitly: "
+                "python3 gh_access.py owner/repo"
+            )
         else:
             parsed = parse_remote(remote)
             if parsed is None:
-                error = f"could not parse git remote: {remote!r}"
+                error = (
+                    f"could not parse git remote {remote!r}. "
+                    "Accepted forms: git@HOST:owner/repo[.git], "
+                    "https://HOST/owner/repo[.git], ssh://git@HOST[:port]/owner/repo[.git]. "
+                    "Next action: fix the origin URL (git remote set-url origin <url>), "
+                    "or pass the repository explicitly: python3 gh_access.py owner/repo"
+                )
             else:
                 host, owner_repo = parsed
     elif "/" not in owner_repo:
-        error = f"invalid OWNER/REPO argument: {owner_repo!r}"
+        error = (
+            f"invalid OWNER/REPO argument {owner_repo!r}: expected one slash-separated "
+            "pair such as outcomeeng/plugins. "
+            "Next action: rerun as python3 gh_access.py owner/repo, "
+            "or omit the argument to detect it from the origin remote"
+        )
         owner_repo = None
     else:
         remote = detect_remote_url()

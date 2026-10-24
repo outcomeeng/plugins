@@ -236,9 +236,32 @@ The judgment is traced from the code and named in the finding — never a measur
 
 The four evidence properties above are language-neutral. Language-specific test-evidence concerns — the per-language check IDs and extraction targets named in `<verdict_format>` — are owned by the language test audit skill, not by this one.
 
-Derive language partitions from the linked-test filenames and the installed language plugins. Take the installed `audit-<lang>-test` skills from the skill listing already in context; no directory scan is needed. For each language: Use skill `<lang>:<lang>-test-standards`. Read its filename instantiation of `<subject>.<evidence>.<level>[.<runner>]` — the concrete pattern the standard states, such as `test_<subject>.<evidence>.<level>[.<runner>].py`. The text after the last closing bracket is the declared suffix: a compound suffix such as `.test.ts` as readily as a bare `.py` or `_test.go`. Map every linked test whose filename ends in an installed plugin's declared suffix to that language. Reject a suffix no installed plugin declares, or an ambiguous partition, with property and rule `unsupported-language` and remediation target `language-partition` instead of guessing; never map an extension from a list this skill carries.
+Derive language partitions from the linked-test filenames and the installed language plugins. Take the installed language skills from the skill listing already in context; no directory scan is needed. The language skills the composition reaches are:
 
-For each language: Use skill `<lang>:audit-<lang>-test`. Validate its output against that skill's declared verdict contract: output shape, required fields, applicable rows, and agreement between findings, row statuses, and overall status. Malformed or incomplete evidence adds a `gate-1-assertion` `REJECT` finding with property and rule `language-composition`; continue the remaining languages.
+| Language   | Standards skill                        | Audit skill                        |
+| ---------- | -------------------------------------- | ---------------------------------- |
+| Python     | `python:python-test-standards`         | `python:audit-python-test`         |
+| TypeScript | `typescript:typescript-test-standards` | `typescript:audit-typescript-test` |
+| Go         | `go:go-test-standards`                 | `go:audit-go-test`                 |
+| Rust       | `rust:rust-test-standards`             | `rust:audit-rust-test`             |
+
+For each language whose audit skill appears in the listing, load only that language's standards skill:
+
+- Python: Use skill `python:python-test-standards`.
+- TypeScript: Use skill `typescript:typescript-test-standards`.
+- Go: Use skill `go:go-test-standards`.
+- Rust: Use skill `rust:rust-test-standards`.
+
+Read the loaded skill's filename instantiation of `<subject>.<evidence>.<level>[.<runner>]` — the concrete pattern the standard states, such as `test_<subject>.<evidence>.<level>[.<runner>].py`. The text after the last closing bracket is the declared suffix: a compound suffix such as `.test.ts` as readily as a bare `.py` or `_test.go`. Map every linked test whose filename ends in an installed plugin's declared suffix to that language. Reject a suffix no installed plugin declares, or an ambiguous partition, with property and rule `unsupported-language` and remediation target `language-partition` instead of guessing; never map an extension from a list this skill carries.
+
+For each language partition, invoke only that language's audit skill:
+
+- Python: Use skill `python:audit-python-test`.
+- TypeScript: Use skill `typescript:audit-typescript-test`.
+- Go: Use skill `go:audit-go-test`.
+- Rust: Use skill `rust:audit-rust-test`.
+
+Validate its output against that skill's declared verdict contract: output shape, required fields, applicable rows, and agreement between findings, row statuses, and overall status. Malformed or incomplete evidence adds a `gate-1-assertion` `REJECT` finding with property and rule `language-composition`; continue the remaining languages.
 
 Merge each valid result's findings into the matching rows by `name` — append, never replace — and derive their statuses under `<verdict_format>`. A composed finding keeps the rule identifier from the rule catalog of the invoked `audit-<lang>-test` skill and is keyed `<file>:<that identifier>`; composed findings sharing a key join into one finding whose `locations` list holds each of their locations. Merge its evidence-chain entries and coverage traces with the shared inspection, preserving every inspected artifact and assertion without duplicate entries. A composed rejection remains a rejection in the merged result. When a required `audit-<lang>-test` skill is absent or unavailable, mark `gate-1-assertion` as `FAIL` and append a `REJECT` finding there naming the missing skill, property and rule `language-composition`, and remediation target `skill-installation`; never approve incomplete coverage.
 

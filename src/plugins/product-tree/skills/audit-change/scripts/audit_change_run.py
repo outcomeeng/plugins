@@ -498,9 +498,14 @@ def _command(
 
 
 def _json_lines(
-    stdout: str, *, run_token: str | None = None
+    stdout: str, *, argv: Sequence[str], run_token: str | None = None
 ) -> list[dict[str, object]]:
-    """Parse every non-empty stdout line as one JSON object."""
+    """Parse every non-empty stdout line as one JSON object.
+
+    ``argv`` names the command that printed ``stdout`` so a block can say which
+    command to rerun by hand.
+    """
+    command = " ".join(argv)
     objects: list[dict[str, object]] = []
     for line in stdout.splitlines():
         if not line.strip():
@@ -510,32 +515,39 @@ def _json_lines(
         except json.JSONDecodeError as exc:
             raise Blocked(
                 BlockReason.UNREADABLE_OUTPUT,
-                f"command output is not JSON: {exc.msg}",
+                f"`{command}` printed a line that is not JSON ({exc.msg}); "
+                "run it by hand and confirm the installed tool prints one JSON "
+                "object per line",
                 run_token=run_token,
             ) from exc
         except ValueError as exc:
             raise Blocked(
                 BlockReason.UNREADABLE_OUTPUT,
-                f"command output cannot be parsed: {exc}",
+                f"`{command}` printed output that cannot be parsed ({exc}); "
+                "run it by hand and confirm it prints one JSON object per line",
                 run_token=run_token,
             ) from exc
         except RecursionError as exc:
             raise Blocked(
                 BlockReason.UNREADABLE_OUTPUT,
-                "command output nests too deeply to parse",
+                f"`{command}` printed JSON nested too deeply to parse; "
+                "run it by hand and confirm the installed tool version",
                 run_token=run_token,
             ) from exc
         if not isinstance(value, dict):
             raise Blocked(
                 BlockReason.UNREADABLE_OUTPUT,
-                "command output line is not a JSON object",
+                f"`{command}` printed a JSON {type(value).__name__} line "
+                "where an object is required; run it by hand and confirm "
+                "the installed tool version",
                 run_token=run_token,
             )
         objects.append(value)
     if not objects:
         raise Blocked(
             BlockReason.UNREADABLE_OUTPUT,
-            "command printed no JSON",
+            f"`{command}` printed no JSON; run it by hand and confirm it "
+            "exits with output on stdout",
             run_token=run_token,
         )
     return objects
@@ -544,7 +556,11 @@ def _json_lines(
 def _repository_root(context: _Context) -> pathlib.Path:
     stdout = _command(context, _GIT_TOPLEVEL, cwd=context.cwd).strip()
     if not stdout:
-        raise Blocked(BlockReason.UNREADABLE_OUTPUT, "git printed no repository root")
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"`{' '.join(_GIT_TOPLEVEL)}` printed no repository root in "
+            f"{context.cwd}; run the request from inside a git worktree",
+        )
     return pathlib.Path(stdout)
 
 
@@ -564,11 +580,23 @@ def _normalized_path(value: str) -> str:
         raise Blocked(BlockReason.PATH_REJECTED, f"path {defect}: {value!r}")
     pure = pathlib.PurePosixPath(value)
     if pure.is_absolute():
-        raise Blocked(BlockReason.PATH_REJECTED, f"path is absolute: {value}")
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"path is absolute: {value}; pass the repository-relative form, "
+            f"such as {value.lstrip('/')!r}",
+        )
     if ".." in pure.parts:
-        raise Blocked(BlockReason.PATH_REJECTED, f"path traverses a parent: {value}")
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"path traverses a parent: {value}; pass a path that stays "
+            "inside the repository, with no `..` segment",
+        )
     if str(pure) != value or pure.parts in ((), (".",)):
-        raise Blocked(BlockReason.PATH_REJECTED, f"path is not normalized: {value}")
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"path is not normalized: {value}; pass the normalized form "
+            f"{str(pure)!r}, with no empty, `.`, or repeated-slash segment",
+        )
     return value
 
 
@@ -789,7 +817,9 @@ def _run_json(
     stdout = _command(
         context, _run_argv(verb, relative, run_token), cwd=root, run_token=run_token
     )
-    return _json_lines(stdout, run_token=run_token)[-1]
+    return _json_lines(
+        stdout, argv=_run_argv(verb, relative, run_token), run_token=run_token
+    )[-1]
 
 
 def _retained_content(
@@ -840,7 +870,11 @@ def _tool_version(
     del request
     version = _command(context, _SPX_VERSION, cwd=context.cwd).strip()
     if not version:
-        raise Blocked(BlockReason.UNREADABLE_OUTPUT, "spx printed no version")
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"`{' '.join(_SPX_VERSION)}` printed no version; confirm spx is "
+            "installed and on PATH",
+        )
     return {ResultField.TOOL_VERSION: version}
 
 
@@ -870,7 +904,7 @@ def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object
         "--input",
         relative,
     ]
-    lines = _json_lines(_command(context, argv, cwd=root))
+    lines = _json_lines(_command(context, argv, cwd=root), argv=argv)
     run_token = next(
         (
             token
@@ -882,7 +916,12 @@ def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object
         None,
     )
     if run_token is None:
-        raise Blocked(BlockReason.UNREADABLE_OUTPUT, "start printed no run locator")
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"`{' '.join(argv)}` printed no line carrying a run locator and "
+            "run token; confirm the installed spx version supports the run "
+            "`start` verb",
+        )
     retained = _retained_content(context, root, relative, run_token)
     if retained != content:
         raise Blocked(
@@ -924,7 +963,7 @@ def _append(
         stdin=_payload_text(request),
         payload_key=idempotency_key,
     )
-    accepted = _json_lines(stdout)[-1]
+    accepted = _json_lines(stdout, argv=argv)[-1]
     return {
         ResultField.RUN_TOKEN: run_token,
         ResultField.IDEMPOTENCY_KEY: idempotency_key,
@@ -1111,7 +1150,8 @@ def _read_connection(
         if cursor is not None:
             argv += ["-f", f"after={cursor}"]
         connection = _connection(
-            _json_lines(_command(context, argv, cwd=context.cwd))[-1], kind
+            _json_lines(_command(context, argv, cwd=context.cwd), argv=argv)[-1],
+            kind,
         )
         nodes = connection.get(StoreField.NODES)
         info = connection.get(StoreField.PAGE_INFO)
@@ -1168,7 +1208,7 @@ def _read_published(
         "-F",
         f"n={number}",
     ]
-    node: object = _json_lines(_command(context, argv, cwd=context.cwd))[-1]
+    node: object = _json_lines(_command(context, argv, cwd=context.cwd), argv=argv)[-1]
     for key in (StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUE):
         node = node.get(key) if isinstance(node, dict) else None
     body = node.get(StoreField.BODY) if isinstance(node, dict) else None
@@ -1237,7 +1277,9 @@ def _read_relations(
         ]
         if cursor is not None:
             argv += ["-f", f"after={cursor}"]
-        node: object = _json_lines(_command(context, argv, cwd=context.cwd))[-1]
+        node: object = _json_lines(_command(context, argv, cwd=context.cwd), argv=argv)[
+            -1
+        ]
         for key in (StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUES):
             node = node.get(key) if isinstance(node, dict) else None
         nodes = node.get(StoreField.NODES) if isinstance(node, dict) else None
@@ -1418,7 +1460,12 @@ def _parse_request(text: str) -> dict[str, object]:
             BlockReason.INVALID_REQUEST, "request nests too deeply to parse"
         ) from exc
     if not isinstance(request, dict):
-        raise Blocked(BlockReason.INVALID_REQUEST, "request must be a JSON object")
+        raise Blocked(
+            BlockReason.INVALID_REQUEST,
+            f"request must be a JSON object, received a JSON "
+            f"{type(request).__name__}; write the request file as "
+            '`{"operation": ...}` and pass its path',
+        )
     return request
 
 

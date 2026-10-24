@@ -1,5 +1,5 @@
 name = "product-tree_changeset-coherence-auditor"
-description = "ALWAYS invoke when deciding whether an exact committed changeset is one coherent review unit or requires a dependency-ordered split."
+description = "Audits whether one exact committed changeset is one coherent review unit or requires a dependency-ordered split, in an isolated read-only verifier context. The owning skill, audit-changeset-coherence, has its composing flow invoke it by exact name with the committed scope."
 model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
@@ -46,7 +46,7 @@ Return only the structured JSON verdict from `product-tree:audit-changeset-coher
 <manual_review_guidance>
 Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Invoke or load these skills before relying on this agent's specialized behavior: `product-tree:audit-changeset-coherence`.
 
-Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Glob`, `Grep`, `Bash(python3:*)`, `Bash(git diff:*)`, `Bash(git show:*)`.
+Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Glob`, `Grep`, `Bash(python3 "*/skills/audit-changeset-coherence/scripts/resolve_scope.py":*)`, `Bash(git diff:*)`, `Bash(git show:*)`.
 </manual_review_guidance>
 """
 

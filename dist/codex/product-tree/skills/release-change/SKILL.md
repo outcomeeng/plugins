@@ -7,7 +7,7 @@ description: >-
   Product's Maintainer. NEVER leave a Change Claimed by a conversation that has
   ended, and NEVER close a Change with this skill.
 argument-hint: "[#N | owner/repo#N | issue-url] [submit]"
-allowed-tools: Read, Write, Bash(git status:*), Bash(git rev-parse:*), Bash(git push -u origin HEAD:*), Bash(git switch --detach), Bash(git switch -c work/change-:*), Bash(git merge-base --is-ancestor:*), Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh pr view:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(gh api repos/*/issues/*/dependencies/blocked_by --method GET -F per_page=100), Bash(printenv CODEX_THREAD_ID), request_user_input
+allowed-tools: Read, Write, Bash(git status:*), Bash(git rev-parse:*), Bash(git push -u origin HEAD:*), Bash(git switch --detach), Bash(git switch -c work/change-:*), Bash(git merge-base --is-ancestor:*), Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh pr view:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(gh api repos/*/issues/*/dependencies/blocked_by --method GET -F per_page=100), Bash(printenv CODEX_THREAD_ID)
 ---
 
 <objective>

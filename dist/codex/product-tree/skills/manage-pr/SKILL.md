@@ -1,7 +1,7 @@
 ---
 name: manage-pr
 description: >-
-  ALWAYS invoke this skill when managing, waiting on, or continuing an open pull request lifecycle after a PR exists.
+  ALWAYS invoke this skill for the composed lifecycle protocol of an existing PR: check wait, re-entry after compaction or push, merge-readiness decision, and merge command selection. Invoked by exact name from the GitHub PR skill, not for opening a PR.
 argument-hint: "[pr-number|url|branch] [--return-closeout]"
 allowed-tools: Read, Glob, Grep, Edit, Write, collaboration.spawn_agent, collaboration.wait_agent, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*)
 ---
@@ -14,23 +14,23 @@ The pull request merged into the base branch on origin with one stable closeout-
 
 `$ARGUMENTS` accepts one optional PR pointer and the optional exact marker `--return-closeout`. Remove the marker before pointer resolution. Treat the remaining complete trimmed value as a PR number, PR URL, or branch name and pass that same value to every pointer-bearing inspection command; when it is empty, resolve the PR from the current branch with bare `gh pr view`. Reject duplicate markers, unknown flags, or more than one pointer.
 
-The marker binds post-merge ownership. Present means Step 9 returns the closeout-ready result and performs no Change disposition. Absent means this pass closes and disposes of the held Change per /merging-standards `<close_phase>` when its remaining-work disposition is complete.
+The marker binds post-merge ownership; Step 9 states what each case returns.
 
 </input>
 
-<step name="pr_wait_and_reentry_policy">
+<pr_wait_and_reentry_policy>
 
 This skill is the re-entry point for an open pull request: each pass inspects live GitHub and repository state for the PR pointer before acting. When no pointer is provided, resolve the PR from the current branch with bare `gh pr view`.
 
 Action tokens are pass-local observations derived from the current live inspection. `WAIT_FOR_REVIEW`, `WAIT_FOR_CHECKS`, `FIX_FINDING:<item>`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_BLOCKED:<reason>`, `AWAIT_DEPLOYMENT_AUTHORIZATION`, and `AWAIT_RELEASE_AUTHORIZATION` never store PR state and never authorize a later wait, fix, deploy, release, or closeout without a fresh inspection pass. The mutation guard verdict `MERGE_READY:<head-sha>` is also pass-local and never authorizes a later merge without a fresh inspection pass for the same inspected head. After compaction, restart from Step 0; the foundation and node context reload only at the first product-content access, per Step 0. After foreground wait completion, a push, a review arrival, an operator reply, or any new user turn, discard prior token and guard-verdict authority and return to Step 1 for the PR pointer.
 
-When PR checks or current-head review output are not terminal, this skill runs exactly one foreground wait command, `gh pr checks <pr-number> --watch --fail-fast --interval 30`, then discards the pre-wait token authority and re-inspects PR state, check rollup, PR-level comments, formal reviews, review-thread comments, and base drift before deciding the next action. Runtime heartbeats, runtime timers, background waits, shell polling, background `sleep`, and `gh run watch` are invalid wait mechanisms for GitHub PR checks.
+When PR checks or current-head review output are not terminal, run `<pr_check_wait>`.
 
 GitHub and the local repository are authoritative for PR state. Conversation memory and prior tokens are only routing hints that name why this skill is being re-entered.
 
-</step>
+</pr_wait_and_reentry_policy>
 
-<step name="pr_identity_fields">
+<pr_identity_fields>
 
 Every PR-state `gh pr view --json` command that participates in a management pass or re-inspection reads the formal-review and PR-level-comment surfaces in the same snapshot as check and PR state:
 
@@ -42,20 +42,15 @@ gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --method GET -F per_page=
 
 The `reviews` field carries formal review submissions. The `comments` field carries PR-level issue comments. The review-thread comments surface is the separate `gh api` call above, which passes `--method GET` explicitly because `gh api` sends a POST when `-F` parameters are present and no method is given; it is read from page 1 to at most page 10 at 100 comments per page; a tenth page that returns 100 comments is the blocked read /merging-standards `<review_inspection>` states, and the pass emits `MERGE_BLOCKED:review-thread-comments-bound` instead of evaluating readiness.
 
-</step>
+</pr_identity_fields>
 
-<step name="the_managing_flow">
+<workflow>
 
 Walk these steps on each management pass. Authorized routine steps — inspect, classify, rebase, re-review, push, and foreground PR-check wait — run directly. Merge proceeds autonomously after `MERGE_READINESS` holds and the mutation-point guard returns `MERGE_READY:<head-sha>`. Unresolved synchronization follows Step 4's diagnostic contract; gate conditions use the action tokens.
 
 **Step 0 — Load references.** Immediately before the first product content this pass reads or modifies — a finding fix, base-sync conflict reconciliation, `/commit-changes` of edited product content, a coordination-note edit — or the first node this pass discusses, and at no earlier step, load the foundation and that node's context: Use skill `product-tree:understand`. Use skill `product-tree:contextualize`. PR inspection, check wait, merge, deploy, and release touch no product content and proceed without either reload. Use skill `product-tree:merging-standards`. It supplies the shared vocabulary. Use skill `product-tree:commit-changes`. It supplies the follow-up commit format. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 1; invoking the compact loader alone does not load the tagged policy sections used below.
 
-**Step 1 — Identify the PR.** When `$ARGUMENTS` is non-empty, resolve the PR from that pointer before inspecting state. Use the command field set of the `pr_identity_fields` step above. Use bare `gh pr view` only when `$ARGUMENTS` is empty and the current branch is the intended PR branch.
-
-```bash
-gh pr view <pr-number-or-url-or-branch> --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
-gh pr view --json number,url,headRefName,baseRefName,state,isDraft,mergeStateStatus,statusCheckRollup,reviewDecision,reviews,comments
-```
+**Step 1 — Identify the PR.** When `$ARGUMENTS` is non-empty, resolve the PR from that pointer before inspecting state. Run the `gh pr view` command from `<pr_identity_fields>`. Use its bare form only when `$ARGUMENTS` is empty and the current branch is the intended PR branch.
 
 **Step 2 — Inspect three surfaces and check base drift.** Run /merging-standards `<review_inspection>` queries. Compare timestamps against the most recent push; entries after that push are re-reviews of the latest state. In the same checkpoint, fetch `origin/<base>` and determine whether the branch is behind it — review state and base drift are read together so the rebase can proceed during the wait for reviews, not only after they land.
 
@@ -77,23 +72,23 @@ When Step 2 found the branch behind `origin/<base>`: Use skill `product-tree:syn
 
 Then re-run /merging-standards `<branch_hygiene>` before the push — hygiene applies on every push, not only at creation. Push via /merging-standards `<push_semantics>`; a pass that rebased in Step 4 pushes with the `--force-with-lease` form. The PR is ready throughout — a follow-up push goes to the ready PR and re-fires CI; there is no draft toggle.
 
-<step name="pr_check_wait">
+<pr_check_wait>
 
-**Step 7 — PR-check wait command.** Step 8 invokes this step when it emits `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`. This skill owns PR check and review waits. Run the exact foreground wait command from /merging-standards `<pr_check_wait>`, then discard the pre-wait token authority and return to Step 1:
+**Step 7 — PR-check wait command.** Step 8 invokes this step when it emits `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`. This skill owns PR check and review waits. Run exactly one foreground wait command, the one from /merging-standards `<pr_check_wait>`, then discard the pre-wait token authority and return to Step 1:
 
 ```bash
 gh pr checks <pr-number> --watch --fail-fast --interval 30
 ```
 
-The command exits when all PR checks finish, and `--fail-fast` exits when any check fails. Do not schedule runtime heartbeats or timers for PR checks. Do not act from the pre-wait gate tuple; Step 1 and Step 2 re-read PR state, check rollup, PR-level comments, formal reviews, review-thread comments, and base drift before the next action.
+The command exits when all PR checks finish, and `--fail-fast` exits when any check fails. Runtime heartbeats, runtime timers, background waits, shell polling, background `sleep`, and `gh run watch` are invalid wait mechanisms for GitHub PR checks. Do not act from the pre-wait gate tuple; Step 1 and Step 2 re-read PR state, check rollup, PR-level comments, formal reviews, review-thread comments, and base drift before the next action.
 
-</step>
+</pr_check_wait>
 
 **Step 8 — Evaluate the merge gate and act.** Apply /merging-standards `<authority_gates>`: `MERGE_READINESS`. Declared `DEPLOYMENT_READINESS` and `RELEASE_READINESS` phases are handled after merge in Step 9.
 
 Start every Step 8 pass with the live gate tuple in prose: PR number, head SHA, current-head review state, required-check state, and the next autonomous action token or merge action. Before each mutation in this step — posting the reviewer trigger comment, merging, deleting branches through the merge cleanup sequence, or resolving review threads — name the exact target, intended command class, gate predicate that permits it, and the next inspection or lifecycle phase.
 
-<step name="merge_readiness_decision_table">
+<merge_readiness_decision_table>
 
 Classify `MERGE_READINESS` in this order. The first matching rule wins; once a rule matches, ignore every later predicate even when a later predicate also fails.
 
@@ -113,9 +108,13 @@ Classify `MERGE_READINESS` in this order. The first matching rule wins; once a r
 
 Ignore host mergeability. `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, and a successful `gh pr merge` response never authorize the merge command.
 
-</step>
+</merge_readiness_decision_table>
+
+<clean_review_predicate>
 
 When evaluating the review predicate, read the current-head CI review from the three surfaces Step 2 inspects (per /merging-standards `<review_inspection>`) — the review-kind findings posted after the latest push. The predicate is clean only when such a review exists, is complete and valid, and reports no unresolved finding on touched or invalidated text across the current-head finding ledger — stated directly, or with every `BLOCKING` finding resolved only by its fix, its individual drop as unbacked, or its recorded deferral (an entry in the owning node's `ISSUES.md` whose reason names why its fix is a separate larger concern) and every `DEBT` finding resolved by a ruling that accepts or drops it or by its `TRACKED` label. A `DEBT` finding with no ruling and no `TRACKED` label is unresolved. Where the CI review omits the `TRACKED` label, classify the `DEBT` finding by its entry key against the headings of the governing node's `ISSUES.md` per /merging-standards `<authority_gates>`. A no-findings review from one reviewer does not make the predicate clean while another current-head reviewer or review surface carries a valid unresolved finding; Step 5 owns that fix queue. The mere absence of a current-head review is `WAIT_FOR_REVIEW`, never a clean read. To tell a not-yet-run review from a deliberately failed or skipped one, read the review-kind check's conclusion on Step 1's `statusCheckRollup` — identify it by role (the check that runs the changeset review), not by a fixed name — and confirm with `gh pr checks <pr-number>`. If the conclusion is `failure`, `cancelled`, `timed_out`, `action_required`, or `neutral`, emit `MERGE_BLOCKED:review-check-failed`; review infrastructure failed, so no clean current-head review exists. If the conclusion is `skipped`, retrieve the cause with `gh run view <run-id> --json conclusion,jobs` (run ID in `detailsUrl`) or `gh api repos/<owner>/<repo>/actions/jobs/<job-id> --jq '.steps[]'` — a skip caused by the PR modifying the reviewer's own workflow file (GitHub Actions' identical-workflow-content gate) triggers the reviewer-skipped-by-design exception below.
+
+</clean_review_predicate>
 
 If the conclusion is `skipped` **because the PR modifies the reviewer's own workflow file** (GitHub Actions' identical-workflow-content gate) and no current-head review has been posted, apply the reviewer-skipped-by-design exception from /merging-standards `<authority_gates>`. For any other skip cause (path filter, branch filter, manual skip), emit `MERGE_BLOCKED:review-check-skipped` and do not post the trigger-phrase comment — the exception is scoped to the self-modifying-PR case only.
 
@@ -127,12 +126,12 @@ Reviewer-skipped-by-design exception steps:
 
 Otherwise, evaluate `MERGE_READINESS` from observable PR state:
 
-- A clean current-head CI review exists — present, complete and valid, and reporting no unresolved finding on touched or invalidated text across the union of current-head review surfaces and reviewers — stated directly, or with every `BLOCKING` finding resolved only by its fix, its individual drop as unbacked, or its recorded deferral (an entry in the owning node's `ISSUES.md` whose reason names why its fix is a separate larger concern) and every `DEBT` finding resolved by a ruling that accepts or drops it or by its `TRACKED` label (a valid in-scope `BLOCKING` finding, or a `DEBT` finding whose ruling directs a fix, is fixed in Step 5 — if one remains this pass, emit `FIX_FINDING:<item>`; a `DEBT` finding with no ruling and no `TRACKED` label emits `MERGE_BLOCKED:debt-ruling-pending`); the absence of a current-head review is `WAIT_FOR_REVIEW`, never clean.
+- A clean current-head CI review exists per `<clean_review_predicate>` (a valid in-scope `BLOCKING` finding, or a `DEBT` finding whose ruling directs a fix, is fixed in Step 5 — if one remains this pass, emit `FIX_FINDING:<item>`; a `DEBT` finding with no ruling and no `TRACKED` label emits `MERGE_BLOCKED:debt-ruling-pending`).
 - Every other required check is terminal-green per /merging-standards `<authority_gates>`. The review-kind check's absent, non-terminal, skipped, and failed states are handled before this point from the check conclusion itself. If no current-head review has landed after that guard, emit `WAIT_FOR_REVIEW`; else if a non-review required check is non-terminal, emit `WAIT_FOR_CHECKS`; if a non-review required check is terminal-but-not-success or absent, or a PR-state predicate (`OPEN`, `isDraft` false, head SHA matches, rebased onto base) fails, emit `MERGE_BLOCKED:<reason>`.
 
 When `MERGE_READINESS` appears to hold, run the mutation-point guard from /merging-standards `<authority_gates>` immediately before the merge command. The guard re-reads live PR state and returns either `MERGE_READY:<head-sha>` or one existing action token. Do not run `gh pr merge` unless the guard returns `MERGE_READY:<head-sha>` for the head SHA just inspected.
 
-<step name="merge_command_selection">
+<merge_command_selection>
 
 Directly read /merging-standards `merge-cleanup.md` from its `<reference_index>` immediately before selecting or running the merge command.
 
@@ -142,7 +141,7 @@ Select the merge command only after the mutation-point guard returns `MERGE_READ
 - Use the universal default from /merging-standards `<merge_cleanup>` when the overlay is silent: selected merge flag `--merge`, explicit delete-branch flag `--delete-branch=false`, and worktree-safe manual branch deletion.
 - Never select rebase (`--rebase`) or squash (`--squash`) from the gate alone; those flags require an overlay declaration.
 
-</step>
+</merge_command_selection>
 
 Run the mutation-point guard inspection per /merging-standards `<authority_gates>` and continue only after it returns `MERGE_READY:<head-sha>`. Enter the single-source /merging-standards `<merge_cleanup>` sequence; its first action runs every overlay-declared preflight check immediately before the merge command, and its post-detach boundary runs every overlay-declared post-cleanup check before branch deletion. Do not transcribe a second copy of those commands here. All cleanup stays in the assigned worktree per /merging-standards `<assigned_cwd_worktree_discipline>`.
 
@@ -154,7 +153,7 @@ If `MERGE_READINESS` does not hold, directly read /merging-standards `action-tok
 
 **Exit when:** the PR is closed, Step 9 has returned a continuation result, Step 9 has returned the closeout with the Change disposition, Step 9 has emitted `AWAIT_DEPLOYMENT_AUTHORIZATION` or `AWAIT_RELEASE_AUTHORIZATION` with branch-state closeout evidence, or Step 4 reports an unresolved synchronization condition with no authorized autonomous continuation. Otherwise return to Step 1 after Step 7 or after the operator resolves a token boundary; an unresolved synchronization pass resumes the same PR pointer once `/sync-base` completes.
 
-</step>
+</workflow>
 
 <script_testing>
 
@@ -166,8 +165,8 @@ Tested inputs and expected outputs:
 - Review-comment discovery: `--host ghe.example.com --repo outcomeeng/plugins --pr 405 --review-comment-id 12345` discovers the owning review-thread node before resolving it.
 - Thread pagination: a first review-thread page whose `pageInfo.hasNextPage` is true and `endCursor` is present leads to a follow-up `threadsAfter=<cursor>` query, then resolves the discovered thread.
 - Comment pagination: a thread comments page whose `pageInfo.hasNextPage` is true and `endCursor` is present leads to a follow-up `commentsAfter=<cursor>` query before resolving the owning thread.
-- Malformed resolver CLI inputs: generated thread IDs, repositories, PR numbers, comment IDs, hosts, and mixed direct/discovery modes outside the helper's source-owned validators return exit code `2`, print a validation message, and make no GitHub mutation call.
-- Missing review comment: complete review-thread pagination without a matching comment returns exit code `2` with `review comment was not found after complete review-thread pagination`.
+- Malformed resolver CLI inputs: generated thread IDs, repositories, PR numbers, comment IDs, hosts, and mixed direct/discovery modes outside the helper's source-owned validators return exit code `2`, print a validation message naming the offending value, the valid form, and the fix, and make no GitHub mutation call.
+- Missing review comment: complete review-thread pagination without a matching comment returns exit code `2` with a message starting `review comment was not found after complete review-thread pagination` followed by the repo, PR number, and comment id searched.
 - Malformed GitHub payloads: null repository, null pull request, null paginated thread node, missing comment pagination metadata, and missing pagination cursor responses return exit code `2` with the exact failing response shape named.
 - Cleanup: the helper creates no temporary files and owns no persistent state; tests assert only subprocess calls, stdout/stderr payload handling, and exit codes.
 
@@ -208,11 +207,11 @@ The narrow Bash grants in frontmatter authorize approval-free execution. Run req
 
 <failure_modes>
 
-**Merged into a void — an absent review read as clean.** Claude evaluated the `MERGE_READINESS` review predicate as "no valid finding" and merged a PR whose current-head CI review had not landed at all: zero findings was indistinguishable from zero review. The predicate requires a clean review to *exist* — a conforming current-head review that reports no unresolved finding on touched or invalidated text (stated directly, or with every `BLOCKING` finding fixed, individually dropped as unbacked, or deferred by a recorded `ISSUES.md` entry naming why its fix is a separate larger concern, and every `DEBT` finding resolved by a ruling or its `TRACKED` label). A PR with no current-head review emits `WAIT_FOR_REVIEW` and never merges (Step 8; /merging-standards `<authority_gates>`).
+**Merged into a void — an absent review read as clean.** Claude evaluated the `MERGE_READINESS` review predicate as "no valid finding" and merged a PR whose current-head CI review had not landed at all: zero findings was indistinguishable from zero review. `<clean_review_predicate>` requires a clean review to *exist*. A PR with no current-head review emits `WAIT_FOR_REVIEW` and never merges (Step 8; /merging-standards `<authority_gates>`).
 
 **Pushed a tree only one predicate had seen.** Claude re-ran deterministic verification after a review-driven fix, re-ran an evidence auditor after a verification-driven fix, or re-ran the local review after an evidence-audit fix, but did not run every applicable predicate on the final tree — each fix is a new diff the other predicates have not covered, so the pushed tree was never jointly gated. Step 6 gates the final tree: after every commit, re-run deterministic verification and, within the gate cap, the evidence-auditor predicates and local review the merge composition selects; a gate's second counted rejection stops the pass, and Claude pushes only a tree that passes them all.
 
-**Wait-token-only without the foreground wait.** Claude emitted `WAIT_FOR_CHECKS` or `WAIT_FOR_REVIEW` and ended the turn, leaving the operator to re-check the PR manually while current-head checks were still running. Step 8 runs `gh pr checks <pr-number> --watch --fail-fast --interval 30` when the PR is blocked by check completion, then restarts full inspection from Step 1 before acting.
+**Wait-token-only without the foreground wait.** Claude emitted `WAIT_FOR_CHECKS` or `WAIT_FOR_REVIEW` and ended the turn, leaving the operator to re-check the PR manually while current-head checks were still running. Step 8 runs `<pr_check_wait>` when the PR is blocked by check completion, then restarts full inspection from Step 1 before acting.
 
 **Reloaded the whole methodology before the first PR inspection.** Claude resumed an open-PR continuation after a compaction by invoking `/understand`, rereading the complete root instruction file, and contextualizing nodes before running the first live PR inspection, on a pass whose next actions — current-head review inspection, check state, merge handling — touched no product content. On a 258K-token window that reload — the truncated root instruction file reread whole, the foundation, node contexts, and the lifecycle skills — cost roughly a quarter to a third of the window before any PR state was read. Reload only immediately before the first product content the pass reads or modifies or the first node it discusses; inspection, waiting, merge, deploy, and release proceed on live PR and repository state alone.
 
@@ -231,12 +230,10 @@ The managing flow satisfies its contract when, at minimum:
 - Every finding is labeled with one of `BLOCKING` / `DEBT` — never `FOLLOW-UP`, never a severity rank, never a legacy class label — and a `BLOCKING` finding is acted on by validity and phase, never by severity, while a `DEBT` finding on touched or invalidated text is acted on by its ruling.
 - The work queue fixes every valid in-scope `BLOCKING` finding the open-PR review surfaces — no deferral of in-scope work. Each new `DEBT` finding on touched or invalidated text takes a ruling from a position at least one rank above the changeset's author and no lower than the Product's Maintainer; the pass emits `MERGE_BLOCKED:debt-ruling-pending` while the ruling is pending, records each ruling with the finding's entry key, acts on the finding only as the ruling directs, records an accepted finding once in the governing node's `ISSUES.md`, and treats a `TRACKED` finding as blocking nothing.
 - Every follow-up push re-establishes `VERIFICATION_READINESS` on the diff it would publish — local deterministic verification passes per /merging-standards `<local_deterministic_scope>` (or, for a push that only rebased onto an advanced base, the preservation-proof-scoped lane per /merging-standards `<base_sync>`), every evidence-auditor predicate the merge composition selects has passed, and, where the composition selects it, the local `product-tree_changes-reviewer` review (invoked at parity per /merging-standards `<local_review_invocation>`, with no scope narrowing) has passed within the gate cap with no valid finding unaddressed — re-runs /merging-standards `<branch_hygiene>`, and goes to the ready PR with no draft toggle.
-- Pending PR checks or current-head CI review use exactly `gh pr checks <pr-number> --watch --fail-fast --interval 30` per /merging-standards `<pr_check_wait>`.
 - Action tokens are treated as pass-local observations only; after compaction, wait completion, push, review arrival, operator reply, or a new user turn, this skill re-enters from the PR pointer and re-inspects live GitHub and repository state before waiting, merging, or closing.
-- Merge fires autonomously only when `MERGE_READINESS` holds and the mutation-point guard has just produced `MERGE_READY:<head-sha>`: a clean current-head CI review exists (present, complete and valid, reporting no unresolved finding on touched or invalidated text — stated directly, or with every `BLOCKING` finding fixed, individually refuted as unbacked, or deferred by a recorded `ISSUES.md` entry naming why its fix is a separate larger concern, and every `DEBT` finding resolved by a ruling or its `TRACKED` label — its absence is never clean), every other required check is terminal-green, branch hygiene and PR-state hold, and the inspected head SHA matches the fetched remote branch head and status-check head.
-- After merge and declared deploy or release handling, the closeout-ready result carries the PR URL, full merged head SHA, merge commit when available, cleanup state, branch-state record with **Remaining Branches**, deploy and release results, and remaining-work disposition. The branch-state closeout record from /merging-standards `<branch_state_closeout>` has been built and safe cleanup has run. With `--return-closeout` the result returns with no Change disposition; without it, remaining in-scope work returns for direct continuation and a complete disposition produces the closeout and disposes of the held Change per /merging-standards `<close_phase>`.
+- Merge fires autonomously only when `MERGE_READINESS` holds and the mutation-point guard has just produced `MERGE_READY:<head-sha>`: a clean current-head CI review exists per `<clean_review_predicate>`, every other required check is terminal-green, branch hygiene and PR-state hold, and the inspected head SHA matches the fetched remote branch head and status-check head.
+- After merge and declared deploy or release handling, the closeout-ready result carries the PR URL, full merged head SHA, merge commit when available, cleanup state, branch-state record with **Remaining Branches**, deploy and release results, and remaining-work disposition. The branch-state closeout record from /merging-standards `<branch_state_closeout>` has been built and safe cleanup has run. Closeout ownership follows Step 9.
 - A current-head CI review skipped **because the PR modifies the reviewer's own workflow file** (`conclusion: skipped`, GitHub Actions' identical-workflow-content gate) triggers the reviewer-skipped-by-design exception from /merging-standards `<authority_gates>`: post `<trigger-phrase> review` as a PR-level comment and emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`. For any other skip cause, emit `MERGE_BLOCKED:review-check-skipped` — the exception is scoped to the self-modifying-PR case only.
-- The foreground PR-check wait inspects the terminal check result, then re-runs the full Step 1/Step 2 inspection before deciding the next action.
 - `gh pr merge` is never run as a probe for mergeability; `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, and command acceptance are not merge predicates.
 - Each pass that does not fire an autonomous action emits exactly one token from /merging-standards `<action_tokens>`, except unresolved base synchronization, which preserves `/sync-base`'s distinct recovery condition and diagnostic evidence, including active rebase state for an unresolved conflict.
 - `/understand` and the governing node's `/contextualize` were invoked before every product-content read or modification and every node discussion in the pass, only immediately before the first such access or discussion, never earlier, and not at all in a pass that touched no product content and discussed no node.

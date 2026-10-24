@@ -42,7 +42,7 @@ Every condition below must hold, each reported with the exact resolved values:
 - `access` is `ADMIN`, `MAINTAIN`, or `WRITE`. `READ`, `NONE`, or an empty result STOPS the flow — a pull request is never opened against a repository the operator does not control.
 - `pr_target` equals `push_target`. A difference means the checkout is a fork and `gh` has resolved the base to the upstream. STOP, name both repositories, and return the decision to the operator; never open the PR against an upstream on the strength of a resolved default.
 
-`pr_target` reads `isFork` and `parent` rather than `nameWithOwner` alone, because `gh repo view` with no argument reports the checkout's own repository — for a fork, the fork. `push_target` resolves the same repository through the `origin` URL, so comparing the two bare names returns equal for every checkout, fork included, and the gate the comparison implements would pass without ever examining the case it exists to catch. Selecting the parent when `isFork` is true makes `pr_target` the repository `gh pr create` will actually open against.
+`pr_target` selects the parent when `isFork` is true, so it is the repository `gh pr create` opens against. `push_target` resolves the same repository through the `origin` URL, so comparing it with a bare `nameWithOwner` returns equal for every checkout, fork included, and the gate would pass without examining the case it exists to catch.
 
 Access class comes from `viewerPermission` alone. A remote URL, the authenticated account name, or a successful push proves nothing about it: the operator owns repositories across several organizations, and neither `git remote` nor the account identity reports the permission that governs this one.
 
@@ -100,8 +100,6 @@ Flag rationale:
 - `--head` — the feature branch, stated explicitly so the head ref never depends on gh's inference. It suppresses gh's fork/push-target prompt, which is safe only because `<repository_target_gate>` has already resolved and checked both repositories; without that gate the suppressed prompt would hide a cross-repository target rather than settle it.
 - `--base` — omit only for peer branches targeting the repo default; specify the previous stack branch for stacked PRs.
 - `GIT_TERMINAL_PROMPT=0` — disables git credential prompts. (gh detects non-TTY stdin/stdout and skips its own prompts automatically; no `GH_*` env var is needed.)
-
-Never embed multi-line content in `--body "..."` — gh does not expand `\n` escapes. Never use command substitution or post-hoc text substitution to assemble or repair the body; rewrite the file.
 
 Do not use `--fill`.
 

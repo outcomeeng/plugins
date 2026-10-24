@@ -43,12 +43,13 @@ A Fixer is a fresh session of the definition the round's Author used. The task m
 
 A round whose fronted skill is not installed returns a `blocked` result naming that skill.
 
-Each Verifier is the configured auditor or reviewer that the `merge_composition` selects for a block, launched with a target-only task message: the decision-record audit for a Governance mutations block's record at any malleability, and for a Spec mutations block the evidence audits and audits that its Node's malleability after and the tags of its assertions select. The Executor launches every Verifier the composition selects for a block after the round whose subject it judges returns; a round session launches none. A `change-verifier` session produces verification routing and evidence through `/verify` and is an Author or Fixer, never a Verifier; its result is no verdict. The Verifier of a `product-tree_change-skill-author` round is `instructions_skill-auditor`, and the Verifier of a `product-tree_change-subagent-author` round is `instructions_subagent-auditor`:
+Each Verifier is the configured auditor or reviewer that the `merge_composition` selects for a block, launched with a target-only task message, which for a node spec is the node spec path: the decision-record audit for a Governance mutations block's record at any malleability, and for a Spec mutations block the node spec audit, the evidence audits, and the audits that its Node's malleability after and the tags of its assertions select. The Executor launches every Verifier the composition selects for a block after the round whose subject it judges returns; a round session launches none. A `change-verifier` session produces verification routing and evidence through `/verify` and is an Author or Fixer, never a Verifier; its result is no verdict. The Verifier of a `product-tree_change-skill-author` round is `instructions_skill-auditor`, and the Verifier of a `product-tree_change-subagent-author` round is `instructions_subagent-auditor`:
 
 | Subject the obligation names        | Verifier                                   |
 | ----------------------------------- | ------------------------------------------ |
 | A PDR                               | `product-tree_pdr-auditor`                 |
 | An ADR                              | `product-tree_adr-auditor`                 |
+| A node spec                         | `product-tree_spec-auditor`                |
 | A node's test evidence              | `product-tree_test-evidence-auditor`       |
 | A node's eval evidence              | `product-tree_eval-evidence-auditor`       |
 | A node's `[audit]` assertions       | `product-tree_assertion-auditor`           |

@@ -109,7 +109,15 @@ def main(argv: list[str]) -> int:
     if not tokens:
         sys.stderr.write(
             json.dumps(
-                {"schema_version": SCHEMA_VERSION, "error": "no command provided"}
+                {
+                    "schema_version": SCHEMA_VERSION,
+                    "error": (
+                        "no command provided after 'check'. Usage: python3 "
+                        "mutation_gate.py check [--user-instructed] <command...>. "
+                        "Next action: pass the gh or git command tokens after check, "
+                        "for example: python3 mutation_gate.py check gh pr merge 123"
+                    ),
+                }
             )
             + "\n"
         )

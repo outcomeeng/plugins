@@ -11,7 +11,7 @@ The shared test-evidence standards that keep predicates in linked tests, cases i
 </objective>
 
 <repo_local_overlay>
-When another skill loads this reference inside a repository, check for `spx/local/test-evidence.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth, and it never weakens a seam, provenance, oracle, level, or permission rule this reference states.
+Inside a repository, check for `spx/local/test-evidence.md` at the repository root. Read that file after this reference if it exists and apply it as repo-local routing to the product's governing specs and decisions. A local overlay supplements skill behavior; it does not declare product truth, and it never weakens a seam, provenance, oracle, level, or permission rule this reference states.
 </repo_local_overlay>
 
 <execution_levels>
@@ -41,9 +41,9 @@ In both steps the level floor stays `l3` where the evidence run itself must reac
 
 **Unavailable required evidence never passes:** a missing mandatory credential, endpoint, binary, or local service fails loudly, or skips only where the suite declares that evidence optional.
 
-**Controlled-implementation relief.** A controlled implementation enters evidence only under the test methodology's exception set — the seven named cases from failure simulation through contract probes, declared by the generic test workflow that both authoring and auditing load — and the evidence names the matching case. The combinatorial-cost exception is that set's member for broad evidence a real dependency makes prohibitively expensive.
+**Controlled-implementation relief.** A controlled implementation enters evidence only under the test methodology's exception set — the seven named cases from failure simulation through contract probes, declared by the generic test workflow — and the evidence names the matching case. The combinatorial-cost exception is that set's member for broad evidence a real dependency makes prohibitively expensive.
 
-**Cell composition.** Every assertion type × execution level cell is decided by composition: the type's artifact rules in `<type_level_permissions>` hold at every level unchanged, and the level contributes only the harness obligations, the level floor, the availability rule, and the controlled-implementation relief above, identically for every type. Dependency permission never selects the assertion's case domain. A per-type per-level delta exists only where the type changes the answer. A permission undecidable from this composition is an amendment to the product's governing evidence decision, never an author's or auditor's inference.
+**Cell composition.** Every assertion type × execution level cell is decided by composition: the type's artifact rules in `<type_level_permissions>` hold at every level unchanged, and the level contributes only the harness obligations, the level floor, the availability rule, and the controlled-implementation relief above, identically for every type. Dependency permission never selects the assertion's case domain. A per-type per-level delta exists only where the type changes the answer. A permission undecidable from this composition is an amendment to the product's governing evidence decision, never an inference.
 
 **Filename declaration.** The canonical filename model `<subject>.<evidence>.<level>[.<runner>]` declares each executed test file's cell: exactly one assertion type and exactly one execution level per file, with a runner token only for a non-default runner. The product's language test standard declares the language's filename instantiation and the default runner an omitted runner token names — or the deterministic rule, including any repository override, by which that default is derived; the instantiation is expression and changes no token semantics.
 
@@ -159,7 +159,7 @@ The artifact set each assertion type permits and requires, per level where the t
 
 <common_litmus_questions>
 
-Apply every question while authoring and auditing:
+Apply every question to test evidence:
 
 1. Holding arrangement and execution fixed, if the assertion changes to its opposite, can only the linked test predicate change? A harness change means the harness encodes the assertion.
 2. Can a reader understand the complete pass/fail predicate from the linked test alone?

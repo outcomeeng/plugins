@@ -1,3 +1,10 @@
+Contents:
+
+- Scope payload: fields, accounting record for an unclaimed path, artifact-type accounting
+- Finding payload: fields and evidence shape
+- Idempotency keys: form, colon-free rule segment, kind segment, quoting
+- Payload files: write, path-copy, serial-command, and rerun rules
+
 <objective>
 
 The payload shapes, key forms, and payload-file rules of the implementation audit's `spx verification run` commands, read before the first scope or finding payload is written.

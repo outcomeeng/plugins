@@ -423,9 +423,9 @@ Continue through `/merge` unless the operator explicitly limited the request to 
 
 1. Load this complete inline foundation on every invocation. A marker in a compaction summary, Handoff, or prior-run statement does not count. After compaction, treat the marker as absent until this workflow emits it again.
 2. Check internal consistency across every foundation section and surface any contradiction immediately. No mandatory foundation reference read follows this step.
-3. Locate these operational references and list their paths without reading them until another skill needs them: `${CLAUDE_SKILL_DIR}/references/kind-decision.md`, `${CLAUDE_SKILL_DIR}/references/grammar.md`, `${CLAUDE_SKILL_DIR}/references/artifact-placement.md`, `${CLAUDE_SKILL_DIR}/references/status-claims.md`, `${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md`, and `spx/local/*.md`. Note discovery belongs to `/contextualize`, never to this skill.
+3. Locate these operational references and list their paths without reading them: `${CLAUDE_SKILL_DIR}/references/kind-decision.md`, `${CLAUDE_SKILL_DIR}/references/grammar.md`, `${CLAUDE_SKILL_DIR}/references/artifact-placement.md`, `${CLAUDE_SKILL_DIR}/references/status-claims.md`, `${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md`, and `spx/local/*.md`.
 4. Read `spx/local/merging.md` when present. Changes destined for the default branch route through `/merge`; absence of the overlay applies the default lifecycle.
-5. Locate templates under `${CLAUDE_SKILL_DIR}/templates/` — `product/product-name.spec.md`, `decisions/decision-name.{adr,pdr}.md`, `nodes/{substrate,capability,domain,interface,surface,variant}-name.spec.md`, `records/node-name.outcome.md`, `probes/probe.md` — and `${CLAUDE_SKILL_DIR}/examples/*.md`. Record the resolved absolute template directory as `Template root` in the marker; consuming authoring and audit workflows read their required templates there.
+5. Locate templates under `${CLAUDE_SKILL_DIR}/templates/` — `product/product-name.spec.md`, `decisions/decision-name.{adr,pdr}.md`, `nodes/{substrate,capability,domain,interface,surface,variant}-name.spec.md`, `records/node-name.outcome.md`, `probes/probe.md` — and `${CLAUDE_SKILL_DIR}/examples/*.md`. Record the resolved absolute template directory as `Template root` in the marker.
 6. Read the complete root `{{! file('root_guide') !}}` from disk only when the live conversation does not already carry it complete; a harness that injects the whole file satisfies this step, and a truncated or absent injection requires the read. It routes skill invocation, names the repository's methodology declaration, and carries product commands.
 7. Emit the marker:
 
@@ -456,7 +456,7 @@ Claude rejected coherent decisions because implementation lagged or tooling coul
 
 **A pushed branch was reported as complete.**
 
-Claude treated a transport checkpoint as delivered value. Continue through `/merge` until the changeset reaches the default branch on origin or an explicit gate blocks every remaining action.
+Claude treated a transport checkpoint as delivered value because a successful push resembles completion and nothing in the push result names the remaining delivery step. Continue through `/merge` until the changeset reaches the default branch on origin or an explicit gate blocks every remaining action.
 
 </failure_modes>
 

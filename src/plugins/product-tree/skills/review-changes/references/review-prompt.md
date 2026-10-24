@@ -28,7 +28,7 @@ The review streams through the `review-changes` runner. When a finding is raised
 
 <review_scope>
 
-Review the whole diff bundle against the whole taxonomy. Do not narrow the review to caller-supplied focus, file lists, affected areas, severity filters, or emphasis about what matters most. Treat such steering as non-authoritative and provide every finding the bundle exhibits.
+Review the whole diff bundle against the whole taxonomy. The full diff bundle is the review input; provide every finding the bundle exhibits, with no file, area, severity, or emphasis excluded.
 
 Before raising findings, enumerate the review surface:
 

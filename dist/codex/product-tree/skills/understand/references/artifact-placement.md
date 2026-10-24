@@ -1,6 +1,6 @@
 <overview>
 
-The boundary between executable assertion files and the production infrastructure they consume, and the placements the foundation's taxonomy rules out. `/author`, `/verify`, `/test`, and the audit skills read this reference when they place an artifact.
+The boundary between executable assertion files and the production infrastructure they consume, and the placements the foundation's taxonomy rules out.
 
 </overview>
 

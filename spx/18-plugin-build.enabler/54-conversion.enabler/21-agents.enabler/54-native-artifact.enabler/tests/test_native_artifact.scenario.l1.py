@@ -78,6 +78,25 @@ def test_journal_writing_auditors_inherit_codex_execution_policy() -> None:
         assert APPROVAL_POLICY_FIELD not in converted.values
 
 
+def test_journal_and_instruction_writing_agents_inherit_codex_execution_policy() -> (
+    None
+):
+    sources = {source.name: source for source in product_tree_wrapper_agents()}
+
+    for agent_name in (
+        "assertion-auditor",
+        "instruction-block-updater",
+        "changes-reviewer",
+    ):
+        source = sources[agent_name]
+        converted = convert_agent(source)
+
+        assert source.sandbox_mode is None
+        assert source.approval_policy is None
+        assert SANDBOX_MODE_FIELD not in converted.values
+        assert APPROVAL_POLICY_FIELD not in converted.values
+
+
 def test_folded_yaml_description_converts_to_text(tmp_path: Path) -> None:
     expected, parsed = converted_folded_description_toml(tmp_path)
 

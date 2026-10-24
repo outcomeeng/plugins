@@ -451,13 +451,13 @@ shape by naming the paths the run left unaccounted.
 <success_criteria>
 
 - The verdict covers every concern skill the registry selects for the supplied scope: the code, tests, and architecture concerns of every selected kind.
-- A missing required concern skill after run start appears as `missing-skill` rejected coverage in the projection, and a blocked run names the exact malformed request field or failed SPX command that prevented a valid completed projection; the projection's `terminalStatus` is the sole determination.
-- Every recorded finding lies on touched text and is falsifiable: it names the stable producer identity, unit, rule identifier, severity, location, message, and observed-versus-expected evidence; every other finding appears as a `filed` line, and a standing finding rejects no run.
+- A missing required concern skill after run start appears as `missing-skill` rejected coverage in the projection; the projection's `terminalStatus` is the sole determination.
+- Every recorded finding is falsifiable: a reader reproduces its judgment from the unit, rule identifier, location, and observed-versus-expected evidence it carries, and a standing finding on untouched text rejects no run.
 - Every missing-skill, unsupported-path, and accounting unit appears in the rendered projection rather than in prose, and each audited concern preserves its complete inspected-path set as path-scoped units whose `subject` fields are the exact paths, audited only after that concern completes, with finding counts derived from accepted finding rows rather than a custom field.
 - The same request, committed scope, normalized live file list, and installed plugin versions produce the same coverage units, finding identities, and terminal determination.
 - Every gate-eligible run addresses an exact committed head with no live-file additions and established passing deterministic evidence; an explicit `worktree:` target includes the complete discovered modified and untracked path list and supplies no reusable gate evidence.
 - The sealed run is self-describing: its recorded subject set equals the inventory its own start input carries, no recorded subject lies outside that inventory, every required unit carries a final status and every unclaimed path its accounting record, and every finding references an accepted unit of its own concern — so a reader establishes the inspection's completeness from the run without the run driver's account of it.
-- A run that reaches no admissible status for a required unit returns the blocked diagnostic naming a concrete failed operation or absent prerequisite, never a sealed projection; a head behind the fetched base returns the resolver's stale-base refusal before any subject is read.
+- A run that reaches no admissible status for a required unit seals no projection; a head behind the fetched base returns the resolver's stale-base refusal before any subject is read.
 - No plugin-side verdict script, legacy journal command, deterministic verification command, or kind-specific file pattern can affect the determination outside the SPX-recorded run.
 
 </success_criteria>
