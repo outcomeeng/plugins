@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import re
 import string
+from dataclasses import dataclass
 from typing import Final
 
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
-from outcomeeng.validation import Step
+from outcomeeng.validation import EXECUTION_LEVELS, Step
 from outcomeeng.validation.selected_gate import PATH_CATEGORY_PATTERNS, PathCategory
 
 RECURSIVE_WILDCARD: Final = "**"
@@ -23,6 +24,14 @@ _WILDCARD_SPLIT: Final = re.compile(r"(\*\*|\*)")
 SEGMENT_ALPHABET: Final = string.ascii_lowercase + string.digits + "-_."
 MAX_SEGMENT_LENGTH: Final = 8
 MAX_NESTED_SEGMENTS: Final = 3
+# A test-file name carries its subject, evidence, level, and runner as
+# dot-separated tokens, so a token holds no dot.
+TEST_FILE_TOKEN_ALPHABET: Final = string.ascii_lowercase + string.digits + "_"
+MAX_TEST_FILE_TOKEN_LENGTH: Final = 8
+MAX_TEST_FILES: Final = 12
+TESTS_DIRECTORY: Final = "tests"
+TEST_FILE_PREFIX: Final = "test_"
+TEST_FILE_EXTENSION: Final = "py"
 
 
 def argvs() -> SearchStrategy[tuple[str, ...]]:
@@ -44,6 +53,66 @@ def step_lists() -> SearchStrategy[tuple[Step, ...]]:
         steps(),
         min_size=1,
     ).map(tuple)
+
+
+@dataclass(frozen=True)
+class GeneratedTestFile:
+    """A generated test-file path and the execution level it was composed at."""
+
+    path: str
+    level: str
+
+
+def test_file_tokens() -> SearchStrategy[str]:
+    """One dot-free token of a test-file name."""
+
+    return st.text(
+        alphabet=TEST_FILE_TOKEN_ALPHABET,
+        min_size=1,
+        max_size=MAX_TEST_FILE_TOKEN_LENGTH,
+    )
+
+
+def _compose_test_file(
+    directory: str, subject: str, evidence: str, level: str, runner: str | None
+) -> GeneratedTestFile:
+    name = ".".join(
+        (
+            f"{TEST_FILE_PREFIX}{subject}",
+            evidence,
+            level,
+            *((runner,) if runner is not None else ()),
+            TEST_FILE_EXTENSION,
+        )
+    )
+    return GeneratedTestFile(
+        path=PATH_SEPARATOR.join((directory, TESTS_DIRECTORY, name)), level=level
+    )
+
+
+def generated_test_files() -> SearchStrategy[GeneratedTestFile]:
+    """Test files composed at every execution level, with and without a runner."""
+
+    return st.builds(
+        _compose_test_file,
+        directory=st.lists(
+            path_segments(), min_size=1, max_size=MAX_NESTED_SEGMENTS
+        ).map(PATH_SEPARATOR.join),
+        subject=test_file_tokens(),
+        evidence=test_file_tokens(),
+        level=st.sampled_from(EXECUTION_LEVELS),
+        runner=st.none() | test_file_tokens(),
+    )
+
+
+def generated_test_file_sets() -> SearchStrategy[list[GeneratedTestFile]]:
+    """Distinct test files drawn across every execution level."""
+
+    return st.lists(
+        generated_test_files(),
+        max_size=MAX_TEST_FILES,
+        unique_by=lambda test_file: test_file.path,
+    )
 
 
 def path_from_pattern(pattern: str) -> str:

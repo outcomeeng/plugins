@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import math
 import signal
+from pathlib import PurePosixPath
 
 from outcomeeng.validation import (
     CHECK_RECIPES,
@@ -12,6 +13,7 @@ from outcomeeng.validation import (
     FMT_CHECK_ARGV,
     HOOK_SAFETY_ARGV,
     MYPY_ARGV,
+    ON_DEMAND_EXCLUSION_ARGV,
     POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
     PURPOSE_CORRECTNESS,
@@ -34,6 +36,8 @@ from outcomeeng.validation import (
     VALIDATION_STEPS,
     VERIFICATION_TYPE_TESTING,
     VERIFICATION_TYPE_VALIDATION,
+    discover_on_demand_tests,
+    is_on_demand_test,
     test_recipe as build_test_recipe,
 )
 from outcomeeng_testing.harnesses.gate import (
@@ -50,6 +54,7 @@ from outcomeeng_testing.harnesses.gate import (
     validation_package_source_text,
     validation_subprocess_importers,
 )
+from outcomeeng_testing.harnesses.real_agent_selection import REPOSITORY_ROOT
 
 
 def test_the_full_gate_carries_every_required_step() -> None:
@@ -97,6 +102,25 @@ def test_recipe_types_and_purposes_match_the_verification_taxonomy() -> None:
     assert targeted.steps == (
         Step(label="pytest", argv=(*PYTEST_ARGV, PYTEST_TARGET_ARG)),
     )
+
+
+def test_the_test_recipe_leaves_on_demand_files_out_of_a_directory_and_runs_a_named_one() -> (
+    None
+):
+    on_demand_file = discover_on_demand_tests(REPOSITORY_ROOT)[0]
+    directory = PurePosixPath(on_demand_file).parent.as_posix()
+
+    (default_step,) = TEST_RECIPE.steps
+    (directory_step,) = build_test_recipe((directory,)).steps
+    (named_step,) = build_test_recipe((on_demand_file,)).steps
+
+    assert set(ON_DEMAND_EXCLUSION_ARGV) <= set(PYTEST_ARGV)
+    for step in (default_step, directory_step, named_step):
+        assert step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+    assert directory_step.argv[len(PYTEST_ARGV) :] == (directory,)
+    assert named_step.argv[len(PYTEST_ARGV) :] == (on_demand_file,)
+    assert is_on_demand_test(on_demand_file)
+    assert not is_on_demand_test(directory)
 
 
 def test_the_check_wrapper_reports_no_verification_type() -> None:

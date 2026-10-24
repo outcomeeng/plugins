@@ -1,11 +1,11 @@
-"""Observations for real-agent Codex test selection in the selected and full gates.
+"""Observations for on-demand test selection in the selected and full gates.
 
 The full-gate runs drive the production entry point through the gate harness's
 recording spawner and scripted git runner, and the direct-execution run drives
 the `test` recipe the direct entry point composes through the same recording
 spawner. Exception case: Stage 5, Interaction protocols — the claim is which
 argvs the gate and the direct recipe spawn, and the recording spawner exposes
-them without launching validators or the real-agent tests themselves.
+them without launching validators or the on-demand tests themselves.
 
 Pytest collection runs for real: the observation is the set of test node ids a
 pytest argument tail collects, which is what the gate's exclusion decides.
@@ -17,42 +17,23 @@ import io
 import os
 import subprocess
 import sys
-from collections.abc import Callable, Iterator, Mapping, Sequence
-from contextlib import contextmanager
-from dataclasses import dataclass, fields
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Final
 
-from outcomeeng.distribution import agents as agent_conversion
-from outcomeeng.distribution.agents import AGENT_SOURCE_DIRECTORY_NAME
-from outcomeeng.distribution.build import project_emissions
-from outcomeeng.distribution.contracts import DIST_DIR_NAME, SOURCE_ROOT_NAME
-from outcomeeng.distribution.installation import (
-    CODEX_HOME_ENV,
-    apply_agent_home_plan,
-    generated_codex_agent_definitions,
-)
-from outcomeeng.distribution.profiles import resolve_profile
 from outcomeeng.validation import (
     PREFLIGHT_STEPS,
     TEST_STEPS,
     VALIDATION_STEPS,
     test_recipe as direct_test_recipe,
 )
-from outcomeeng.validation.ci_gate import (
-    CODEX_API_KEY_ENVIRONMENT,
-    DISCOVERY_AUTH_MODE_ENVIRONMENT,
-)
+from outcomeeng.validation._steps import PYTEST_NODE_ID_SEPARATOR
 from outcomeeng.validation.selected_gate import (
     DEFAULT_BASE_REF,
     FIRST_PARENT_BASE_REF,
-    PYTEST_NODE_ID_SEPARATOR,
     run_full_check as production_run_full_check,
-)
-from outcomeeng_testing.harnesses.discovery_auth import (
-    WORKSPACE_TOKEN_ENV,
-    AuthenticationMode,
 )
 from outcomeeng_testing.harnesses.changeset_scope import build_repo_without_origin
 from outcomeeng_testing.harnesses.gate import (
@@ -62,10 +43,8 @@ from outcomeeng_testing.harnesses.gate import (
     recipe_run_observation,
     selected_gate_runner_for_paths,
 )
-from outcomeeng_testing.harnesses.installation import PluginLifecycleHarness
 
 REPOSITORY_ROOT: Final = Path(__file__).resolve().parents[2]
-SOURCE_ROOT: Final = REPOSITORY_ROOT / SOURCE_ROOT_NAME
 PYTEST_COLLECTION_TIMEOUT_SECONDS: Final = 120
 PYTEST_COLLECTION_ARGV: Final = (
     sys.executable,
@@ -76,13 +55,6 @@ PYTEST_COLLECTION_ARGV: Final = (
     "-p",
     "no:cacheprovider",
 )
-PLACEHOLDER_CREDENTIAL: Final = "placeholder-credential-for-selection"
-CODEX_CREDENTIAL_VARIABLES: Final = (
-    CODEX_API_KEY_ENVIRONMENT,
-    WORKSPACE_TOKEN_ENV,
-    DISCOVERY_AUTH_MODE_ENVIRONMENT,
-    CODEX_HOME_ENV,
-)
 _SPAWN_BUDGET: Final = (
     2 * len(PREFLIGHT_STEPS) + len(VALIDATION_STEPS) + len(TEST_STEPS)
 )
@@ -92,84 +64,6 @@ def repository_relative_path(module_file: str) -> str:
     """Return ``module_file`` relative to this checkout, in posix form."""
 
     return Path(module_file).resolve().relative_to(REPOSITORY_ROOT).as_posix()
-
-
-def _module_path(function: Callable[..., object]) -> str:
-    return repository_relative_path(sys.modules[function.__module__].__file__ or "")
-
-
-@dataclass(frozen=True)
-class AgentDefinitionInventory:
-    """The checkout's agent definitions by kind, derived independently of the selector.
-
-    Each kind comes from the owner that produces or places the artifact: the
-    build's emission projection names every authored agent source, the
-    rendering it emits, and every rendering of the shipped placement script;
-    the conversion module, the module defining the profiles each definition
-    selects, the module defining that projection, and the module defining
-    repository installation's agent-home placement are the code that converts,
-    profiles, emits, and places definitions; and the plugin-lifecycle harness
-    that executes the shipped placement script names its authored template.
-    """
-
-    authored_sources: tuple[str, ...]
-    renderings: tuple[str, ...]
-    conversion_code: tuple[str, ...]
-    profile_code: tuple[str, ...]
-    emission_code: tuple[str, ...]
-    placement_code: tuple[str, ...]
-    placement_scripts: tuple[str, ...]
-
-    def by_kind(self) -> Mapping[str, tuple[str, ...]]:
-        """Return every kind's paths keyed by the kind's field name."""
-
-        return {kind.name: getattr(self, kind.name) for kind in fields(self)}
-
-
-def _shipped_placement_script(relative_path: Path) -> bool:
-    # The plugin-lifecycle harness that executes the shipped placement script
-    # names where a plugin's lifecycle skill carries it; a target-tree output
-    # at that place for its own plugin is a rendering of the script.
-    if not relative_path.parts:
-        return False
-    lifecycle = PluginLifecycleHarness(root=Path(), plugin_name=relative_path.parts[0])
-    shipped = lifecycle.script_path.relative_to(lifecycle.skill_root.parents[1])
-    return relative_path.parts[1:] == shipped.parts
-
-
-def checkout_agent_definition_inventory() -> AgentDefinitionInventory:
-    """Return the checkout's agent definitions by kind."""
-
-    projection = project_emissions(SOURCE_ROOT)
-    authored: set[str] = set()
-    renderings: set[str] = set()
-    placement_scripts: set[str] = set()
-    for emission in projection.emissions:
-        rendering = (
-            Path(DIST_DIR_NAME) / emission.target.value / emission.relative_path
-        ).as_posix()
-        if emission.source.parent.name == AGENT_SOURCE_DIRECTORY_NAME:
-            authored.add(repository_relative_path(str(emission.source)))
-            renderings.add(rendering)
-        elif _shipped_placement_script(emission.relative_path):
-            placement_scripts.add(repository_relative_path(str(emission.source)))
-            placement_scripts.add(rendering)
-    return AgentDefinitionInventory(
-        authored_sources=tuple(sorted(authored)),
-        renderings=tuple(sorted(renderings)),
-        conversion_code=(repository_relative_path(agent_conversion.__file__),),
-        profile_code=(_module_path(resolve_profile),),
-        emission_code=(_module_path(project_emissions),),
-        placement_code=tuple(
-            sorted(
-                {
-                    _module_path(generated_codex_agent_definitions),
-                    _module_path(apply_agent_home_plan),
-                }
-            )
-        ),
-        placement_scripts=tuple(sorted(placement_scripts)),
-    )
 
 
 @dataclass(frozen=True)
@@ -275,26 +169,3 @@ def direct_test_observation(pytest_arguments: Sequence[str]) -> RecipeRunObserva
         recipe=recipe,
         exit_codes=[os.EX_OK] * (len(recipe.preflight_steps) + len(recipe.steps)),
     )
-
-
-@contextmanager
-def codex_credential_environment(*, present: bool) -> Iterator[None]:
-    """Set or clear every Codex credential variable, restoring them on exit."""
-
-    saved = {name: os.environ.get(name) for name in CODEX_CREDENTIAL_VARIABLES}
-    with TemporaryDirectory() as codex_home:
-        try:
-            for name in CODEX_CREDENTIAL_VARIABLES:
-                os.environ.pop(name, None)
-            if present:
-                os.environ[CODEX_API_KEY_ENVIRONMENT] = PLACEHOLDER_CREDENTIAL
-                os.environ[WORKSPACE_TOKEN_ENV] = PLACEHOLDER_CREDENTIAL
-                os.environ[DISCOVERY_AUTH_MODE_ENVIRONMENT] = AuthenticationMode.API
-                os.environ[CODEX_HOME_ENV] = codex_home
-            yield
-        finally:
-            for name, value in saved.items():
-                if value is None:
-                    os.environ.pop(name, None)
-                else:
-                    os.environ[name] = value
