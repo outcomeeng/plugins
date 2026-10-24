@@ -10,7 +10,13 @@ from typing import Final
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
-from outcomeeng.validation import EXECUTION_LEVELS, Step
+from outcomeeng.validation import EXECUTION_LEVELS, ON_DEMAND_LEVEL, Step
+from outcomeeng.validation.infrastructure_index import (
+    EXECUTED_TEST_PREFIX,
+    PYTHON_SUFFIX,
+    SPEC_TREE_ROOT,
+    TESTS_DIRECTORY_NAME,
+)
 from outcomeeng.validation.selected_gate import PATH_CATEGORY_PATTERNS, PathCategory
 
 RECURSIVE_WILDCARD: Final = "**"
@@ -29,9 +35,17 @@ MAX_NESTED_SEGMENTS: Final = 3
 TEST_FILE_TOKEN_ALPHABET: Final = string.ascii_lowercase + string.digits + "_"
 MAX_TEST_FILE_TOKEN_LENGTH: Final = 8
 MAX_TEST_FILES: Final = 12
-TESTS_DIRECTORY: Final = "tests"
-TEST_FILE_PREFIX: Final = "test_"
-TEST_FILE_EXTENSION: Final = "py"
+# The violating on-demand fixture composes one test file at every execution
+# level, in two nested nodes and in the top-level test root, with and without a
+# runner segment.
+ON_DEMAND_FIXTURE_DIRECTORIES: Final = (
+    f"{SPEC_TREE_ROOT}/21-first.enabler",
+    f"{SPEC_TREE_ROOT}/32-second.enabler/21-nested.enabler",
+    TESTS_DIRECTORY_NAME,
+)
+ON_DEMAND_FIXTURE_SUBJECT: Final = "case"
+ON_DEMAND_DECOY_SUBJECT: Final = "helper"
+ON_DEMAND_FIXTURE_VARIANTS: Final = (("scenario", None), ("property", "runner"))
 
 
 def argvs() -> SearchStrategy[tuple[str, ...]]:
@@ -76,17 +90,55 @@ def test_file_tokens() -> SearchStrategy[str]:
 def _compose_test_file(
     directory: str, subject: str, evidence: str, level: str, runner: str | None
 ) -> GeneratedTestFile:
-    name = ".".join(
-        (
-            f"{TEST_FILE_PREFIX}{subject}",
-            evidence,
-            level,
-            *((runner,) if runner is not None else ()),
-            TEST_FILE_EXTENSION,
+    name = (
+        ".".join(
+            (
+                f"{EXECUTED_TEST_PREFIX}{subject}",
+                evidence,
+                level,
+                *((runner,) if runner is not None else ()),
+            )
         )
+        + PYTHON_SUFFIX
     )
     return GeneratedTestFile(
-        path=PATH_SEPARATOR.join((directory, TESTS_DIRECTORY, name)), level=level
+        path=PATH_SEPARATOR.join((directory, TESTS_DIRECTORY_NAME, name)), level=level
+    )
+
+
+def on_demand_fixture_files() -> tuple[GeneratedTestFile, ...]:
+    """The violating whole-payload fixture the exclusion must filter.
+
+    Every execution level appears in every directory with and without a runner
+    segment, so the files at the on-demand level lie beside files of every
+    other level in each directory a recipe collects.
+    """
+
+    return tuple(
+        _compose_test_file(
+            directory, ON_DEMAND_FIXTURE_SUBJECT, evidence, level, runner
+        )
+        for directory in ON_DEMAND_FIXTURE_DIRECTORIES
+        for level in EXECUTION_LEVELS
+        for evidence, runner in ON_DEMAND_FIXTURE_VARIANTS
+    )
+
+
+def on_demand_decoy_files() -> tuple[GeneratedTestFile, ...]:
+    """Python files at the on-demand level whose names are not test-file names."""
+
+    return tuple(
+        GeneratedTestFile(
+            path=PATH_SEPARATOR.join(
+                (
+                    directory,
+                    TESTS_DIRECTORY_NAME,
+                    f"{ON_DEMAND_DECOY_SUBJECT}.scenario.{ON_DEMAND_LEVEL}{PYTHON_SUFFIX}",
+                )
+            ),
+            level=ON_DEMAND_LEVEL,
+        )
+        for directory in ON_DEMAND_FIXTURE_DIRECTORIES
     )
 
 

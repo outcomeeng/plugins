@@ -21,6 +21,7 @@ from typing import Final
 from hypothesis import given, seed, settings
 
 from outcomeeng import validation as validation_pkg
+from outcomeeng.validation._steps import EXECUTION_LEVEL_L1, ON_DEMAND_LEVEL
 from outcomeeng.validation.infrastructure_index import (
     CONFTEST_FILENAME,
     EXECUTED_TEST_PREFIX,
@@ -66,10 +67,12 @@ class SyntheticRepository:
         target.write_text(source, encoding="utf-8")
         return relative.as_posix()
 
-    def write_test(self, node: str, name: str, source: str) -> str:
+    def write_test(
+        self, node: str, name: str, source: str, level: str = EXECUTION_LEVEL_L1
+    ) -> str:
         """Write an executed test under ``node``; return its repository-relative path."""
 
-        relative = executed_test_path(node, name)
+        relative = executed_test_path(node, name, level)
         target = self.root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(source, encoding="utf-8")
@@ -95,13 +98,13 @@ class SyntheticRepository:
         return index_test_infrastructure(self.root, package=self.package)
 
 
-def executed_test_path(node: str, name: str) -> str:
+def executed_test_path(node: str, name: str, level: str = EXECUTION_LEVEL_L1) -> str:
     """Return the repository-relative path of executed test ``name`` under ``node``."""
 
     return (
         Path(node)
         / TESTS_DIRECTORY_NAME
-        / f"{EXECUTED_TEST_PREFIX}{name}.scenario.l1{PYTHON_SUFFIX}"
+        / f"{EXECUTED_TEST_PREFIX}{name}.scenario.{level}{PYTHON_SUFFIX}"
     ).as_posix()
 
 
@@ -158,6 +161,22 @@ def reach_layout(kind: InfrastructureReach, repo: SyntheticRepository) -> ReachL
         repo.write_module(other, "")
         repo.write_test(FIRST_NODE, "one", f"import {other}\n")
         tests = ()
+    return ReachLayout(changed_path=changed, tests=tests, index=repo.index())
+
+
+def on_demand_reach_layout(repo: SyntheticRepository) -> ReachLayout:
+    """Write a node-local module reached by one default test and one on-demand test.
+
+    ``tests`` lists the default test first and the on-demand test second.
+    """
+
+    harness = f"{repo.package}.{HARNESSES_SUBPACKAGE}.on_demand"
+    import_line = f"from {repo.package}.{HARNESSES_SUBPACKAGE} import on_demand\n"
+    changed = repo.write_module(harness, "")
+    tests = (
+        repo.write_test(FIRST_NODE, "default", import_line),
+        repo.write_test(FIRST_NODE, "on_demand", import_line, level=ON_DEMAND_LEVEL),
+    )
     return ReachLayout(changed_path=changed, tests=tests, index=repo.index())
 
 

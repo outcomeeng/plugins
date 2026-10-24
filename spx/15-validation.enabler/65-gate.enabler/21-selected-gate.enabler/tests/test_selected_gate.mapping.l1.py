@@ -7,7 +7,6 @@ import pytest
 from outcomeeng.validation import (
     CHECK_RECIPES,
     EVAL_LINKS_ARGV,
-    ON_DEMAND_LEVEL,
     PREFLIGHT_STEPS,
     PYTEST_ARGV,
     TEST_STEPS,
@@ -37,7 +36,6 @@ from outcomeeng.validation.selected_gate import (
 from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
-    GeneratedTestFile,
     category_patterns,
     path_from_pattern,
 )
@@ -48,7 +46,6 @@ from outcomeeng_testing.harnesses.gate import (
     SELECTED_GATE_WHITESPACE_PATH,
     category_pattern_path_matches,
     collected_paths_observation,
-    on_demand_suite_property,
     resolved_base_observation,
     run_check_observation,
     selected_gate_branch_discovery_argv,
@@ -57,6 +54,7 @@ from outcomeeng_testing.harnesses.gate import (
 from outcomeeng_testing.harnesses.infrastructure_index import (
     conftest_reach_layout,
     mixed_reach_layout,
+    on_demand_reach_layout,
     reach_layout,
     repository_reach,
     synthetic_repository,
@@ -366,6 +364,23 @@ def test_test_infrastructure_reach_maps_to_gate_steps(
         assert pytest_steps == []
 
 
+def test_a_node_local_reach_selects_only_the_default_tests_it_reaches() -> None:
+    with synthetic_repository() as repo:
+        layout = on_demand_reach_layout(repo)
+    default_path, on_demand_path = layout.tests
+    reached = layout.index.reach(layout.changed_path)
+
+    plan = build_selected_gate_plan(
+        (layout.changed_path,), test_infrastructure=layout.index
+    )
+
+    assert reached.kind is InfrastructureReach.NODE_LOCAL
+    assert set(reached.tests) == {default_path, on_demand_path}
+    assert [
+        step.argv for step in plan.steps if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+    ] == [(*PYTEST_ARGV, default_path)]
+
+
 def test_module_reached_by_conftest_selects_the_full_surface() -> None:
     with synthetic_repository() as repo:
         layout = conftest_reach_layout(repo)
@@ -448,29 +463,3 @@ def test_explicit_full_execution_spawns_the_planned_recipe_set() -> None:
         for recipe in CHECK_RECIPES
         for step in (*PREFLIGHT_STEPS, *recipe.steps)
     )
-
-
-@on_demand_suite_property
-def _planned_pytest_targets_lie_outside_the_on_demand_suite(
-    test_files: list[GeneratedTestFile],
-) -> None:
-    paths = tuple(f"{SPEC_TREE_ROOT}/{test_file.path}" for test_file in test_files)
-    expected = tuple(
-        sorted(
-            path
-            for path, test_file in zip(paths, test_files, strict=True)
-            if test_file.level != ON_DEMAND_LEVEL
-        )
-    )
-
-    plan = build_selected_gate_plan(paths)
-
-    assert [
-        step.argv[len(PYTEST_ARGV) :]
-        for step in plan.steps
-        if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-    ] == ([expected] if expected else [])
-
-
-def test_planned_pytest_targets_lie_outside_the_on_demand_suite() -> None:
-    _planned_pytest_targets_lie_outside_the_on_demand_suite()

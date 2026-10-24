@@ -64,6 +64,7 @@ from outcomeeng_testing.harnesses.gate import (
     unrelated_validation_source_path,
 )
 from outcomeeng_testing.harnesses.infrastructure_index import (
+    on_demand_reach_layout,
     reach_layout,
     repository_reach,
     synthetic_repository,
@@ -258,7 +259,32 @@ def test_no_changed_path_category_selects_an_on_demand_test(
                 assert tuple(step.argv for step in plan.steps) == _full_surface_steps()
 
 
-def test_a_changed_test_infrastructure_module_selects_no_on_demand_test() -> None:
+def test_a_node_local_reach_of_an_on_demand_test_selects_no_on_demand_target() -> None:
+    with synthetic_repository() as repo:
+        layout = on_demand_reach_layout(repo)
+    reached = layout.index.reach(layout.changed_path)
+    _, on_demand_path = layout.tests
+
+    plan = build_selected_gate_plan(
+        (layout.changed_path,), test_infrastructure=layout.index
+    )
+
+    assert reached.kind is InfrastructureReach.NODE_LOCAL
+    assert on_demand_path in reached.tests
+    assert plan.full_gate is False
+    assert on_demand_path not in {
+        argument for arguments in _pytest_arguments(plan) for argument in arguments
+    }
+    assert all(
+        step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
+        for step in plan.steps
+        if "pytest" in step.argv
+    )
+
+
+def test_a_shared_test_infrastructure_module_selects_the_full_surface_without_the_on_demand_suite() -> (
+    None
+):
     reach = repository_reach(installation_harness.__file__)
 
     plan = build_selected_gate_plan((reach.path,), test_infrastructure=reach.index)
