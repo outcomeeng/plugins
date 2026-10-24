@@ -32,7 +32,7 @@ from outcomeeng.distribution.installation import (
     marketplace_plugin_name,
     report_document,
 )
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from outcomeeng_testing.generators.installation import (
     ClosingDisposition,
@@ -41,9 +41,11 @@ from outcomeeng_testing.generators.installation import (
     RecordDisposition,
     generated_boolean_states,
 )
-from outcomeeng.validation import ON_DEMAND_EXCLUSION_ARGV, is_on_demand_test
-from outcomeeng.validation._steps import RECIPE_TEST
+from outcomeeng.validation import ON_DEMAND_LEVEL, PYTEST_ARGV
+from outcomeeng.validation._steps import PYTEST_NODE_ID_SEPARATOR, RECIPE_TEST
+from outcomeeng_testing.harnesses.on_demand_collection import pytest_argument_tail
 from outcomeeng_testing.harnesses.real_agent_selection import (
+    direct_test_observation,
     pytest_collection_observation,
 )
 from outcomeeng_testing.harnesses.installation import (
@@ -110,6 +112,16 @@ def _announced_first_installs(
     )
 
 
+def _collected_files(collected: frozenset[str]) -> frozenset[str]:
+    return frozenset(
+        node_id.split(PYTEST_NODE_ID_SEPARATOR, maxsplit=1)[0] for node_id in collected
+    )
+
+
+def _carries_on_demand_level(file_path: str) -> bool:
+    return ON_DEMAND_LEVEL in PurePosixPath(file_path).name.split(".")
+
+
 def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
     observation = observe_verification_recipe()
 
@@ -118,12 +130,24 @@ def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
         RECIPE_TEST,
         Path(__file__).parent.relative_to(repository_root()).as_posix(),
     )
-    collection = pytest_collection_observation(
-        (*ON_DEMAND_EXCLUSION_ARGV, *observation.invoked[1:])
+    node_directory = observation.invoked[1:]
+    recipe_spawns = direct_test_observation(node_directory).spawn_calls
+    (pytest_call,) = (
+        call for call in recipe_spawns if call[: len(PYTEST_ARGV)] == PYTEST_ARGV
     )
-    assert collection.exit_code == 0, collection.output
-    assert collection.collected
-    assert not any(is_on_demand_test(node_id) for node_id in collection.collected)
+    excluded = pytest_collection_observation(pytest_argument_tail(pytest_call))
+    unfiltered = pytest_collection_observation(node_directory)
+
+    assert excluded.exit_code == 0, excluded.output
+    assert unfiltered.exit_code == 0, unfiltered.output
+    unfiltered_files = _collected_files(unfiltered.collected)
+    on_demand_files = frozenset(
+        file_path
+        for file_path in unfiltered_files
+        if _carries_on_demand_level(file_path)
+    )
+    assert on_demand_files
+    assert _collected_files(excluded.collected) == unfiltered_files - on_demand_files
 
 
 def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
