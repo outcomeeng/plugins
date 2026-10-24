@@ -49,6 +49,8 @@ Tested with:
   field on stderr.
 - ``render`` with an empty prefix array -> prints the approved rollup with zero
   blocking and zero debt counts as JSON.
+- Cleanup: the script reads stdin and writes stdout and stderr only, creating no
+  file, directory, or other state to remove.
 """
 
 from __future__ import annotations

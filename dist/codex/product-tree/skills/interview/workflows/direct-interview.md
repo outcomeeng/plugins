@@ -40,14 +40,7 @@ Determine what the user provided in response to the intake question:
 
 <step number="2" name="pre-analysis">
 
-Complete pre-analysis research before the first question:
-
-1. Analyze the input — what's defined, ambiguous, missing
-2. Scan the codebase for existing patterns, architecture, tech stack
-3. Check dependencies (package.json, pyproject.toml, etc.)
-4. Read product docs (README, AGENTS.md, existing specs)
-
-Share the structured brief with the user before asking the first question. Include your preliminary opinions — they set the tone for a collaborative interview, not a passive one.
+Complete the Pre-Analysis Protocol, including a check of dependency manifests (package.json, pyproject.toml, etc.), and share the structured brief with its preliminary opinions before the first question.
 
 </step>
 
@@ -66,13 +59,7 @@ Display the initial coverage map to the user.
 
 <step number="4" name="conduct-interview">
 
-Follow the essential principles strictly:
-
-1. Display coverage map before each question
-2. Ask one question at a time via request_user_input (2-4 options, no obvious choices)
-3. Push back on contradictions, over-engineering, missing edge cases
-4. Refine coverage map as new areas emerge — split, add, mark [done]
-5. Record every pushback and resolution in a running decisions log
+Conduct the interview under the Questioning, Coverage, and Pushback Protocols, and record every pushback and resolution in a running decisions log.
 
 </step>
 

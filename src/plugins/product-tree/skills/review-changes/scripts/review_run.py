@@ -17,7 +17,14 @@ nonzero `spx journal` exit propagated with its stderr, a finish that marks
 changed files unread sealing `failed` with the unread files named in the
 terminal event, a finish that leaves a changed file neither advanced nor marked
 unread refused, a branch value naming a commit replaced by the checked-out
-branch as the run's branch identity, and scratch cleanup on every failure path.
+branch as the run's branch identity, and scratch cleanup: `start` removes its
+scratch directory on every failure exit and on any exception after creating it,
+`finish` removes it on every exit (success, journal failure, seal failure, or
+handled error) except a coverage refusal, which seals nothing and keeps the run
+open so a missing `append-scope` and a second `finish` can follow, and a run
+stopped after a failed `append-scope` or `append-finding` keeps its scratch
+directory, under the system temporary root, for the single `append-finding`
+rerun, with no later `finish` to remove it.
 """
 
 from __future__ import annotations
@@ -540,6 +547,9 @@ def _cleanup_state(state_path: pathlib.Path) -> None:
         shutil.rmtree(scratch_dir)
 
 
+_COVERAGE_REFUSED = -1
+
+
 def _start(args: argparse.Namespace) -> int:
     started_at = _utc_now()
     # A head behind the fetched base is refused before any journal exists, so
@@ -565,6 +575,7 @@ def _start(args: argparse.Namespace) -> int:
         sys.stderr.write(f"{exc}\n")
         return 1
     scratch_dir = pathlib.Path(tempfile.mkdtemp(prefix="review-changes-"))
+    started = False
     try:
         summary = compute_diff.write_bundle(
             base_ref=base_ref,
@@ -582,10 +593,8 @@ def _start(args: argparse.Namespace) -> int:
             "open", "--type", _REVIEW_TYPE, journal_env=journal_env
         )
         if code != 0:
-            shutil.rmtree(scratch_dir)
             return code
         if not isinstance(opened, dict) or not isinstance(opened.get("runToken"), str):
-            shutil.rmtree(scratch_dir)
             sys.stderr.write("spx journal open did not return runToken\n")
             return 1
         run_token = str(opened["runToken"])
@@ -595,7 +604,6 @@ def _start(args: argparse.Namespace) -> int:
         )
         code = _append_event(run_token, event, journal_env=journal_env)
         if code != 0:
-            shutil.rmtree(scratch_dir)
             return code
         state: dict[str, object] = {
             "runToken": run_token,
@@ -617,6 +625,7 @@ def _start(args: argparse.Namespace) -> int:
         }
         json.dump(output, sys.stdout, sort_keys=True)
         sys.stdout.write("\n")
+        started = True
         return 0
     except (
         OSError,
@@ -625,10 +634,11 @@ def _start(args: argparse.Namespace) -> int:
         TypeError,
         ValueError,
     ) as exc:
-        if scratch_dir.is_dir():
-            shutil.rmtree(scratch_dir)
         sys.stderr.write(f"{exc}\n")
         return 1
+    finally:
+        if not started and scratch_dir.is_dir():
+            shutil.rmtree(scratch_dir)
 
 
 def _append_scope(args: argparse.Namespace) -> int:
@@ -664,6 +674,17 @@ def _append_finding(args: argparse.Namespace) -> int:
 
 
 def _finish(args: argparse.Namespace) -> int:
+    refused_for_coverage = False
+    try:
+        code = _finish_run(args)
+        refused_for_coverage = code == _COVERAGE_REFUSED
+        return 1 if refused_for_coverage else code
+    finally:
+        if not refused_for_coverage:
+            _cleanup_state(args.state)
+
+
+def _finish_run(args: argparse.Namespace) -> int:
     try:
         state = _read_state(args.state)
         journal_env = _journal_env_from_state(state)
@@ -690,7 +711,7 @@ def _finish(args: argparse.Namespace) -> int:
         )
         if coverage_error is not None:
             sys.stderr.write(f"{coverage_error}\n")
-            return 1
+            return _COVERAGE_REFUSED
         completed_at = _utc_now()
         event = _completed_event(
             metadata=state["metadata"],
@@ -708,7 +729,6 @@ def _finish(args: argparse.Namespace) -> int:
         if failed is not None:
             return failed
         sys.stdout.write(f"{run_token}\n")
-        _cleanup_state(args.state)
         return 0
     except (OSError, TypeError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")

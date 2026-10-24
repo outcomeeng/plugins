@@ -1,7 +1,7 @@
 ---
 name: manage-pr
 description: >-
-  ALWAYS invoke this skill for the composed lifecycle protocol of an existing PR: check wait, re-entry after compaction or push, merge-readiness decision, and merge command selection. Invoked by exact name from the GitHub PR skill, not for opening a PR.
+  ALWAYS invoke this skill by exact name to run the composed re-entry protocol on an already open PR: foreground check and review waits, re-entry after compaction or push, the merge-readiness decision, and merge command selection. NEVER invoke it for a user request to open or manage a PR; that request selects the GitHub PR skill, which routes here.
 argument-hint: "[pr-number|url|branch] [--return-closeout]"
 allowed-tools: Read, Glob, Grep, Edit, Write, collaboration.spawn_agent, collaboration.wait_agent, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*)
 ---
@@ -20,11 +20,11 @@ The marker binds post-merge ownership; Step 9 states what each case returns.
 
 <pr_wait_and_reentry_policy>
 
-This skill is the re-entry point for an open pull request: each pass inspects live GitHub and repository state for the PR pointer before acting. When no pointer is provided, resolve the PR from the current branch with bare `gh pr view`.
+Re-enter an open pull request on every pass: inspect live GitHub and repository state for the PR pointer before acting. When no pointer is provided, resolve the PR from the current branch with bare `gh pr view`.
 
 Action tokens are pass-local observations derived from the current live inspection. `WAIT_FOR_REVIEW`, `WAIT_FOR_CHECKS`, `FIX_FINDING:<item>`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_BLOCKED:<reason>`, `AWAIT_DEPLOYMENT_AUTHORIZATION`, and `AWAIT_RELEASE_AUTHORIZATION` never store PR state and never authorize a later wait, fix, deploy, release, or closeout without a fresh inspection pass. The mutation guard verdict `MERGE_READY:<head-sha>` is also pass-local and never authorizes a later merge without a fresh inspection pass for the same inspected head. After compaction, restart from Step 0; the foundation and node context reload only at the first product-content access, per Step 0. After foreground wait completion, a push, a review arrival, an operator reply, or any new user turn, discard prior token and guard-verdict authority and return to Step 1 for the PR pointer.
 
-When PR checks or current-head review output are not terminal, run `<pr_check_wait>`.
+When PR checks or current-head review output are not terminal, run `<pr_check_wait>`; it owns the wait command and the return to Step 1.
 
 GitHub and the local repository are authoritative for PR state. Conversation memory and prior tokens are only routing hints that name why this skill is being re-entered.
 
@@ -50,7 +50,7 @@ Walk these steps on each management pass. Authorized routine steps — inspect, 
 
 **Step 0 — Load references.** Immediately before the first product content this pass reads or modifies — a finding fix, base-sync conflict reconciliation, `/commit-changes` of edited product content, a coordination-note edit — or the first node this pass discusses, and at no earlier step, load the foundation and that node's context: Use skill `product-tree:understand`. Use skill `product-tree:contextualize`. PR inspection, check wait, merge, deploy, and release touch no product content and proceed without either reload. Use skill `product-tree:merging-standards`. It supplies the shared vocabulary. Use skill `product-tree:commit-changes`. It supplies the follow-up commit format. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 1; invoking the compact loader alone does not load the tagged policy sections used below.
 
-**Step 1 — Identify the PR.** When `$ARGUMENTS` is non-empty, resolve the PR from that pointer before inspecting state. Run the `gh pr view` command from `<pr_identity_fields>`. Use its bare form only when `$ARGUMENTS` is empty and the current branch is the intended PR branch.
+**Step 1 — Identify the PR.** When `$ARGUMENTS` is non-empty, resolve the PR from that pointer before inspecting state. Run the `gh pr view` command from `<pr_identity_fields>`, in its bare form only when `$ARGUMENTS` is empty and the current branch is the intended PR branch. Every later re-inspection runs the same command.
 
 **Step 2 — Inspect three surfaces and check base drift.** Run /merging-standards `<review_inspection>` queries. Compare timestamps against the most recent push; entries after that push are re-reviews of the latest state. In the same checkpoint, fetch `origin/<base>` and determine whether the branch is behind it — review state and base drift are read together so the rebase can proceed during the wait for reviews, not only after they land.
 
@@ -74,7 +74,7 @@ Then re-run /merging-standards `<branch_hygiene>` before the push — hygiene ap
 
 <pr_check_wait>
 
-**Step 7 — PR-check wait command.** Step 8 invokes this step when it emits `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`. This skill owns PR check and review waits. Run exactly one foreground wait command, the one from /merging-standards `<pr_check_wait>`, then discard the pre-wait token authority and return to Step 1:
+**Step 7 — PR-check wait command.** Run this step when Step 8 emits `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`. Run exactly one foreground wait command, the one from /merging-standards `<pr_check_wait>`, then discard the pre-wait token authority and return to Step 1:
 
 ```bash
 gh pr checks <pr-number> --watch --fail-fast --interval 30
@@ -122,7 +122,7 @@ Reviewer-skipped-by-design exception steps:
 
 1. Resolve the trigger phrase per /merging-standards `<repo_local_overlay>` (the Mention-reviewer trigger phrase topic; default `@spec-tree` when the overlay is silent).
 2. Post one PR-level comment with body exactly `<trigger-phrase> review`, writing the body to a scratch file per /merging-standards `<shared_contract>` and posting it with `gh pr comment <pr-number> --body-file <body-file>`. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner.
-3. Emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run Step 7, and re-inspect. The mention-triggered reviewer's posted findings become the current-head review the next management pass reads.
+3. Emit `MENTION_REVIEW_NEEDED:<trigger-phrase>` and run Step 7. The mention-triggered reviewer's posted findings become the current-head review the next management pass reads.
 
 Otherwise, evaluate `MERGE_READINESS` from observable PR state:
 
@@ -133,7 +133,7 @@ When `MERGE_READINESS` appears to hold, run the mutation-point guard from /mergi
 
 <merge_command_selection>
 
-Directly read /merging-standards `merge-cleanup.md` from its `<reference_index>` immediately before selecting or running the merge command.
+Read /merging-standards `merge-cleanup.md` from its `<reference_index>` immediately before selecting or running the merge command.
 
 Select the merge command only after the mutation-point guard returns `MERGE_READY:<head-sha>`:
 
@@ -143,11 +143,11 @@ Select the merge command only after the mutation-point guard returns `MERGE_READ
 
 </merge_command_selection>
 
-Run the mutation-point guard inspection per /merging-standards `<authority_gates>` and continue only after it returns `MERGE_READY:<head-sha>`. Enter the single-source /merging-standards `<merge_cleanup>` sequence; its first action runs every overlay-declared preflight check immediately before the merge command, and its post-detach boundary runs every overlay-declared post-cleanup check before branch deletion. Do not transcribe a second copy of those commands here. All cleanup stays in the assigned worktree per /merging-standards `<assigned_cwd_worktree_discipline>`.
+Run the mutation-point guard inspection per /merging-standards `<authority_gates>` and continue only after it returns `MERGE_READY:<head-sha>`. Enter the /merging-standards `<merge_cleanup>` sequence, which owns the preflight, merge, detach, post-cleanup, and branch-deletion commands. All cleanup stays in the assigned worktree per /merging-standards `<assigned_cwd_worktree_discipline>`.
 
 If the project declares deploy or release phases, continue through Step 9 with the branch-state closeout record and the declared phase results.
 
-If `MERGE_READINESS` does not hold, directly read /merging-standards `action-tokens.md` from its `<reference_index>`, then emit exactly one token from `<action_tokens>`. The token is valid only for this pass. For `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run Step 7 and re-inspect. For `MERGE_BLOCKED:<reason>`, stop at the concrete blocker the token names; when the operator replies, restart this workflow for the PR pointer before acting. Unresolved base synchronization is handled earlier in Step 4 through `/sync-base`'s diagnostic contract, preserving the specific recovery condition separately from the action tokens.
+If `MERGE_READINESS` does not hold, directly read /merging-standards `action-tokens.md` from its `<reference_index>`, then emit exactly one token from `<action_tokens>`. The token is valid only for this pass. For `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, or `MENTION_REVIEW_NEEDED:<trigger-phrase>`, run Step 7. For `MERGE_BLOCKED:<reason>`, stop at the concrete blocker the token names; when the operator replies, restart this workflow for the PR pointer before acting. Unresolved base synchronization is handled earlier in Step 4 through `/sync-base`'s diagnostic contract, preserving the specific recovery condition separately from the action tokens.
 
 **Step 9 — Build the closeout result and apply explicit ownership.** Once the PR is merged and /merging-standards `<merge_cleanup>` has run, build the branch-state closeout record from /merging-standards `<branch_state_closeout>` and run its safe cleanup policy before deploy or release routing so every later token carries the cleanup state. If a declared deploy action exists and its authorization predicate is unsatisfied, emit `AWAIT_DEPLOYMENT_AUTHORIZATION` with the branch-state closeout record, run no deploy action, run no release action, and wait for operator authorization before re-entering Step 1. If a declared release action exists after deploy completion or a deploy no-op and its authorization predicate is unsatisfied, emit `AWAIT_RELEASE_AUTHORIZATION` with the branch-state closeout record, run no release action, and wait for operator authorization before re-entering Step 1. When declared deploy and release phases are complete or no-op, build one closeout-ready result containing the PR URL, full merged head SHA, merge commit when available, cleanup state, branch-state closeout record with **Remaining Branches** groups, deploy result, release result, and remaining-work disposition. When `--return-closeout` is present, return that result and perform no Change disposition. When the marker is absent and the disposition names remaining in-scope work, return the result for direct continuation. When the marker is absent and the disposition says no in-scope work remains, produce the operator-useful closeout from that result and dispose of the held Change per /merging-standards `<close_phase>` by the one case that applies: when the Change's Output is delivered: Use skill `product-tree:close-change`. Close the Change `Applied`. When continuation remains for another holder: Use skill `product-tree:release-change`. Release the Change with a Handoff. The parsed marker alone decides closeout ownership.
 
@@ -190,11 +190,7 @@ gh api repos/<owner>/<repo>/pulls/<pr-number>/comments --method POST --field in_
 python3 "${SKILL_DIR}/scripts/resolve_review_thread.py" --host <host> <review-thread-node-id>
 python3 "${SKILL_DIR}/scripts/resolve_review_thread.py" --host <host> --repo <owner>/<repo> --pr <pr-number> --review-comment-id <review-comment-id>
 
-# Merge + branch deletion: see /merging-standards <merge_cleanup> for the single-source
-# rebase-merge-then-worktree-safe-deletion sequence (the merge command, the worktree detach,
-# and the local + remote branch deletion). Run it only after the mutation-point guard returns
-# MERGE_READY:<head-sha> per /merging-standards <authority_gates>; cleanup stays in the assigned
-# worktree per /merging-standards <assigned_cwd_worktree_discipline>. Not transcribed here.
+# Merge + branch deletion: run the Step 8 /merging-standards <merge_cleanup> sequence.
 ```
 
 </commands_reference>
@@ -211,11 +207,11 @@ The narrow Bash grants in frontmatter authorize approval-free execution. Run req
 
 **Pushed a tree only one predicate had seen.** Claude re-ran deterministic verification after a review-driven fix, re-ran an evidence auditor after a verification-driven fix, or re-ran the local review after an evidence-audit fix, but did not run every applicable predicate on the final tree — each fix is a new diff the other predicates have not covered, so the pushed tree was never jointly gated. Step 6 gates the final tree: after every commit, re-run deterministic verification and, within the gate cap, the evidence-auditor predicates and local review the merge composition selects; a gate's second counted rejection stops the pass, and Claude pushes only a tree that passes them all.
 
-**Wait-token-only without the foreground wait.** Claude emitted `WAIT_FOR_CHECKS` or `WAIT_FOR_REVIEW` and ended the turn, leaving the operator to re-check the PR manually while current-head checks were still running. Step 8 runs `<pr_check_wait>` when the PR is blocked by check completion, then restarts full inspection from Step 1 before acting.
+**Wait-token-only without the foreground wait.** Claude emitted `WAIT_FOR_CHECKS` or `WAIT_FOR_REVIEW` and ended the turn, leaving the operator to re-check the PR manually while current-head checks were still running. Run `<pr_check_wait>` when the PR is blocked by check completion; it restarts full inspection from Step 1 before acting.
 
 **Reloaded the whole methodology before the first PR inspection.** Claude resumed an open-PR continuation after a compaction by invoking `/understand`, rereading the complete root instruction file, and contextualizing nodes before running the first live PR inspection, on a pass whose next actions — current-head review inspection, check state, merge handling — touched no product content. On a 258K-token window that reload — the truncated root instruction file reread whole, the foundation, node contexts, and the lifecycle skills — cost roughly a quarter to a third of the window before any PR state was read. Reload only immediately before the first product content the pass reads or modifies or the first node it discusses; inspection, waiting, merge, deploy, and release proceed on live PR and repository state alone.
 
-**Used GitHub mergeability as authority.** Claude merged while current-head PR review/check automation was still running because GitHub reported the PR as mergeable and accepted `gh pr merge`. Host mergeability is not the repository policy gate; it ignores the stricter requirement that current-head review output exists and all required checks are terminal-green. Run the mutation-point guard immediately before merge; if any current-head review/check predicate is absent or non-terminal, emit the wait token and refresh tracking.
+**Used GitHub mergeability as authority.** Claude merged while current-head PR review/check automation was still running because GitHub reported the PR as mergeable and accepted `gh pr merge`. Host mergeability is not the repository policy gate; it ignores the stricter requirement that current-head review output exists and all required checks are terminal-green. Run the mutation-point guard immediately before merge; if any current-head review/check predicate is absent or non-terminal, emit the wait token and run `<pr_check_wait>`.
 
 </failure_modes>
 
@@ -230,8 +226,8 @@ The managing flow satisfies its contract when, at minimum:
 - Every finding is labeled with one of `BLOCKING` / `DEBT` — never `FOLLOW-UP`, never a severity rank, never a legacy class label — and a `BLOCKING` finding is acted on by validity and phase, never by severity, while a `DEBT` finding on touched or invalidated text is acted on by its ruling.
 - The work queue fixes every valid in-scope `BLOCKING` finding the open-PR review surfaces — no deferral of in-scope work. Each new `DEBT` finding on touched or invalidated text takes a ruling from a position at least one rank above the changeset's author and no lower than the Product's Maintainer; the pass emits `MERGE_BLOCKED:debt-ruling-pending` while the ruling is pending, records each ruling with the finding's entry key, acts on the finding only as the ruling directs, records an accepted finding once in the governing node's `ISSUES.md`, and treats a `TRACKED` finding as blocking nothing.
 - Every follow-up push re-establishes `VERIFICATION_READINESS` on the diff it would publish — local deterministic verification passes per /merging-standards `<local_deterministic_scope>` (or, for a push that only rebased onto an advanced base, the preservation-proof-scoped lane per /merging-standards `<base_sync>`), every evidence-auditor predicate the merge composition selects has passed, and, where the composition selects it, the local `product-tree_changes-reviewer` review (invoked at parity per /merging-standards `<local_review_invocation>`, with no scope narrowing) has passed within the gate cap with no valid finding unaddressed — re-runs /merging-standards `<branch_hygiene>`, and goes to the ready PR with no draft toggle.
-- Action tokens are treated as pass-local observations only; after compaction, wait completion, push, review arrival, operator reply, or a new user turn, this skill re-enters from the PR pointer and re-inspects live GitHub and repository state before waiting, merging, or closing.
-- Merge fires autonomously only when `MERGE_READINESS` holds and the mutation-point guard has just produced `MERGE_READY:<head-sha>`: a clean current-head CI review exists per `<clean_review_predicate>`, every other required check is terminal-green, branch hygiene and PR-state hold, and the inspected head SHA matches the fetched remote branch head and status-check head.
+- Action tokens are treated as pass-local observations only; after compaction, wait completion, push, review arrival, operator reply, or a new user turn, re-enter from the PR pointer and re-inspect live GitHub and repository state before waiting, merging, or closing.
+- Merge fires autonomously only when `MERGE_READINESS` holds and the mutation-point guard has just produced `MERGE_READY:<head-sha>`: the `<merge_readiness_decision_table>` reaches its final row.
 - After merge and declared deploy or release handling, the closeout-ready result carries the PR URL, full merged head SHA, merge commit when available, cleanup state, branch-state record with **Remaining Branches**, deploy and release results, and remaining-work disposition. The branch-state closeout record from /merging-standards `<branch_state_closeout>` has been built and safe cleanup has run. Closeout ownership follows Step 9.
 - A current-head CI review skipped **because the PR modifies the reviewer's own workflow file** (`conclusion: skipped`, GitHub Actions' identical-workflow-content gate) triggers the reviewer-skipped-by-design exception from /merging-standards `<authority_gates>`: post `<trigger-phrase> review` as a PR-level comment and emit `MENTION_REVIEW_NEEDED:<trigger-phrase>`. For any other skip cause, emit `MERGE_BLOCKED:review-check-skipped` — the exception is scoped to the self-modifying-PR case only.
 - `gh pr merge` is never run as a probe for mergeability; `mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`, and command acceptance are not merge predicates.

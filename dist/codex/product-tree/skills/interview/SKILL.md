@@ -105,12 +105,11 @@ Resume: if state file exists, re-validate against current codebase state, flag s
 
 <intake>
 
-**When the input supplies coverage areas and domain context**: skip the questions below and apply `<essential_principles>` directly with those areas.
-
-**Otherwise**, if the input is `/interview <input>`:
+For `/interview <input>`:
 
 1. Analyze the input
 2. Infer what the user needs from the input and current state:
+   - Coverage areas and domain context supplied → use those areas in place of the generic defaults
    - Existing artifact provided → read it first, derive coverage from its sections, focus on gaps and deltas
    - Decision framing ("should we X or Y") → coverage centers on options, criteria, trade-offs
    - Problem framing ("why does X", "X is broken") → coverage builds a causal chain from symptoms to root cause
@@ -170,7 +169,7 @@ How to avoid: Display the coverage map before EVERY question, not just the first
 
 **Failure 4: Generated spec doesn't trace back to interview**
 
-Spec is written from Claude's synthesis, not from the recorded Q&A. Assertions appear that were never discussed. The decisions log is empty or missing. User reviews the spec and asks "where did this come from?" — Claude can't answer.
+Spec is written from Claude's synthesis, not from the recorded Q&A. Assertions appear that were never discussed. The decisions log is empty or missing. User reviews the spec and asks "where did this come from?" — Claude cannot answer.
 
 Why it failed: Claude wrote the spec from its own synthesis rather than from the recorded Q&A, so no assertion carried a link back to an answer.
 
@@ -182,23 +181,17 @@ Claude loads this skill, reads the intake question, and immediately starts askin
 
 Why it failed: Claude treated the intake question as the start of the interview and the research as optional preparation.
 
-How to avoid: Complete the Pre-Analysis Protocol and share its brief before the first question. The user should never have to supply something that exists in the codebase or docs.
-
 **Failure 6: Asking a question the evidence already settled**
 
 Claude framed a question — "should the parser tolerate trailing commas?" — whose answer the loaded spec and the existing parser already fixed. The operator answered the obvious, and the turn produced nothing the code did not already say. A variant: Claude reasoned to a clear recommendation, then asked anyway "to confirm", staging a decision it had already made.
 
 Why it failed: Claude framed a question before reasoning the decision through, so it never checked whether the loaded evidence already fixed the answer, and treated asking as a substitute for deciding.
 
-How to avoid: Decide-First Protocol. Reason the decision through first. Ask only when the answer is operator-owned and the evidence does not settle it. When one defensible answer remains, take it and state the call — do not ask to ratify it.
-
 **Failure 7: Strawman options and false balance**
 
 Claude offered "use the existing validation harness" against "hand-roll a bespoke validator from scratch" — the second option a strawman no one would pick, dressed up to make the question look like a real choice. Or it split a single judgment into a fabricated 50/50 to appear neutral, when one option was plainly correct.
 
 Why it failed: Claude shaped the question to look neutral instead of reasoning to the option the evidence favored.
-
-How to avoid: every option is a materially distinct end-state a reasonable operator might actually choose. If only one option survives scrutiny, there is no question — decide and proceed. When a question is real, state the recommended option first and label it recommended; do not manufacture a counterweight to look balanced.
 
 </failure_modes>
 

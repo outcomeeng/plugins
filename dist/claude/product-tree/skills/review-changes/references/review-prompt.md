@@ -28,7 +28,7 @@ The review streams through the `review-changes` runner. When a finding is raised
 
 <review_scope>
 
-Review the whole diff bundle against the whole taxonomy. The full diff bundle is the review input; provide every finding the bundle exhibits, with no file, area, severity, or emphasis excluded.
+Review the whole diff bundle against the whole taxonomy. The full diff bundle is the review input; provide every finding the bundle exhibits, with no focus list, file list, affected-area list, severity filter, or emphasis narrowing it and no file or area excluded.
 
 Before raising findings, enumerate the review surface:
 

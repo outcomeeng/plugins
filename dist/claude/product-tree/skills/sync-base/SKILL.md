@@ -165,7 +165,7 @@ Apply the authority and checkpoint checks in `<dirty_tree_resolution>` before di
 - "Stash is forbidden, so the tree cannot be cleared" — committing clears it; the forbidden tool is not a blocker.
 - A detached worktree with authorized tracked changes blocking base movement and no branch to commit onto — create a local branch from the current commit and commit there.
 - Uncertainty about which branch a change belongs on — objective work goes on the change branch, an unrelated coordination note on its own branch cut from `origin/<base>`.
-- A clean behind-base detached HEAD — sync-base advances it to the base tip; it returns `rebased` / `already_current`, not a stop.
+- A clean behind-base detached HEAD — the synchronizer advances it to the base tip; it returns `rebased` / `already_current`, not a stop.
 
 Preserve each failure's classification through recovery. A decision about mutation authority cannot resolve a hook failure, and a successful commit cannot substitute for the primitive's currency result.
 

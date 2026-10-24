@@ -465,6 +465,5 @@ Claude treated a transport checkpoint as delivered value because a successful pu
 - The foundation domains — truth hierarchy, node model, artifact placement, assertion model, ordering model, verification model, coordination model, imperfection protocol — are present inline and require no secondary file reads.
 - Internal foundation sections contain no contradiction in truth flow, artifact ownership, kind grammar, assertion selection, ordering, verification vocabulary, coordination, or imperfection handling.
 - Operational references, templates, examples, overlays, and the root guide are located or read according to the workflow.
-- A live `<PRODUCT_TREE_FOUNDATION>` marker records the inline payload.
 
 </success_criteria>

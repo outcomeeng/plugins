@@ -288,6 +288,7 @@ class TestReviewRunnerBoundary:
 
         assert finished.stdout == "run-001\n"
         assert pathlib.Path(start_payload["statePath"]).exists() is False
+        assert pathlib.Path(start_payload["diffPath"]).parent.exists() is False
 
         journal = json.loads(journal_path.read_text(encoding="utf-8"))
         assert journal["sealed"] is True
@@ -350,6 +351,7 @@ class TestReviewRunnerBoundary:
         event_types = [event["type"] for event in journal["events"]]
         assert event_types == ["verification.scope.entered"]
         assert journal["sealed"] is False
+        assert pathlib.Path(start_payload["statePath"]).exists() is True
 
     def test_runner_requires_rename_source_and_destination_scope(
         self, tmp_path: pathlib.Path

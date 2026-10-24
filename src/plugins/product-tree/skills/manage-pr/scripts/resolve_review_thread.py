@@ -79,8 +79,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def validate_thread_id(thread_id: str) -> str:
     if not NODE_ID_PATTERN.fullmatch(thread_id):
         raise ValueError(
-            f"thread_id must be a GitHub node ID matching {NODE_ID_PATTERN.pattern}, "
-            f"got {thread_id!r}. Pass the review-thread node ID, for example "
+            "positional argument thread_id must be a GitHub node ID matching "
+            f"{NODE_ID_PATTERN.pattern}, got {thread_id!r}. Pass the review-thread node ID, for example "
             "PRRT_kwDOABCDEF, from the pull-request review-thread listing."
         )
     return thread_id

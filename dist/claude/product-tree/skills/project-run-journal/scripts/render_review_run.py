@@ -267,7 +267,14 @@ def _load_events(text: str, run_token: str) -> list[dict[str, Any]]:
 def render_summary(run_token: str, events: list[dict[str, Any]]) -> str:
     terminal = _terminal_event(events)
     if terminal is None:
-        raise ValueError(f"review run {run_token} has no terminal completion event")
+        seen = ", ".join(sorted({str(event.get("type")) for event in events}))
+        raise ValueError(
+            f"review run {run_token} has no terminal completion event "
+            f"({jp.RUN_COMPLETED!r}); "
+            f"received event types [{seen}]. The run is unsealed or truncated: "
+            "wait for the review to complete, then re-run this command with "
+            "the runToken of a sealed run."
+        )
 
     data = _event_data(terminal, run_token)
     status = _string_value(data, jp.RUN_STATE_STATUS)
