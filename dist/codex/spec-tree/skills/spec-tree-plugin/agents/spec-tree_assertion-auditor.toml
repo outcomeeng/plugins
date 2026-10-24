@@ -2,7 +2,6 @@ name = "spec-tree_assertion-auditor"
 description = "Verifier running `/audit-assertions`: a calling skill launches it by exact name with one node spec path when its gate requires an independent verdict on that node's `[audit]` assertions."
 model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
-sandbox_mode = "workspace-write"
 web_search = "disabled"
 developer_instructions = """Use skill `spec-tree:audit-assertions`.
 
