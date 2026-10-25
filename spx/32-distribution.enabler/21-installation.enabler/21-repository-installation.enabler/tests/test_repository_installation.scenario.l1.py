@@ -32,7 +32,7 @@ from outcomeeng.distribution.installation import (
     marketplace_plugin_name,
     report_document,
 )
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 from outcomeeng_testing.generators.installation import (
     ClosingDisposition,
@@ -41,7 +41,7 @@ from outcomeeng_testing.generators.installation import (
     RecordDisposition,
     generated_boolean_states,
 )
-from outcomeeng.validation import ON_DEMAND_LEVEL, PYTEST_ARGV
+from outcomeeng.validation import PYTEST_ARGV, is_on_demand_test
 from outcomeeng.validation._steps import PYTEST_NODE_ID_SEPARATOR, RECIPE_TEST
 from outcomeeng_testing.harnesses.on_demand_collection import pytest_argument_tail
 from outcomeeng_testing.harnesses.real_agent_selection import (
@@ -119,7 +119,7 @@ def _collected_files(collected: frozenset[str]) -> frozenset[str]:
 
 
 def _carries_on_demand_level(file_path: str) -> bool:
-    return ON_DEMAND_LEVEL in PurePosixPath(file_path).name.split(".")
+    return is_on_demand_test(file_path)
 
 
 def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
