@@ -11,7 +11,7 @@ from outcomeeng_testing.harnesses.workflow_inspect import GhReply, run_cli
 # Subcommand argv, the JSON shape `gh` must not return for it, and the located prefix and gh name
 # the spec's error contract names for it.
 WRONG_SHAPE_CASES = (
-    (["runs"], "{}", "runs: gh run list returned no list. Next: "),
+    (["runs"], "{}", "runs: gh run list returned dict, not a list. Next: "),
     (["run", "9001"], "[]", "run 9001: gh run view returned no run object. Next: "),
     (["jobs", "9001"], "[]", "jobs 9001: gh run view returned no jobs object. Next: "),
     (

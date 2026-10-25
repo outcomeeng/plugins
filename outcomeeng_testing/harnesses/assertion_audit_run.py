@@ -76,6 +76,7 @@ _START_SELECTORS: Final = re.compile(
     r"spx verification run start (--verification-type \S+ --scope-type \S+) --scope <path>"
 )
 _PLACEHOLDER: Final = re.compile(r"<([^<>]+)>")
+_OPTIONAL_LOCATION_SUFFIX: Final = re.compile(r"\[; <further-location>\.\.\.\]")
 _EXPECTED_PRODUCER_PLACEHOLDER: Final = (
     "the unit's expectedProducer object, repeated exactly"
 )
@@ -346,7 +347,7 @@ def _bindings(unit_key: str, designator: str) -> Mapping[str, str]:
         "path": NODE_SPEC_PATH,
         "designator": designator,
         "subject-path-and-line-or-section": f"{NODE_SPEC_PATH}:1",
-        "violated-rule-id": FINDING_RULE,
+        "catalog-rule-id": FINDING_RULE,
         "blocking-or-debt": FINDING_SEVERITY,
         "finding-message": FINDING_MESSAGE,
         "observed-state": FINDING_OBSERVED,
@@ -369,7 +370,8 @@ def _provenance_bindings() -> Mapping[str, str]:
 
 def _render(value: object, bindings: Mapping[str, str]) -> object:
     if isinstance(value, str):
-        return _PLACEHOLDER.sub(lambda match: bindings[match.group(1)], value)
+        required = _OPTIONAL_LOCATION_SUFFIX.sub("", value)
+        return _PLACEHOLDER.sub(lambda match: bindings[match.group(1)], required)
     if isinstance(value, dict):
         return {key: _render(item, bindings) for key, item in value.items()}
     if isinstance(value, list):

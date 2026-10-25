@@ -181,6 +181,21 @@ def shape_error(field: str, expected: str, value: object, where: str) -> ValueEr
     )
 
 
+def missing_end_cursor_error(page: str, value: object, where: str) -> ValueError:
+    return ValueError(
+        f"GitHub response {page} page is missing endCursor: pageInfo.hasNextPage "
+        f"is true but endCursor is {value!r} while reading {where}. {RETRY_HINT}"
+    )
+
+
+def shape_object(
+    value: object, field: str, expected: str, where: str
+) -> dict[str, object]:
+    if not isinstance(value, dict):
+        raise shape_error(field, expected, value, where)
+    return value
+
+
 def require_object(value: object, field: str, where: str) -> dict[str, object]:
     if not isinstance(value, dict):
         raise shape_error(field, "an object", value, where)
@@ -221,9 +236,7 @@ def thread_has_comment(
     while page_info.get("hasNextPage"):
         end_cursor = page_info.get("endCursor")
         if not isinstance(end_cursor, str) or not end_cursor:
-            raise shape_error(
-                "comments.pageInfo.endCursor", "a non-empty string", end_cursor, where
-            )
+            raise missing_end_cursor_error("comments", end_cursor, where)
         payload = run_graphql(
             THREAD_COMMENTS_QUERY,
             {"threadId": thread_id, "commentsAfter": end_cursor},
@@ -231,8 +244,8 @@ def thread_has_comment(
             runner,
         )
         data = require_object(payload.get("data"), "data", where)
-        node = require_object(
-            data.get("node"), "node (a PullRequestReviewThread)", where
+        node = shape_object(
+            data.get("node"), "node", "a PullRequestReviewThread object", where
         )
         comments = require_object(node.get("comments"), "node.comments", where)
         if find_comment_in_page(comments, comment_id, where):
@@ -282,9 +295,7 @@ def next_threads_cursor(review_threads: dict[str, object], where: str) -> str | 
         return None
     end_cursor = page_info.get("endCursor")
     if not isinstance(end_cursor, str) or not end_cursor:
-        raise shape_error(
-            "reviewThreads.pageInfo.endCursor", "a non-empty string", end_cursor, where
-        )
+        raise missing_end_cursor_error("reviewThreads", end_cursor, where)
     return end_cursor
 
 

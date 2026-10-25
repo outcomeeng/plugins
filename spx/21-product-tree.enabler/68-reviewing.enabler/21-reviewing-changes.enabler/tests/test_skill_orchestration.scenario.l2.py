@@ -414,17 +414,22 @@ class TestReviewRunnerBoundary:
         )
         assert missing_source.returncode == 1
         assert "missing scope-advanced events for: README.md" in missing_source.stderr
+        assert pathlib.Path(start_payload["statePath"]).exists() is False
 
-        source_scoped = run_script(
-            REVIEW_RUN_SCRIPT,
-            "append-scope",
-            "--state",
-            start_payload["statePath"],
-            "README.md",
-            env=env,
-            cwd=repo,
-        )
-        assert source_scoped.returncode == 0, source_scoped.stderr
+        restarted = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+        assert restarted.returncode == 0, restarted.stderr
+        start_payload = json.loads(restarted.stdout)
+        for unit in ("RENAMED.md", "README.md"):
+            scoped = run_script(
+                REVIEW_RUN_SCRIPT,
+                "append-scope",
+                "--state",
+                start_payload["statePath"],
+                unit,
+                env=env,
+                cwd=repo,
+            )
+            assert scoped.returncode == 0, scoped.stderr
 
         finished = run_script(
             REVIEW_RUN_SCRIPT,
