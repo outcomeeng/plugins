@@ -47,7 +47,7 @@ Decision-record form (ADR/PDR) is audited by `/audit-adr` and `/audit-pdr`; test
 
 - NEVER modify the node spec under audit or any other file — this audit produces a verdict, never a fix or a commit.
 - ALWAYS judge each assertion's verification type and each test assertion type against the standards Step 1 loads — never accept a present tag as valid by its mere presence.
-- ALWAYS name the section or assertion, the violated rule, and the evidence in every REJECT finding.
+- ALWAYS name the section or assertion, the violated rule, and the evidence in every `blocking` finding.
 - NEVER issue a finding the cited rule does not support — drop an unbacked finding rather than reject the node for it.
 - NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding as `filed`, and NEVER raise a recorded finding's severity or let a `filed` finding start to reject unless the run names a changed basis. `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `filed` form; `${CLAUDE_SKILL_DIR}/references/rule-catalog.md` defines the rule identifiers.
 
@@ -85,7 +85,7 @@ Verify three structural properties:
 2. An `## Assertions` section contains at least one assertion. Specific untagged declarations may appear directly under it without a heading. Tagged assertions require the template's routed grouping. An empty assertion section is `missing-assertions`.
 3. Each claim-shape heading (`### Scenarios`, `### Mappings`, `### Conformance`, `### Properties`, `### Compliance`) holds at least one assertion, and every assertion under it has the heading's claim shape independently of its verification-type tag; classify each assertion by the claim-shape rule in `<constraints>`. A `### Scenarios` heading whose assertions are universal is mismatched.
 
-**No kind statement or no `## Assertions` section → REJECT — "missing-section." A kind statement that differs from its template → REJECT — "malformed-kind-statement." An empty, unsupported, or claim-mismatched heading → REJECT — "heading-mismatch." A draft assertion's absent heading is valid.**
+**No kind statement or no `## Assertions` section → `blocking` — "missing-section." A kind statement that differs from its template → `blocking` — "malformed-kind-statement." An empty, unsupported, or claim-mismatched heading → `blocking` — "heading-mismatch." A draft assertion's absent heading is valid.**
 
 </step>
 
@@ -95,13 +95,13 @@ Verify three structural properties:
 
 Check EVERY section for temporal language:
 
-| Temporal (REJECT)                     | Atemporal (correct)                |
+| Temporal (blocking)                   | Atemporal (correct)                |
 | ------------------------------------- | ---------------------------------- |
 | "We added a rollup so failures show"  | "The rollup propagates failures"   |
 | "Currently the parser accepts X"      | "The parser accepts X"             |
 | "After the rewrite, status derives Y" | "Status derives from test results" |
 
-**Any temporal language in any section → REJECT — "temporal-voice."**
+**Any temporal language in any section → `blocking` — "temporal-voice."**
 
 </step>
 
@@ -115,7 +115,7 @@ For each assertion under `## Assertions`:
 2. Under `[test]`, the assertion type fits the claim's quantifier — apply the quantifier rule from `<constraints>` (a universal is never `scenario`). Reject a type the test assertion-type standard would not produce; do not relitigate a choice it leaves open between equally valid types.
 3. The tag is reachable for the claim's subject — apply the reachability rule from `<constraints>`.
 
-**A required tag missing from a routed assertion, a duplicate tag, or an unsupported bare mechanism tag → REJECT — "invalid-tag." A `[test]` assertion type that contradicts the claim's quantifier → REJECT — "evidence-type-mismatch." `[test]` on an authored-prose claim → REJECT — "prose-coupling," remediated to `[eval]` or `[audit]`. An unfalsifiable draft → REJECT — "unfalsifiable-assertion."**
+**A required tag missing from a routed assertion, a duplicate tag, or an unsupported bare mechanism tag → `blocking` — "invalid-tag." A `[test]` assertion type that contradicts the claim's quantifier → `blocking` — "evidence-type-mismatch." `[test]` on an authored-prose claim → `blocking` — "prose-coupling," remediated to `[eval]` or `[audit]`. An unfalsifiable draft → `blocking` — "unfalsifiable-assertion."**
 
 </step>
 
@@ -202,8 +202,8 @@ The verdict is sound when:
 
 - Every spec-node rule was judged with none skipped — claim-shape heading structure independent of verification type, atemporal voice, and per-assertion tag fitness (coverage-complete).
 - The verdict states an overall APPROVED/REJECTED, every property row carrying its determination, with no assertion left unevaluated.
-- Each REJECT finding lies on touched text, and every finding outside touched text appears as `filed` with its key, `baseRefEvidence`, and `issuesEntry`.
-- Each REJECT finding is falsifiable: it names the section or assertion, the violated rule, and the evidence — the malformed kind statement, the empty or mismatched heading, the temporal phrase, the invalid tag, the quantifier-mismatched assertion type, or the prose-coupled `[test]`.
+- Each `blocking` finding lies on touched text, and every finding outside touched text appears as `filed` with its key, `baseRefEvidence`, and `issuesEntry`.
+- Each `blocking` finding is falsifiable: it names the section or assertion, the violated rule, and the evidence — the malformed kind statement, the empty or mismatched heading, the temporal phrase, the invalid tag, the quantifier-mismatched assertion type, or the prose-coupled `[test]`.
 - The same node spec yields the same verdict.
 
 </success_criteria>
