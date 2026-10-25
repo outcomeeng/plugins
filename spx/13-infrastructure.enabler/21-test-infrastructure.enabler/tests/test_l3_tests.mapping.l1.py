@@ -25,8 +25,6 @@ from outcomeeng_testing.harnesses.l3_collection import (
     recipe_dispatch_spawns,
 )
 
-PYTHON_COMMAND = "python3"
-PYTHON_MODULE_FLAG = "-m"
 L3_FIXTURE_PATHS = tuple(
     test_file.path for test_file in l3_fixture_files() if test_file.level == L3_LEVEL
 )
@@ -82,12 +80,10 @@ def test_the_dispatch_collects_exactly_the_l3_files_of_a_repository() -> None:
 
 
 def test_the_justfile_recipe_runs_the_l3_dispatch() -> None:
-    assert justfile_recipe_command(RECIPE_TEST_L3) == (
-        PYTHON_COMMAND,
-        PYTHON_MODULE_FLAG,
-        str(validation_entry.__package__),
-        RECIPE_TEST_L3,
-    )
+    test_command = justfile_recipe_command(RECIPE_TEST)
+    entry = test_command[: test_command.index(str(validation_entry.__package__)) + 1]
+
+    assert justfile_recipe_command(RECIPE_TEST_L3) == (*entry, RECIPE_TEST_L3)
 
 
 @pytest.mark.parametrize("named", L3_FIXTURE_PATHS)

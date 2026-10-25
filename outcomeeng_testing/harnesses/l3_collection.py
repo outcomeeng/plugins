@@ -4,7 +4,8 @@ The harness writes a violating whole-payload fixture, test files at every
 execution level, into a temporary repository and reports which files real
 pytest collects for the argument tail of a pytest argv the production recipes
 compose. It also reports the argvs a recipe dispatch spawns against that repository and the
-command the `justfile` recipe body resolves to for the words a caller passes. The
+command the `justfile` recipe body resolves to for the words a caller passes, and
+projects a selected-gate plan onto the pytest arguments its steps carry. The
 linked tests own every predicate over those observations.
 
 Exception case: Stage 5, Interaction protocols — the dispatch observation runs
@@ -19,16 +20,17 @@ import os
 import shlex
 import subprocess
 import sys
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Final
 
-from outcomeeng.validation import PREFLIGHT_STEPS, TEST_STEPS
+from outcomeeng.validation import L3_LEVEL, PREFLIGHT_STEPS, PYTEST_ARGV, TEST_STEPS
 from outcomeeng.validation.__main__ import main as validation_main
 from outcomeeng.validation._steps import PYTEST_NODE_ID_SEPARATOR
-from outcomeeng_testing.generators.gate import GeneratedTestFile
+from outcomeeng.validation.selected_gate import SelectedGatePlan
+from outcomeeng_testing.generators.gate import GeneratedTestFile, l3_fixture_files
 from outcomeeng_testing.harnesses.gate import RecordingSpawner
 from outcomeeng_testing.harnesses.real_agent_selection import REPOSITORY_ROOT
 
@@ -62,6 +64,51 @@ def pytest_argument_tail(argv: Sequence[str]) -> tuple[str, ...]:
     """Return the arguments that follow the pytest module in a spawned argv."""
 
     return tuple(argv[argv.index(PYTEST_MODULE_TOKEN) + 1 :])
+
+
+def pytest_argvs(argvs: Iterable[Sequence[str]]) -> tuple[tuple[str, ...], ...]:
+    """Return the argvs that spawn pytest, in the order given."""
+
+    return tuple(
+        tuple(argv) for argv in argvs if tuple(argv[: len(PYTEST_ARGV)]) == PYTEST_ARGV
+    )
+
+
+def plan_pytest_arguments(plan: SelectedGatePlan) -> tuple[tuple[str, ...], ...]:
+    """Return the pytest arguments of each planned pytest step, in plan order."""
+
+    return tuple(
+        argv[len(PYTEST_ARGV) :]
+        for argv in pytest_argvs(step.argv for step in plan.steps)
+    )
+
+
+def plan_pytest_targets(plan: SelectedGatePlan) -> frozenset[str]:
+    """Return every pytest argument the plan's pytest steps carry."""
+
+    return frozenset(
+        argument for arguments in plan_pytest_arguments(plan) for argument in arguments
+    )
+
+
+def l3_fixture_paths() -> frozenset[str]:
+    """Return the fixture paths the generator composed at the L3 level."""
+
+    return frozenset(
+        test_file.path
+        for test_file in l3_fixture_files()
+        if test_file.level == L3_LEVEL
+    )
+
+
+def default_suite_fixture_paths() -> frozenset[str]:
+    """Return the fixture paths the generator composed at every other level."""
+
+    return frozenset(
+        test_file.path
+        for test_file in l3_fixture_files()
+        if test_file.level != L3_LEVEL
+    )
 
 
 def write_fixture(root: Path, files: Sequence[GeneratedTestFile]) -> None:
@@ -115,6 +162,23 @@ def fixture_collection(
             if PYTEST_NODE_ID_SEPARATOR in line
         ),
         output=completed.stdout + completed.stderr,
+    )
+
+
+def fixture_collected_files(pytest_argv: Sequence[str]) -> frozenset[str]:
+    """Return the fixture files real pytest collects for a pytest argv's arguments."""
+
+    return fixture_collection(
+        l3_fixture_files(), pytest_argument_tail(pytest_argv)
+    ).collected_files
+
+
+def plan_collected_files(plan: SelectedGatePlan) -> tuple[frozenset[str], ...]:
+    """Return the fixture files real pytest collects for each planned pytest step."""
+
+    return tuple(
+        fixture_collected_files(argv)
+        for argv in pytest_argvs(step.argv for step in plan.steps)
     )
 
 

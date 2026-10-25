@@ -1,4 +1,12 @@
-"""Real process-group infrastructure for gate signal scenario evidence."""
+"""Real process-group infrastructure for gate signal scenario evidence.
+
+Each entry point drives the production orchestrator or spawner in real
+processes and returns what those processes showed: liveness readings, the
+signal a grandchild received, exit codes, the parsed run summary, and the
+timing and reap state of a live orchestrator's direct child. The linked tests
+own every predicate over those observations. A process that fails to start or
+announce itself raises `SignalHarnessLifecycleError`.
+"""
 
 from __future__ import annotations
 
@@ -9,26 +17,67 @@ import signal
 import subprocess
 import sys
 import time
+from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Final, cast
 
-from outcomeeng.validation import (
-    FORWARDED_SIGNALS,
-    ProductionSpawner,
-    RUN_FAIL_STATUS,
-    SUMMARY_KEY_EXIT_CODE,
-    SUMMARY_KEY_LOG_PATH,
-    SUMMARY_KEY_STATUS,
-    SUMMARY_KEY_STEPS,
-    SUMMARY_PATH_LABEL,
-)
+from outcomeeng.validation import ProductionSpawner, SUMMARY_PATH_LABEL
 
 ORCHESTRATOR_STARTUP_SECONDS: Final = 8.0
 TERMINATION_DEADLINE_SECONDS: Final = 6.0
 CONTROLLED_CHILD_SLEEP_SECONDS: Final = 60.0
 GROUP_MARKER_WAIT_SECONDS: Final = ORCHESTRATOR_STARTUP_SECONDS
 GROUP_MARKER_POLL_SECONDS: Final = 0.01
+# The orchestrator's own process signals itself this long after it enters the
+# child wait, so the signal lands while the interrupted wait holds the lock.
+WAIT_ENTRY_SIGNAL_DELAY_SECONDS: Final = 0.2
+
+
+class SignalHarnessLifecycleError(RuntimeError):
+    """A real process the signal harness drives failed to start or announce itself."""
+
+
+@dataclass(frozen=True)
+class SignalRunObservation:
+    """One forwarded signal delivered to a real orchestrator with a child group."""
+
+    delivered_signal: signal.Signals
+    child_alive_before_signal: bool
+    grandchild_alive_before_signal: bool
+    grandchild_received_signal: int | None
+    child_alive_after_exit: bool
+    orchestrator_exit_code: int
+    summary: Mapping[str, object]
+
+
+@dataclass(frozen=True)
+class DirectReapObservation:
+    """A live orchestrator's view of its direct child after `run` returns."""
+
+    delivered_signal: signal.Signals
+    child_exits_on_sigterm: bool
+    child_reaped_before_orchestrator_exit: bool
+    seconds_from_signal_to_return: float
+    run_exit_code: int
+
+
+@dataclass(frozen=True)
+class SpawnerOutputObservation:
+    """A real child's printed text, exit code, and the file the spawner captured."""
+
+    printed: str
+    exit_code: int
+    captured: str
+
+
+@dataclass(frozen=True)
+class SpawnerGroupSignalObservation:
+    """A real child's poll result before a group signal and exit code after it."""
+
+    poll_before_signal: int | None
+    exit_code_after_signal: int
 
 
 def _process_group_command(pid_path: Path, signal_path: Path) -> tuple[str, ...]:
@@ -57,6 +106,23 @@ def _process_group_command(pid_path: Path, signal_path: Path) -> tuple[str, ...]
         "import pathlib, signal, subprocess, sys, time; "
         "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
         f"grandchild = subprocess.Popen({[sys.executable, '-c', grandchild_program]!r}); "
+        f"time.sleep({CONTROLLED_CHILD_SLEEP_SECONDS})",
+    )
+
+
+def _direct_child_command(
+    ready_path: Path, *, exits_on_sigterm: bool
+) -> tuple[str, ...]:
+    """Return a direct child that announces readiness, then sleeps."""
+    disposition = (
+        "" if exits_on_sigterm else "signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+    )
+    return (
+        sys.executable,
+        "-c",
+        "import pathlib, signal, time; "
+        f"{disposition}"
+        f"pathlib.Path({str(ready_path)!r}).write_text('ready', encoding='utf-8'); "
         f"time.sleep({CONTROLLED_CHILD_SLEEP_SECONDS})",
     )
 
@@ -125,6 +191,83 @@ sys.exit(run(spawner=SignalDuringSpawnSpawner(), sink=sys.stdout, steps=steps))
 """
 
 
+def _direct_reap_wrapper_program(
+    delivered_signal: signal.Signals,
+    child_argv: tuple[str, ...],
+    ready_path: Path,
+    observation_path: Path,
+) -> str:
+    """Return an orchestrator that signals itself mid-wait and inspects its child.
+
+    The wrapper keeps every handle it spawned alive until it has inspected the
+    child, so no garbage-collected `Popen` reaps the child on its behalf.
+    """
+    return f"""
+import json, os, pathlib, signal, sys, threading, time
+from outcomeeng.validation import ProductionSpawner, Step, run
+
+held_handles = []
+record = {{}}
+main_thread = threading.main_thread().ident
+
+def deliver():
+    marker = pathlib.Path({str(ready_path)!r})
+    deadline = time.monotonic() + {GROUP_MARKER_WAIT_SECONDS!r}
+    while time.monotonic() < deadline and not marker.exists():
+        time.sleep({GROUP_MARKER_POLL_SECONDS!r})
+    time.sleep({WAIT_ENTRY_SIGNAL_DELAY_SECONDS!r})
+    record["signalled_at"] = time.monotonic()
+    signal.pthread_kill(main_thread, {int(delivered_signal)})
+
+class SelfSignallingSpawner:
+    def __init__(self) -> None:
+        self._inner = ProductionSpawner()
+    def spawn(self, argv, output_path):
+        handle = SelfSignallingHandle(self._inner.spawn(argv, output_path))
+        held_handles.append(handle)
+        record["child_pid"] = handle.pid
+        return handle
+
+class SelfSignallingHandle:
+    def __init__(self, inner) -> None:
+        self._inner = inner
+    @property
+    def pid(self):
+        return self._inner.pid
+    def poll(self):
+        return self._inner.poll()
+    def wait(self):
+        threading.Thread(target=deliver, daemon=True).start()
+        return self._inner.wait()
+    def send_signal_to_group(self, sig):
+        self._inner.send_signal_to_group(sig)
+
+steps = (Step(label="direct-child", argv={child_argv!r}),)
+exit_code = run(spawner=SelfSignallingSpawner(), sink=sys.stderr, steps=steps)
+returned_at = time.monotonic()
+try:
+    os.waitpid(record["child_pid"], os.WNOHANG)
+except ChildProcessError:
+    reaped = True
+else:
+    reaped = False
+try:
+    os.killpg(record["child_pid"], signal.SIGKILL)
+except (ProcessLookupError, PermissionError):
+    pass
+pathlib.Path({str(observation_path)!r}).write_text(
+    json.dumps(
+        {{
+            "reaped": reaped,
+            "seconds": returned_at - record["signalled_at"],
+            "exit_code": exit_code,
+        }}
+    ),
+    encoding="utf-8",
+)
+"""
+
+
 def _process_is_alive(pid: int) -> bool:
     try:
         os.kill(pid, 0)
@@ -142,20 +285,18 @@ def _read_grandchild_pid(pid_path: Path) -> int:
             return int(pid_path.read_text(encoding="utf-8"))
         except (FileNotFoundError, ValueError):
             time.sleep(GROUP_MARKER_POLL_SECONDS)
-    raise AssertionError("child did not announce grandchild PID in time")
+    raise SignalHarnessLifecycleError("child did not announce grandchild PID in time")
 
 
-def _assert_grandchild_received_group_signal(signal_path: Path) -> None:
+def _read_grandchild_signal(signal_path: Path) -> int | None:
+    """Return the signal the grandchild announced receiving, or None in time."""
     deadline = time.monotonic() + GROUP_MARKER_WAIT_SECONDS
     while time.monotonic() < deadline:
         try:
-            delivered_signal = int(signal_path.read_text(encoding="utf-8"))
+            return int(signal_path.read_text(encoding="utf-8"))
         except (FileNotFoundError, ValueError):
             time.sleep(GROUP_MARKER_POLL_SECONDS)
-            continue
-        assert delivered_signal == int(signal.SIGTERM)
-        return
-    raise AssertionError("grandchild did not receive process-group SIGTERM")
+    return None
 
 
 def _terminate_child_group(child_pid: int | None) -> None:
@@ -176,7 +317,7 @@ def _read_child_pid_marker(
     buffer = b""
     child_pid: int | None = None
     if stderr_reader.stderr is None:
-        raise AssertionError("orchestrator stderr is unavailable")
+        raise SignalHarnessLifecycleError("orchestrator stderr is unavailable")
     file_descriptor = stderr_reader.stderr.fileno()
     wait_marker_seen = False
     while time.monotonic() < deadline:
@@ -197,8 +338,10 @@ def _read_child_pid_marker(
             if child_pid is not None and (wait_marker_seen or not wait_for_handle):
                 return child_pid
     if wait_for_handle:
-        raise AssertionError("orchestrator did not enter child wait in time")
-    raise AssertionError("orchestrator did not announce child PID in time")
+        raise SignalHarnessLifecycleError(
+            "orchestrator did not enter child wait in time"
+        )
+    raise SignalHarnessLifecycleError("orchestrator did not announce child PID in time")
 
 
 def _spawn_wrapper(path: Path, program: str) -> subprocess.Popen[bytes]:
@@ -221,108 +364,160 @@ def _terminate_wrapper(orchestrator: subprocess.Popen[bytes]) -> None:
     orchestrator.wait(timeout=TERMINATION_DEADLINE_SECONDS)
 
 
-def _read_summary(orchestrator: subprocess.Popen[bytes]) -> dict[str, object]:
+def _read_summary(orchestrator: subprocess.Popen[bytes]) -> Mapping[str, object]:
     if orchestrator.stdout is None:
-        raise AssertionError("orchestrator stdout is unavailable")
+        raise SignalHarnessLifecycleError("orchestrator stdout is unavailable")
     stdout_text = orchestrator.stdout.read().decode()
     summary_line = next(
-        line for line in stdout_text.splitlines() if line.startswith(SUMMARY_PATH_LABEL)
+        (
+            line
+            for line in stdout_text.splitlines()
+            if line.startswith(SUMMARY_PATH_LABEL)
+        ),
+        None,
     )
+    if summary_line is None:
+        raise SignalHarnessLifecycleError("orchestrator printed no summary path")
     summary_path = Path(summary_line.removeprefix(SUMMARY_PATH_LABEL).strip())
     parsed = cast(object, json.loads(summary_path.read_text(encoding="utf-8")))
     if not isinstance(parsed, dict):
-        raise AssertionError("orchestrator summary is not a JSON object")
+        raise SignalHarnessLifecycleError("orchestrator summary is not a JSON object")
     return cast(dict[str, object], parsed)
 
 
-def _assert_failed_signal_summary(
-    orchestrator: subprocess.Popen[bytes], delivered_signal: signal.Signals
-) -> None:
-    expected_exit_code = 128 + int(delivered_signal)
-    assert orchestrator.returncode == expected_exit_code
-    summary = _read_summary(orchestrator)
-    assert summary[SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
-    assert summary[SUMMARY_KEY_EXIT_CODE] == expected_exit_code
-    steps = cast(list[dict[str, object]], summary[SUMMARY_KEY_STEPS])
-    assert steps[0][SUMMARY_KEY_STATUS] == RUN_FAIL_STATUS
-    assert steps[0][SUMMARY_KEY_EXIT_CODE] == expected_exit_code
-    assert SUMMARY_KEY_LOG_PATH in steps[0]
+def _observe_signal_run(
+    delivered_signal: signal.Signals,
+    program_name: str,
+    program: str,
+    pid_path: Path,
+    signal_path: Path,
+    *,
+    harness_delivers_signal: bool,
+) -> SignalRunObservation:
+    orchestrator = _spawn_wrapper(pid_path.parent / program_name, program)
+    child_pid: int | None = None
+    try:
+        child_pid = _read_child_pid_marker(
+            orchestrator, wait_for_handle=harness_delivers_signal
+        )
+        grandchild_pid = _read_grandchild_pid(pid_path)
+        child_alive_before = _process_is_alive(child_pid)
+        grandchild_alive_before = _process_is_alive(grandchild_pid)
+        if harness_delivers_signal:
+            os.kill(orchestrator.pid, delivered_signal)
+        orchestrator.wait(timeout=TERMINATION_DEADLINE_SECONDS)
+        return SignalRunObservation(
+            delivered_signal=delivered_signal,
+            child_alive_before_signal=child_alive_before,
+            grandchild_alive_before_signal=grandchild_alive_before,
+            grandchild_received_signal=_read_grandchild_signal(signal_path),
+            child_alive_after_exit=_process_is_alive(child_pid),
+            orchestrator_exit_code=orchestrator.returncode,
+            summary=_read_summary(orchestrator),
+        )
+    finally:
+        _terminate_wrapper(orchestrator)
+        _terminate_child_group(child_pid)
 
 
-def assert_signals_terminate_process_groups_within_grace() -> None:
-    """Exercise every forwarded signal against a real in-flight child group."""
-    for delivered_signal in FORWARDED_SIGNALS:
-        with TemporaryDirectory() as directory:
-            root = Path(directory)
-            grandchild_pid_path = root / "grandchild.pid"
-            grandchild_signal_path = root / "grandchild.signal"
-            orchestrator = _spawn_wrapper(
-                root / "wrapper.py",
-                _wrapper_program(grandchild_pid_path, grandchild_signal_path),
-            )
-            child_pid: int | None = None
-            try:
-                child_pid = _read_child_pid_marker(orchestrator, wait_for_handle=True)
-                grandchild_pid = _read_grandchild_pid(grandchild_pid_path)
-                assert _process_is_alive(child_pid)
-                assert _process_is_alive(grandchild_pid)
-                os.kill(orchestrator.pid, delivered_signal)
-                orchestrator.wait(timeout=TERMINATION_DEADLINE_SECONDS)
-                _assert_grandchild_received_group_signal(grandchild_signal_path)
-                assert not _process_is_alive(child_pid), (
-                    f"child PID {child_pid} survived signal {delivered_signal}"
-                )
-                _assert_failed_signal_summary(orchestrator, delivered_signal)
-            finally:
-                _terminate_wrapper(orchestrator)
-                _terminate_child_group(child_pid)
+def observe_in_flight_signal_run(
+    delivered_signal: signal.Signals,
+) -> SignalRunObservation:
+    """Deliver a signal to a real orchestrator waiting on a child group."""
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        pid_path = root / "grandchild.pid"
+        signal_path = root / "grandchild.signal"
+        return _observe_signal_run(
+            delivered_signal,
+            "wrapper.py",
+            _wrapper_program(pid_path, signal_path),
+            pid_path,
+            signal_path,
+            harness_delivers_signal=True,
+        )
 
 
-def assert_spawn_window_signals_reach_child_groups() -> None:
-    """Exercise every forwarded signal raised during production child spawn."""
-    for delivered_signal in FORWARDED_SIGNALS:
-        with TemporaryDirectory() as directory:
-            root = Path(directory)
-            grandchild_pid_path = root / "grandchild.pid"
-            grandchild_signal_path = root / "grandchild.signal"
-            orchestrator = _spawn_wrapper(
-                root / "spawn_signal_wrapper.py",
-                _spawn_signal_wrapper_program(
-                    delivered_signal, grandchild_pid_path, grandchild_signal_path
+def observe_spawn_window_signal_run(
+    delivered_signal: signal.Signals,
+) -> SignalRunObservation:
+    """Raise a signal inside a real orchestrator during production child spawn."""
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        pid_path = root / "grandchild.pid"
+        signal_path = root / "grandchild.signal"
+        return _observe_signal_run(
+            delivered_signal,
+            "spawn_signal_wrapper.py",
+            _spawn_signal_wrapper_program(delivered_signal, pid_path, signal_path),
+            pid_path,
+            signal_path,
+            harness_delivers_signal=False,
+        )
+
+
+def observe_direct_child_reap(
+    delivered_signal: signal.Signals, *, child_exits_on_sigterm: bool
+) -> DirectReapObservation:
+    """Signal a live orchestrator mid-wait and read its direct child's reap state."""
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        ready_path = root / "child.ready"
+        observation_path = root / "observation.json"
+        orchestrator = _spawn_wrapper(
+            root / "direct_reap_wrapper.py",
+            _direct_reap_wrapper_program(
+                delivered_signal,
+                _direct_child_command(
+                    ready_path, exits_on_sigterm=child_exits_on_sigterm
                 ),
+                ready_path,
+                observation_path,
+            ),
+        )
+        try:
+            orchestrator.wait(
+                timeout=ORCHESTRATOR_STARTUP_SECONDS + TERMINATION_DEADLINE_SECONDS
             )
-            child_pid: int | None = None
-            try:
-                child_pid = _read_child_pid_marker(orchestrator, wait_for_handle=False)
-                grandchild_pid = _read_grandchild_pid(grandchild_pid_path)
-                assert _process_is_alive(child_pid)
-                assert _process_is_alive(grandchild_pid)
-                orchestrator.wait(timeout=TERMINATION_DEADLINE_SECONDS)
-                _assert_grandchild_received_group_signal(grandchild_signal_path)
-                assert not _process_is_alive(child_pid), (
-                    f"child PID {child_pid} survived spawn-window signal {delivered_signal}"
-                )
-                _assert_failed_signal_summary(orchestrator, delivered_signal)
-            finally:
-                _terminate_wrapper(orchestrator)
-                _terminate_child_group(child_pid)
+        finally:
+            _terminate_wrapper(orchestrator)
+        if not observation_path.exists():
+            stderr = b"" if orchestrator.stderr is None else orchestrator.stderr.read()
+            raise SignalHarnessLifecycleError(
+                f"orchestrator recorded no observation: {stderr.decode()}"
+            )
+        recorded = cast(
+            dict[str, object],
+            json.loads(observation_path.read_text(encoding="utf-8")),
+        )
+    return DirectReapObservation(
+        delivered_signal=delivered_signal,
+        child_exits_on_sigterm=child_exits_on_sigterm,
+        child_reaped_before_orchestrator_exit=bool(recorded["reaped"]),
+        seconds_from_signal_to_return=float(cast(float, recorded["seconds"])),
+        run_exit_code=int(cast(int, recorded["exit_code"])),
+    )
 
 
-def assert_production_spawner_captures_child_output() -> None:
-    """Exercise the production spawner's real file-backed output capture."""
+def observe_production_spawner_output() -> SpawnerOutputObservation:
+    """Run a real child that prints one line through the production spawner."""
     with TemporaryDirectory() as directory:
         output_path = Path(directory) / "child.log"
-        captured_output = ProductionSpawner.__name__
+        printed = ProductionSpawner.__name__
         handle = ProductionSpawner().spawn(
-            (sys.executable, "-c", f"print({captured_output!r})"),
+            (sys.executable, "-c", f"print({printed!r})"),
             output_path,
         )
-        assert handle.wait() == 0
-        assert output_path.read_text(encoding="utf-8") == f"{captured_output}\n"
+        exit_code = handle.wait()
+        return SpawnerOutputObservation(
+            printed=printed,
+            exit_code=exit_code,
+            captured=output_path.read_text(encoding="utf-8"),
+        )
 
 
-def assert_production_spawner_signal_terminates_child() -> None:
-    """Exercise production process-group signalling against a real child."""
+def observe_production_spawner_group_signal() -> SpawnerGroupSignalObservation:
+    """Send SIGTERM to a real sleeping child's group through the production handle."""
     with TemporaryDirectory() as directory:
         output_path = Path(directory) / "sleep.log"
         handle = ProductionSpawner().spawn(
@@ -334,18 +529,28 @@ def assert_production_spawner_signal_terminates_child() -> None:
             output_path,
         )
         try:
-            assert handle.poll() is None
+            poll_before_signal = handle.poll()
             handle.send_signal_to_group(signal.SIGTERM)
-            assert handle.wait() != 0
+            exit_code_after_signal = handle.wait()
         finally:
             if handle.poll() is None:
                 handle.send_signal_to_group(signal.SIGKILL)
                 handle.wait()
+        return SpawnerGroupSignalObservation(
+            poll_before_signal=poll_before_signal,
+            exit_code_after_signal=exit_code_after_signal,
+        )
 
 
 __all__ = [
-    "assert_production_spawner_captures_child_output",
-    "assert_production_spawner_signal_terminates_child",
-    "assert_signals_terminate_process_groups_within_grace",
-    "assert_spawn_window_signals_reach_child_groups",
+    "DirectReapObservation",
+    "SignalHarnessLifecycleError",
+    "SignalRunObservation",
+    "SpawnerGroupSignalObservation",
+    "SpawnerOutputObservation",
+    "observe_direct_child_reap",
+    "observe_in_flight_signal_run",
+    "observe_production_spawner_group_signal",
+    "observe_production_spawner_output",
+    "observe_spawn_window_signal_run",
 ]

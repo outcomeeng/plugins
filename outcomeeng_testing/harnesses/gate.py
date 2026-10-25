@@ -81,6 +81,7 @@ from outcomeeng_testing.generators.gate import (
     generated_test_file_sets,
     path_from_pattern,
     selected_gate_changed_paths,
+    step_lists,
 )
 from outcomeeng_testing.harnesses.changeset_scope import (
     CHANGESET_SCOPE,
@@ -98,7 +99,9 @@ SELECTED_GATE_PROPERTY_REPLAY_PATH = (
 SELECTED_GATE_PROPERTY_EXAMPLES = 40
 L3_TESTS_PROPERTY_SEED = 20261024
 L3_TESTS_PROPERTY_EXAMPLES = 60
-L3_TESTS_PROPERTY_REPLAY_COMMAND = "just test"
+STEP_LIST_PROPERTY_SEED = 20261025
+STEP_LIST_PROPERTY_EXAMPLES = 50
+PROPERTY_REPLAY_COMMAND = "just test"
 PATHSPEC_GIT_TIMEOUT_SECONDS = 30
 STATIC_ANALYSIS_ARGVS = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
 PASS_EXIT_CODE = 0
@@ -416,14 +419,12 @@ def selected_gate_property(
     return wrapper
 
 
-def _l3_tests_replay_path(
-    test_func: Callable[[list[GeneratedTestFile]], None],
-) -> str:
+def _property_replay_path(test_func: Callable[..., None]) -> str:
     # A property named `_{name}` runs through the test entry point `test_{name}`
     # beside it in the same file.
     source = Path(inspect.getfile(test_func)).resolve()
     return (
-        f"{L3_TESTS_PROPERTY_REPLAY_COMMAND} "
+        f"{PROPERTY_REPLAY_COMMAND} "
         f"{source.relative_to(Path(__file__).resolve().parents[2]).as_posix()}"
         f"::test{test_func.__name__}"
     )
@@ -444,7 +445,28 @@ def l3_tests_property(
         run_replayable_property(
             configured,
             seed_value=L3_TESTS_PROPERTY_SEED,
-            replay_path=_l3_tests_replay_path(test_func),
+            replay_path=_property_replay_path(test_func),
+        )
+
+    return wrapper
+
+
+def step_list_property(
+    test_func: Callable[[tuple[Step, ...]], None],
+) -> Callable[[], None]:
+    """Run a gate step-list property with reproducible failure diagnostics."""
+
+    configured = seed(STEP_LIST_PROPERTY_SEED)(
+        settings(max_examples=STEP_LIST_PROPERTY_EXAMPLES, deadline=None)(
+            given(steps=step_lists())(test_func)
+        )
+    )
+
+    def wrapper() -> None:
+        run_replayable_property(
+            configured,
+            seed_value=STEP_LIST_PROPERTY_SEED,
+            replay_path=_property_replay_path(test_func),
         )
 
     return wrapper

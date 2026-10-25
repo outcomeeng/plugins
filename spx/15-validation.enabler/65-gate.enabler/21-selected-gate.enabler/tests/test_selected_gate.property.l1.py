@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from outcomeeng.validation import L3_LEVEL, PYTEST_ARGV
+from outcomeeng.validation import L3_LEVEL
 from outcomeeng.validation.infrastructure_index import SPEC_TREE_ROOT
 from outcomeeng.validation.selected_gate import build_selected_gate_plan
 from outcomeeng_testing.generators.gate import GeneratedTestFile
@@ -14,6 +14,7 @@ from outcomeeng_testing.harnesses.gate import (
     selected_gate_property,
     selected_gate_reach_index,
 )
+from outcomeeng_testing.harnesses.l3_collection import plan_pytest_arguments
 from outcomeeng_testing.harnesses.property_evidence import (
     REPLAY_NOTE_PREFIX,
     SEED_NOTE_PREFIX,
@@ -49,11 +50,9 @@ def _planned_pytest_targets_lie_outside_the_l3_tests(
 
     plan = build_selected_gate_plan(paths)
 
-    assert [
-        set(step.argv[len(PYTEST_ARGV) :])
-        for step in plan.steps
-        if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-    ] == ([expected] if expected else [])
+    assert [set(arguments) for arguments in plan_pytest_arguments(plan)] == (
+        [expected] if expected else []
+    )
 
 
 def test_planned_pytest_targets_lie_outside_the_l3_tests() -> None:

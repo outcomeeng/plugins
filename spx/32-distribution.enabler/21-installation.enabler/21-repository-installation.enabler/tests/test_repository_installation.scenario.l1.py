@@ -32,16 +32,19 @@ from outcomeeng.distribution.installation import (
     marketplace_plugin_name,
     report_document,
 )
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+
+import pytest
 
 from outcomeeng_testing.generators.installation import (
     ClosingDisposition,
     MOVED_DISPOSITIONS,
     UNCACHED_OTHER_CHECKOUT_STATE,
     RecordDisposition,
+    generated_absent_plugins,
     generated_boolean_states,
 )
-from outcomeeng.validation import PYTEST_ARGV, is_l3_test
+from outcomeeng.validation import L3_LEVEL, PYTEST_ARGV
 from outcomeeng.validation._steps import PYTEST_NODE_ID_SEPARATOR, RECIPE_TEST
 from outcomeeng_testing.harnesses.l3_collection import pytest_argument_tail
 from outcomeeng_testing.harnesses.real_agent_selection import (
@@ -55,7 +58,6 @@ from outcomeeng_testing.harnesses.installation import (
     RegistryState,
     UnreadableSourceCase,
     absent_from_every_agent,
-    committed_catalog_plugin_names,
     observe_first_persistent_cli,
     observe_inspection_failure,
     observe_invalid_isolated_selection,
@@ -119,7 +121,8 @@ def _collected_files(collected: frozenset[str]) -> frozenset[str]:
 
 
 def _carries_the_l3_level(file_path: str) -> bool:
-    return is_l3_test(file_path)
+    """Read the level segment of a file name without the production classifier."""
+    return L3_LEVEL in PurePosixPath(file_path).name.split(".")
 
 
 def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
@@ -144,8 +147,11 @@ def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
     l3_files = frozenset(
         file_path for file_path in unfiltered_files if _carries_the_l3_level(file_path)
     )
+    collected_files = _collected_files(excluded.collected)
     assert l3_files
-    assert _collected_files(excluded.collected) == unfiltered_files - l3_files
+    assert unfiltered_files - l3_files
+    assert not collected_files & l3_files
+    assert collected_files == unfiltered_files - l3_files
 
 
 def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
@@ -219,98 +225,107 @@ def test_marketplace_inspection_failure_stops_before_any_plan_operation() -> Non
     )
 
 
-def test_persistent_installation_reports_an_unpublished_plugin_and_completes() -> None:
-    for absent in committed_catalog_plugin_names():
-        observation = observe_unpublished_plugin(
-            isolated=False, unpublished=absent_from_every_agent(frozenset({absent}))
+ABSENT_PLUGINS = generated_absent_plugins(repository_root())
+
+
+@pytest.mark.parametrize("absent", ABSENT_PLUGINS)
+def test_persistent_installation_reports_an_unpublished_plugin_and_completes(
+    absent: str,
+) -> None:
+    observation = observe_unpublished_plugin(
+        isolated=False, unpublished=absent_from_every_agent(frozenset({absent}))
+    )
+
+    assert observation.failure is None
+    assert observation.report is not None
+    assert {entry.plugin for entry in observation.report.pending_publication} == {
+        absent
+    }
+    installed = {
+        call.plugin
+        for call in observation.calls
+        if call.operation is Operation.PLUGIN_INSTALL
+    }
+    # Every catalog plugin, not merely more than one: "every other plugin
+    # still installs" fails the moment the run stops early, and a count
+    # threshold passes a run that stopped after the second plugin.
+    assert installed == frozenset(ABSENT_PLUGINS)
+
+
+@pytest.mark.parametrize("absent", ABSENT_PLUGINS)
+def test_isolated_installation_treats_an_absent_plugin_as_terminal(absent: str) -> None:
+    observation = observe_unpublished_plugin(
+        isolated=True, unpublished=absent_from_every_agent(frozenset({absent}))
+    )
+
+    assert observation.report is None
+    assert observation.failure is not None
+    assert observation.failure.command.plugin == absent
+    assert observation.failure.command.operation is Operation.PLUGIN_INSTALL
+
+
+@pytest.mark.parametrize("agent", Target)
+@pytest.mark.parametrize("absent", ABSENT_PLUGINS)
+def test_the_json_report_never_lists_a_pending_plugin_as_installed(
+    agent: Target, absent: str
+) -> None:
+    observation = observe_unpublished_plugin(
+        isolated=False, unpublished={agent: frozenset({absent})}
+    )
+
+    assert observation.report is not None
+    document = report_document(observation.report)
+    pending = {
+        cast(str, entry[ReportField.PLUGIN])
+        for entry in cast(
+            list[dict[str, str]], document[ReportField.PENDING_PUBLICATION]
         )
-
-        assert observation.failure is None, absent
-        assert observation.report is not None, absent
-        assert {entry.plugin for entry in observation.report.pending_publication} == {
-            absent
-        }
-        installed = {
-            call.plugin
-            for call in observation.calls
-            if call.operation is Operation.PLUGIN_INSTALL
-        }
-        # Every catalog plugin, not merely more than one: "every other plugin
-        # still installs" fails the moment the run stops early, and a count
-        # threshold passes a run that stopped after the second plugin.
-        assert installed == committed_catalog_plugin_names(), absent
-
-
-def test_isolated_installation_treats_an_absent_plugin_as_terminal() -> None:
-    for absent in committed_catalog_plugin_names():
-        observation = observe_unpublished_plugin(
-            isolated=True, unpublished=absent_from_every_agent(frozenset({absent}))
+    }
+    installed = {
+        other: set(
+            cast(
+                list[str],
+                document[
+                    ReportField.CLAUDE_PLUGINS
+                    if other is Target.CLAUDE
+                    else ReportField.CODEX_PLUGINS
+                ],
+            )
         )
+        for other in Target
+    }
 
-        assert observation.report is None, absent
-        assert observation.failure is not None, absent
-        assert observation.failure.command.plugin == absent
-        assert observation.failure.command.operation is Operation.PLUGIN_INSTALL
-
-
-def test_the_json_report_never_lists_a_pending_plugin_as_installed() -> None:
-    for agent in Target:
-        for absent in committed_catalog_plugin_names():
-            observation = observe_unpublished_plugin(
-                isolated=False, unpublished={agent: frozenset({absent})}
-            )
-
-            assert observation.report is not None, (agent, absent)
-            document = report_document(observation.report)
-            pending = {
-                cast(str, entry[ReportField.PLUGIN])
-                for entry in cast(
-                    list[dict[str, str]], document[ReportField.PENDING_PUBLICATION]
-                )
-            }
-            installed = {
-                other: set(
-                    cast(
-                        list[str],
-                        document[
-                            ReportField.CLAUDE_PLUGINS
-                            if other is Target.CLAUDE
-                            else ReportField.CODEX_PLUGINS
-                        ],
-                    )
-                )
-                for other in Target
-            }
-
-            # The text summary and this document answer from the same
-            # accessor. Reading the plan directly here reported a plugin as
-            # installed in one field while the next field reported it
-            # unpublished, and the two disagreed inside one document.
-            assert pending == {absent}, (agent, absent)
-            assert not pending & installed[agent], (agent, absent)
-            for other in Target:
-                if other is not agent:
-                    assert absent in installed[other], (agent, absent, other)
+    # The text summary and this document answer from the same
+    # accessor. Reading the plan directly here reported a plugin as
+    # installed in one field while the next field reported it
+    # unpublished, and the two disagreed inside one document.
+    assert pending == {absent}
+    assert not pending & installed[agent]
+    for other in Target:
+        if other is not agent:
+            assert absent in installed[other], other
 
 
-def test_a_plugin_absent_from_one_agent_stays_installed_for_the_other() -> None:
-    for agent in Target:
-        for absent in committed_catalog_plugin_names():
-            observation = observe_unpublished_plugin(
-                isolated=False, unpublished={agent: frozenset({absent})}
-            )
+@pytest.mark.parametrize("agent", Target)
+@pytest.mark.parametrize("absent", ABSENT_PLUGINS)
+def test_a_plugin_absent_from_one_agent_stays_installed_for_the_other(
+    agent: Target, absent: str
+) -> None:
+    observation = observe_unpublished_plugin(
+        isolated=False, unpublished={agent: frozenset({absent})}
+    )
 
-            assert observation.failure is None, (agent, absent)
-            assert observation.report is not None, (agent, absent)
-            # The two marketplaces refresh separately, so one agent reporting
-            # a plugin unpublished says nothing about the other. A pending
-            # record carrying only the plugin name cannot express that, and
-            # drops the plugin from both agents' installed counts on either
-            # one's failure.
-            for other in Target:
-                assert observation.report.pending_for(other) == (
-                    frozenset({absent}) if other is agent else frozenset()
-                ), (agent, absent, other)
+    assert observation.failure is None
+    assert observation.report is not None
+    # The two marketplaces refresh separately, so one agent reporting
+    # a plugin unpublished says nothing about the other. A pending
+    # record carrying only the plugin name cannot express that, and
+    # drops the plugin from both agents' installed counts on either
+    # one's failure.
+    for other in Target:
+        assert observation.report.pending_for(other) == (
+            frozenset({absent}) if other is agent else frozenset()
+        ), other
 
 
 def test_fresh_home_plan_adds_the_declared_marketplace() -> None:

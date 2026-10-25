@@ -63,29 +63,14 @@ from outcomeeng_testing.harnesses.infrastructure_index import (
     synthetic_repository,
 )
 from outcomeeng_testing.harnesses.l3_collection import (
-    fixture_collection,
-    pytest_argument_tail,
+    default_suite_fixture_paths,
+    plan_collected_files,
+    plan_pytest_arguments,
+    plan_pytest_targets,
 )
 from outcomeeng_testing.harnesses.real_agent_selection import (
     run_full_check_observation,
 )
-
-FIXTURE = l3_fixture_files()
-DEFAULT_SUITE_FILES = frozenset(
-    test_file.path for test_file in FIXTURE if test_file.level != L3_LEVEL
-)
-
-
-def _collected_by_pytest_steps(
-    plan: SelectedGatePlan,
-) -> tuple[frozenset[str], ...]:
-    # Real pytest collection over the fixture, for the arguments each planned
-    # pytest step spawns.
-    return tuple(
-        fixture_collection(FIXTURE, pytest_argument_tail(step.argv)).collected_files
-        for step in plan.steps
-        if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-    )
 
 
 def _argvs(plan: SelectedGatePlan) -> tuple[tuple[str, ...], ...]:
@@ -194,13 +179,7 @@ def test_every_assertion_path_category_maps_presence_to_targeted_execution(
     path = path_from_pattern(pattern)
     plan = build_selected_gate_plan((path,), deleted_paths=(path,) if deleted else ())
 
-    targets = {
-        argument
-        for step in plan.steps
-        if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-        for argument in step.argv[len(PYTEST_ARGV) :]
-    }
-    assert (path in targets) is not deleted
+    assert (path in plan_pytest_targets(plan)) is not deleted
 
 
 @pytest.mark.parametrize("level", EXECUTION_LEVELS)
@@ -209,20 +188,16 @@ def test_changed_test_files_of_a_level_are_targeted_exactly_when_the_level_is_no
 ) -> None:
     paths = tuple(
         test_file.path
-        for test_file in FIXTURE
+        for test_file in l3_fixture_files()
         if test_file.level == level and test_file.path.startswith(f"{SPEC_TREE_ROOT}/")
     )
 
     plan = build_selected_gate_plan(paths)
 
-    targets = {
-        argument
-        for step in plan.steps
-        if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-        for argument in step.argv[len(PYTEST_ARGV) :]
-    }
     assert paths
-    assert targets == (set() if level == L3_LEVEL else set(paths))
+    assert plan_pytest_targets(plan) == (
+        frozenset() if level == L3_LEVEL else frozenset(paths)
+    )
 
 
 @pytest.mark.parametrize("pattern", PATH_CATEGORY_PATTERNS[PathCategory.EVIDENCE_LINK])
@@ -427,14 +402,14 @@ def test_a_full_surface_reach_collects_every_default_test_and_no_l3_test(
     )
 
     assert plan.full_gate is True
-    assert _collected_by_pytest_steps(plan) == (DEFAULT_SUITE_FILES,)
+    assert plan_collected_files(plan) == (default_suite_fixture_paths(),)
 
 
 def test_the_full_gate_wrapper_collects_every_default_test_and_no_l3_test() -> None:
     plan = build_full_gate_plan(())
 
     assert plan.full_gate is True
-    assert _collected_by_pytest_steps(plan) == (DEFAULT_SUITE_FILES,)
+    assert plan_collected_files(plan) == (default_suite_fixture_paths(),)
 
 
 def test_a_node_local_reach_selects_only_the_default_tests_it_reaches() -> None:
@@ -449,9 +424,7 @@ def test_a_node_local_reach_selects_only_the_default_tests_it_reaches() -> None:
 
     assert reached.kind is InfrastructureReach.NODE_LOCAL
     assert set(reached.tests) == {default_path, l3_path}
-    assert [
-        step.argv for step in plan.steps if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-    ] == [(*PYTEST_ARGV, default_path)]
+    assert plan_pytest_arguments(plan) == ((default_path,),)
 
 
 def test_module_reached_by_conftest_selects_the_full_surface() -> None:

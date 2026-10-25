@@ -14,8 +14,6 @@ from pathlib import Path
 import re
 from typing import Final
 
-from hypothesis import given, settings
-
 from outcomeeng.validation import (
     SUMMARY_KEY_DURATION_SECONDS,
     SUMMARY_KEY_STEPS,
@@ -23,11 +21,12 @@ from outcomeeng.validation import (
     Step,
     run,
 )
-from outcomeeng_testing.generators.gate import step_lists
-from outcomeeng_testing.harnesses.gate import RecordingSpawner
+from outcomeeng_testing.harnesses.gate import (
+    PASS_EXIT_CODE,
+    RecordingSpawner,
+    step_list_property,
+)
 
-MAX_EXAMPLES: Final = 50
-PASS: Final = 0
 TIMING_ROW_PATTERN: Final = re.compile(r"\s+([0-9]+)s$")
 
 
@@ -42,11 +41,9 @@ def _timing_summary_elapsed_values(output: str) -> list[int]:
     return elapsed_values
 
 
-@given(steps=step_lists())
-@settings(max_examples=MAX_EXAMPLES, deadline=None)
-def test_spawn_order_matches_step_list_order(steps: tuple[Step, ...]) -> None:
-    """The order in which subprocesses are started equals the step-list order."""
-    spawner = RecordingSpawner(exit_codes=[PASS] * len(steps))
+@step_list_property
+def _spawn_order_matches_step_list_order(steps: tuple[Step, ...]) -> None:
+    spawner = RecordingSpawner(exit_codes=[PASS_EXIT_CODE] * len(steps))
     sink = io.StringIO()
 
     run(spawner=spawner, sink=sink, steps=steps)
@@ -56,13 +53,16 @@ def test_spawn_order_matches_step_list_order(steps: tuple[Step, ...]) -> None:
     assert invoked_argvs == expected_argvs
 
 
-@given(steps=step_lists())
-@settings(max_examples=MAX_EXAMPLES, deadline=None)
-def test_elapsed_time_is_non_negative_for_completed_steps(
+def test_spawn_order_matches_step_list_order() -> None:
+    """The order in which subprocesses are started equals the step-list order."""
+    _spawn_order_matches_step_list_order()
+
+
+@step_list_property
+def _elapsed_time_is_non_negative_for_completed_steps(
     steps: tuple[Step, ...],
 ) -> None:
-    """Every per-step summary record carries a non-negative elapsed value."""
-    spawner = RecordingSpawner(exit_codes=[PASS] * len(steps))
+    spawner = RecordingSpawner(exit_codes=[PASS_EXIT_CODE] * len(steps))
     sink = io.StringIO()
 
     run(spawner=spawner, sink=sink, steps=steps)
@@ -83,3 +83,8 @@ def test_elapsed_time_is_non_negative_for_completed_steps(
     for step in summary[SUMMARY_KEY_STEPS]:
         assert isinstance(step[SUMMARY_KEY_DURATION_SECONDS], int)
         assert step[SUMMARY_KEY_DURATION_SECONDS] >= 0
+
+
+def test_elapsed_time_is_non_negative_for_completed_steps() -> None:
+    """Every per-step summary record carries a non-negative elapsed value."""
+    _elapsed_time_is_non_negative_for_completed_steps()

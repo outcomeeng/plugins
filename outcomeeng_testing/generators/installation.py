@@ -64,6 +64,23 @@ def catalog_plugin_names_from_document(catalog_path: Path) -> tuple[str, ...]:
     return catalog_plugin_names_from_bytes(catalog_path.read_bytes())
 
 
+def generated_absent_plugins(checkout: Path) -> tuple[str, ...]:
+    """Every plugin either committed catalog declares, each one absent-plugin case.
+
+    The domain is read from the raw catalog documents, so a plugin the
+    catalogs add or drop changes the cases without the tests naming it.
+    """
+    return tuple(
+        sorted(
+            {
+                name
+                for catalog_path in (CLAUDE_CATALOG_PATH, CODEX_CATALOG_PATH)
+                for name in catalog_plugin_names_from_document(checkout / catalog_path)
+            }
+        )
+    )
+
+
 def generated_catalog_subset(
     catalog: Sequence[str],
     *,

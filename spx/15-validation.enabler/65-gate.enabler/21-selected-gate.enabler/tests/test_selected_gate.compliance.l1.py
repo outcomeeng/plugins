@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from pathlib import PurePosixPath
 
 import pytest
@@ -10,7 +10,6 @@ import pytest
 from outcomeeng.validation import (
     CHECK_RECIPES,
     L3_SKIP_ARGV,
-    L3_LEVEL,
     PREFLIGHT_STEPS,
     PYTEST_ARGV,
     RECIPE_CHECK,
@@ -37,7 +36,6 @@ from outcomeeng.validation.selected_gate import (
     L3_SKIPPED_REASON,
     PATH_CATEGORY_PATTERNS,
     PathCategory,
-    SelectedGatePlan,
     TEST_REASON,
     build_full_gate_plan,
     build_selected_gate_plan,
@@ -69,8 +67,14 @@ from outcomeeng_testing.harnesses.infrastructure_index import (
     synthetic_repository,
 )
 from outcomeeng_testing.harnesses.l3_collection import (
+    default_suite_fixture_paths,
+    fixture_collected_files,
     fixture_collection,
-    pytest_argument_tail,
+    l3_fixture_paths,
+    plan_collected_files,
+    plan_pytest_arguments,
+    plan_pytest_targets,
+    pytest_argvs,
 )
 from outcomeeng_testing.harnesses.real_agent_selection import (
     direct_test_observation,
@@ -78,55 +82,9 @@ from outcomeeng_testing.harnesses.real_agent_selection import (
     run_full_check_observation,
 )
 
-# The generator composes each fixture file at one execution level, so the level
-# of every path below is the generator's, not the selector's.
-FIXTURE = l3_fixture_files()
-L3_PATHS = frozenset(
-    test_file.path for test_file in FIXTURE if test_file.level == L3_LEVEL
-)
-DEFAULT_SUITE_FILES = frozenset(
-    test_file.path for test_file in FIXTURE if test_file.level != L3_LEVEL
-)
-
-
-def _pytest_arguments(plan: SelectedGatePlan) -> tuple[tuple[str, ...], ...]:
-    return tuple(
-        step.argv[len(PYTEST_ARGV) :]
-        for step in plan.steps
-        if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-    )
-
-
-def _pytest_calls(
-    spawn_calls: tuple[tuple[str, ...], ...],
-) -> tuple[tuple[str, ...], ...]:
-    return tuple(
-        call for call in spawn_calls if call[: len(PYTEST_ARGV)] == PYTEST_ARGV
-    )
-
-
-def _plan_targets(plan: SelectedGatePlan) -> frozenset[str]:
-    return frozenset(
-        argument for arguments in _pytest_arguments(plan) for argument in arguments
-    )
-
-
-def _pytest_steps_argv(plan: SelectedGatePlan) -> tuple[tuple[str, ...], ...]:
-    return tuple(
-        step.argv for step in plan.steps if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-    )
-
 
 def _full_surface_steps() -> tuple[tuple[str, ...], ...]:
     return tuple(step.argv for recipe in CHECK_RECIPES for step in recipe.steps)
-
-
-def _collected_by(pytest_argv: Sequence[str]) -> frozenset[str]:
-    # Real pytest collection over the fixture, for the arguments a spawned
-    # pytest argv carries.
-    return fixture_collection(
-        FIXTURE, pytest_argument_tail(pytest_argv)
-    ).collected_files
 
 
 def test_an_empty_changeset_selects_no_steps() -> None:
@@ -235,15 +193,15 @@ def test_infrastructure_path_without_an_index_is_rejected_by_name() -> None:
 
 
 def test_a_changeset_of_l3_files_selects_no_pytest_target() -> None:
-    files = tuple(sorted(L3_PATHS))
+    files = tuple(sorted(l3_fixture_paths()))
 
     local = build_selected_gate_plan(files)
     full = build_full_gate_plan(files)
 
     assert files
-    assert _pytest_arguments(local) == ()
+    assert plan_pytest_arguments(local) == ()
     for plan in (local, full):
-        assert not L3_PATHS & _plan_targets(plan)
+        assert not l3_fixture_paths() & plan_pytest_targets(plan)
 
 
 @pytest.mark.parametrize("category", tuple(PathCategory), ids=str)
@@ -252,7 +210,7 @@ def test_no_changed_path_category_selects_an_l3_test(
 ) -> None:
     for pattern in PATH_CATEGORY_PATTERNS[category]:
         path = path_from_pattern(pattern)
-        changed = (path, *sorted(L3_PATHS))
+        changed = (path, *sorted(l3_fixture_paths()))
         with synthetic_repository() as repo:
             local = build_selected_gate_plan(
                 changed, test_infrastructure=index_test_infrastructure(repo.root)
@@ -260,7 +218,7 @@ def test_no_changed_path_category_selects_an_l3_test(
         full = build_full_gate_plan(changed)
 
         for plan in (local, full):
-            assert not L3_PATHS & _plan_targets(plan), path
+            assert not l3_fixture_paths() & plan_pytest_targets(plan), path
             assert all(
                 step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
                 for step in plan.steps
@@ -283,7 +241,7 @@ def test_a_node_local_reach_of_an_l3_test_selects_no_l3_target() -> None:
     assert reached.kind is InfrastructureReach.NODE_LOCAL
     assert l3_path in reached.tests
     assert plan.full_gate is False
-    assert l3_path not in _plan_targets(plan)
+    assert l3_path not in plan_pytest_targets(plan)
     assert all(
         step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
         for step in plan.steps
@@ -299,9 +257,7 @@ def test_a_shared_test_infrastructure_module_selects_the_full_surface_without_th
     plan = build_selected_gate_plan((reach.path,), test_infrastructure=reach.index)
 
     assert plan.full_gate is True
-    assert [_collected_by(call) for call in _pytest_steps_argv(plan)] == [
-        DEFAULT_SUITE_FILES
-    ]
+    assert plan_collected_files(plan) == (default_suite_fixture_paths(),)
     assert all(
         step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
         for step in plan.steps
@@ -322,21 +278,21 @@ def test_widening_to_the_full_suite_removes_no_other_step() -> None:
 
 
 def test_the_exclusion_leaves_l3_files_out_of_a_collected_directory() -> None:
-    directory = PurePosixPath(sorted(L3_PATHS)[0]).parent.as_posix()
+    directory = PurePosixPath(sorted(l3_fixture_paths())[0]).parent.as_posix()
     in_directory = frozenset(
         test_file.path
-        for test_file in FIXTURE
+        for test_file in l3_fixture_files()
         if PurePosixPath(test_file.path).parent.as_posix() == directory
     )
 
-    excluded = fixture_collection(FIXTURE, (*L3_SKIP_ARGV, directory))
-    unfiltered = fixture_collection(FIXTURE, (directory,))
+    excluded = fixture_collection(l3_fixture_files(), (*L3_SKIP_ARGV, directory))
+    unfiltered = fixture_collection(l3_fixture_files(), (directory,))
 
     assert excluded.exit_code == 0, excluded.output
     assert unfiltered.exit_code == 0, unfiltered.output
     assert unfiltered.collected_files == in_directory
     assert excluded.collected_files
-    assert excluded.collected_files == in_directory - L3_PATHS
+    assert excluded.collected_files == in_directory - l3_fixture_paths()
 
 
 @pytest.mark.parametrize(
@@ -369,10 +325,13 @@ def test_a_full_gate_execution_spawns_only_exclusion_carrying_pytest_runs(
 ) -> None:
     run = run_observation(branch_path=unrelated_validation_source_path())
 
-    pytest_calls = _pytest_calls(run.spawn_calls)
+    pytest_calls = pytest_argvs(run.spawn_calls)
     assert run.exit_code == 0
     assert pytest_calls
-    assert all(_collected_by(call) == DEFAULT_SUITE_FILES for call in pytest_calls)
+    assert all(
+        fixture_collected_files(call) == default_suite_fixture_paths()
+        for call in pytest_calls
+    )
     assert tuple(call for call in run.spawn_calls if call not in pytest_calls) == tuple(
         step.argv
         for recipe in CHECK_RECIPES
@@ -384,7 +343,7 @@ def test_a_full_gate_execution_spawns_only_exclusion_carrying_pytest_runs(
 def test_direct_execution_runs_a_named_l3_test_whatever_the_changeset() -> None:
     # Both gate wrappers exclude the L3 tests whatever the changeset is;
     # direct execution naming an L3 file still runs it.
-    named = tuple(L3_PATHS)
+    named = tuple(l3_fixture_paths())
     gate_runs = (
         run_check_observation(branch_path=unrelated_validation_source_path()),
         run_full_check_observation(branch_path=unrelated_validation_source_path()),
@@ -392,16 +351,16 @@ def test_direct_execution_runs_a_named_l3_test_whatever_the_changeset() -> None:
     direct = direct_test_observation(named)
 
     for run in gate_runs:
-        assert _pytest_calls(run.spawn_calls)
+        assert pytest_argvs(run.spawn_calls)
         assert all(
-            _collected_by(call) == DEFAULT_SUITE_FILES
-            for call in _pytest_calls(run.spawn_calls)
+            fixture_collected_files(call) == default_suite_fixture_paths()
+            for call in pytest_argvs(run.spawn_calls)
         )
 
     assert direct.exit_code == 0
-    (direct_pytest_call,) = _pytest_calls(direct.spawn_calls)
+    (direct_pytest_call,) = pytest_argvs(direct.spawn_calls)
     assert set(direct_pytest_call[len(PYTEST_ARGV) :]) == set(named)
-    assert _collected_by(direct_pytest_call) == L3_PATHS
+    assert fixture_collected_files(direct_pytest_call) == l3_fixture_paths()
 
 
 def test_ci_full_verification_without_a_default_branch_selects_by_the_first_parent() -> (
@@ -418,9 +377,12 @@ def test_ci_full_verification_without_a_default_branch_selects_by_the_first_pare
     assert run.runner_calls[0] == selected_gate_branch_discovery_argv(
         base_ref=FIRST_PARENT_BASE_REF
     )
-    pytest_calls = _pytest_calls(run.spawn_calls)
+    pytest_calls = pytest_argvs(run.spawn_calls)
     assert pytest_calls
-    assert all(_collected_by(call) == DEFAULT_SUITE_FILES for call in pytest_calls)
+    assert all(
+        fixture_collected_files(call) == default_suite_fixture_paths()
+        for call in pytest_calls
+    )
     plan_end = run.output.index(RECIPE_HEADER_PREFIX)
     assert run.output.index(L3_SKIPPED_REASON) < plan_end
     assert (

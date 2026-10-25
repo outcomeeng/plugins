@@ -48,14 +48,6 @@ repaired one round earlier against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`.
 The widened scan over that changeset examined 310 functions, found five members
 of the class where the narrow sweep had found one, and changed all five.
 
-## The no-lock clause of the listing-read rule has no deterministic oracle
-
-The compliance assertion that a persistent run reads the install-record listing once before and once after execution also states that it issues no lock, wait, or retry against the agent's record store. `test_a_persistent_run_reads_the_listing_once_before_and_once_after_execution` falsifies the read-count and retry clauses through the recorded commands; a lock is not a command, so adding an advisory lock around the listing read in production leaves both listing counts at one and the test passing.
-
-**Resolution shape**: route the no-lock clause to audit evidence in the governing decision, where the absence of a lock is a structural judgment, or add a record-store observation the harness owns — a runner that reports every open on the record file — so the clause reaches a predicate.
-
-**Evidence**: test-evidence audit finding `f-010` (WARNING) against `841e864a9759eae04c8988c2931aa44b1ca21c74`, `f-007` (WARNING) against `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a`, `f-008` (WARNING) with the implementation audit's matching debt finding against `a47f88e39d2a5fe9318eb24e6140623ca774dcfa`, which names the same absent oracle from the recorded-command seam, `f-009` (WARNING) against `c3b42a5514452b1b71e01c77467e7e45abfad048`, and `f-008` (WARNING) against each of `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322`. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` raised it as `f-013` (WARNING): "The read-count and retry clauses are falsified through the recorded commands. A lock is not a command, so adding an advisory lock around the listing read leaves both counts at one and the test passing. The no-lock clause has no deterministic oracle." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-013` (WARNING).
-
 ## Claude Code renderings ship the Codex-only placement script and paraphrase its output
 
 The `<plugin>-plugin` skill's Claude Code rendering carries `scripts/place_agents.py`, roughly 330 lines that its own `<agent_delivery>` section says are never invoked there, because the shared template `src/templates/plugin/SKILL.md` conditions other sections on the build target but not the script directory. The same skill's `<examples>` paraphrases the manifest-delivery line instead of quoting the sentence `<verbs>` prints, and the `<verbs>` table's result column for `init`, `upgrade`, and `check` describes the Codex home reconciliation in the Claude Code rendering too, leaving the next sentence to walk all three rows back for that target.
@@ -354,49 +346,6 @@ production re-applies the declared plugin selection after a failed run
 linked [test] assertion declares that behavior, and the untagged spec assertion
 plus the ADR say failed runs retain changed state without restoring a snapshot." The round against `cc5f3e86be4dbcc2c727c46f5c96593bab02b680` raised it again as `f-018` (INFO).
 
-## The scenario tests draw their case plugins from no generator
-
-The isolated-absence and pending-publication scenarios in
-`tests/test_repository_installation.scenario.l1.py` loop over
-`committed_catalog_plugin_names()` and run once per catalog plugin, so no call
-site picks a plugin. No generator supplies those cases, which the settlement
-condition requires. The record-mapping test in
-`tests/test_repository_installation.mapping.l1.py` takes its publication rows
-from `generated_publication_states`, which shows the generator shape this entry
-asks for.
-
-**Settlement condition**: a generator supplies the case plugin, and no scenario
-under this node picks one at the call site.
-
-**Evidence**: test-evidence audit finding `f-010` (REJECT) against
-`114c56d96942138058a10caae796bd59d83e20ec`: "The scenario tests pick their case
-plugin in the test file with sorted(committed_catalog_plugin_names())[0] at lines
-172, 195, 208 and 233. The assertion names no particular plugin, so the choice
-is a call-site value the assertion does not state and should come from a
-generator." The lines predate the discovery-login security fix; recorded here
-under the convergence-stall rule by the Director's ruling.
-
-## The fresh-home scenario's source oracle shares production's source rendering
-
-`test_fresh_home_plan_adds_the_declared_marketplace` in
-`tests/test_repository_installation.scenario.l1.py` compares the source the
-plan's marketplace add carries with `DECLARED_CLAUDE_SOURCE`. The harness
-computes that value by calling the production `declared_claude_source`, which
-resolves through `declared_claude_marketplace` and `render_claude_source`, the
-path the bootstrap plan also takes. The predicate therefore rejects a plan that
-registers some other source, but a defect in the source rendering moves both
-sides and passes.
-
-**Impact**: the scenario establishes the wiring — the plan registers the
-declared source — and nothing about the rendering of that source.
-
-**Settlement condition**: the scenario writes a generated source value into the
-checkout's settings and expects that value on the marketplace add, so the
-oracle no longer runs through the production rendering.
-
-**Evidence**: test-evidence audit finding `f-002` (WARNING, oracle-independence)
-against `7c1f3421faecf2634fe29a290d9cb01d9d6d1d7c`.
-
 ## Seven installation assertions stand untagged on an implementation-malleable node
 
 The node declares no malleability, so it is `implementation`-malleable and every assertion carries exactly one verification tag. Seven assertions under `## Assertions` in [`repository-installation.md`](repository-installation.md) carry none: the catalog-bounded persistent selection, the bootstrap of an invocation checkout with no install record, the trusted product enabling a home-disabled plugin, configured home plugins with an absent snapshot or cache, the activation-preserving refresh of a valid subset, the unexpected selection or activation write, and the globally registered Codex subagent definitions.
@@ -417,24 +366,20 @@ The plugins shipped the Claude Code Standard change without this evidence. The p
 
 **Settlement condition**: with exactly one native credential selected for each harness, `just verify-native-profile-execution` retains passing `claude-standard`, `claude-executor`, `codex-standard`, `codex-strong`, `codex-executor`, and `codex-fast` rows.
 
-## DEBT [evidence]: case data is chosen at the call site (f-008, f-010)
+## DEBT [evidence]: case data is chosen at the call site (f-010)
 
-Two findings (both REJECT) on test-owned data:
+One finding (REJECT) on test-owned data:
 
-- f-008 at `tests/test_repository_installation.scenario.l1.py:172` (also 195,
-  208, 233): the case plugin is chosen with
-  `sorted(committed_catalog_plugin_names())[0]`.
 - f-010 at `tests/test_repository_installation.compliance.l1.py:109` (also 144,
   226, 296): incidental plugin and agent slugs are call-site literals.
 
 The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
 `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
-token. Existing entries already record each: "The scenario tests draw their
-case plugins from no generator" (f-008) and "Lifecycle evidence cases are
-hand-authored in the harness" (f-010). Their resolution shapes and settlement
-conditions govern.
+token. The existing entry "Lifecycle evidence cases are hand-authored in the
+harness" (f-010) already records it. Its resolution shape and settlement
+condition govern.
 
-**Resolution shape**: the resolution shapes of those two entries.
+**Resolution shape**: the resolution shape of that entry.
 
 **Evidence that the text lies outside the change.**
 `git diff -U0 origin/main...HEAD` reports no hunk in the cited tests,
@@ -450,16 +395,14 @@ profile-binding generators, harnesses, and tests. The cited tests drive
 installation in `outcomeeng/distribution` modules the changeset does not
 change.
 
-**Settlement condition**: a generator supplies the case plugin and the slugs,
-and no test under this node picks one at the call site.
+**Settlement condition**: a generator supplies the slugs, and no test under
+this node picks one at the call site.
 
-## DEBT [evidence]: assertions are stronger than the evidence that links them (f-014, f-016, f-018)
+## DEBT [evidence]: assertions are stronger than the evidence that links them (f-016, f-018)
 
-Three findings on alignment between a declared clause and its predicate, all
+Two findings on alignment between a declared clause and its predicate, both
 WARNING.
 
-- f-014 at `tests/test_repository_installation.compliance.l1.py:830`: the
-  no-lock clause has no deterministic oracle.
 - f-016 at `tests/test_repository_installation.mapping.l1.py:177`: the
   unrefreshable-record warning and the unresolved-target disposition are never
   driven.
@@ -469,15 +412,14 @@ WARNING.
 
 The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
 `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
-token. Existing entries already record each: f-014 in "The no-lock clause of the
-listing-read rule has no deterministic oracle", f-016 in "The unresolved
+token. Existing entries already record each: f-016 in "The unresolved
 disposition of a record in another checkout, and both dispositions in the
 record-mapping assertion, reach no evidence", and f-018 in "A failed persistent run restores the committed
 selection, which the decisions forbid".
 Their resolution shapes and settlement conditions govern; this entry repeats
 none.
 
-**Resolution shape**: the resolution shapes of those three entries.
+**Resolution shape**: the resolution shapes of those two entries.
 
 **Evidence that the text lies outside the change.**
 `git diff -U0 origin/main...HEAD` reports no hunk in the cited tests,
