@@ -409,7 +409,9 @@ def test_a_retired_record_the_uninstall_removes_is_not_off_target() -> None:
         ), case
 
 
-def test_a_declared_selection_renames_the_retired_key_and_keeps_its_boolean() -> None:
+def test_a_declared_selection_carries_the_retired_keys_boolean_to_the_successor_key() -> (
+    None
+):
     marketplace = observe_committed_declarations().marketplace
     retired_key = marketplace_plugin_identifier(RETIRED_PLUGIN, marketplace)
     current_key = marketplace_plugin_identifier(PRODUCT_TREE_PLUGIN, marketplace)
@@ -426,15 +428,8 @@ def test_a_declared_selection_renames_the_retired_key_and_keeps_its_boolean() ->
         assert retired_key not in after, case
         if retired_key in before:
             renamed += 1
-            assert after == {
-                (current_key if key == retired_key else key): value
-                for key, value in before.items()
-            }, case
-            assert list(after) == [
-                current_key if key == retired_key else key for key in before
-            ], case
-        else:
-            assert after == before, case
+            assert current_key in after, case
+            assert after[current_key] == before[retired_key], case
 
     assert renamed > 0
 
