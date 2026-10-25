@@ -33,10 +33,10 @@ from collections.abc import Callable
 from shutil import which
 from typing import Final
 
-# The lowest published @outcomeeng/spx version whose capabilities the shipped
+# The lowest spx version a build reports whose capabilities the shipped
 # skills and their tests depend on. Raise this when a skill starts to rely on a
-# newer spx capability; the CI pin must then advance to a published version at or
-# above it. spx 0.8.0 is the first release whose `spx validation markdown`
+# newer spx capability; the CI pin must then advance to a commit whose build
+# reports a version at or above it. spx 0.8.0 is the first release whose `spx validation markdown`
 # enforces the 4.0 link shapes (`spx-link-shape`): a link is node-local or
 # tree-absolute, and a decision cited as text is rejected; this repository's
 # `spx/` tree conforms and the gate's `markdown` step runs that rule. spx 0.7.2

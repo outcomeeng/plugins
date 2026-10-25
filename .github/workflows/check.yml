@@ -28,7 +28,7 @@ jobs:
       CLAUDE_CLI_VERSION: "2.1.168" # renovate: datasource=npm depName=@anthropic-ai/claude-code
       CODEX_CLI_VERSION: "0.162.1"
       DPRINT_VERSION: "0.60.1" # renovate: datasource=npm depName=dprint
-      SPX_VERSION: "0.8.0" # renovate: datasource=npm depName=@outcomeeng/spx
+      SPX_COMMIT: "4ffc053da6e7b4d76208d78ba7e3ded951f3711a"
       ACTIONLINT_VERSION: "1.7.12" # renovate: datasource=github-releases depName=rhysd/actionlint
       SHELLCHECK_VERSION: "0.11.0" # renovate: datasource=github-releases depName=koalaman/shellcheck
     steps:
@@ -58,6 +58,19 @@ jobs:
         with:
           bun-version: "1.3.14"
 
+      - name: Check out spx
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: outcomeeng/spx
+          ref: ${{ env.SPX_COMMIT }}
+          path: .spx-source
+
+      - name: Set up Node
+        # spx declares node >=24 and pins its package manager through corepack.
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+
       - name: Install gate CLIs (just, actionlint, shellcheck)
         run: |
           set -euo pipefail
@@ -83,24 +96,38 @@ jobs:
           actionlint -version
           shellcheck --version
 
-      - name: Install gate CLIs (claude, codex, dprint, spx)
+      - name: Build spx
+        # spx -> markdown step; built from the commit SPX_COMMIT pins, never
+        # installed from the npm registry.
+        run: |
+          set -euo pipefail
+          corepack enable
+          cd .spx-source
+          pnpm install --frozen-lockfile
+          pnpm run build
+          chmod +x bin/spx.js
+          mkdir -p "${RUNNER_TEMP}/spx-bin"
+          ln -sf "${GITHUB_WORKSPACE}/.spx-source/bin/spx.js" "${RUNNER_TEMP}/spx-bin/spx"
+          echo "${RUNNER_TEMP}/spx-bin" >> "$GITHUB_PATH"
+          export PATH="${RUNNER_TEMP}/spx-bin:$PATH"
+          spx --version
+
+      - name: Install gate CLIs (claude, codex, dprint)
         run: |
           set -euo pipefail
           # bun add -g installs into $BUN_INSTALL/bin, which setup-bun puts on
           # PATH; echo it to GITHUB_PATH so the gate steps find each binary.
           # claude -> manifests and installation tests; codex -> installation tests;
-          # dprint -> fmt-check step; spx -> markdown step.
+          # dprint -> fmt-check step.
           bun add -g \
             "@anthropic-ai/claude-code@${CLAUDE_CLI_VERSION}" \
             "@openai/codex@${CODEX_CLI_VERSION}" \
-            "dprint@${DPRINT_VERSION}" \
-            "@outcomeeng/spx@${SPX_VERSION}"
+            "dprint@${DPRINT_VERSION}"
           echo "${BUN_INSTALL:-$HOME/.bun}/bin" >> "$GITHUB_PATH"
           export PATH="${BUN_INSTALL:-$HOME/.bun}/bin:$PATH"
           claude --version
           codex --version
           dprint --version
-          spx --version
 
       - name: Run quality gate
         # GH_TOKEN authenticates the gh CLI for the [test]-lane l3

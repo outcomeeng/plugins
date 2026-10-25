@@ -19,6 +19,9 @@ GATE_STEP_NAME: Final = "Run quality gate"
 GITHUB_TOKEN_ENVIRONMENT: Final = "GH_TOKEN"
 CODEX_API_KEY_ENVIRONMENT: Final = "OPENAI_API_KEY"
 DISCOVERY_AUTH_MODE_ENVIRONMENT: Final = "SUBAGENT_DISCOVERY_AUTH_MODE"
+SPX_REPOSITORY: Final = "outcomeeng/spx"
+SPX_COMMIT_ENVIRONMENT: Final = "SPX_COMMIT"
+SPX_CHECKOUT_REFERENCE: Final = f"${{{{ env.{SPX_COMMIT_ENVIRONMENT} }}}}"
 CONTINUE_ON_ERROR_FALSY: Final = (None, "false")
 FAIL_FAST_PREAMBLE: Final = "set -euo pipefail"
 TRAP_COMMAND_PREFIX: Final = "trap "
@@ -82,22 +85,16 @@ CI_TOOL_REQUIREMENTS: Final = (
         "dprint@${DPRINT_VERSION}",
         "dprint --version",
     ),
-    CiToolRequirement(
-        "SPX_VERSION",
-        "@outcomeeng/spx@${SPX_VERSION}",
-        "spx --version",
-    ),
+    CiToolRequirement(None, "pnpm run build", "spx --version"),
     CiToolRequirement(None, "actions/checkout@", None),
     CiToolRequirement(None, "actions/setup-python@", None),
+    CiToolRequirement(None, "actions/setup-node@", None),
 )
 CI_STEP_ENVIRONMENT_REQUIREMENTS: Final = (
     CiStepEnvironmentRequirement(GATE_STEP_NAME, GITHUB_TOKEN_ENVIRONMENT),
     CiStepEnvironmentRequirement(GATE_STEP_NAME, CODEX_API_KEY_ENVIRONMENT),
     CiStepEnvironmentRequirement(GATE_STEP_NAME, DISCOVERY_AUTH_MODE_ENVIRONMENT),
 )
-SPX_REPOSITORY: Final = "outcomeeng/spx"
-SPX_COMMIT_ENVIRONMENT: Final = "SPX_COMMIT"
-SPX_CHECKOUT_REFERENCE: Final = f"${{{{ env.{SPX_COMMIT_ENVIRONMENT} }}}}"
 RETIRED_SPX_VERSION_ENVIRONMENT: Final = "SPX_VERSION"
 FULL_COMMIT_SHA_PATTERN: Final = r"[0-9a-f]{40}"
 MAXIMUM_JOB_TIMEOUT_MINUTES: Final = 30
