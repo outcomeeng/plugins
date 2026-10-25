@@ -1881,7 +1881,9 @@ def nul_tainted_requests(
     """One copy of the request per text value it carries, that value followed
     by the NUL character the source declares."""
 
-    def taint(value: object, paths: list[tuple[object, ...]], prefix: tuple) -> None:
+    def taint(
+        value: object, paths: list[tuple[object, ...]], prefix: tuple[object, ...]
+    ) -> None:
         if isinstance(value, str):
             paths.append(prefix)
         elif isinstance(value, dict):
