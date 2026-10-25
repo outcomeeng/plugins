@@ -43,7 +43,7 @@ Language-specific ADR concerns — testability-in-Verification (dependency injec
 - ALWAYS derive the valid section set from the canonical ADR template before judging structure — never from memory.
 - ALWAYS name the section, the violated rule, and the evidence in every REJECT finding — the author repairs from the finding alone, and an unanchored finding leaves nothing to repair.
 - NEVER issue a finding the cited rule or canonical template does not support — drop an unbacked finding rather than reject the ADR for it.
-- NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding as `filed`, and NEVER raise a recorded finding's severity or let a `filed` finding start to reject unless the run names a changed basis. `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `filed` form.
+- NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding as `filed`, and NEVER raise a recorded finding's severity or let a `filed` finding start to reject unless the run names a changed basis. `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `filed` form; `${CLAUDE_SKILL_DIR}/references/rule-catalog.md` defines the rule identifiers.
 
 </constraints>
 
@@ -53,7 +53,7 @@ Language-specific ADR concerns — testability-in-Verification (dependency injec
 
 **Step 1: Load context**
 
-Bind the required ADR path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. If the request carries no path, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all three native rows marked `FAIL`. Each row carries a `missing-target` finding with severity `blocking`, location `input`, `observed` naming the absent target, and `expected` and `message` naming the required ADR path. Stop before context loading or artifact inspection.
+Bind the required ADR path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. If the request carries no path, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all three native rows marked `FAIL`. Each row carries a `missing-target` finding with severity `blocking`, unit `input`, locations `["input"]`, `observed` naming the absent target, and `expected` and `message` naming the required ADR path. Stop before context loading or artifact inspection.
 
 When the live `<PRODUCT_TREE_FOUNDATION>` marker is absent or lacks `Template root`: Use skill `product-tree:understand`. Read `decisions/decision-name.adr.md` beneath that marker's resolved absolute template directory. The template remains owned by `/understand`. Then, on the directory containing the ADR: Use skill `product-tree:contextualize`. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
 
@@ -135,7 +135,7 @@ For every discovered partition: Use skill `{lang}:audit-{lang}-architecture`. Pa
 
 Before consuming a composed result, validate it against the invoked skill's declared verdict contract: the schema and skill identity, matching target, every required concern row exactly once, allowed statuses, required finding fields, explanations for `NOT_APPLICABLE`, and agreement between the rows and overall result. An absent, malformed, incomplete, mismatched, or inconsistent result produces a `FAIL` row and blocking finding named `language-result-invalid`, identifying the failed contract check; accept no partial rows from that result. This boundary validates returned structure without repeating the language audit's judgment.
 
-Append only validated rows. Qualify each composed row name with its language to preserve distinct concerns across partitions. Map its findings to this verdict's fields: retain the rule, message, observed, and expected evidence, use the child location or file as `location`, and mark findings that reject the ADR as `blocking`. A composed `FAIL` always rejects the ADR; no omitted row or empty result counts as passing coverage.
+Append only validated rows. Qualify each composed row name with its language to preserve distinct concerns across partitions. Map its findings to this verdict's fields: retain the rule, message, observed, and expected evidence, use the child location or file as a `locations` entry, and mark findings that reject the ADR as `blocking`. A composed `FAIL` always rejects the ADR; no omitted row or empty result counts as passing coverage.
 
 One case is not a composition failure. When the governed context establishes that the changeset itself ships the ADR's language plugin, unpublished and uninstalled in this session, no `audit-<lang>-architecture` skill can exist yet. Judge the decision directly against the skill files its rules name and the cross-language decisions, and record a row named `language-skill-unpublished` as `NOT_APPLICABLE` with the evidence establishing that case. An absent installed skill alone never establishes unpublished status.
 
@@ -172,7 +172,7 @@ The `overall` is `APPROVED` iff every native and composed row is `PASS` or `NOT_
 }
 ```
 
-Each finding carries `rule`, `severity: "blocking | filed"`, `location`, `message`, `observed`, and `expected`; a `filed` finding additionally carries `key`, `baseRefEvidence`, and `issuesEntry` (`path`, `heading`). Native findings use `missing-target`, `missing-section`, `temporal-voice`, `invalid-draft-rule`, `invalid-tag`, `assertion-type-mismatch`, `template-missing`, `test-standards-unavailable`, `language-routing-unavailable`, `language-skill-unavailable`, or `language-result-invalid`; validated composed findings retain the invoked skill's rule identifier.
+Each finding is keyed `<adr-file-path>:<rule-id>` and carries `rule` (the `<rule-id>`), `severity: "blocking | filed"`, `locations` (every location in the ADR where that rule is violated), `message`, `observed`, and `expected`; a `filed` finding additionally carries `key`, `baseRefEvidence`, and `issuesEntry` (`path`, `heading`). Every `<rule-id>` comes from `${CLAUDE_SKILL_DIR}/references/rule-catalog.md`; a validated composed finding retains the rule identifier of the invoked skill's own catalog. A finding names no identifier outside those catalogs.
 
 </verdict_format>
 
