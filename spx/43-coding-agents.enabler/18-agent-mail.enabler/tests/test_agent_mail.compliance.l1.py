@@ -16,9 +16,11 @@ from outcomeeng_testing.harnesses.agent_mail import (
     load_agent_mail,
     mail_command_source_texts,
     nul_tainted_requests,
+    raw_mail_shell_violation_source,
     raw_mail_violation_source,
     requests_over_every_operation,
     run_cli_with_only_adapter_programs,
+    run_correlation_overflow_cases,
     run_cli_without_executables,
     run_generated_identities,
     run_hung_command_under_bound,
@@ -165,6 +167,8 @@ def test_no_other_shipped_script_constructs_mail_commands_or_git_keys() -> None:
 
     raw_path, raw_source = raw_mail_violation_source()
     assert module.raw_mail_command_violations(raw_source) == [raw_path]
+    shell_path, shell_source = raw_mail_shell_violation_source()
+    assert module.raw_mail_command_violations(shell_source) == [shell_path]
     git_path, git_source = git_project_key_violation_source()
     assert module.git_project_key_violations(git_source) == [git_path]
 
@@ -522,6 +526,23 @@ def test_an_over_long_thread_id_never_reaches_a_store_command() -> None:
         assert len(at_limit.calls) == 2
 
     run_operation_mapping(assert_operation)
+
+
+def test_a_correlation_whose_written_form_overflows_never_reaches_a_store_command() -> (
+    None
+):
+    def assert_overflow(
+        module: ModuleType, record: dict[str, object], project_key: str
+    ) -> None:
+        runner = common_dir_seeded_runner(module, project_key)
+        result = module.execute(
+            module.operation_request(module.Operation.SEND, record=record), runner
+        )
+
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
+        assert runner.calls == []
+
+    run_correlation_overflow_cases(assert_overflow)
 
 
 def test_every_result_carries_the_versioned_shape_and_a_runner_error_is_named() -> None:

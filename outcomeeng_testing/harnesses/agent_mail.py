@@ -27,6 +27,10 @@ from outcomeeng_testing.generators.agent_mail import (
     common_dir_output,
     capture_row_ordinals,
     distinct_stable_names,
+    escape_prefixed_correlations,
+    fitting_correlations,
+    overflowing_correlations,
+    thread_alphabet_thread_ids,
     position_labels,
     coordination_references,
     expected_project_key,
@@ -66,6 +70,7 @@ USAGE_FIXTURE_ROOT = FIXTURE_ROOT / "usage"
 # the resolver is read against.
 RESPONSE_FIXTURE_ROOT = FIXTURE_ROOT / "responses"
 RAW_MAIL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_command.py.txt"
+RAW_MAIL_SHELL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_shell_command.py.txt"
 GIT_PROJECT_KEY_VIOLATION_FIXTURE = FIXTURE_ROOT / "git_project_key.py.txt"
 RECORD_ROUNDTRIP_SEED = 2026091801
 RECORD_ROUNDTRIP_EXAMPLES = 60
@@ -73,6 +78,10 @@ RECORD_ROUNDTRIP_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.property.l1.py"
 )
+CORRELATION_ENCODING_SEED = 2026102502
+CORRELATION_ENCODING_EXAMPLES = 200
+CORRELATION_OVERFLOW_SEED = 2026102503
+CORRELATION_OVERFLOW_EXAMPLES = 30
 DELEGATION_CHAIN_SEED = 2026092201
 DELEGATION_CHAIN_EXAMPLES = 20
 TERMINAL_PROPERTY_SEED = 2026091802
@@ -517,6 +526,90 @@ def run_record_roundtrip_property(
         generated_roundtrip,
         seed_value=RECORD_ROUNDTRIP_SEED,
         replay_path=RECORD_ROUNDTRIP_REPLAY_PATH,
+    )
+
+
+def run_correlation_encoding_property(
+    assert_encoding: Callable[[ModuleType, str, str], None],
+) -> None:
+    """Drive correlations the store's thread alphabet rejects and ones it admits,
+    plus thread ids another writer created, while the linked test owns the
+    round-trip, alphabet, and collision predicates.
+
+    The linked test receives the correlation and a store thread id drawn from
+    the thread alphabet.
+    """
+    module = _load()
+
+    @seed(CORRELATION_ENCODING_SEED)
+    @settings(
+        max_examples=CORRELATION_ENCODING_EXAMPLES, deadline=None, print_blob=True
+    )
+    @given(
+        correlation=st.one_of(
+            fitting_correlations(),
+            escape_prefixed_correlations(module.CORRELATION_ESCAPE_PREFIX),
+            coordination_references(),
+        ),
+        foreign_thread_id=st.one_of(
+            thread_alphabet_thread_ids(module.THREAD_ID_MAXIMUM_LENGTH),
+            escape_prefixed_correlations(module.CORRELATION_ESCAPE_PREFIX),
+        ),
+    )
+    def generated_encoding(correlation: str, foreign_thread_id: str) -> None:
+        assert_encoding(module, correlation, foreign_thread_id)
+
+    run_replayable_property(
+        generated_encoding,
+        seed_value=CORRELATION_ENCODING_SEED,
+        replay_path=RECORD_ROUNDTRIP_REPLAY_PATH,
+    )
+
+
+def run_correlation_overflow_cases(
+    assert_overflow: Callable[[ModuleType, dict[str, object], str], None],
+) -> None:
+    """Drive sent records whose correlation necessarily writes a thread id over
+    the store's length, under a generated project key, while the linked test
+    owns the rejection predicate."""
+    module = _load()
+
+    @seed(CORRELATION_OVERFLOW_SEED)
+    @settings(
+        max_examples=CORRELATION_OVERFLOW_EXAMPLES, deadline=None, print_blob=True
+    )
+    @given(
+        correlation=overflowing_correlations(),
+        sender=agent_names(),
+        recipient=agent_names(),
+        subject=message_texts(),
+        body=message_texts(),
+        kind=sent_record_kinds(module),
+        project_key=project_key_paths(),
+    )
+    def generated_overflow(
+        correlation: str,
+        sender: str,
+        recipient: str,
+        subject: str,
+        body: str,
+        kind: object,
+        project_key: str,
+    ) -> None:
+        record = module.message_record(
+            kind=kind,
+            correlation=correlation,
+            sender=sender,
+            recipient=recipient,
+            subject=subject,
+            body=body,
+        )
+        assert_overflow(module, record, project_key)
+
+    run_replayable_property(
+        generated_overflow,
+        seed_value=CORRELATION_OVERFLOW_SEED,
+        replay_path=COMPLIANCE_REPLAY_PATH,
     )
 
 
@@ -1155,6 +1248,13 @@ def raw_mail_violation_source() -> tuple[str, dict[str, str]]:
     return (
         str(RAW_MAIL_VIOLATION_FIXTURE.relative_to(ROOT)),
         _source_texts((RAW_MAIL_VIOLATION_FIXTURE,)),
+    )
+
+
+def raw_mail_shell_violation_source() -> tuple[str, dict[str, str]]:
+    return (
+        str(RAW_MAIL_SHELL_VIOLATION_FIXTURE.relative_to(ROOT)),
+        _source_texts((RAW_MAIL_SHELL_VIOLATION_FIXTURE,)),
     )
 
 

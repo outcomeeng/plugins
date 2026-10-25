@@ -96,6 +96,74 @@ def coordination_references() -> st.SearchStrategy[str]:
     return st.uuids(version=4).map(str)
 
 
+# A correlation of at most this many characters writes at most four escaped
+# bytes of three characters each plus the three-character prefix, so its
+# written form stays inside the store's 128-character thread limit.
+FITTING_CORRELATION_MAXIMUM_CHARACTERS = 10
+# Every character at or above U+0080 spells at least two UTF-8 bytes of three
+# characters each, so this many of them write more than 128 characters.
+OVERFLOWING_NON_ASCII_MINIMUM_CHARACTERS = 22
+OVERFLOWING_NON_ASCII_MAXIMUM_CHARACTERS = 60
+OVERFLOWING_ALPHANUMERIC_MINIMUM_CHARACTERS = 129
+OVERFLOWING_ALPHANUMERIC_MAXIMUM_CHARACTERS = 200
+FIRST_NON_ASCII_CODEPOINT = 0x80
+SURROGATE_CATEGORY = "Cs"
+NUL_CHARACTER = "\x00"
+ESCAPE_PREFIX_SUFFIX_PATTERN = r"[A-Za-z0-9._-]{0,20}"
+
+
+def _text_characters(minimum_codepoint: int = 0) -> st.SearchStrategy[str]:
+    return st.characters(
+        min_codepoint=minimum_codepoint,
+        exclude_categories=(SURROGATE_CATEGORY,),
+        exclude_characters=NUL_CHARACTER,
+    )
+
+
+def fitting_correlations() -> st.SearchStrategy[str]:
+    """Any text, spaces, underscores, and non-ASCII included, short enough that
+    its written form fits the store's thread length."""
+    return st.text(
+        alphabet=_text_characters(),
+        min_size=1,
+        max_size=FITTING_CORRELATION_MAXIMUM_CHARACTERS,
+    )
+
+
+def escape_prefixed_correlations(prefix: str) -> st.SearchStrategy[str]:
+    """Alphabet-valid text that begins with the escape prefix the caller names."""
+    return st.from_regex(ESCAPE_PREFIX_SUFFIX_PATTERN, fullmatch=True).map(
+        lambda suffix: f"{prefix}{suffix}"
+    )
+
+
+def overflowing_correlations() -> st.SearchStrategy[str]:
+    """Correlations whose written thread id necessarily exceeds the store's
+    length: long alphabet text, and non-ASCII text whose escaped bytes overflow."""
+    return st.one_of(
+        st.text(
+            alphabet=_text_characters(FIRST_NON_ASCII_CODEPOINT),
+            min_size=OVERFLOWING_NON_ASCII_MINIMUM_CHARACTERS,
+            max_size=OVERFLOWING_NON_ASCII_MAXIMUM_CHARACTERS,
+        ),
+        st.from_regex(
+            r"[A-Za-z0-9]{%d,%d}"
+            % (
+                OVERFLOWING_ALPHANUMERIC_MINIMUM_CHARACTERS,
+                OVERFLOWING_ALPHANUMERIC_MAXIMUM_CHARACTERS,
+            ),
+            fullmatch=True,
+        ),
+    )
+
+
+def thread_alphabet_thread_ids(maximum_length: int) -> st.SearchStrategy[str]:
+    """Thread ids another writer may have created inside the store's alphabet."""
+    return st.from_regex(
+        r"[A-Za-z0-9][A-Za-z0-9._-]{0,%d}" % (maximum_length - 1), fullmatch=True
+    )
+
+
 def store_message_ids() -> st.SearchStrategy[int]:
     return st.integers(min_value=1, max_value=1_000_000)
 
