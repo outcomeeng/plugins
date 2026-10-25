@@ -37,12 +37,17 @@ PROJECT_METADATA: Final = REPO_ROOT / "pyproject.toml"
 
 @dataclass(frozen=True)
 class CiToolchainObservation:
-    """Raw job environment, action, command, and step-environment observations."""
+    """Raw job environment, action, command, and step-environment observations.
+
+    Each step environment is keyed by the step's normalized `run:` body, empty
+    for a step that runs no command, so a step's name never decides which
+    command its environment reaches.
+    """
 
     job_environment: frozenset[str]
     action_references: tuple[str, ...]
     run_commands: tuple[str, ...]
-    step_environments: tuple[tuple[str, frozenset[str]], ...]
+    run_environments: tuple[tuple[str, frozenset[str]], ...]
 
 
 @dataclass(frozen=True)
@@ -184,9 +189,9 @@ def observe_ci_toolchain(
             cast("str", step["uses"]) for step in steps if "uses" in step
         ),
         run_commands=runs,
-        step_environments=tuple(
+        run_environments=tuple(
             (
-                cast("str", step.get("name", "")),
+                cast("str", step.get("run", "")).strip(),
                 frozenset(cast("dict[str, str]", step.get("env", {}))),
             )
             for step in steps

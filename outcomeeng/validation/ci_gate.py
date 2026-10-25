@@ -16,11 +16,9 @@ GATE_PUSH_EVENT: Final = "push"
 GATE_PUSH_BRANCH: Final = "main"
 JUST_BINARY: Final = "just"
 GATE_RECIPE_COMMAND: Final = f"{JUST_BINARY} {RECIPE_CHECK_FULL}"
-GATE_STEP_NAME: Final = "Run quality gate"
 # The gate job runs every L3 test after the full gate, in the same job, so a
 # red full gate stops the job before an L3 test spends a credential.
 L3_RECIPE_COMMAND: Final = f"{JUST_BINARY} {RECIPE_TEST_L3}"
-L3_STEP_NAME: Final = "Run L3 tests"
 GATE_RECIPE_COMMANDS: Final = (GATE_RECIPE_COMMAND, L3_RECIPE_COMMAND)
 GITHUB_TOKEN_ENVIRONMENT: Final = "GH_TOKEN"
 CODEX_API_KEY_ENVIRONMENT: Final = "OPENAI_API_KEY"
@@ -52,9 +50,9 @@ class CiToolRequirement:
 
 @dataclass(frozen=True)
 class CiStepEnvironmentRequirement:
-    """One environment variable required by a named CI gate step."""
+    """One environment variable the CI gate step running a command requires."""
 
-    step_name: str
+    run_command: str
     environment_name: str
 
 
@@ -96,12 +94,12 @@ CI_TOOL_REQUIREMENTS: Final = (
     CiToolRequirement(None, "actions/setup-python@", None),
     CiToolRequirement(None, "actions/setup-node@", None),
 )
-# Only the L3 tests read these credentials, so only the step that runs them
-# receives them.
+# Only the L3 tests read these credentials, so only the step whose command
+# runs them receives them.
 CI_STEP_ENVIRONMENT_REQUIREMENTS: Final = (
-    CiStepEnvironmentRequirement(L3_STEP_NAME, GITHUB_TOKEN_ENVIRONMENT),
-    CiStepEnvironmentRequirement(L3_STEP_NAME, CODEX_API_KEY_ENVIRONMENT),
-    CiStepEnvironmentRequirement(L3_STEP_NAME, DISCOVERY_AUTH_MODE_ENVIRONMENT),
+    CiStepEnvironmentRequirement(L3_RECIPE_COMMAND, GITHUB_TOKEN_ENVIRONMENT),
+    CiStepEnvironmentRequirement(L3_RECIPE_COMMAND, CODEX_API_KEY_ENVIRONMENT),
+    CiStepEnvironmentRequirement(L3_RECIPE_COMMAND, DISCOVERY_AUTH_MODE_ENVIRONMENT),
 )
 RETIRED_SPX_VERSION_ENVIRONMENT: Final = "SPX_VERSION"
 FULL_COMMIT_SHA_PATTERN: Final = r"[0-9a-f]{40}"
@@ -115,7 +113,6 @@ __all__ = [
     "CI_STEP_ENVIRONMENT_REQUIREMENTS",
     "CODEX_API_KEY_ENVIRONMENT",
     "DISCOVERY_AUTH_MODE_ENVIRONMENT",
-    "GATE_STEP_NAME",
     "GITHUB_TOKEN_ENVIRONMENT",
     "CI_TOOL_REQUIREMENTS",
     "FULL_COMMIT_SHA_PATTERN",
@@ -136,7 +133,6 @@ __all__ = [
     "GATE_RECIPE_COMMANDS",
     "JUST_BINARY",
     "L3_RECIPE_COMMAND",
-    "L3_STEP_NAME",
     "PINNED_VERSION_ENVIRONMENT_SUFFIX",
     "PYTHON_SETUP_STEP_NAME",
     "SOFT_PASS_SHELL_SNIPPETS",

@@ -5,7 +5,11 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from outcomeeng.validation import ACTIONLINT_ARGV, SHELLCHECK_ARGV
+import pytest
+
+import outcomeeng.validation.__main__ as validation_entry
+from outcomeeng.validation import ACTIONLINT_ARGV, RECIPE_TEST_L3, SHELLCHECK_ARGV
+from outcomeeng.validation.selected_gate import RECIPE_CHECK_FULL
 from outcomeeng.validation.spx_version import SPX_PACKAGE_NAME
 from outcomeeng.validation.ci_gate import (
     CI_STEP_ENVIRONMENT_REQUIREMENTS,
@@ -38,6 +42,7 @@ from outcomeeng_testing.harnesses.ci_gate import (
     observe_validation_step_argvs,
     observe_workflow_jobs,
 )
+from outcomeeng_testing.harnesses.l3_collection import justfile_recipe_command
 
 
 def test_gate_workflow_triggers_on_pull_request_and_main_push() -> None:
@@ -48,54 +53,74 @@ def test_gate_workflow_triggers_on_pull_request_and_main_push() -> None:
     assert GATE_PUSH_BRANCH in observation.push_branches
 
 
-def _gate_recipes_in_order(workflow_path: Path | None = None) -> bool:
-    """Return whether the gate job runs the gate recipes, each once, in order."""
-    commands = observe_gate_run_commands(workflow_path)
-    return (
-        tuple(command for command in commands if command in GATE_RECIPE_COMMANDS)
-        == GATE_RECIPE_COMMANDS
+def _gate_recipe_sequence(workflow_path: Path | None = None) -> tuple[str, ...]:
+    """Return the gate recipes the gate job runs, in the order it runs them."""
+    return tuple(
+        command
+        for command in observe_gate_run_commands(workflow_path)
+        if command in GATE_RECIPE_COMMANDS
     )
 
 
 def test_gate_workflow_runs_the_full_gate_and_then_the_l3_tests() -> None:
-    assert _gate_recipes_in_order()
+    assert _gate_recipe_sequence() == GATE_RECIPE_COMMANDS
+
+
+@pytest.mark.parametrize("recipe", (RECIPE_CHECK_FULL, RECIPE_TEST_L3))
+def test_each_gate_recipe_dispatches_its_own_validation_command(recipe: str) -> None:
+    command = justfile_recipe_command(recipe)
+
+    assert command[command.index(str(validation_entry.__package__)) + 1 :] == (recipe,)
 
 
 def test_a_gate_job_without_the_l3_tests_is_detected() -> None:
-    assert not _gate_recipes_in_order(gate_fixture_path("missing_l3_recipe.yml"))
+    assert (
+        _gate_recipe_sequence(gate_fixture_path("missing_l3_recipe.yml"))
+        != GATE_RECIPE_COMMANDS
+    )
 
 
 def test_l3_tests_before_the_full_gate_are_detected() -> None:
-    assert not _gate_recipes_in_order(gate_fixture_path("l3_before_full_gate.yml"))
+    assert (
+        _gate_recipe_sequence(gate_fixture_path("l3_before_full_gate.yml"))
+        != GATE_RECIPE_COMMANDS
+    )
 
 
-def _step_credentials(workflow_path: Path | None = None) -> set[tuple[str, str]]:
-    """Return every (step name, credential) pair the gate job passes."""
+def _run_credentials(workflow_path: Path | None = None) -> set[tuple[str, str]]:
+    """Return every (run command, credential) pair the gate job passes."""
     credentials = {
         requirement.environment_name for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
     }
     return {
-        (step_name, name)
-        for step_name, environment in observe_ci_toolchain(
+        (run_command, name)
+        for run_command, environment in observe_ci_toolchain(
             workflow_path
-        ).step_environments
+        ).run_environments
         for name in environment
         if name in credentials
     }
 
 
 def test_only_the_l3_step_receives_the_l3_credentials() -> None:
-    assert _step_credentials() == {
-        (requirement.step_name, requirement.environment_name)
+    assert _run_credentials() == {
+        (requirement.run_command, requirement.environment_name)
         for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
     }
 
 
 def test_credentials_on_the_full_gate_step_are_detected() -> None:
-    assert _step_credentials(
-        gate_fixture_path("credentials_on_full_gate_step.yml")
+    assert _run_credentials(gate_fixture_path("credentials_on_full_gate_step.yml")) != {
+        (requirement.run_command, requirement.environment_name)
+        for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
+    }
+
+
+def test_credentials_on_a_full_gate_step_named_for_the_l3_tests_are_detected() -> None:
+    assert _run_credentials(
+        gate_fixture_path("credentials_under_swapped_step_names.yml")
     ) != {
-        (requirement.step_name, requirement.environment_name)
+        (requirement.run_command, requirement.environment_name)
         for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
     }
 
@@ -146,9 +171,9 @@ def test_gate_workflow_provisions_the_declared_toolchain() -> None:
             )
     for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS:
         assert any(
-            step_name == requirement.step_name
+            run_command == requirement.run_command
             and requirement.environment_name in environment
-            for step_name, environment in observation.step_environments
+            for run_command, environment in observation.run_environments
         )
 
 
@@ -172,11 +197,11 @@ def test_every_provisioned_tool_is_declared() -> None:
         if requirement.version_environment is not None
     }
     assert {
-        (step_name, name)
-        for step_name, environment in observation.step_environments
+        (run_command, name)
+        for run_command, environment in observation.run_environments
         for name in environment
     } == {
-        (requirement.step_name, requirement.environment_name)
+        (requirement.run_command, requirement.environment_name)
         for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
     }
 
@@ -194,9 +219,9 @@ def test_missing_tool_provisioning_is_detected() -> None:
         for requirement in CI_TOOL_REQUIREMENTS
     )
     assert not any(
-        step_name == requirement.step_name
+        run_command == requirement.run_command
         and requirement.environment_name in environment
-        for step_name, environment in observation.step_environments
+        for run_command, environment in observation.run_environments
         for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
     )
 
@@ -266,7 +291,7 @@ def test_conforming_fixture_satisfies_every_gate_rule() -> None:
 
     assert GATE_PULL_REQUEST_EVENT in triggers.events
     assert GATE_PUSH_BRANCH in triggers.push_branches
-    assert _gate_recipes_in_order(workflow_path)
+    assert _gate_recipe_sequence(workflow_path) == GATE_RECIPE_COMMANDS
     job = observe_gate_job(workflow_path)
 
     assert not job.has_condition

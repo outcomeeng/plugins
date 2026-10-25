@@ -45,6 +45,17 @@ def marketplace_tracked_files(product_root: Path) -> list[str]:
     return [line for line in result.stdout.splitlines() if line]
 
 
+def marketplace_tracked_texts(product_root: Path) -> dict[str, str]:
+    """Return the UTF-8 content of every tracked text file present in the checkout."""
+    texts: dict[str, str] = {}
+    for path in marketplace_tracked_files(product_root):
+        try:
+            texts[path] = (product_root / path).read_text(encoding="utf-8")
+        except (UnicodeDecodeError, FileNotFoundError, IsADirectoryError):
+            continue
+    return texts
+
+
 def marketplace_tracked_spx_node_directories(test_file: str) -> list[Path]:
     product_root = marketplace_root_for_spec_tree_root_test(test_file)
     result = subprocess.run(
