@@ -233,7 +233,19 @@ def record_namespace(path: Path, value: Json) -> str:
         ) from error
 
 
-def checked_retained_jobs(path: Path, value: Json) -> None:
+def retained_control_script(root: Path, argument: str) -> bool:
+    """Whether ``argument`` is ``usage_control.py`` in a versioned asset directory of ``root``."""
+    script = Path(argument)
+    version = script.parent.name
+    return (
+        script.name == "usage_control.py"
+        and script.parent.parent == root / "assets"
+        and len(version) == 64
+        and all(c in "0123456789abcdef" for c in version)
+    )
+
+
+def checked_retained_jobs(path: Path, root: Path, value: Json) -> None:
     retained = value.get(RETAINED_JOBS, [])
     if not isinstance(retained, list):
         raise ValueError(
@@ -272,6 +284,24 @@ def checked_retained_jobs(path: Path, value: Json) -> None:
             raise ValueError(
                 f"Invalid {RETAINED_JOBS} entry for {label}: {path} must name an "
                 f"absolute non-symlink {label}.plist path and a plist object; "
+                "inspect the file and reinstall through install"
+            )
+        arguments = settings.get(ScheduleField.PROGRAMARGUMENTS)
+        if (
+            settings.get("Label") != label
+            or settings.get("WorkingDirectory") != str(root)
+            or not isinstance(arguments, list)
+            or len(arguments) != 6
+            or not all(isinstance(item, str) for item in arguments)
+            or not Path(arguments[0]).is_absolute()
+            or arguments[1] != "-B"
+            or not retained_control_script(root, arguments[2])
+            or arguments[3] != label.rsplit(".", 1)[-1]
+            or arguments[4:] != ["--root", str(root)]
+        ):
+            raise ValueError(
+                f"Invalid {RETAINED_JOBS} entry for {label}: {path} does not match its installed form and must "
+                f"run usage_control.py in mode {label.rsplit('.', 1)[-1]} with --root {root}; "
                 "inspect the file and reinstall through install"
             )
 
@@ -364,7 +394,7 @@ def manifest(root: Path) -> Json | None:
                 f"Managed job {label} does not match installed assets: {path} must run "
                 f"{assets / 'usage_control.py'} with --root {root}; inspect the file and reinstall through install"
             )
-    checked_retained_jobs(path, value)
+    checked_retained_jobs(path, root, value)
     return value
 
 
@@ -590,8 +620,13 @@ def install(
 def retain_jobs(
     retained: list[Json], agents_directory: Path, runner: Runner
 ) -> tuple[list[Json], list[str]]:
-    """Keep the newest retained jobs; stop and remove the older ones this install owns."""
+    """Keep the newest retained jobs; stop and remove the older ones this install owns.
+
+    A job past the limit whose removal reports a gap stays in the returned list, so
+    the record keeps owning the launch agent it still manages.
+    """
     gaps: list[str] = []
+    kept = list(retained[:RETAINED_JOB_LIMIT])
     domain = f"gui/{os.getuid()}"
     for job in retained[RETAINED_JOB_LIMIT:]:
         path = Path(job["path"])
@@ -599,6 +634,7 @@ def retain_jobs(
             gaps.append(
                 f"job retention preserved launch agent outside {agents_directory}: {path}"
             )
+            kept.append(job)
             continue
         try:
             if path.is_symlink() or (
@@ -606,6 +642,7 @@ def retain_jobs(
                 and path.read_bytes() != plistlib.dumps(job[ScheduleField.PLIST])
             ):
                 gaps.append(f"job retention preserved changed launch agent: {path}")
+                kept.append(job)
                 continue
             target = domain + "/" + job["label"]
             result = runner.run((LAUNCHCTL, LaunchctlOperation.PRINT, target))
@@ -615,11 +652,13 @@ def retain_jobs(
                 gaps.append(
                     f"job retention could not establish status: {path}: {result.stderr[:2000]}"
                 )
+                kept.append(job)
                 continue
             path.unlink(missing_ok=True)
         except (OSError, RuntimeError) as error:
             gaps.append(f"job retention failed: {path}: {error}")
-    return retained[:RETAINED_JOB_LIMIT], gaps
+            kept.append(job)
+    return kept, gaps
 
 
 def retain_assets(root: Path, active: Path) -> list[str]:
