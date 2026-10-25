@@ -420,7 +420,8 @@ def discover_on_demand_tests(root: Path) -> tuple[str, ...]:
             for test_root in TEST_ROOTS
             if (root / test_root).is_dir()
             for path in (root / test_root).rglob(f"*{PYTHON_SUFFIX}")
-            if path.name.startswith(EXECUTED_TEST_PREFIX)
+            if path.parent.name == TESTS_DIRECTORY_NAME
+            and path.name.startswith(EXECUTED_TEST_PREFIX)
             and is_on_demand_test(path.name)
         )
     )
