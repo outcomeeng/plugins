@@ -11,6 +11,8 @@ CAN wake on the first event any named source yields without a standing watcher, 
 
 ## Assertions
 
+- A mail source carrying an optional `repository` maps to the agent-mail capability's wait request carrying the same `repository`, and a mail source without one maps to a wait request carrying none
+
 ### Properties
 
 - Every run that starts with a valid request ends by printing exactly one line, an event line, an unreadable-source line, or a timeout line, and exits ([test](tests/test_event_wait.property.l1.py))

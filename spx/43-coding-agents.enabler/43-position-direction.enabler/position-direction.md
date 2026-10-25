@@ -13,6 +13,8 @@ The skill reaches panes through the environment adapters of `spx/43-coding-agent
 
 ## Assertions
 
+- ALWAYS: every mail request `/direct-positions` sends carries the composed `mail.channel` as its `repository` when the configuration sets one and carries none otherwise
+
 ### Compliance
 
 - ALWAYS: `/direct-positions` resumes a directing session after every compaction from its own resume note, the configuration its override file and the shipped defaults compose, and its unread mail ([audit])
