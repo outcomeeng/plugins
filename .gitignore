@@ -24,6 +24,7 @@ methodology/memories/
 # Agent runtime operational files
 /.pi/
 .spx/
+.spx-source/
 
 # Per-eval run transcripts (ephemeral; history.jsonl is the committed trend record)
 **/evals/*/runs/

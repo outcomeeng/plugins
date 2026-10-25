@@ -22,8 +22,8 @@ The manifest is declarative because the facts that vary by consumer — the floo
 
 The marketplace-install check reads each agent's plugin CLI (`claude plugin`, `codex plugin`), which are agent-specific where the rest of the pipeline is agent-agnostic. `spx diagnose` shells out to each present surface, skips an absent one, and reports not-applicable when neither is present, so one command covers every check while staying usable wherever a surface is missing.
 
-The shipped `diagnose` skill depends on the published `spx diagnose` command
-and carries no in-body check classification. It passes the plugin-shipped
+The shipped `diagnose` skill depends on the `spx diagnose` command of any spx
+build that reports the floor version and carries no in-body check classification. It passes the plugin-shipped
 manifest to `spx diagnose`, relays the deterministic report, and adds remediation
 judgment from the report's non-healthy verdicts.
 
@@ -46,4 +46,4 @@ judgment from the report's non-healthy verdicts.
 - ALWAYS: the consumer-varying inputs — the spx-version floor, the marketplace identity, and the check set — reach `spx diagnose` through a plugin-shipped declarative manifest the skill passes by path, the floor build-rendered from the product's single source of truth per [`spx/21-spec-tree.enabler/79-diagnostics.enabler/15-version-floor.adr.md`](spx/21-spec-tree.enabler/79-diagnostics.enabler/15-version-floor.adr.md) ([audit])
 - NEVER: the shipped diagnose manifest embeds an expected or required plugin set — the check derives selection from the agent-owned state declared in [`spx/12-marketplace-state.adr.md`](spx/12-marketplace-state.adr.md) ([audit])
 - NEVER: the `spx` CLI hard-codes a consumer's floor, marketplace identity, or check set — those are the manifest's, so `spx diagnose` stays generic across the consumers a methodology marketplace installs into ([audit])
-- ALWAYS: the diagnose skill's `spx diagnose` dependency is provided by a published `@outcomeeng/spx` release included in the product's spx-version floor, per the publish-before-depend rule ([audit])
+- ALWAYS: the diagnose skill's `spx diagnose` dependency is provided by any spx build that reports a version at or above the product's spx-version floor, from npm or from source ([audit])
