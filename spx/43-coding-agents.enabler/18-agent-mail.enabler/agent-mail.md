@@ -13,8 +13,6 @@ This capability is an agent adapter: the configured way the agent harness lets o
 
 ## Assertions
 
-- ALWAYS: for every operation, the argument vector the adapter builds is accepted by the installed store, and every response the adapter parses is a shape that store emits
-
 ### Mappings
 
 - Registration, send, list, read, and acknowledge each map one source-owned request shape to one store command and checked result, and wait maps one source-owned request shape to listing commands bounded by its timeout and one checked result; a registration request carries an optional display name that maps to the store's display name, an absent display name passes no display-name argument, a blank display name passes through as an empty value that clears the label, and every checked result preserves the store's labels verbatim beside its message, thread, and agent identities ([test](tests/test_agent_mail.mapping.l1.py))
@@ -33,6 +31,7 @@ This capability is an agent adapter: the configured way the agent harness lets o
 ### Scenarios
 
 - Against the installed native `am` carrying position labels, a registration with a label followed by send, list, and doorbell shows the label on each surface, and a send right after startup and right after a label change authenticates ([probe](probes/position-labels/probe.md))
+- ALWAYS: for every operation, the argument vector the adapter builds is accepted by the installed store, and every response the adapter parses is a shape that store emits ([probe](probes/installed-store/probe.md))
 
 ### Compliance
 
