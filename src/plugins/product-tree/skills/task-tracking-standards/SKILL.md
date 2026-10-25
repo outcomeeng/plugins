@@ -26,7 +26,7 @@ Load this skill before any workflow:
 
 <principles>
 - Runtime tracking is a coordination handle for the next wake-up. Keep it sparse.
-- Durable facts stay in GitHub, the repository, the product tree, and command output. Re-read those sources on wake-up; conversation memory is not durable and is not a fact source.
+- Durable facts stay in GitHub, the repository, the Product Tree, and command output. Re-read those sources on wake-up; conversation memory is not durable and is not a fact source.
 - The continuation prompt is a pointer, never a payload; `<heartbeat_payload>` defines its content.
 - On wake-up, reload the named workflow skills, this skill, repository instructions, and authoritative state before acting. The reload is mandatory recovery: the protocol a skill carries cannot be assumed to have survived in context, so re-invoking restores it.
 - A failed check keeps the work active. Fetch failed logs once, classify the layer, then continue the repair loop or ask for the exact missing approval, credential, or judgment.

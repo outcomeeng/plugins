@@ -1,6 +1,6 @@
 ---
 name: decompose
-description: ALWAYS invoke this skill when breaking down, splitting, scoping, composing, or structuring product tree nodes. NEVER decompose specs without this skill.
+description: ALWAYS invoke this skill when breaking down, splitting, scoping, composing, or structuring Product Tree nodes. NEVER decompose specs without this skill.
 argument-hint: <node-address|spx/>
 allowed-tools: Read, Glob, Grep, Write, Edit
 ---
@@ -19,7 +19,7 @@ Product Tree structure under a target node address, composed from durable spec c
 
 Accept exactly one target from `$ARGUMENTS`:
 
-- `spx/` — compose top-level children from the product root after bootstrapping creates the product spec and root guide.
+- `spx/` — compose top-level children from the product root after bootstrapping creates the product document and root guide.
 - `{path-to-node}` — decompose or restructure children under an existing node.
 
 If `$ARGUMENTS` is empty, stop before reading or writing product files. State that this skill requires exactly one target and give the two accepted forms above.
@@ -43,7 +43,7 @@ Read the conditional operational sources below before composing. Use the live in
 
 If the target is `spx/`:
 
-1. Read the product spec and product-level ADRs/PDRs.
+1. Read the product document and product-level ADRs/PDRs.
 2. Read `AGENTS.md` if present.
 3. Read `spx/PLAN.md` and `spx/ISSUES.md` if present.
 4. Enumerate existing top-level children.
@@ -64,7 +64,7 @@ For both target modes, note root product scope, ancestor constraints, current as
 
 **Step 2: Assess whether composition is needed**
 
-For `spx/`, composition is needed when the product spec or root coordination notes name product scope that has no top-level children yet.
+For `spx/`, composition is needed when the product document or root coordination notes name product scope that has no top-level children yet.
 
 For a node target, decompose when at least one trigger applies:
 
@@ -232,7 +232,7 @@ For node targets, move assertions from the parent spec into children:
 
 Count assertions before and after redistribution. The child assertions plus remaining parent assertions must equal the original assertion count.
 
-For `spx/`, write top-level children from product scope and root coordination-note intent. Product-level assertions stay in the product spec unless they specify only one child concern.
+For `spx/`, write top-level children from product scope and root coordination-note intent. Product-level assertions stay in the product document unless they specify only one child concern.
 
 </step>
 
@@ -373,7 +373,7 @@ Decomposition is complete when:
 - [ ] Disposition checkpoint stated before index assignment; no index guessed from an existing sibling's slot
 - [ ] Sparse indices assigned from ordering evidence and selected horizon
 - [ ] Assertions redistributed without loss
-- [ ] Parent or product spec revised without temporal narration
+- [ ] Parent or product document revised without temporal narration
 - [ ] Child specs written from templates
 - [ ] Full `spx/` paths used for every node, ADR, and PDR reference
 - [ ] Validation checklist passes

@@ -10,7 +10,7 @@ allowed-tools: Read, Grep, Glob, Bash(git branch --show-current:*), Bash(git mer
 
 <objective>
 
-A verdict on one PDR against the PDR evidence model — APPROVED or REJECTED, with findings on touched text naming the section, rule, and evidence for content classification, property quality, declaration form and tag fitness, atemporal voice, or consistency with the product spec and ancestor PDRs, and every other finding returned as `filed`.
+A verdict on one PDR against the PDR evidence model — APPROVED or REJECTED, with findings on touched text naming the section, rule, and evidence for content classification, property quality, declaration form and tag fitness, atemporal voice, or consistency with the product document and ancestor PDRs, and every other finding returned as `filed`.
 
 </objective>
 
@@ -48,7 +48,7 @@ Bind the required PDR path, preserving spaces within it: `$ARGUMENTS` supplies i
 
 Use skill `product-tree:understand` when the live `<PRODUCT_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.pdr.md` beneath that marker's resolved absolute template directory, then use skill `product-tree:contextualize` on the directory containing the PDR. Derive declaration form and required tags from that canonical template. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
 
-The product document used below is the product spec loaded by `/contextualize` in its product-level context step. Use that spec's declared audience and interaction surfaces for content classification.
+The product document used below is the one `/contextualize` loads in its product-level context step. Use that document's declared audience and interaction surfaces for content classification.
 
 Do not proceed without live `<PRODUCT_TREE_FOUNDATION>` and `<PRODUCT_TREE_CONTEXT>` markers for the PDR directory.
 
@@ -134,11 +134,11 @@ Any temporal language in any section is a `temporal-voice` finding.
 
 Compare the PDR against:
 
-1. **Product spec** — Does the PDR contradict the product's scope or assertions?
+1. **Product document** — Does the PDR contradict the product's scope or assertions?
 2. **Ancestor PDRs** — Does the PDR contradict constraints from PDRs higher in the tree?
 3. **Sibling ADRs** — Does the PDR overlap with architecture concerns?
 
-A contradiction with the product spec or an ancestor PDR is a `consistency-violation` finding. A statement that overlaps a sibling ADR's architecture concern is an `architecture-content` finding, judged under Step 3.
+A contradiction with the product document or an ancestor PDR is a `consistency-violation` finding. A statement that overlaps a sibling ADR's architecture concern is an `architecture-content` finding, judged under Step 3.
 
 </step>
 
@@ -230,7 +230,7 @@ The verdict is sound when:
 - Every PDR rule was judged with none skipped — content classification, property quality (observability, falsifiability, and stability), per-rule tag validity and assertion-type fit, atemporal voice, and consistency (coverage-complete).
 - The verdict states an overall APPROVED/REJECTED, every property row carrying its determination, with no rule left unevaluated.
 - Each `blocking` finding lies on touched text, and every finding outside touched text appears as `filed` with its key, `baseRefEvidence`, and `issuesEntry`.
-- Each `blocking` finding is falsifiable: it names the location, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable, unfalsifiable, or unstable property, absent verification section or rules, the unverifiable rule or mismatched tag, the temporal phrase, or the contradicted product spec or ancestor PDR.
+- Each `blocking` finding is falsifiable: it names the location, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable, unfalsifiable, or unstable property, absent verification section or rules, the unverifiable rule or mismatched tag, the temporal phrase, or the contradicted product document or ancestor PDR.
 - An absent or empty Verification section fails `tag-validity`; an unmet property-quality criterion fails `property-quality`. Neither condition can disappear through an empty iteration or receive an overall `APPROVED` verdict.
 - The same PDR yields the same verdict.
 

@@ -10,7 +10,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **The reference examples name the `product-tree` plugin.** `/author-subagent`'s reference example invokes `product-tree:audit-specs` under `subagent_name('product-tree', ...)`, `/skill-standards` names the product tree in its naming examples, and the finding payload descriptions of `/audit-skill` and `/audit-subagent` say product tree. Before this change, each named `spec-tree`, which stops resolving once the methodology plugin is installed under its new name.
+- **The reference examples name the `product-tree` plugin.** `/author-subagent`'s reference example invokes `product-tree:audit-specs` under `subagent_name('product-tree', ...)`, `/skill-standards` names the Product Tree in its naming examples, and the finding payload descriptions of `/audit-skill` and `/audit-subagent` say Product Tree. Before this change, each named `spec-tree`, which stops resolving once the methodology plugin is installed under its new name.
 
 ## 0.22.0
 

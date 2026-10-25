@@ -1,4 +1,4 @@
-"""Convert the citations in a product tree to tree-absolute Markdown links.
+"""Convert the citations in a Product Tree to tree-absolute Markdown links.
 
 Usage: convert_links.py ROOT [PATH ...]
 

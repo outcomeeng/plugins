@@ -10,7 +10,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **`/audit-prose` requires `product-tree:scope-changeset` and `product-tree:project-run-journal`, and `/author-prose` reads the governing prose ADR from the repository's product tree.** Before this change, the skills named `spec-tree:` skills and the spec tree, which stop resolving once the methodology plugin is installed under its new name.
+- **`/audit-prose` requires `product-tree:scope-changeset` and `product-tree:project-run-journal`, and `/author-prose` reads the governing prose ADR from the repository's Product Tree.** Before this change, the skills named `spec-tree:` skills and the spec tree, which stop resolving once the methodology plugin is installed under its new name.
 
 ## 0.13.1
 

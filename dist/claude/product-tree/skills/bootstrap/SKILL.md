@@ -1,12 +1,12 @@
 ---
 name: bootstrap
-description: ALWAYS invoke this skill when setting up a new product tree in an empty or absent spx/ directory. NEVER create a product tree from scratch without this skill.
+description: ALWAYS invoke this skill when setting up a new Product Tree in an empty or absent spx/ directory. NEVER create a Product Tree from scratch without this skill.
 allowed-tools: Read, Glob, Grep, Write, Skill
 ---
 
 <objective>
 
-An initial `spx/` root scaffolded with a product spec and product guide, plus recorded top-level structure intent for `/decompose spx/`.
+An initial `spx/` root scaffolded with a product document and product guide, plus recorded top-level structure intent for `/decompose spx/`.
 
 </objective>
 
@@ -27,9 +27,9 @@ Glob: "spx/*.product.md"
 Glob: "spx/*-*.{enabler,outcome}/"
 ```
 
-If a product spec already exists, this is not a bootstrap. Redirect to `/author` for single artifacts or `/decompose spx/` for top-level structure.
+If a product document already exists, this is not a bootstrap. Redirect to `/author` for single artifacts or `/decompose spx/` for top-level structure.
 
-If `spx/` doesn't exist or contains no product spec, proceed.
+If `spx/` doesn't exist or contains no product document, proceed.
 
 Also detect **brownfield**: a product already implemented in code while `spx/` is absent or empty (source packages, a README describing shipped behavior, a working CLI or service). Brownfield bootstrap is valid — note it, because it changes how Step 2 gathers top-level intent (see the brownfield guard).
 
@@ -112,7 +112,7 @@ Wait for user confirmation before creating files.
 
 **Step 5: Delegate top-level composition**
 
-After the root scaffold exists, use skill `product-tree:decompose` with `spx/` to compose top-level children. Pass only `spx/`; the root product spec and `spx/PLAN.md` carry the user-provided intent.
+After the root scaffold exists, use skill `product-tree:decompose` with `spx/` to compose top-level children. Pass only `spx/`; the root product document and `spx/PLAN.md` carry the user-provided intent.
 
 </step>
 
@@ -122,7 +122,7 @@ After the root scaffold exists, use skill `product-tree:decompose` with `spx/` t
 
 Summarize what was created:
 
-- Product spec path
+- Product document path
 - `CLAUDE.md` path and `AGENTS.md` path
 - `spx/PLAN.md` path, if created
 - `/decompose spx/` as the next structural step
@@ -141,19 +141,19 @@ Recommend next steps:
 
 **Failure 1: Bootstrapped over an existing tree**
 
-Claude ran bootstrapping in a product that already had `spx/` with specs, because it read the request as a new product and skipped the existence check. The product spec was overwritten.
+Claude ran bootstrapping in a product that already had `spx/` with specs, because it read the request as a new product and skipped the existence check. The product document was overwritten.
 
-How to avoid: Step 1 checks for an existing product spec. If one exists, redirect to `/author` or `/decompose spx/`.
+How to avoid: Step 1 checks for an existing product document. If one exists, redirect to `/author` or `/decompose spx/`.
 
 **Failure 2: Bootstrapping pre-shaped top-level children**
 
 Claude accepted a list of candidate areas, assigned node types and indices during bootstrapping, and skipped the composition workflow. The first tree shape encoded unexamined dependencies.
 
-How to avoid: Bootstrapping records product intent in the product spec and root `PLAN.md`; `/decompose spx/` owns top-level child structure.
+How to avoid: Bootstrapping records product intent in the product document and root `PLAN.md`; `/decompose spx/` owns top-level child structure.
 
 **Failure 3: Lost top-level intent**
 
-Claude created only the product spec and guide, then discarded the user's candidate product areas, because it treated the interview answers as conversation context the next step would still hold. The next composition step ran in a fresh session and had no durable local context.
+Claude created only the product document and guide, then discarded the user's candidate product areas, because it treated the interview answers as conversation context the next step would still hold. The next composition step ran in a fresh session and had no durable local context.
 
 How to avoid: Write candidate areas, constraints, examples, and unresolved questions to `spx/PLAN.md` before invoking `/decompose spx/`.
 
@@ -169,8 +169,8 @@ How to avoid: In brownfield, derive top-level intent from consumers, jobs, surfa
 
 The scaffold is sound when:
 
-- [ ] No existing product spec was overwritten; a tree already present redirected to `/author` or `/decompose spx/`
-- [ ] The product spec states the hypothesis and scope the interview surfaced in atemporal voice and enumerates no child
+- [ ] No existing product document was overwritten; a tree already present redirected to `/author` or `/decompose spx/`
+- [ ] The product document states the hypothesis and scope the interview surfaced in atemporal voice and enumerates no child
 - [ ] Every candidate top-level area is a user-facing capability derived from consumers, jobs, surfaces, and actors; none is named after a code component
 - [ ] The managed sections of `CLAUDE.md` and `AGENTS.md` match the installed template and name only the project's enabled languages
 - [ ] `spx/PLAN.md` carries every candidate area, constraint, example, and unresolved question the interview surfaced and assigns no node kind or index

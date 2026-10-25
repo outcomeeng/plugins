@@ -43,7 +43,7 @@ Each rule below fires when a required inspection cannot run, and the finding nam
 | Identifier           | Severity | Rule                                                                               | Stated in               |
 | -------------------- | -------- | ---------------------------------------------------------------------------------- | ----------------------- |
 | `missing-target`     | blocking | The request carries the node-spec path.                                            | `audit_workflow` Step 1 |
-| `unsupported-target` | blocking | The target is an output or variant spec; a product spec carries no assertions.     | `audit_workflow` Step 1 |
+| `unsupported-target` | blocking | The target is an output or variant spec; a product document carries no assertions. | `audit_workflow` Step 1 |
 | `template-missing`   | blocking | The canonical kind template loads beneath the foundation's resolved template root. | `audit_workflow` Step 1 |
 
 </blocked_inspection_rules>

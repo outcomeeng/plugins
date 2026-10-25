@@ -1,13 +1,13 @@
 ---
 name: author
-description: ALWAYS invoke this skill when adding, defining, or creating specs, decisions, or nodes. NEVER author product tree artifacts without this skill.
+description: ALWAYS invoke this skill when adding, defining, or creating specs, decisions, or nodes. NEVER author Product Tree artifacts without this skill.
 argument-hint: "[full-spx-target-path] [change-issue-url] [repair-block]"
 allowed-tools: Read, Glob, Grep, Write, Edit, request_user_input, Bash(spx validation markdown:*), Bash(spx spec status:*), Bash(gh issue view:*)
 ---
 
 <objective>
 
-A Product Tree artifact — a product spec, decision record (ADR/PDR), output-kind or variant node spec, outcome record, or probe protocol — placed, indexed, and authored from the `understand` foundation templates.
+A Product Tree artifact — a product document, decision record (ADR/PDR), output-kind or variant node spec, outcome record, or probe protocol — placed, indexed, and authored from the `understand` foundation templates.
 
 </objective>
 
@@ -34,7 +34,7 @@ About to choose an assertion's verification type (`[test]` / `[eval]` / `[probe]
 
 Use the canonical templates and examples provided by `/understand`:
 
-- product spec template
+- product document template
 - ADR template
 - PDR template
 - one spec template per output kind — substrate, capability, domain, interface, surface — and the variant template
@@ -55,15 +55,15 @@ Ask or infer from context:
 
 Each template below is read beneath the `Template root` the live `<PRODUCT_TREE_FOUNDATION>` marker records.
 
-| Artifact           | When to create                                    | Template beneath the `Template root`                                 |
-| ------------------ | ------------------------------------------------- | -------------------------------------------------------------------- |
-| **Product spec**   | Bootstrapping a new tree                          | `product/product-name.spec.md`                                       |
-| **ADR**            | Architecture decision needs recording             | `decisions/decision-name.adr.md`                                     |
-| **PDR**            | Product decision needs recording                  | `decisions/decision-name.pdr.md`                                     |
-| **Output node**    | One of the five output kinds                      | `nodes/{substrate,capability,domain,interface,surface}-name.spec.md` |
-| **Variant node**   | One implementation of its parent's whole contract | `nodes/variant-name.spec.md`                                         |
-| **Outcome record** | A condition only real use settles                 | `records/node-name.outcome.md`                                       |
-| **Probe protocol** | A claim only observing the running node settles   | `probes/probe.md`                                                    |
+| Artifact             | When to create                                    | Template beneath the `Template root`                                 |
+| -------------------- | ------------------------------------------------- | -------------------------------------------------------------------- |
+| **Product document** | Bootstrapping a new tree                          | `product/product-name.spec.md`                                       |
+| **ADR**              | Architecture decision needs recording             | `decisions/decision-name.adr.md`                                     |
+| **PDR**              | Product decision needs recording                  | `decisions/decision-name.pdr.md`                                     |
+| **Output node**      | One of the five output kinds                      | `nodes/{substrate,capability,domain,interface,surface}-name.spec.md` |
+| **Variant node**     | One implementation of its parent's whole contract | `nodes/variant-name.spec.md`                                         |
+| **Outcome record**   | A condition only real use settles                 | `records/node-name.outcome.md`                                       |
+| **Probe protocol**   | A claim only observing the running node settles   | `probes/probe.md`                                                    |
 
 If unclear which type, apply the ordered kind decision procedure from live `/understand` `<identity_and_kinds>` and the `kind-decision.md` reference that section names — product, variant, substrate, surface, interface, domain, capability — and:
 
@@ -86,7 +86,7 @@ This loads:
 - Ancestor ADRs/PDRs (to respect constraints)
 - Parent spec (to understand scope)
 
-**Bootstrap mode**: If `spx/` doesn't exist or has no product spec, use skill `product-tree:bootstrap` first. It interviews the user and scaffolds the initial tree. Return here after bootstrapping to author individual artifacts.
+**Bootstrap mode**: If `spx/` doesn't exist or has no product document, use skill `product-tree:bootstrap` first. It interviews the user and scaffolds the initial tree. Return here after bootstrapping to author individual artifacts.
 
 </step>
 
@@ -94,7 +94,7 @@ This loads:
 
 **Step 3: Determine placement and index**
 
-**For product specs:** The root spec is `spx/{product-name}.spec.md` with `kind: product` in its front matter and no index; a nested product is a `{NN}-{slug}.product/` child of a product, holding `{slug}.spec.md`.
+**For product documents:** The root product document is `spx/{product-name}.spec.md` with `kind: product` in its front matter and no index; a nested product is a `{NN}-{slug}.product/` child of a product, holding `{slug}.spec.md`.
 
 **For ADRs/PDRs:** Place in the directory where the decision's scope applies. Assign the index from the decision's constraining scope:
 
@@ -122,7 +122,7 @@ Present the proposed placement to the user before creating files, unless the pac
 
 Before drafting, gather what's needed for the artifact type:
 
-**Product spec:**
+**Product document:**
 
 - What does the product provide, and for whom — only when that constrains a descendant?
 - Which terms are product-owned and need a definition?
@@ -244,7 +244,7 @@ spx/{scope-path}/{NN}-{slug}.{adr|pdr}.md
 
 Write the file directly.
 
-**For product specs:**
+**For product documents:**
 
 ```text
 spx/{product-name}.spec.md
@@ -258,7 +258,7 @@ Write the file. If `AGENTS.md` doesn't exist, note that product guide creation r
 
 **Step 8: Align downstream declarations**
 
-When this authoring change creates or edits a product spec, ADR, PDR, or ancestor spec assertion, use skill `product-tree:align` over the changeset before summarizing. The same changeset must carry the first affected lower specs that receive the new truth. If downstream evidence or implementation remains after the lower specs are aligned, record the next step in the Change that carries this work.
+When this authoring change creates or edits a product document, ADR, PDR, or ancestor spec assertion, use skill `product-tree:align` over the changeset before summarizing. The same changeset must carry the first affected lower specs that receive the new truth. If downstream evidence or implementation remains after the lower specs are aligned, record the next step in the Change that carries this work.
 
 If `/align` reports that a higher-level declaration has no aligned lower spec, fix the alignment before delivery. Do not leave new higher-level truth floating above the tree.
 
@@ -277,7 +277,7 @@ Recommend next steps based on artifact type:
 
 | Created                          | Recommended next                                  |
 | -------------------------------- | ------------------------------------------------- |
-| Product spec                     | Author top-level nodes with this skill            |
+| Product document                 | Author top-level nodes with this skill            |
 | ADR/PDR                          | Verify compliance in affected nodes with `/align` |
 | Output node with many assertions | Decompose with `/decompose`                       |
 | Output node                      | Establish evidence with `/apply`                  |
@@ -338,11 +338,11 @@ How to avoid: write each new rule directly under `## Verification` without a sub
 
 **Failure 7: Over-multiplying decision records in small trees**
 
-Claude authored four separate ADRs (binary packaging, Rust edition, shared-crate-vs-vendoring, panic-and-logging) plus two separate PDRs (rule-binding, install-tooling) for a pre-commit Rust product with five nodes. The user pushed back: "way overcomplicated … 2. All ADRs can be just one: spx/55-example.domain/15-build.adr.md." The four ADRs collapsed into one `spx/55-example.domain/15-build.adr.md`, the two PDRs were absorbed into the product spec's compliance section, and the tree went from 6 decision records to 1. Index spacing was also wrong — nodes sat at 43, 65, 82, 98, 99 for a product with no commits yet.
+Claude authored four separate ADRs (binary packaging, Rust edition, shared-crate-vs-vendoring, panic-and-logging) plus two separate PDRs (rule-binding, install-tooling) for a pre-commit Rust product with five nodes. The user pushed back: "way overcomplicated … 2. All ADRs can be just one: spx/55-example.domain/15-build.adr.md." The four ADRs collapsed into one `spx/55-example.domain/15-build.adr.md`, the two PDRs were absorbed into the product document's compliance section, and the tree went from 6 decision records to 1. Index spacing was also wrong — nodes sat at 43, 65, 82, 98, 99 for a product with no commits yet.
 
-How to avoid: before authoring a second decision record at the same directory level, ask whether it can be a section inside the first one, or a product-level compliance rule. Closely-related architectural choices (how we package, how we build, how we handle panics, how we log) are one ADR. Product-level guarantees that constrain every node are compliance rules in the product spec, not separate PDRs. Keep indices tight (under 55 in small or pre-commit trees) and let them spread only when nodes actually multiply. The product tree's structure reflects the scope that exists, not the scope that might exist.
+How to avoid: before authoring a second decision record at the same directory level, ask whether it can be a section inside the first one, or a product-level compliance rule. Closely-related architectural choices (how we package, how we build, how we handle panics, how we log) are one ADR. Product-level guarantees that constrain every node are compliance rules in the product document, not separate PDRs. Keep indices tight (under 55 in small or pre-commit trees) and let them spread only when nodes actually multiply. The Product Tree's structure reflects the scope that exists, not the scope that might exist.
 
-Scope: this failure fires only on minting a new record for a guarantee that would otherwise have no home. It does not fire on a universal rule already inside an existing record sharing its subject and rationale — relocating that rule strips it of reasoning the product spec has no section to hold — so confirm a record was actually minted before citing this failure against an existing one.
+Scope: this failure fires only on minting a new record for a guarantee that would otherwise have no home. It does not fire on a universal rule already inside an existing record sharing its subject and rationale — relocating that rule strips it of reasoning the product document has no section to hold — so confirm a record was actually minted before citing this failure against an existing one.
 
 **Failure 8: Authoring pre-decided decomposition structure**
 

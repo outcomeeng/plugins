@@ -156,7 +156,7 @@ Read the `<common_misplacements>` section of `/understand` `references/artifact-
 
 Use the live `/understand` `<decision_to_spec_alignment>` section. For changeset checks, use the exact changed-file set derived through `/scope-changeset`.
 
-For each changed higher-level declaration — product spec, ADR, PDR, or ancestor spec — report a finding when the changed-file set contains neither:
+For each changed higher-level declaration — product document, ADR, PDR, or ancestor spec — report a finding when the changed-file set contains neither:
 
 - the first affected lower spec or specs that receive the new truth, nor
 - a Change, referenced from the changeset or its commit message, carrying the remaining downstream evidence or implementation work.
@@ -183,7 +183,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 6. **Check each file**:
    - If classified: run structural, language, and placement checks; for an output-kind spec, also run ancestor-decision conformance per `<ancestor_decision_conformance>`
    - If unrecognized: report classification failure, then run language check only (language rules apply to all text)
-7. **Check downstream alignment for changesets**: For changed product specs, ADRs, PDRs, and ancestor specs, report missing first affected lower specs or Change grounding.
+7. **Check downstream alignment for changesets**: For changed product documents, ADRs, PDRs, and ancestor specs, report missing first affected lower specs or Change grounding.
 8. **Report**: Emit findings grouped by file path per `<report_format>`.
 9. **Summary**: End with counts.
 

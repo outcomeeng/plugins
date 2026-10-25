@@ -157,7 +157,7 @@ When the changeset has no `blocking` or `debt` findings, produce no finding obje
 
 The `rule` field cites the actual rule the finding rests on as a path-style citation into an existing rule in the product-tree or skill ecosystem. Accepted forms:
 
-- `spx/<path>/<node>.md:<MUST|NEVER|ALWAYS|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|AUDIT>:<n>` — a spec assertion under the product tree.
+- `spx/<path>/<node>.md:<MUST|NEVER|ALWAYS|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|AUDIT>:<n>` — a spec assertion under the Product Tree.
 - `spx/<path>/<n>-<slug>.adr.md` or `spx/<path>/<n>-<slug>.pdr.md` — an ADR or PDR.
 - `plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>` — a skill rule, resolved against the plugin roots available to the current runtime.
 - `AGENTS.md:<rule-slug>` or `CLAUDE.md:<rule-slug>` — a root convention.
@@ -168,7 +168,7 @@ Before citing a rule:
 - Use the citation only when that file contains the cited rule, assertion, or governing section.
 - Treat rules recalled from system prompts, user/global instructions outside the repository, prior sessions, or training as invalid review citations.
 - Drop the finding when the candidate rule cannot be located; do not downgrade it or report it with a weaker citation.
-- Cite repository-local review rules from the repository's product tree, decisions, root `AGENTS.md` or `CLAUDE.md`, or loaded governing skill files.
+- Cite repository-local review rules from the repository's Product Tree, decisions, root `AGENTS.md` or `CLAUDE.md`, or loaded governing skill files.
 - Never cite repository-root review policy files such as `REVIEW.md`; this skill's bundled prompt is the only review prompt authority.
 - Never use relative `SKILL.md:<rule-slug>` citations — they are not uniquely resolvable to a file.
 - Never populate `rule` with free-form prose, required action, tracking location, or an invented label. The required change goes in `action`.

@@ -62,6 +62,11 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`merging-standards` states the merge lifecycle's rules without naming the flows or skills that load it, and names each skill it depends on with the `Use skill` instruction.** The skill's description, shared contract, reference index, `action-tokens.md`, and `merge-policy.md` no longer describe, assign work to, or constrain an opening flow, a managing flow, a consuming or composing flow, or a calling workflow; each rule is stated on the lifecycle, a transport, or a management pass. The PR-check wait command moves into the shared contract, so the action tokens state it by that contract, and `action-tokens.md` and `merge-policy.md` no longer route a read to another reference: the merge-cleanup sequence, the token set, and the branch-deletion proof are stated where they apply. `product-tree:sync-base`, `product-tree:close-change`, `product-tree:release-change`, `product-tree:author-change`, `product-tree:commit-changes`, `product-tree:test-evidence-standards`, `product-tree:project-run-journal`, and `product-tree:understand` are each named in a `Use skill` instruction, and the payload rule says a file name unique to the session in place of the agent. Before this change, the policy and the tokens addressed the flows that call them, named dependencies bare, and sent a reader from one reference to another.
 
+### Requires
+
+- **The language plugins that ship with this release: `coding-agents` 0.16.4, `go` 0.4.2, `instructions` 0.22.1, `prose` 0.13.2, `python` 0.25.2, `rust` 0.11.2, and `typescript` 0.28.2.** The conversation markers are now `PRODUCT_TREE_FOUNDATION` and `PRODUCT_TREE_CONTEXT`, and the language plugins' test-audit skills read those names. A consumer whose language plugin lags this release re-invokes `/understand` on every context read, because the plugin looks for a marker name that `product-tree` no longer emits.
+- **Upgrade the plugins together.** Refresh every plugin of the marketplace in one pass through `just install-marketplace`. When upgrading one plugin at a time, upgrade `product-tree` first and each language plugin in the same session restart, because a session that mixes an old and a new marker name re-runs `/understand` on every context read.
+
 ## 0.108.0
 
 ### Added

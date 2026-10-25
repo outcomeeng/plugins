@@ -21,7 +21,7 @@ The complete Product Tree foundation loaded eagerly in one skill payload and rec
 **TRUTH FLOWS DOWN.** The Product Tree is the durable map of intent, decisions, assertions, evidence, and implementation obligations, rooted in `spx/`. Each layer depends on the layer above:
 
 ```text
-Root product spec
+Root product document
 -> decision records (PDR, ADR)
 -> specs
 -> evidence (tests, evals, audits, probes)
@@ -50,7 +50,7 @@ Not product content: operational configuration — the `spx/local/` overlays, an
 
 - ALWAYS: higher-level truth remains authoritative while coherent, even when lower layers have not caught up.
 
-A coherent product spec, PDR, ADR, or ancestor spec stays authoritative when lower layers have not caught up. Evaluate declaration validity separately from implementation completeness. Current code shape is evidence about code, never authority over higher layers; a toolchain's current limit is a fact about the toolchain, never a gate on what a declaration may state.
+A coherent product document, PDR, ADR, or ancestor spec stays authoritative when lower layers have not caught up. Evaluate declaration validity separately from implementation completeness. Current code shape is evidence about code, never authority over higher layers; a toolchain's current limit is a fact about the toolchain, never a gate on what a declaration may state.
 
 </future_product_truth>
 
@@ -124,7 +124,7 @@ Classify by the ordered procedure — product, variant, substrate, surface, inte
 
 - NEVER: give a `.product` an assertion, malleability, state, status claim, outcome record, or child enumeration.
 
-The operator judges a scope a product with three questions: does it need a surface or interface the tree lacks; does it run, ship, and transfer as a whole on its own; does it have its own backlog, checkout, and owner. A valid product spec is its front matter and title; a paragraph, product-local semantics, boundaries, and a Change-retention policy appear only where they change what a descendant does or how it is judged.
+The operator judges a scope a product with three questions: does it need a surface or interface the tree lacks; does it run, ship, and transfer as a whole on its own; does it have its own backlog, checkout, and owner. A valid product document is its front matter and title; a paragraph, product-local semantics, boundaries, and a Change-retention policy appear only where they change what a descendant does or how it is judged.
 
 </product_scope>
 
@@ -176,7 +176,7 @@ The taxonomy is closed: `spx/` admits no artifact outside this table, the canoni
 
 | Artifact            | Purpose                                            | Verified by                                  |
 | ------------------- | -------------------------------------------------- | -------------------------------------------- |
-| Product spec        | Declares scope and product-owned terms             | Review                                       |
+| Product document    | Declares scope and product-owned terms             | Review                                       |
 | ADR                 | Governs how the product is built                   | ADR audit                                    |
 | PDR                 | Governs what users can rely on                     | PDR audit                                    |
 | Output spec         | Declares one output's contract and assertions      | Linked evidence                              |

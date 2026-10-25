@@ -1,6 +1,6 @@
 ---
 name: contextualize
-description: ALWAYS invoke this skill when asking about status, progress, or what exists in the product tree. NEVER work on any part of the product tree without loading context through this skill first.
+description: ALWAYS invoke this skill when asking about status, progress, or what exists in the Product Tree. NEVER work on any part of the Product Tree without loading context through this skill first.
 argument-hint: "<spx-root-or-full-node-path>"
 arguments: target
 allowed-tools: Read, Glob, Grep, Skill
@@ -24,12 +24,12 @@ A `<PRODUCT_TREE_CONTEXT target="...">` marker carrying a structured context man
 - Explicit full-path ADR/PDR citations in loaded specs and decision records must be read before the context marker is emitted; coordination notes never add cited decisions.
 - A context-grounded answer requires the matching `<PRODUCT_TREE_CONTEXT target="...">` marker. Loading this skill or reading a pre-compaction summary supplies no context.
 - Context loading reads the checkout as it stands. It never runs `/sync-base`, fetches, rebases, or otherwise moves the checkout, so the context it reports describes the head it found.
-- Test files are not read here. The node target spec or product-root product spec already exposes inline `[test](tests/...)` links; list those links and the applicable `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
+- Test files are not read here. The node target spec or product-root product document already exposes inline `[test](tests/...)` links; list those links and the applicable `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
 - **Always use canonical full paths** from `spx/` for targets and references. The product-root target is exactly `spx/`; a node target begins with `spx/` and contains only node-directory segments. Never refer to nodes, ADRs, or PDRs by bare name or numeric prefix; sibling numbers repeat under different parents and decision files cannot be found without their parent path.
   - Wrong: `/contextualize 32-parser.capability`
   - Right: `/contextualize spx/{path-to-node}`
 
-**BOOTSTRAP MODE**: Bootstrap is derived from the documented target and tree state, never from an undeclared operation. When `$target` is exactly `spx/`, one product spec exists, and no node directories exist, emit the product-root manifest with `bootstrap=true`. A missing node target always aborts; a node that does not yet exist takes its context from its existing parent (`spx/` for a top-level node or the canonical full parent node path for a nested node).
+**BOOTSTRAP MODE**: Bootstrap is derived from the documented target and tree state, never from an undeclared operation. When `$target` is exactly `spx/`, one product document exists, and no node directories exist, emit the product-root manifest with `bootstrap=true`. A missing node target always aborts; a node that does not yet exist takes its context from its existing parent (`spx/` for a top-level node or the canonical full parent node path for a nested node).
 
 </essential_principles>
 
@@ -57,7 +57,7 @@ Set `product_root_target=true` only for the exact target `spx/`. Every other acc
 
 ```bash
 # Find the product file
-Glob: "spx/*.spec.md"      # the root spec carries kind: product
+Glob: "spx/*.spec.md"      # the root product document carries kind: product
 Glob: "spx/*.product.md"   # the prior form a 3.x-authored tree still carries
 
 # Verify a node target exists; product-root mode already addresses spx/
@@ -68,7 +68,7 @@ If the product file is missing, ABORT: "No product file found in spx/. Create on
 
 If a node target path doesn't exist, ABORT: "Target path not found: $target. Check the path, or target its existing parent while the node does not yet exist."
 
-For the exact product-root target `spx/`, list top-level node directories after locating the product spec. Set `bootstrap=true` when none exist and `bootstrap=false` otherwise. For every node target, set `bootstrap=false`.
+For the exact product-root target `spx/`, list top-level node directories after locating the product document. Set `bootstrap=true` when none exist and `bootstrap=false` otherwise. For every node target, set `bootstrap=false`.
 
 For a node target, extract the path segments from product root to target. Each segment is a directory to walk. For the product-root target, the segment list is empty.
 
@@ -79,7 +79,7 @@ For a node target, extract the path segments from product root to target. Each s
 **Step 1: Load product-level context**
 
 ```bash
-# Read product spec
+# Read product document
 Read: spx/{product-name}.spec.md   # or the prior form spx/{product-name}.product.md
 
 # Read runtime product guide if present
@@ -199,7 +199,7 @@ Glob: "$target/ISSUES.md"
 
 **Do not read test file bodies.** Record the test links visible in the target spec and whether co-located test files exist. Context loading does not infer implementation state from test imports. When the next workflow needs test details, route to `/test`, `/audit-tests`, or `/apply`.
 
-For the product-root target, the product spec and product-level decisions and coordination notes were already read in Step 1. Enumerate top-level child nodes with `Glob: "spx/*-*.*/"`, list test links from the product spec, check `Glob: "spx/tests/*"` without reading test bodies, and skip node-spec and node-decision lookup. Report the target as `spx/ (product root)` and render the hierarchy as `{product-name} ← TARGET`.
+For the product-root target, the product document and product-level decisions and coordination notes were already read in Step 1. Enumerate top-level child nodes with `Glob: "spx/*-*.*/"`, list test links from the product document, check `Glob: "spx/tests/*"` without reading test bodies, and skip node-spec and node-decision lookup. Report the target as `spx/ (product root)` and render the hierarchy as `{product-name} ← TARGET`.
 
 </step>
 
@@ -233,7 +233,7 @@ Target: $target ({kind}|product root)
 Bootstrap: {true|false}
 
 Documents loaded:
-  Product spec: {product-file}
+  Product document: {product-file}
   Ancestor specs: {count} read
   Lower-index sibling specs: {count} read
   ADRs: {count} found, {count} read
@@ -282,7 +282,7 @@ When a required document is missing, ABORT immediately with:
 
 | Missing       | Remediation                                                                                |
 | ------------- | ------------------------------------------------------------------------------------------ |
-| Product file  | "Create with `/bootstrap` — every tree needs a product spec"                               |
+| Product file  | "Create with `/bootstrap` — every tree needs a product document"                           |
 | Ancestor spec | "Node directory exists but spec file is missing. Create `{slug}.spec.md`"                  |
 | Target spec   | "Target directory exists but spec file is missing. Create `{slug}.spec.md` with `/author`" |
 
@@ -345,13 +345,13 @@ The emitted `<PRODUCT_TREE_CONTEXT target="...">` marker is sound when:
 - [ ] A live `<PRODUCT_TREE_FOUNDATION>` marker precedes it in the conversation
 - [ ] Its target is exact `spx/` or a canonical full `spx/...` node path, accepted before any filesystem lookup
 - [ ] At every level it names, the ADR and PDR read counts equal their glob counts
-- [ ] It lists the product spec, every ancestor spec, and every lower-index sibling spec as read, and no higher-index sibling spec as read
+- [ ] It lists the product document, every ancestor spec, and every lower-index sibling spec as read, and no higher-index sibling spec as read
 - [ ] Every full-path ADR/PDR cited by a loaded spec or decision appears with its citing file, and no cited decision comes from a coordination note
 - [ ] Every guide file and coordination note present at the product root, on the path, and at the target is listed
 - [ ] Test links and co-located test files are listed, implementation state reads `unknown` unless a prior workflow established it, and no test body was read
 - [ ] Local overlays are listed, and when `spx/local/merging.md` exists the lifecycle continuation fields carry its routing
 - [ ] Every node, ADR, PDR, test, and coordination-note reference is a full path from `spx/`
-- [ ] Bootstrap is `true` only for exact `spx/` with a product spec and no nodes, and `false` for every node target
+- [ ] Bootstrap is `true` only for exact `spx/` with a product document and no nodes, and `false` for every node target
 - [ ] The checkout's head is the same before and after context loading
 - [ ] An ABORT emits no marker and names the missing path with its remediation
 

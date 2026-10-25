@@ -361,7 +361,7 @@ export const test = withPlaywright(baseTest);
 
 <fixtures>
 
-Fixtures are inert files. Use them for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response payload, a document the parser must handle, a sample TypeScript source file for a linter, or a product tree copied into a temp directory.
+Fixtures are inert files. Use them for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response payload, a document the parser must handle, a sample TypeScript source file for a linter, or a Product Tree copied into a temp directory.
 
 Executed tests may read fixtures from disk, copy them into temp projects, or pass their paths to the code or program under test. Executed tests must never import fixture modules, require fixture files, or consume fixture exports. A fixture file can have a `.ts` extension when the test is verifying linters, parsers, pre-commit hooks, or scanners; it remains input data, not a test dependency.
 
@@ -400,7 +400,7 @@ import { createAuditResult } from "@testing/harnesses/factories";
 import { createHugoHarness } from "@testing/harnesses/hugo";
 ```
 
-Reusable setup, context management, generated domains, and inert fixtures live under `testing/`. Product tree `tests/` directories contain typed assertion files only.
+Reusable setup, context management, generated domains, and inert fixtures live under `testing/`. Product Tree `tests/` directories contain typed assertion files only.
 
 </test_infrastructure>
 

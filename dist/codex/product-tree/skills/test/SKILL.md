@@ -9,7 +9,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, request_user_input
 ---
 
 <objective>
-Product tree assertion tests and decision Testing rules that are canonically assertion-typed, source-contract-coupled, language-routed, and reproducible where executable evidence exists.
+Product Tree assertion tests and decision Testing rules that are canonically assertion-typed, source-contract-coupled, language-routed, and reproducible where executable evidence exists.
 </objective>
 
 <prerequisites>

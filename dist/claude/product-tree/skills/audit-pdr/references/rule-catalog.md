@@ -32,7 +32,7 @@ Severity in the tables below labels the defect on touched text. A finding whose 
 | `invalid-tag`                | blocking | A routed rule is verifiable and specific, carries exactly one tag valid for its subsection, and an `### Audit` slug repeats nowhere in the PDR. | `audit_workflow` Step 5                                         |
 | `assertion-type-mismatch`    | blocking | A `### Testing` rule's declared assertion type is compatible with the claim's quantifier and evidence shape.                                    | `audit_workflow` Step 5; `product-tree:test-evidence-standards` |
 | `temporal-voice`             | blocking | Every section states product truth atemporally.                                                                                                 | `audit_workflow` Step 6                                         |
-| `consistency-violation`      | blocking | The PDR contradicts neither the product spec nor an ancestor PDR.                                                                               | `audit_workflow` Step 7                                         |
+| `consistency-violation`      | blocking | The PDR contradicts neither the product document nor an ancestor PDR.                                                                           | `audit_workflow` Step 7                                         |
 
 </form_rules>
 

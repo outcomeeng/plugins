@@ -103,7 +103,7 @@ If this work belongs to a product-tree node:
 2. abort if required context is missing
 3. implement only after the context is loaded
 
-If the work is outside the product tree, proceed with the provided requirements and repository context.
+If the work is outside the Product Tree, proceed with the provided requirements and repository context.
 </context_loading>
 
 <reference_guides>

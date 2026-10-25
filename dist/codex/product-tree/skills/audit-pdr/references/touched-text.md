@@ -28,7 +28,7 @@ Invalidated text is:
 - a rule a changed line newly violates elsewhere in the PDR, such as a tag left under a subsection the edit moved its rule away from;
 - generated output whose source changed.
 
-A touched sentence that only cites an already-defective passage leaves the finding standing, against the passage. A finding that the PDR contradicts the product spec or an ancestor PDR lies on touched text when the changed PDR text is one side of the contradiction.
+A touched sentence that only cites an already-defective passage leaves the finding standing, against the passage. A finding that the PDR contradicts the product document or an ancestor PDR lies on touched text when the changed PDR text is one side of the contradiction.
 
 </touched_text>
 

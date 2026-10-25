@@ -2,7 +2,7 @@
 
 Events that no single plugin owns: an agent harness gained or dropped, a plugin added, removed, or renamed, a floor that moves across plugins.
 
-This file ships with the spec-tree plugin, which carries the methodology every other plugin operationalizes.
+This file ships with the `product-tree` plugin, which carries the methodology every other plugin operationalizes.
 
 One other changelog line runs on its own clock: what changed in a **plugin** is in that plugin's own `CHANGELOG.md`.
 

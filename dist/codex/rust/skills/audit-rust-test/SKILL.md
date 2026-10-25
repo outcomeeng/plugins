@@ -279,7 +279,7 @@ What happened: Claude encoded one repository's no-Level-3 test policy in the reu
 
 Why it failed: Product-local execution policy was promoted into a reusable language standard.
 
-How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejection only when a governing product spec or decision disables Level 3; a repo-local overlay can route to that declaration, but does not create it.
+How to avoid: Keep Level 3 in the generic Rust standard. Apply `.l3.rs` rejection only when a governing spec or decision disables Level 3; a repo-local overlay can route to that declaration, but does not create it.
 </failure_modes>
 
 <success_criteria>

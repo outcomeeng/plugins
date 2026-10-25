@@ -136,7 +136,7 @@ Treat generated runtime output and implementation names as lower-layer evidence,
 # ✅ Matches user speech
 name: author # Users say "author a spec"
 name: author-typescript-test # Users say "author a TypeScript test"
-name: bootstrap # Users say "bootstrap the product tree"
+name: bootstrap # Users say "bootstrap the Product Tree"
 
 # ❌ Nobody says these
 name: author-product-tree-artifacts # Too verbose

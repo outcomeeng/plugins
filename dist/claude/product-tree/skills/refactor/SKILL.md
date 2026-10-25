@@ -1,6 +1,6 @@
 ---
 name: refactor
-description: ALWAYS invoke this skill when moving nodes, re-scoping content, or extracting shared providers. NEVER restructure the product tree without this skill.
+description: ALWAYS invoke this skill when moving nodes, re-scoping content, or extracting shared providers. NEVER restructure the Product Tree without this skill.
 allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git status:*), Bash(git mv:*), Bash(git rm -r:*), Skill
 ---
 
@@ -252,7 +252,7 @@ How to avoid: Always use `git mv` for files tracked by git. This preserves renam
 
 Claude moved assertions between nodes and rewrote the source node's opening to explain what happened: "After extracting the validation concerns into the sibling node, this outcome focuses on data transformation." This narrates a refactoring history — it's temporal. The atemporal version: "This outcome transforms raw input into normalized records."
 
-How to avoid: When rewriting specs after structural changes, treat the rewrite as if the spec was always this way. The product tree is a durable map — it states product truth, not a changelog. Apply the read-aloud test: if the sentence would sound strange to someone who never saw the old structure, it's temporal.
+How to avoid: When rewriting specs after structural changes, treat the rewrite as if the spec was always this way. The Product Tree is a durable map — it states product truth, not a changelog. Apply the read-aloud test: if the sentence would sound strange to someone who never saw the old structure, it's temporal.
 
 **Failure 7: Blanket-re-pointed cited assertions to a generalized parent**
 
