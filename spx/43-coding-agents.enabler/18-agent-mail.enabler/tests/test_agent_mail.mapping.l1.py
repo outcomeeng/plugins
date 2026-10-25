@@ -152,7 +152,7 @@ def test_agent_mail_operation_mappings() -> None:
         result = module.execute(request, runner)
 
         assert runner.calls == [
-            (module.PUBLIC_GIT_COMMON_DIR_COMMAND, None),
+            (module.common_dir_command(arguments.get(module.REPOSITORY_FIELD)), None),
             (argv, None),
         ]
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
