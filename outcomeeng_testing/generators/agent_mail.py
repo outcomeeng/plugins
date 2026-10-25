@@ -267,12 +267,9 @@ def relative_repository_texts() -> st.SearchStrategy[str]:
     separator, the empty string among them. NUL is outside the domain because
     a NUL-bearing text argument is rejected by its own rule, and surrogates
     because they cannot cross a process boundary."""
-    return st.text(
-        alphabet=st.characters(
-            blacklist_categories=("Cs",), blacklist_characters="\x00"
-        ),
-        max_size=40,
-    ).filter(lambda text: not text.startswith("/"))
+    return st.text(alphabet=_text_characters(), max_size=40).filter(
+        lambda text: not text.startswith("/")
+    )
 
 
 def non_path_repository_values() -> st.SearchStrategy[object]:
