@@ -15,7 +15,7 @@ allowed-tools: Read, Grep, Glob, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resol
 
 <objective>
 
-A verdict on whether one exact committed changeset forms one coherent review unit — `APPROVED`, `REJECTED`, or `UNKNOWN`, with each finding naming the violated rule, its location, and the evidence — or a `BLOCKED` diagnostic naming the unresolved scope input.
+A verdict on whether one exact committed changeset forms one coherent review unit, judged against the evidence rules in `${CLAUDE_SKILL_DIR}/references/rule-catalog.md` — `APPROVED`, `REJECTED`, or `UNKNOWN`, with each finding naming the violated rule, its location, and the evidence — or a `BLOCKED` diagnostic naming the unresolved scope input. Findings fall in four categories: semantic clustering, generated-source attribution, evidence completeness, and review-unit sequencing.
 
 </objective>
 
