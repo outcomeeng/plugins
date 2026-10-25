@@ -33,7 +33,7 @@ Codex provides no native argument that starts a session with a configured subage
 
 Every mode's last two tokens are this position's own registered agent-mail name and the principal: the agent-mail name of the position this Orchestrator reports to. Every message request to `coding-agents:message-agents` carries this position's own name as `sender` and the principal as `recipient`.
 
-Every mail operation this skill instructs, each `list` through `coding-agents:operate-agent-mail` and each request to `coding-agents:message-agents`, carries as its `repository` the `mail.channel` value of this position's override file, which `coding-agents:direct-positions` `<configuration>` locates, when that file sets one, and carries no `repository` otherwise.
+Use skill `coding-agents:direct-positions` for the location of this position's override file in its `<configuration>`. Every mail operation this skill instructs, each `list` through `coding-agents:operate-agent-mail` and each request to `coding-agents:message-agents`, carries as its `repository` the `mail.channel` value of that file when it sets one, and carries no `repository` otherwise.
 
 The invocation is the mutation authorization, and it covers exactly the targets it names: the worktree root **Start** names, created or opened grouped with the herdr workspace Start names, with the root pane herdr returns for it, and the pane **Check** names. Every `"mutationAuthorized": true` below applies to one of those targets; no other workspace or pane is mutated.
 
