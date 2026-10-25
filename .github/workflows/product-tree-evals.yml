@@ -357,9 +357,12 @@ jobs:
           claude --version
 
       - name: Sync Python environment
+        # Locked, wheels only: no third-party setup script runs on the runner.
+        # The project itself is not installed here; the eval CLI runs as a
+        # module from the checkout, and each suite's own `uv run` installs it.
         run: |
           set -euo pipefail
-          uv sync
+          uv sync --locked --no-build --no-install-project
 
       - name: Collect changed paths
         run: |
@@ -378,7 +381,7 @@ jobs:
           CI_MODE: ${{ github.event_name == 'pull_request' && 'pr' || 'full' }}
         run: |
           set -euo pipefail
-          uv run outcomeeng-evals ci "$EVALS_ROOT" \
+          uv run --locked --no-sync --no-build python -m outcomeeng_evals ci "$EVALS_ROOT" \
             --mode "$CI_MODE" \
             --changed-paths-file changed-paths.txt \
             --default-plugin-dir "$PLUGIN_DIR" \
