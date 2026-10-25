@@ -12,25 +12,28 @@ from pathlib import Path
 
 import pytest
 
-from outcomeeng.validation.hook_safety import iter_tree_violations, main
+from outcomeeng.validation.hook_safety import (
+    BLOCKING_EVENTS,
+    DEFAULT_ROOTS,
+    iter_tree_violations,
+    main,
+)
+from outcomeeng_testing.harnesses.hook_safety import (
+    HOOK_PLUGIN_NAME,
+    write_plugin_hooks,
+)
 
 # A command-shape-clean command, so a fixture's only possible violation is its event.
+claude_root, codex_root = DEFAULT_ROOTS
+event = min(BLOCKING_EVENTS)
+
 SAFE_COMMAND = "echo '{}'"
 
 
-def write_hooks(
-    root: Path, runtime: str, plugin: str, config: dict[str, object]
-) -> Path:
-    path = root / runtime / plugin / "hooks" / "hooks.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(config), encoding="utf-8")
-    return path
-
-
-def blocking_config() -> dict[str, object]:
+def blocking_config(event: str) -> dict[str, object]:
     return {
         "hooks": {
-            "PreToolUse": [
+            event: [
                 {
                     "matcher": "",
                     "hooks": [
@@ -58,7 +61,7 @@ def safe_config() -> dict[str, object]:
 
 
 def test_blocking_hook_is_reported_with_location(tmp_path: Path) -> None:
-    write_hooks(tmp_path, "dist/claude", "product-tree", blocking_config())
+    write_plugin_hooks(tmp_path, claude_root, blocking_config(event))
 
     violations = iter_tree_violations(tmp_path)
 
@@ -66,14 +69,14 @@ def test_blocking_hook_is_reported_with_location(tmp_path: Path) -> None:
         "a blocking-capable hook must produce a non-empty report (non-zero exit)"
     )
     report = "\n".join(violations)
-    assert "product-tree" in report  # plugin
+    assert HOOK_PLUGIN_NAME in report  # plugin
     assert "hooks.json" in report  # file
-    assert "PreToolUse" in report  # event
+    assert event in report  # event
 
 
 def test_clean_tree_reports_nothing(tmp_path: Path) -> None:
-    write_hooks(tmp_path, "dist/claude", "product-tree", safe_config())
-    write_hooks(tmp_path, "dist/codex", "product-tree", safe_config())
+    write_plugin_hooks(tmp_path, claude_root, safe_config())
+    write_plugin_hooks(tmp_path, codex_root, safe_config())
 
     assert iter_tree_violations(tmp_path) == []
 
@@ -96,7 +99,7 @@ def guarded_substituted_config() -> dict[str, object]:
 def test_guarded_substituted_path_hook_reports_nothing(tmp_path: Path) -> None:
     # Scenario witness for the assertion's "uses a guarded command" clause: a guarded
     # substituted-path invocation in an otherwise clean tree produces no violations.
-    write_hooks(tmp_path, "dist/claude", "product-tree", guarded_substituted_config())
+    write_plugin_hooks(tmp_path, claude_root, guarded_substituted_config())
 
     assert iter_tree_violations(tmp_path) == []
 
@@ -106,19 +109,19 @@ def test_main_reports_location_and_exits_non_zero(
 ) -> None:
     # The first scenario assertion couples both halves: reports plugin/file/event AND
     # exits non-zero. Verify them together at the CLI entry point.
-    root = tmp_path / "dist/claude"
-    write_hooks(tmp_path, "dist/claude", "product-tree", blocking_config())
+    root = tmp_path / claude_root
+    write_plugin_hooks(tmp_path, claude_root, blocking_config(event))
 
     code = main([str(root)])
     err = capsys.readouterr().err
 
     assert code == 1
-    assert "product-tree" in err and "hooks.json" in err and "PreToolUse" in err
+    assert HOOK_PLUGIN_NAME in err and "hooks.json" in err and event in err
 
 
 def test_main_exits_zero_for_a_clean_tree(tmp_path: Path) -> None:
     # The assertion frames "the dist trees" (plural): exercise both at the CLI entry.
-    write_hooks(tmp_path, "dist/claude", "product-tree", safe_config())
-    write_hooks(tmp_path, "dist/codex", "product-tree", safe_config())
+    write_plugin_hooks(tmp_path, claude_root, safe_config())
+    write_plugin_hooks(tmp_path, codex_root, safe_config())
 
-    assert main([str(tmp_path / "dist/claude"), str(tmp_path / "dist/codex")]) == 0
+    assert main([str(tmp_path / claude_root), str(tmp_path / codex_root)]) == 0

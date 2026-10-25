@@ -17,8 +17,13 @@ import pytest
 
 from outcomeeng.validation.hook_safety import (
     BLOCKING_EVENTS,
+    DEFAULT_ROOTS,
     hook_config_violations,
     iter_tree_violations,
+)
+from outcomeeng_testing.harnesses.hook_safety import (
+    version_pinned_cache_hooks_path,
+    write_plugin_hooks,
 )
 
 
@@ -205,14 +210,10 @@ def test_blocking_event_violation_reported_once_per_event() -> None:
 
 def test_version_pinned_cache_path_is_flagged() -> None:
     # NEVER: pass a hook command naming a version-pinned plugin cache path.
-    pinned = "python3 /Users/dev/.claude/plugins/cache/outcomeeng/product-tree/0.57.33/scripts/x.py || echo '{}'"
-    assert hook_config_violations(config("SessionStart", command=pinned))
-
-
-def _write_config(root: Path, runtime: str, cfg: Mapping[str, object]) -> None:
-    path = root / runtime / "product-tree" / "hooks" / "hooks.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(cfg), encoding="utf-8")
+    violating = json.loads(
+        version_pinned_cache_hooks_path().read_text(encoding="utf-8")
+    )
+    assert hook_config_violations(violating)
 
 
 def _rule_messages(violations: list[str]) -> list[str]:
@@ -223,11 +224,12 @@ def _rule_messages(violations: list[str]) -> list[str]:
 def test_rules_apply_identically_across_both_runtime_trees(tmp_path: Path) -> None:
     # ALWAYS: each runtime tree, scanned in isolation, yields the same rule violation —
     # so a bug that skipped one subtree would make the two lists differ.
-    blocking = config("PreToolUse")
+    blocking = config(min(BLOCKING_EVENTS))
     claude_root = tmp_path / "claude"
     codex_root = tmp_path / "codex"
-    _write_config(claude_root, "dist/claude", blocking)
-    _write_config(codex_root, "dist/codex", blocking)
+    claude_runtime, codex_runtime = DEFAULT_ROOTS
+    write_plugin_hooks(claude_root, claude_runtime, blocking)
+    write_plugin_hooks(codex_root, codex_runtime, blocking)
 
     claude_rules = _rule_messages(iter_tree_violations(claude_root))
     codex_rules = _rule_messages(iter_tree_violations(codex_root))
