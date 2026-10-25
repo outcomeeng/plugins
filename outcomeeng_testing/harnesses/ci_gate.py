@@ -37,17 +37,21 @@ PROJECT_METADATA: Final = REPO_ROOT / "pyproject.toml"
 
 @dataclass(frozen=True)
 class CiToolchainObservation:
-    """Raw job environment, action, command, and step-environment observations.
+    """Raw workflow, job, action, command, and step-environment observations.
 
     Each step environment is keyed by the step's normalized `run:` body, empty
     for a step that runs no command, so a step's name never decides which
-    command its environment reaches.
+    command its environment reaches. `run_environments` holds the names a step
+    declares itself; `effective_run_environments` holds every name the step
+    receives, from the workflow, the job, and the step together.
     """
 
+    workflow_environment: frozenset[str]
     job_environment: frozenset[str]
     action_references: tuple[str, ...]
     run_commands: tuple[str, ...]
     run_environments: tuple[tuple[str, frozenset[str]], ...]
+    effective_run_environments: tuple[tuple[str, frozenset[str]], ...]
 
 
 @dataclass(frozen=True)
@@ -180,21 +184,28 @@ def observe_ci_toolchain(
 ) -> CiToolchainObservation:
     """Return the workflow surfaces that provision and authenticate gate tools."""
     workflow_data = workflow(workflow_path)
-    env = cast("dict[str, str]", gate_job(workflow_data).get("env", {}))
+    workflow_env = frozenset(cast("dict[str, str]", workflow_data.get("env", {})))
+    env = frozenset(cast("dict[str, str]", gate_job(workflow_data).get("env", {})))
     steps = gate_steps(workflow_data)
     runs = tuple(cast("str", step["run"]) for step in steps if "run" in step)
+    run_environments = tuple(
+        (
+            cast("str", step.get("run", "")).strip(),
+            frozenset(cast("dict[str, str]", step.get("env", {}))),
+        )
+        for step in steps
+    )
     return CiToolchainObservation(
-        job_environment=frozenset(env),
+        workflow_environment=workflow_env,
+        job_environment=env,
         action_references=tuple(
             cast("str", step["uses"]) for step in steps if "uses" in step
         ),
         run_commands=runs,
-        run_environments=tuple(
-            (
-                cast("str", step.get("run", "")).strip(),
-                frozenset(cast("dict[str, str]", step.get("env", {}))),
-            )
-            for step in steps
+        run_environments=run_environments,
+        effective_run_environments=tuple(
+            (run_command, workflow_env | env | step_env)
+            for run_command, step_env in run_environments
         ),
     )
 

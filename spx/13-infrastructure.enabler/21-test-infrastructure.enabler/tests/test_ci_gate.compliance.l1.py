@@ -25,6 +25,7 @@ from outcomeeng.validation.ci_gate import (
     GATE_PUSH_EVENT,
     GATE_RECIPE_COMMAND,
     GATE_RECIPE_COMMANDS,
+    GITHUB_TOKEN_ENVIRONMENT,
     MAXIMUM_JOB_TIMEOUT_MINUTES,
     PINNED_VERSION_ENVIRONMENT_SUFFIX,
     SOFT_PASS_SHELL_SNIPPETS,
@@ -88,7 +89,11 @@ def test_l3_tests_before_the_full_gate_are_detected() -> None:
 
 
 def _run_credentials(workflow_path: Path | None = None) -> set[tuple[str, str]]:
-    """Return every (run command, credential) pair the gate job passes."""
+    """Return every (run command, credential) pair a gate step receives.
+
+    A step receives the workflow's, the job's, and its own environment, so a
+    credential declared at any of the three reaches the step.
+    """
     credentials = {
         requirement.environment_name for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
     }
@@ -96,7 +101,7 @@ def _run_credentials(workflow_path: Path | None = None) -> set[tuple[str, str]]:
         (run_command, name)
         for run_command, environment in observe_ci_toolchain(
             workflow_path
-        ).run_environments
+        ).effective_run_environments
         for name in environment
         if name in credentials
     }
@@ -109,20 +114,19 @@ def test_only_the_l3_step_receives_the_l3_credentials() -> None:
     }
 
 
-def test_credentials_on_the_full_gate_step_are_detected() -> None:
-    assert _run_credentials(gate_fixture_path("credentials_on_full_gate_step.yml")) != {
-        (requirement.run_command, requirement.environment_name)
-        for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
-    }
-
-
-def test_credentials_on_a_full_gate_step_named_for_the_l3_tests_are_detected() -> None:
-    assert _run_credentials(
-        gate_fixture_path("credentials_under_swapped_step_names.yml")
-    ) != {
-        (requirement.run_command, requirement.environment_name)
-        for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
-    }
+@pytest.mark.parametrize(
+    "fixture",
+    (
+        "credentials_on_full_gate_step.yml",
+        "credentials_in_job_environment.yml",
+        "credentials_in_workflow_environment.yml",
+        "credentials_under_swapped_step_names.yml",
+    ),
+)
+def test_a_credential_reaching_the_full_gate_step_is_detected(fixture: str) -> None:
+    assert (GATE_RECIPE_COMMAND, GITHUB_TOKEN_ENVIRONMENT) in _run_credentials(
+        gate_fixture_path(fixture)
+    )
 
 
 def _inlined_gate_steps(workflow_path: Path | None = None) -> set[str]:
@@ -169,10 +173,10 @@ def test_gate_workflow_provisions_the_declared_toolchain() -> None:
                 requirement.verification_fragment in command
                 for command in observation.run_commands
             )
-    for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS:
+    for step_requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS:
         assert any(
-            run_command == requirement.run_command
-            and requirement.environment_name in environment
+            run_command == step_requirement.run_command
+            and step_requirement.environment_name in environment
             for run_command, environment in observation.run_environments
         )
 
