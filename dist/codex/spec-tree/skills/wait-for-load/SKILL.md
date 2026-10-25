@@ -2,7 +2,7 @@
 name: wait-for-load
 description: >-
   ALWAYS invoke this skill before starting a resource-intensive local command or when host load is high. NEVER calculate or schedule a host-load wait without this skill.
-allowed-tools: Bash(spx orchestration lock:*), Bash(python3 "${SKILL_DIR}/scripts/wait_for_load.py")
+allowed-tools: Bash(python3 "${SKILL_DIR}/scripts/wait_for_load.py")
 ---
 
 <objective>
@@ -129,8 +129,8 @@ The lock line has no test; an assertion audit of this skill judges it.
 
 **Waiters released together**
 
-- **What happened:** Waiters from several sessions on one host were released at 03:30Z, and host load reached 98 on 12 cores.
-- **Why it failed:** A waiter observes load and holds no slot, so sessions that see the same dip start their heavy commands together.
+- **What happened:** Claude sessions on one host each started a heavy command behind a waiter at 03:30Z after the same load dip, and host load reached 98 on 12 cores.
+- **Why it failed:** A waiter observes load and holds no slot, so Claude sessions that see the same dip start their heavy commands together.
 - **How to avoid:** Where the lock switch is on, run the command under `spx orchestration lock` so one host-wide slot admits one heavy run at a time.
 
 **Parser stage between the waiter and the command**
