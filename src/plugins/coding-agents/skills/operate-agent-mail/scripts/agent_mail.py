@@ -17,8 +17,8 @@ from typing import Final, Mapping, Protocol, TextIO, cast
 SCHEMA_VERSION = 1
 RECORD_SCHEMA_VERSION = 1
 COMMAND_TIMEOUT_SECONDS = 30
-# A wait lists the requester's inbox at this interval until a record arrives or
-# its timeout passes, and each listing reads at most this many records.
+# A wait lists the requester's records at this interval until a record arrives
+# or its timeout passes, and each listing reads at most this many records.
 WAIT_POLL_INTERVAL_SECONDS = 2
 WAIT_LISTING_LIMIT = 1_000
 WAIT_TIMEOUT_MAXIMUM_SECONDS = 3_600
@@ -32,6 +32,7 @@ REGISTER_COMMAND = "register"
 MAIL_COMMAND = "mail"
 SEND_COMMAND = "send"
 ACK_COMMAND = "ack"
+READ_COMMAND = "read"
 ROBOT_COMMAND = "robot"
 INBOX_COMMAND = "inbox"
 REV_PARSE_COMMAND = "rev-parse"
@@ -49,6 +50,7 @@ BODY_OPTION = "--body"
 ACK_REQUIRED_OPTION = "--ack-required"
 AGENT_OPTION = "--agent"
 UNREAD_OPTION = "--unread"
+ALL_OPTION = "--all"
 INCLUDE_BODIES_OPTION = "--include-bodies"
 LIMIT_OPTION = "--limit"
 JSON_OPTION = "--json"
@@ -101,6 +103,21 @@ STORE_ACK_REQUIRED_STATUSES = frozenset(
     {STORE_ACK_STATUS_PENDING, STORE_ACK_STATUS_ACKED}
 )
 STORE_INBOX_FIELD = "inbox"
+# The store's thread alphabet: an alphanumeric first character, then letters,
+# digits, `.`, `_`, or `-`, at most this many characters in all. A correlation
+# outside it, or beginning with the escape prefix, is written as the prefix
+# followed by its UTF-8 bytes, each byte outside letters, digits, `.`, and `-`
+# spelled as `_` and two lowercase hex digits.
+THREAD_ID_MAXIMUM_LENGTH = 128
+THREAD_ID_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"[A-Za-z0-9][A-Za-z0-9._-]{0,%d}" % (THREAD_ID_MAXIMUM_LENGTH - 1)
+)
+CORRELATION_ESCAPE_PREFIX = "xc-"
+CORRELATION_UNESCAPED_BYTES = frozenset(
+    b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-"
+)
+CORRELATION_ESCAPE_MARK = "_"
+NUL_CHARACTER = "\x00"
 # The store reads `--to` as a list joined by this separator, so a recipient
 # that carries it names several agents and no longer maps back to one record.
 STORE_RECIPIENT_SEPARATOR = ","
@@ -130,7 +147,7 @@ MESSAGE_ID_FIELD = "messageId"
 AFTER_ID_FIELD = "afterId"
 TIMEOUT_SECONDS_FIELD = "timeoutSeconds"
 OUTCOME_FIELD = "outcome"
-UNREAD_ONLY_FIELD = "unreadOnly"
+ALL_RECORDS_FIELD = "allRecords"
 INCLUDE_BODIES_FIELD = "includeBodies"
 LIMIT_FIELD = "limit"
 
@@ -192,8 +209,9 @@ RECORD_TEXT_FIELDS = (
 class Operation(StrEnum):
     REGISTER = "register"
     SEND = "send"
-    INBOX = "inbox"
-    RECEIPT = "receipt"
+    LIST = "list"
+    READ = "read"
+    ACKNOWLEDGE = "acknowledge"
     WAIT = "wait"
 
 
@@ -279,15 +297,18 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
         )
     ),
     Operation.SEND: OperationContract((RequestShape(frozenset({RECORD_FIELD})),)),
-    Operation.INBOX: OperationContract(
+    Operation.LIST: OperationContract(
         (
             RequestShape(
                 frozenset({AGENT_FIELD}),
-                frozenset({UNREAD_ONLY_FIELD, INCLUDE_BODIES_FIELD, LIMIT_FIELD}),
+                frozenset({ALL_RECORDS_FIELD, INCLUDE_BODIES_FIELD, LIMIT_FIELD}),
             ),
         )
     ),
-    Operation.RECEIPT: OperationContract(
+    Operation.READ: OperationContract(
+        (RequestShape(frozenset({AGENT_FIELD, MESSAGE_ID_FIELD})),)
+    ),
+    Operation.ACKNOWLEDGE: OperationContract(
         (RequestShape(frozenset({AGENT_FIELD, MESSAGE_ID_FIELD})),)
     ),
     Operation.WAIT: OperationContract(
@@ -297,13 +318,15 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
 PUBLIC_AM_COMMAND_PREFIXES: Final[Mapping[Operation, tuple[str, ...]]] = {
     Operation.REGISTER: (AM_COMMAND, AGENTS_COMMAND, REGISTER_COMMAND),
     Operation.SEND: (AM_COMMAND, MAIL_COMMAND, SEND_COMMAND),
-    Operation.INBOX: (AM_COMMAND, ROBOT_COMMAND, INBOX_COMMAND),
-    Operation.RECEIPT: (AM_COMMAND, MAIL_COMMAND, ACK_COMMAND),
+    Operation.LIST: (AM_COMMAND, ROBOT_COMMAND, INBOX_COMMAND),
+    Operation.READ: (AM_COMMAND, MAIL_COMMAND, READ_COMMAND),
+    Operation.ACKNOWLEDGE: (AM_COMMAND, MAIL_COMMAND, ACK_COMMAND),
     Operation.WAIT: (AM_COMMAND, ROBOT_COMMAND, INBOX_COMMAND),
 }
-# Operations whose public command emits JSON on `--json`; receipt prints text.
+# Operations whose public command emits JSON on `--json`; read and acknowledge
+# print text.
 JSON_OPERATIONS = frozenset(
-    {Operation.REGISTER, Operation.SEND, Operation.INBOX, Operation.WAIT}
+    {Operation.REGISTER, Operation.SEND, Operation.LIST, Operation.WAIT}
 )
 PUBLIC_AM_ARGUMENT_OPTIONS: Final[Mapping[str, str]] = {
     AGENT_FIELD: AGENT_OPTION,
@@ -311,7 +334,7 @@ PUBLIC_AM_ARGUMENT_OPTIONS: Final[Mapping[str, str]] = {
     MODEL_FIELD: MODEL_OPTION,
     TASK_FIELD: TASK_OPTION,
     DISPLAY_NAME_FIELD: DISPLAY_NAME_OPTION,
-    UNREAD_ONLY_FIELD: UNREAD_OPTION,
+    ALL_RECORDS_FIELD: ALL_OPTION,
     INCLUDE_BODIES_FIELD: INCLUDE_BODIES_OPTION,
     LIMIT_FIELD: LIMIT_OPTION,
 }
@@ -335,7 +358,7 @@ INTEGER_BOUNDS: Final[Mapping[str, tuple[int, int]]] = {
     AFTER_ID_FIELD: (0, 1_000_000_000),
     TIMEOUT_SECONDS_FIELD: (1, WAIT_TIMEOUT_MAXIMUM_SECONDS),
 }
-BOOLEAN_ARGUMENT_FIELDS = frozenset({UNREAD_ONLY_FIELD, INCLUDE_BODIES_FIELD})
+BOOLEAN_ARGUMENT_FIELDS = frozenset({ALL_RECORDS_FIELD, INCLUDE_BODIES_FIELD})
 TEXT_ARGUMENT_FIELDS = frozenset(
     {AGENT_FIELD, PROGRAM_FIELD, MODEL_FIELD, TASK_FIELD, DISPLAY_NAME_FIELD}
 )
@@ -349,12 +372,15 @@ ARGUMENT_NAMES: Final[Mapping[str, str]] = {
     "message_id": MESSAGE_ID_FIELD,
     "after_id": AFTER_ID_FIELD,
     "timeout_seconds": TIMEOUT_SECONDS_FIELD,
-    "unread_only": UNREAD_ONLY_FIELD,
+    "all_records": ALL_RECORDS_FIELD,
     "include_bodies": INCLUDE_BODIES_FIELD,
     "limit": LIMIT_FIELD,
 }
+# The argument-vector form of a raw `am` command, and its shell-string form: the
+# executable followed by one of the store's command groups inside a string.
 RAW_MAIL_COMMAND_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"\bAM_COMMAND\b|[\[(]['\"]am['\"]"),
+    re.compile(r"(?<![\w./-])am\s+(?:mail|agents|robot)\b"),
 )
 GIT_PROJECT_KEY_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"[\[(]['\"]git['\"]\s*,"),
@@ -655,11 +681,83 @@ def reduce_terminal(current: object | None, incoming: object) -> dict[str, objec
         )
     if existing == terminal:
         return existing
+    if existing[KIND_FIELD] == terminal[KIND_FIELD]:
+        differing = sorted(
+            field_name
+            for field_name in existing
+            if existing[field_name] != terminal[field_name]
+        )
+        raise AgentMailError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Conflicting handback for {terminal[CORRELATION_FIELD]}: the "
+            f"{terminal[KIND_FIELD]} handbacks differ in {', '.join(differing)}.",
+        )
     raise AgentMailError(
         ExecutionStatus.INVALID_SCHEMA,
         f"Conflicting terminal handbacks for {terminal[CORRELATION_FIELD]}: "
         f"{existing[KIND_FIELD]} then {terminal[KIND_FIELD]}.",
     )
+
+
+def encode_correlation(correlation: str) -> str:
+    """Return the thread id the store receives for a correlation.
+
+    A correlation inside the store's thread alphabet that does not begin with the
+    escape prefix is written unchanged; every other correlation is written as the
+    prefix and its escaped UTF-8 bytes. The written form lies inside the alphabet
+    or exceeds its length, and an over-long form is refused before any command.
+    """
+    if THREAD_ID_PATTERN.fullmatch(correlation) and not correlation.startswith(
+        CORRELATION_ESCAPE_PREFIX
+    ):
+        return correlation
+    spelled = "".join(
+        chr(byte)
+        if byte in CORRELATION_UNESCAPED_BYTES
+        else f"{CORRELATION_ESCAPE_MARK}{byte:02x}"
+        for byte in correlation.encode("utf-8", errors="surrogatepass")
+    )
+    thread_id = f"{CORRELATION_ESCAPE_PREFIX}{spelled}"
+    if len(thread_id) > THREAD_ID_MAXIMUM_LENGTH:
+        raise AgentMailError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"The correlation's thread id exceeds the store's "
+            f"{THREAD_ID_MAXIMUM_LENGTH}-character limit.",
+        )
+    return thread_id
+
+
+def decode_correlation(thread_id: str) -> str:
+    """Return the correlation a thread id encodes, or the thread id verbatim.
+
+    Only a form `encode_correlation` writes decodes; any other thread id, the
+    escape prefix included, reads back unchanged.
+    """
+    if not thread_id.startswith(CORRELATION_ESCAPE_PREFIX):
+        return thread_id
+    spelled = thread_id[len(CORRELATION_ESCAPE_PREFIX) :]
+    raw = bytearray()
+    index = 0
+    while index < len(spelled):
+        character = spelled[index]
+        if character == CORRELATION_ESCAPE_MARK:
+            digits = spelled[index + 1 : index + 3]
+            if len(digits) != 2 or not re.fullmatch(r"[0-9a-f]{2}", digits):
+                return thread_id
+            raw.append(int(digits, 16))
+            index += 3
+        elif ord(character) < 128 and ord(character) in CORRELATION_UNESCAPED_BYTES:
+            raw.append(ord(character))
+            index += 1
+        else:
+            return thread_id
+    try:
+        correlation = raw.decode("utf-8", errors="surrogatepass")
+        if encode_correlation(correlation) != thread_id:
+            return thread_id
+    except (UnicodeDecodeError, AgentMailError):
+        return thread_id
+    return correlation
 
 
 def store_fields_for(record: object) -> dict[str, object]:
@@ -669,7 +767,9 @@ def store_fields_for(record: object) -> dict[str, object]:
     return {
         STORE_FROM_FIELD: validated[SENDER_FIELD],
         STORE_TO_FIELD: validated[RECIPIENT_FIELD],
-        STORE_THREAD_ID_FIELD: validated[CORRELATION_FIELD],
+        STORE_THREAD_ID_FIELD: encode_correlation(
+            cast(str, validated[CORRELATION_FIELD])
+        ),
         STORE_SUBJECT_FIELD: (
             f"{KIND_PREFIX_OPEN}{kind.value}{KIND_PREFIX_CLOSE}"
             f"{validated[RECORD_SUBJECT_FIELD]}"
@@ -706,7 +806,9 @@ def record_from_inbox_item(item: object, *, recipient: str) -> dict[str, object]
     value = _object(item, STORE_INBOX_FIELD)
     location = f"{STORE_INBOX_FIELD}[]"
     thread = value.get(STORE_THREAD_FIELD)
-    correlation = thread if isinstance(thread, str) and thread else None
+    correlation = (
+        decode_correlation(thread) if isinstance(thread, str) and thread else None
+    )
     subject_text = _string(
         value.get(STORE_SUBJECT_FIELD), f"{location}.{STORE_SUBJECT_FIELD}"
     )
@@ -791,6 +893,11 @@ def resolve_project_key(runner: CommandRunner) -> str:
             f"{GIT_COMMAND} exceeded its bound: "
             f"{' '.join(PUBLIC_GIT_COMMON_DIR_COMMAND)}",
         ) from error
+    except Exception as error:
+        raise AgentMailError(
+            ExecutionStatus.REPOSITORY_UNRESOLVED,
+            f"{GIT_COMMAND} failed to run: {error}",
+        ) from error
     if result.returncode != 0:
         detail = result.stderr.strip() or "no command detail"
         raise AgentMailError(
@@ -805,6 +912,23 @@ def _describe_shapes(contract: OperationContract) -> str:
         f"required {sorted(shape.required_fields)}, optional {sorted(shape.optional_fields)}"
         for shape in contract.request_shapes
     )
+
+
+def _reject_nul(value: object, location: str) -> None:
+    """Refuse a NUL byte in any text of the request, key or value."""
+    if isinstance(value, str):
+        if NUL_CHARACTER in value:
+            raise AgentMailError(
+                ExecutionStatus.INVALID_SCHEMA,
+                f"Text at {location} carries a NUL byte.",
+            )
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            _reject_nul(key, location)
+            _reject_nul(item, f"{location}.{key}")
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            _reject_nul(item, f"{location}[{index}]")
 
 
 def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
@@ -828,6 +952,7 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
         )
     operation = _operation(value.get(OPERATION_FIELD))
     arguments = _object(value.get(ARGUMENTS_FIELD), f"request.{ARGUMENTS_FIELD}")
+    _reject_nul(arguments, f"request.{ARGUMENTS_FIELD}")
     contract = OPERATION_CONTRACTS[operation]
     unexpected_arguments = sorted(set(arguments) - contract.allowed_fields)
     if unexpected_arguments:
@@ -869,6 +994,7 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
                 with_id=False,
             )
         }
+        store_fields_for(arguments[RECORD_FIELD])
     return operation, arguments
 
 
@@ -946,15 +1072,20 @@ def command_for(request: object, project_key: str) -> tuple[str, ...]:
         if operation is Operation.WAIT:
             command.extend(
                 (
+                    ALL_OPTION,
                     PUBLIC_AM_ARGUMENT_OPTIONS[INCLUDE_BODIES_FIELD],
                     PUBLIC_AM_ARGUMENT_OPTIONS[LIMIT_FIELD],
                     str(WAIT_LISTING_LIMIT),
                 )
             )
-        elif operation is Operation.INBOX:
-            for field_name in (UNREAD_ONLY_FIELD, INCLUDE_BODIES_FIELD):
-                if arguments.get(field_name) is True:
-                    command.append(PUBLIC_AM_ARGUMENT_OPTIONS[field_name])
+        elif operation is Operation.LIST:
+            command.append(
+                ALL_OPTION
+                if arguments.get(ALL_RECORDS_FIELD) is True
+                else UNREAD_OPTION
+            )
+            if arguments.get(INCLUDE_BODIES_FIELD) is True:
+                command.append(INCLUDE_BODIES_OPTION)
             if LIMIT_FIELD in arguments:
                 command.extend(
                     (
@@ -1086,7 +1217,7 @@ def _data_for(
                 with_id=True,
             )
         }
-    if operation is Operation.INBOX:
+    if operation is Operation.LIST:
         recipient = str(arguments[AGENT_FIELD])
         items = _array(response.get(STORE_INBOX_FIELD), STORE_INBOX_FIELD)
         return {
@@ -1159,7 +1290,7 @@ def _execute_wait(
             return _wait_result(WaitOutcome.TIMEOUT, project_key, response, {})
         try:
             result = runner.run(command, timeout_seconds=remaining)
-        except FileNotFoundError:
+        except OSError:
             return _failure_result(
                 operation,
                 ExecutionStatus.STORE_UNAVAILABLE,
@@ -1172,6 +1303,12 @@ def _execute_wait(
                 operation,
                 ExecutionStatus.COMMAND_FAILED,
                 f"{AM_COMMAND} exceeded its bound: {' '.join(command)}",
+            )
+        except Exception as error:
+            return _failure_result(
+                operation,
+                ExecutionStatus.COMMAND_FAILED,
+                f"{AM_COMMAND} failed to run: {error}",
             )
         if result.returncode != 0:
             detail = (
@@ -1243,7 +1380,7 @@ def execute(
     command = command_for(request, project_key)
     try:
         result = runner.run(command)
-    except FileNotFoundError:
+    except OSError:
         return _failure_result(
             operation.value,
             ExecutionStatus.STORE_UNAVAILABLE,
@@ -1254,6 +1391,12 @@ def execute(
             operation.value,
             ExecutionStatus.COMMAND_FAILED,
             f"{AM_COMMAND} exceeded its bound: {' '.join(command)}",
+        )
+    except Exception as error:
+        return _failure_result(
+            operation.value,
+            ExecutionStatus.COMMAND_FAILED,
+            f"{AM_COMMAND} failed to run: {error}",
         )
     if result.returncode != 0:
         detail = result.stderr.strip() or result.stdout.strip() or "no command detail"
@@ -1335,7 +1478,7 @@ def main(
     try:
         request = _json_input(stdin, "request")
     except AgentMailError as error:
-        json.dump({STATUS_FIELD: error.status, DETAIL_FIELD: str(error)}, stdout)
+        json.dump(_failure_result("unknown", error.status, str(error)), stdout)
         stdout.write("\n")
         return 2
     result = execute(request, runner, clock)

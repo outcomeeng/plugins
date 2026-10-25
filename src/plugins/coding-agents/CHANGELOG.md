@@ -6,6 +6,18 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.17.0
+
+### Breaking
+
+- **`/operate-agent-mail` replaces its `inbox` and `receipt` operations with `list`, `read`, and `acknowledge`.** A request naming `inbox` or `receipt` is rejected as `operation-unavailable`, and a `list` request carrying `unreadOnly` is rejected as `invalid-schema`. `list` takes `agent` and the optional `allRecords`, `includeBodies`, and `limit`: it returns the records the recipient has not yet judged, and every record, read or unread, when `allRecords` is true. `read` takes `agent` and `messageId` and records, visibly to the recipient alone, that the recipient judged the message. `acknowledge` takes the same arguments and is a read the sender can observe. Neither stands in for the other, and neither establishes agreement, ownership, authorization, or acceptance of a proposal. A caller that marked a record through `receipt` now names `read` for a private judgment and `acknowledge` only when the sender is meant to see it, and a caller that passed `unreadOnly` drops it, because the unjudged form is the default.
+
+### Changed
+
+- **Only `read` and `acknowledge` change a record's read state.** A `list` and a `wait` leave every record as they found it, so looking at records no longer judges them. A `wait` lists the requester's records in their complete form, so read and unread records alike reach its selection.
+- **Every correlation round-trips through the store.** A correlation the store's thread alphabet rejects is written as an `xc-` escape and read back as the original correlation, and a thread id the adapter did not write reads back verbatim. A send whose written thread id would exceed the store's 128-character limit, and any request text carrying a NUL byte, is rejected as `invalid-schema` before any command runs.
+- **Every result carries the versioned shape.** Stdin that does not parse now answers with `schemaVersion`, `operation` as `unknown`, `status: "invalid-schema"`, and `detail`, still exiting 2, and a failure of the store command of any class answers `store-unavailable` or `command-failed`. A second terminal handback of the same kind with different content is rejected as a conflicting handback whose detail names the differing fields.
+
 ## 0.16.5
 
 ### Changed
