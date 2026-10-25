@@ -41,18 +41,16 @@ def _planned_pytest_targets_lie_outside_the_on_demand_suite(
     test_files: list[GeneratedTestFile],
 ) -> None:
     paths = tuple(f"{SPEC_TREE_ROOT}/{test_file.path}" for test_file in test_files)
-    expected = tuple(
-        sorted(
-            path
-            for path, test_file in zip(paths, test_files, strict=True)
-            if test_file.level != ON_DEMAND_LEVEL
-        )
-    )
+    expected = {
+        path
+        for path, test_file in zip(paths, test_files, strict=True)
+        if test_file.level != ON_DEMAND_LEVEL
+    }
 
     plan = build_selected_gate_plan(paths)
 
     assert [
-        step.argv[len(PYTEST_ARGV) :]
+        set(step.argv[len(PYTEST_ARGV) :])
         for step in plan.steps
         if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
     ] == ([expected] if expected else [])

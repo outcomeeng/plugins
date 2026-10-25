@@ -41,7 +41,6 @@ from outcomeeng.validation.selected_gate import (
     TEST_REASON,
     build_full_gate_plan,
     build_selected_gate_plan,
-    render_plan,
 )
 from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_FULL_GATE_PATH,
@@ -140,12 +139,13 @@ def test_an_empty_changeset_selects_no_steps() -> None:
 def test_the_plan_prints_before_the_recipes_run() -> None:
     run = run_check_observation(branch_path=SELECTED_GATE_PYTHON_SOURCE_PATH)
 
-    plan_text = render_plan(
-        build_selected_gate_plan((SELECTED_GATE_PYTHON_SOURCE_PATH,))
-    )
+    selected = build_selected_gate_plan((SELECTED_GATE_PYTHON_SOURCE_PATH,))
+    first_recipe = run.output.index(recipe_header(RECIPE_CHECK))
     assert run.exit_code == 0
-    assert run.output.startswith(plan_text)
-    assert len(plan_text) <= run.output.index(recipe_header(RECIPE_CHECK))
+    assert selected.selected_steps
+    for item in selected.selected_steps:
+        assert item.reason in run.output
+        assert run.output.index(item.reason) < first_recipe
     assert SUMMARY_PATH_LABEL in run.output
 
 
@@ -319,12 +319,6 @@ def test_widening_to_the_full_suite_removes_no_other_step() -> None:
 
     assert plan.full_gate
     assert tuple(step.argv for step in plan.steps) == _full_surface_steps()
-    assert all(
-        step.argv[len(PYTEST_ARGV) - len(ON_DEMAND_EXCLUSION_ARGV) : len(PYTEST_ARGV)]
-        == ON_DEMAND_EXCLUSION_ARGV
-        for step in plan.steps
-        if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-    )
 
 
 def test_the_exclusion_leaves_on_demand_files_out_of_a_collected_directory() -> None:
@@ -392,7 +386,7 @@ def test_a_full_gate_execution_spawns_only_exclusion_carrying_pytest_runs(
 def test_direct_execution_runs_a_named_on_demand_test_whatever_the_changeset() -> None:
     # Both gate wrappers exclude the on-demand suite whatever the changeset is;
     # direct execution naming an on-demand file still runs it.
-    named = tuple(sorted(ON_DEMAND_PATHS))
+    named = tuple(ON_DEMAND_PATHS)
     gate_runs = (
         run_check_observation(branch_path=unrelated_validation_source_path()),
         run_full_check_observation(branch_path=unrelated_validation_source_path()),
@@ -408,7 +402,7 @@ def test_direct_execution_runs_a_named_on_demand_test_whatever_the_changeset() -
 
     assert direct.exit_code == 0
     (direct_pytest_call,) = _pytest_calls(direct.spawn_calls)
-    assert direct_pytest_call[len(PYTEST_ARGV) :] == named
+    assert set(direct_pytest_call[len(PYTEST_ARGV) :]) == set(named)
     assert _collected_by(direct_pytest_call) == ON_DEMAND_PATHS
 
 

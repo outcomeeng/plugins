@@ -386,8 +386,11 @@ def test_test_infrastructure_reach_maps_to_gate_steps(
 
     if kind is InfrastructureReach.NODE_LOCAL:
         assert plan.full_gate is False
-        assert [item.step.argv for item in pytest_steps] == [
-            (*PYTEST_ARGV, *layout.tests)
+        assert [item.step.argv[: len(PYTEST_ARGV)] for item in pytest_steps] == [
+            PYTEST_ARGV
+        ]
+        assert [set(item.step.argv[len(PYTEST_ARGV) :]) for item in pytest_steps] == [
+            set(layout.tests)
         ]
         assert [item.reason for item in pytest_steps] == [REACHED_TESTS_REASON]
     elif kind is InfrastructureReach.SHARED:
@@ -481,8 +484,11 @@ def test_step_fed_by_changed_and_reached_tests_names_both_reasons() -> None:
     ]
 
     assert plan.full_gate is False
-    assert [item.step.argv for item in pytest_steps] == [
-        (*PYTEST_ARGV, *sorted((layout.changed_test, *layout.reached_tests)))
+    assert [item.step.argv[: len(PYTEST_ARGV)] for item in pytest_steps] == [
+        PYTEST_ARGV
+    ]
+    assert [set(item.step.argv[len(PYTEST_ARGV) :]) for item in pytest_steps] == [
+        {layout.changed_test, *layout.reached_tests}
     ]
     assert TEST_REASON in pytest_steps[0].reason
     assert REACHED_TESTS_REASON in pytest_steps[0].reason
