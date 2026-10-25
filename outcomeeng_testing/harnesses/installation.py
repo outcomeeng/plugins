@@ -3591,36 +3591,7 @@ class _MigrationRunner:
     def __call__(self, command: InstallationCommand) -> CommandResult:
         self.calls.append(command)
         records = self.records[command.agent]
-        if command.operation is Operation.PLUGIN_INSTALL:
-            if not any(
-                (record.plugin, record.scope) == (command.plugin, command.scope)
-                for record in records
-            ):
-                records.append(
-                    ListedRecord(
-                        str(command.plugin),
-                        command.scope,
-                        True,
-                        self.installed_version,
-                    )
-                )
-        elif command.operation is Operation.PLUGIN_ENABLE:
-            for index, record in enumerate(records):
-                if (record.plugin, record.scope) == (command.plugin, command.scope):
-                    records[index] = replace(record, enabled=True)
-        elif command.operation is Operation.PLUGIN_DISABLE:
-            for index, record in enumerate(records):
-                if (record.plugin, record.scope) == (command.plugin, command.scope):
-                    records[index] = replace(record, enabled=False)
-        elif (
-            command.operation is Operation.PLUGIN_UNINSTALL
-            and not self.retains_uninstalled
-        ):
-            records[:] = [
-                record
-                for record in records
-                if (record.plugin, record.scope) != (command.plugin, command.scope)
-            ]
+        self._apply_native_effect(records, command)
         if command.operation in {Operation.PLUGIN_INSPECT, Operation.PLUGIN_LIST}:
             return CommandResult(
                 argv=command.argv,
@@ -3631,6 +3602,46 @@ class _MigrationRunner:
                 stderr="",
             )
         return self.fallback(command)
+
+    def _apply_native_effect(
+        self, records: list[ListedRecord], command: InstallationCommand
+    ) -> None:
+        """Apply the record change a native install, enable, disable, or uninstall makes."""
+        if command.operation is Operation.PLUGIN_INSTALL:
+            if not any(_addresses(record, command) for record in records):
+                records.append(
+                    ListedRecord(
+                        str(command.plugin),
+                        command.scope,
+                        True,
+                        self.installed_version,
+                    )
+                )
+        elif command.operation is Operation.PLUGIN_ENABLE:
+            _set_activation(records, command, enabled=True)
+        elif command.operation is Operation.PLUGIN_DISABLE:
+            _set_activation(records, command, enabled=False)
+        elif (
+            command.operation is Operation.PLUGIN_UNINSTALL
+            and not self.retains_uninstalled
+        ):
+            records[:] = [
+                record for record in records if not _addresses(record, command)
+            ]
+
+
+def _addresses(record: ListedRecord, command: InstallationCommand) -> bool:
+    """Whether `command` names the plugin and scope `record` sits at."""
+    return (record.plugin, record.scope) == (command.plugin, command.scope)
+
+
+def _set_activation(
+    records: list[ListedRecord], command: InstallationCommand, *, enabled: bool
+) -> None:
+    """Set the activation of every record `command` addresses."""
+    for index, record in enumerate(records):
+        if _addresses(record, command):
+            records[index] = replace(record, enabled=enabled)
 
 
 def _records_listing_payload(

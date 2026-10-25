@@ -427,7 +427,8 @@ def test_a_declared_selection_carries_the_retired_keys_boolean_to_the_successor_
         before = observation.selection_before
         after = observation.selection_after
 
-        assert before is not None and after is not None, case
+        assert before is not None, case
+        assert after is not None, case
         assert retired_key not in after, case
         if retired_key in before:
             renamed += 1

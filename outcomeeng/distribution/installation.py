@@ -1991,6 +1991,37 @@ def compare_install_listings(
     )
 
 
+def _listing_defect_warning(
+    record: VersionlessInstallRecord | PathlessInstallRecord,
+) -> InstallationWarning:
+    """The warning for a listing entry a rewrite cannot address.
+
+    An entry in a refresh scope that reports no version or no project path
+    is a listing defect and blocks the run; one outside the refresh scopes
+    is reported and left unchanged.
+    """
+    in_scope = record.scope in CLAUDE_REFRESH_SCOPES
+    if isinstance(record, VersionlessInstallRecord):
+        template = (
+            VERSIONLESS_LISTING_ENTRY_WARNING
+            if in_scope
+            else OUT_OF_SCOPE_RECORD_WARNING
+        )
+        message = template.format(
+            plugin=record.plugin,
+            scope=record.scope,
+            project_path=record.project_path,
+        )
+    else:
+        template = (
+            PATHLESS_LISTING_ENTRY_WARNING
+            if in_scope
+            else PATHLESS_OUT_OF_SCOPE_RECORD_WARNING
+        )
+        message = template.format(plugin=record.plugin, scope=record.scope)
+    return InstallationWarning(agent=Target.CLAUDE, message=message, blocking=in_scope)
+
+
 def claude_refresh_records(
     records: Sequence[ListedInstallRecord],
     catalog: Sequence[str],
@@ -2019,55 +2050,17 @@ def claude_refresh_records(
     rewrites: list[ClaudeInstallRecord] = []
     warnings: list[InstallationWarning] = []
     for record in records:
-        if isinstance(record, VersionlessInstallRecord):
-            if record.scope in CLAUDE_REFRESH_SCOPES:
-                warnings.append(
-                    InstallationWarning(
-                        agent=Target.CLAUDE,
-                        message=VERSIONLESS_LISTING_ENTRY_WARNING.format(
-                            plugin=record.plugin,
-                            scope=record.scope,
-                            project_path=record.project_path,
-                        ),
-                        blocking=True,
-                    )
-                )
-                continue
-            warnings.append(
-                InstallationWarning(
-                    agent=Target.CLAUDE,
-                    message=OUT_OF_SCOPE_RECORD_WARNING.format(
-                        plugin=record.plugin,
-                        scope=record.scope,
-                        project_path=record.project_path,
-                    ),
-                )
-            )
+        if not isinstance(record, ClaudeInstallRecord):
+            warnings.append(_listing_defect_warning(record))
             continue
-        if isinstance(record, PathlessInstallRecord):
-            if record.scope in CLAUDE_REFRESH_SCOPES:
-                warnings.append(
-                    InstallationWarning(
-                        agent=Target.CLAUDE,
-                        message=PATHLESS_LISTING_ENTRY_WARNING.format(
-                            plugin=record.plugin, scope=record.scope
-                        ),
-                        blocking=True,
-                    )
-                )
-                continue
-            message = PATHLESS_OUT_OF_SCOPE_RECORD_WARNING.format(
-                plugin=record.plugin, scope=record.scope
-            )
-        elif record.scope not in CLAUDE_REFRESH_SCOPES:
+        at_checkout = record.project_path == resolved_checkout
+        if record.scope not in CLAUDE_REFRESH_SCOPES:
             message = OUT_OF_SCOPE_RECORD_WARNING.format(
                 plugin=record.plugin,
                 scope=record.scope,
                 project_path=record.project_path,
             )
-        elif (
-            record.plugin == RETIRED_PLUGIN and record.project_path == resolved_checkout
-        ):
+        elif record.plugin == RETIRED_PLUGIN and at_checkout:
             continue
         elif record.plugin not in catalog:
             message = UNCATALOGED_RECORD_WARNING.format(
@@ -2075,7 +2068,7 @@ def claude_refresh_records(
                 scope=record.scope,
                 project_path=record.project_path,
             )
-        elif record.project_path == resolved_checkout:
+        elif at_checkout:
             native.append(record)
             continue
         else:
@@ -2121,12 +2114,8 @@ def installed_plugin_names(
     return frozenset(codex_listing_activations(payload, marketplace))
 
 
-def codex_listing_activations(payload: str, marketplace: str) -> dict[str, bool | None]:
-    """Each marketplace entry of the Codex plugin listing with the activation it reports.
-
-    The value is the entry's `enabled` field where the listing carries one as
-    a boolean, and None where the entry declares none.
-    """
+def _codex_listing_entries(payload: str) -> list[object]:
+    """The entries of the Codex plugin listing, parsed and shape-checked."""
     agent = Target.CODEX
     try:
         document = cast(object, json.loads(payload))
@@ -2137,9 +2126,18 @@ def codex_listing_activations(payload: str, marketplace: str) -> dict[str, bool 
     entries = document.get(CODEX_PLUGIN_ENTRIES_FIELD)
     if not isinstance(entries, list):
         raise ValueError(f"{agent.value} plugin listing must contain an array")
+    return entries
 
+
+def codex_listing_activations(payload: str, marketplace: str) -> dict[str, bool | None]:
+    """Each marketplace entry of the Codex plugin listing with the activation it reports.
+
+    The value is the entry's `enabled` field where the listing carries one as
+    a boolean, and None where the entry declares none.
+    """
+    agent = Target.CODEX
     activations: dict[str, bool | None] = {}
-    for index, entry in enumerate(entries):
+    for index, entry in enumerate(_codex_listing_entries(payload)):
         if not isinstance(entry, dict):
             raise ValueError(
                 f"{agent.value} plugin listing entry {index} must be an object"
@@ -2229,6 +2227,7 @@ def retired_plugin_migrations(
     id to the current one: the result names both ids as the two sides of one
     migration.
     """
+    migrations: list[PluginMigration] = []
     if agent is Target.CLAUDE:
         resolved_checkout = checkout.resolve()
         records = sorted(
@@ -2242,24 +2241,25 @@ def retired_plugin_migrations(
             ),
             key=lambda record: record.scope,
         )
-        return tuple(
+        migrations.extend(
             PluginMigration(
                 agent, RETIRED_PLUGIN, PRODUCT_TREE_PLUGIN, record.scope, record.enabled
             )
             for record in records
         )
-    activations = codex_listing_activations(payload, marketplace)
-    if RETIRED_PLUGIN not in activations:
-        return ()
-    return (
-        PluginMigration(
-            agent,
-            RETIRED_PLUGIN,
-            PRODUCT_TREE_PLUGIN,
-            None,
-            activations[RETIRED_PLUGIN],
-        ),
-    )
+    else:
+        activations = codex_listing_activations(payload, marketplace)
+        if RETIRED_PLUGIN in activations:
+            migrations.append(
+                PluginMigration(
+                    agent,
+                    RETIRED_PLUGIN,
+                    PRODUCT_TREE_PLUGIN,
+                    None,
+                    activations[RETIRED_PLUGIN],
+                )
+            )
+    return tuple(migrations)
 
 
 def _first_install_warnings(
