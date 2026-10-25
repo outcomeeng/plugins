@@ -56,6 +56,9 @@ COLLECTION_ARGV: Final = (
     FIXTURE_PYTEST_CONFIG_NAME,
 )
 JUST_DRY_RUN_ARGV: Final = ("just", "--dry-run", "--justfile")
+FULL_GATE_RECIPE_FIXTURES: Final = (
+    REPOSITORY_ROOT / "outcomeeng_testing" / "fixtures" / "full_gate_recipe"
+)
 # `just --dry-run` prints each command line of the recipe to stderr.
 SPAWN_BUDGET: Final = len(PREFLIGHT_STEPS) + len(TEST_STEPS)
 
@@ -195,14 +198,24 @@ def recipe_dispatch_spawns(
     return tuple(spawner.spawn_calls)
 
 
-def justfile_recipe_command(recipe: str, *arguments: str) -> tuple[str, ...]:
-    """Return the command line the repository `justfile` resolves ``recipe`` to.
+def full_gate_recipe_fixture_path(name: str) -> Path:
+    """Return the path to an inert `justfile` fixture for the full-gate recipe."""
 
-    ``arguments`` are the words a caller passes to the recipe.
+    return FULL_GATE_RECIPE_FIXTURES / name
+
+
+def justfile_recipe_command(
+    recipe: str, *arguments: str, justfile: Path | None = None
+) -> tuple[str, ...]:
+    """Return the command line a `justfile` resolves ``recipe`` to.
+
+    ``arguments`` are the words a caller passes to the recipe. ``justfile``
+    defaults to the repository's own; a fixture path reads that payload instead.
     """
 
+    source = REPOSITORY_ROOT / "justfile" if justfile is None else justfile
     completed = subprocess.run(
-        (*JUST_DRY_RUN_ARGV, str(REPOSITORY_ROOT / "justfile"), recipe, *arguments),
+        (*JUST_DRY_RUN_ARGV, str(source), recipe, *arguments),
         cwd=REPOSITORY_ROOT,
         stdin=subprocess.DEVNULL,
         capture_output=True,
