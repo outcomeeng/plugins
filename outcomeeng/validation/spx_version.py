@@ -1,40 +1,35 @@
-"""Enforce that the CI-pinned ``@outcomeeng/spx`` version meets the floor the
-shipped skills depend on.
+"""Enforce that the version the ``spx`` CLI on the path reports meets the floor
+the shipped skills depend on.
 
 The shipped ``spec-tree`` skills (``/diagnose``, the verification wrappers, the
-``SessionStart`` hook) and their co-located tests invoke the ``spx`` CLI and assume the behavior of a specific version. A
-skill or test that assumes a capability absent from the pinned spx ships a
-runtime contract the consumer's installed CLI cannot honor, and surfaces only as
-an opaque test failure against the pinned CLI or as a consumer-side regression.
+``SessionStart`` hook) and their co-located tests invoke the ``spx`` CLI and assume
+the behavior of a specific version. A skill or test that assumes a capability absent
+from the build the gate runs ships a runtime contract the consumer's installed CLI
+cannot honor, and surfaces only as an opaque test failure or a consumer-side
+regression.
 
-``REQUIRED_SPX_VERSION`` is the single source of truth for that floor — the
-lowest published spx version whose capabilities the skills and tests depend on.
-This step reads the version the CI workflow pins (``SPX_VERSION`` in
-``.github/workflows/check.yml``) and fails when the pin falls below the floor, so
-the gap is named in the same ``just check-full`` CI runs before merge
-("skills require spx >= X, CI pins Y") rather than left to a downstream test.
-
-The floor rises only when a skill begins to depend on a newer capability. Because
-the pin can only reach a version published to the registry, a floor set to an
-unpublished version cannot be matched by any installable pin — the floor enforces
-publish-before-depend by construction.
+``REQUIRED_SPX_VERSION`` is the single source of truth for that floor — the lowest
+version a build of spx reports whose capabilities the skills and tests depend on.
+This step runs ``spx --version`` and fails when the reported version falls below the
+floor, so the gap is named in the same ``just check-full`` CI runs before merge
+("skills require spx >= X, the build reports Y") rather than left to a downstream
+test. The floor names no release channel: any build reporting the version meets it.
 
 Usage::
 
     uv run python -m outcomeeng.validation.spx_version
 
 Exit codes:
-    0 - The pinned spx version meets or exceeds the declared floor
-    1 - The pinned version is below the floor, no pin could be read, or the
-        pinned value is not a dotted-numeric version
+    0 - The reported spx version meets or exceeds the declared floor
+    1 - The reported version is below the floor, or the CLI reports no version
 """
 
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from collections.abc import Callable
-from pathlib import Path
 from shutil import which
 from typing import Final
 
@@ -104,11 +99,9 @@ VERIFICATION_RUN_REQUIRED_COMMANDS: Final = (
 )
 REQUIRED_SPX_VERSION: Final = "0.8.0"
 
-_REPO_ROOT: Final = Path(__file__).resolve().parents[2]
-WORKFLOW_PATH: Final = _REPO_ROOT / ".github" / "workflows" / "check.yml"
-
-# The pinned-version line the CI workflow declares (and Renovate advances).
-_PIN_PATTERN: Final[re.Pattern[str]] = re.compile(r'SPX_VERSION:\s*"([^"]+)"')
+SPX_EXECUTABLE: Final = "spx"
+SPX_VERSION_ARGUMENT: Final = "--version"
+_REPORTED_VERSION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\d+(?:\.\d+)+")
 
 
 def parse_version(version: str) -> tuple[int, ...]:
@@ -120,10 +113,26 @@ def parse_version(version: str) -> tuple[int, ...]:
     return tuple(int(part) for part in version.split("."))
 
 
-def read_pinned_version(workflow_text: str) -> str | None:
-    """Return the ``SPX_VERSION`` value the workflow pins, or None when absent."""
-    match = _PIN_PATTERN.search(workflow_text)
-    return match.group(1) if match else None
+def parse_reported_version(output: str) -> str | None:
+    """Return the first dotted-numeric version in ``spx --version`` output."""
+    match = _REPORTED_VERSION_PATTERN.search(output)
+    return match.group(0) if match else None
+
+
+def read_reported_version(executable: str = SPX_EXECUTABLE) -> str | None:
+    """Return the version the ``spx`` CLI on the path reports, or None when it reports none."""
+    try:
+        completed = subprocess.run(
+            [executable, SPX_VERSION_ARGUMENT],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    if completed.returncode != 0:
+        return None
+    return parse_reported_version(completed.stdout)
 
 
 def is_satisfied(pinned: str, floor: str) -> bool:
@@ -152,49 +161,30 @@ def minimum_release_package_command(
     )
 
 
-def main(workflow_path: Path = WORKFLOW_PATH) -> int:
-    """Read the workflow pin and fail when it is below ``REQUIRED_SPX_VERSION``."""
-    if not verification_run_floor_is_satisfied():
+def main(floor: str = REQUIRED_SPX_VERSION, executable: str = SPX_EXECUTABLE) -> int:
+    """Fail when the version the ``spx`` CLI reports is below ``floor``."""
+    if not verification_run_floor_is_satisfied(floor):
         print(
-            "error: shipped implementation audits require @outcomeeng/spx >= "
+            "error: shipped implementation audits require spx >= "
             f"{VERIFICATION_RUN_MINIMUM_SPX_VERSION} for spx verification run, "
-            f"but the repository floor is {REQUIRED_SPX_VERSION}.",
+            f"but the repository floor is {floor}.",
             file=sys.stderr,
         )
         return 1
 
-    if not workflow_path.is_file():
-        print(f"error: CI workflow not found at {workflow_path}", file=sys.stderr)
-        return 1
-
-    pinned = read_pinned_version(workflow_path.read_text(encoding="utf-8"))
-    if pinned is None:
+    reported = read_reported_version(executable)
+    if reported is None:
         print(
-            f"error: no SPX_VERSION pin found in {workflow_path}",
+            f"error: `{executable} {SPX_VERSION_ARGUMENT}` reported no version.",
             file=sys.stderr,
         )
         return 1
 
-    try:
-        satisfied = is_satisfied(pinned, REQUIRED_SPX_VERSION)
-    except ValueError:
-        # A pin that matches the line shape but is not dotted-numeric (e.g. a
-        # prerelease tag) cannot be ordered against the floor — fail closed with
-        # a named cause rather than an uncaught traceback.
+    if not is_satisfied(reported, floor):
         print(
-            f"error: SPX_VERSION pin {pinned!r} in {workflow_path} is not a "
-            "dotted-numeric version and cannot be compared to the floor "
-            f"{REQUIRED_SPX_VERSION}.",
-            file=sys.stderr,
-        )
-        return 1
-
-    if not satisfied:
-        print(
-            "error: shipped skills require @outcomeeng/spx >= "
-            f"{REQUIRED_SPX_VERSION}, but the CI workflow pins {pinned}. "
-            "Publish an spx release at or above the floor and advance "
-            "SPX_VERSION in .github/workflows/check.yml to it.",
+            f"error: shipped skills require spx >= {floor}, but the spx build "
+            f"on the path reports {reported}. Advance the spx commit pin in "
+            "the CI workflow to a commit whose build reports at least the floor.",
             file=sys.stderr,
         )
         return 1
