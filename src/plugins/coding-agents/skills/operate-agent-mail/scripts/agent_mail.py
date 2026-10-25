@@ -462,7 +462,9 @@ class SubprocessRunner:
 def _object(value: object, location: str) -> dict[str, object]:
     if not isinstance(value, dict):
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"Expected an object at {location}."
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Expected an object at {location}; received {type(value).__name__}. "
+            f"Supply a JSON object there.",
         )
     return cast(dict[str, object], value)
 
@@ -470,7 +472,9 @@ def _object(value: object, location: str) -> dict[str, object]:
 def _array(value: object, location: str) -> list[object]:
     if not isinstance(value, list):
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"Expected an array at {location}."
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Expected an array at {location}; received {type(value).__name__}. "
+            f"Supply a JSON array there.",
         )
     return cast(list[object], value)
 
@@ -478,7 +482,9 @@ def _array(value: object, location: str) -> list[object]:
 def _text(value: object, location: str) -> str:
     if not isinstance(value, str) or not value:
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"Expected non-empty text at {location}."
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Expected non-empty text at {location}; received {value!r}. "
+            f"Supply a non-empty string there.",
         )
     return value
 
@@ -486,7 +492,9 @@ def _text(value: object, location: str) -> str:
 def _string(value: object, location: str) -> str:
     if not isinstance(value, str):
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"Expected text at {location}."
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Expected text at {location}; received {type(value).__name__}. "
+            f"Supply a string there.",
         )
     return value
 
@@ -494,7 +502,9 @@ def _string(value: object, location: str) -> str:
 def _boolean(value: object, location: str) -> bool:
     if not isinstance(value, bool):
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"Expected a boolean at {location}."
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Expected a boolean at {location}; received {value!r}. "
+            f"Supply true or false there.",
         )
     return value
 
@@ -502,12 +512,15 @@ def _boolean(value: object, location: str) -> bool:
 def _integer(value: object, location: str, *, minimum: int, maximum: int) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"Expected an integer at {location}."
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Expected an integer at {location}; received {value!r}. "
+            f"Supply a whole number there.",
         )
     if not minimum <= value <= maximum:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Expected an integer between {minimum} and {maximum} at {location}.",
+            f"Expected an integer between {minimum} and {maximum} at {location}; "
+            f"received {value}. Supply a value inside that range.",
         )
     return value
 
@@ -530,12 +543,14 @@ def _record_kind(value: object, location: str, *, sent: bool) -> RecordKind:
         valid = ", ".join(sorted(member.value for member in SENT_KINDS))
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Unsupported record kind at {location}. Valid kinds: {valid}.",
+            f"Unsupported record kind {value!r} at {location}. Valid kinds: {valid}. "
+            f"Use one of them.",
         ) from error
     if sent and kind not in SENT_KINDS:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"A {kind.value} record is derived on read and is never sent.",
+            f"A {kind.value} record at {location} is derived on read and is never "
+            f"sent. Send a record of kind {', '.join(sorted(m.value for m in SENT_KINDS))}.",
         )
     return kind
 
@@ -571,7 +586,8 @@ def validate_record(
     if value.get(RECORD_SCHEMA_FIELD) != RECORD_SCHEMA_VERSION:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Record schema at {location} must be {RECORD_SCHEMA_VERSION}.",
+            f"Record schema at {location} is {value.get(RECORD_SCHEMA_FIELD)!r}; it "
+            f"must be {RECORD_SCHEMA_VERSION}. Set the schema field to that value.",
         )
     validated: dict[str, object] = {
         RECORD_SCHEMA_FIELD: RECORD_SCHEMA_VERSION,
@@ -656,7 +672,8 @@ def terminal_handback(
     if record[KIND_FIELD] not in TERMINAL_KINDS:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"{record[KIND_FIELD]} is not a terminal handback kind.",
+            f"{record[KIND_FIELD]} is not a terminal handback kind. Use one of: "
+            f"{', '.join(sorted(kind.value for kind in TERMINAL_KINDS))}.",
         )
     return record
 
@@ -669,7 +686,8 @@ def reduce_terminal(current: object | None, incoming: object) -> dict[str, objec
     if terminal[KIND_FIELD] not in TERMINAL_KINDS:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"{terminal[KIND_FIELD]} is not a terminal handback kind.",
+            f"{terminal[KIND_FIELD]} is not a terminal handback kind. Use one of: "
+            f"{', '.join(sorted(kind.value for kind in TERMINAL_KINDS))}.",
         )
     if current is None:
         return terminal
@@ -677,7 +695,9 @@ def reduce_terminal(current: object | None, incoming: object) -> dict[str, objec
     if existing[CORRELATION_FIELD] != terminal[CORRELATION_FIELD]:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            "A terminal handback names a different coordination reference.",
+            f"A terminal handback names coordination reference "
+            f"{terminal[CORRELATION_FIELD]!r}, not the current {existing[CORRELATION_FIELD]!r}. "
+            f"Reduce only handbacks that share one reference.",
         )
     if existing == terminal:
         return existing
@@ -721,8 +741,9 @@ def encode_correlation(correlation: str) -> str:
     if len(thread_id) > THREAD_ID_MAXIMUM_LENGTH:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"The correlation's thread id exceeds the store's "
-            f"{THREAD_ID_MAXIMUM_LENGTH}-character limit.",
+            f"The {CORRELATION_FIELD} field encodes to a {len(thread_id)}-character "
+            f"thread id, over the store's {THREAD_ID_MAXIMUM_LENGTH}-character "
+            f"limit. Shorten the {CORRELATION_FIELD} so its written form fits.",
         )
     return thread_id
 
@@ -851,7 +872,8 @@ def project_key_from_common_dir(text: str) -> str:
     if not candidate.startswith(PATH_SEPARATOR):
         raise AgentMailError(
             ExecutionStatus.REPOSITORY_UNRESOLVED,
-            "The repository reports no absolute common Git directory.",
+            f"The repository reports no absolute common Git directory; received "
+            f"{text!r}. Run the operation from a directory inside a Git repository.",
         )
     normalized = os.path.normpath(candidate)
     return PATH_SEPARATOR + normalized.lstrip(PATH_SEPARATOR)
@@ -885,7 +907,7 @@ def resolve_project_key(runner: CommandRunner) -> str:
     except FileNotFoundError as error:
         raise AgentMailError(
             ExecutionStatus.REPOSITORY_UNRESOLVED,
-            f"{GIT_COMMAND} is unavailable on this machine.",
+            f"{GIT_COMMAND} is unavailable on this machine. Install it and put it on PATH.",
         ) from error
     except subprocess.TimeoutExpired as error:
         raise AgentMailError(
@@ -920,7 +942,8 @@ def _reject_nul(value: object, location: str) -> None:
         if NUL_CHARACTER in value:
             raise AgentMailError(
                 ExecutionStatus.INVALID_SCHEMA,
-                f"Text at {location} carries a NUL byte.",
+                f"Text {value!r} at {location} carries a NUL byte, which cannot "
+                f"cross a process boundary. Remove the NUL byte from that text.",
             )
     elif isinstance(value, dict):
         for key, item in value.items():
@@ -948,7 +971,8 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
     if value.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Operation request schema version must be {SCHEMA_VERSION}.",
+            f"Operation request schema version is {value.get(SCHEMA_VERSION_FIELD)!r}; "
+            f"it must be {SCHEMA_VERSION}. Set the schema version field to that value.",
         )
     operation = _operation(value.get(OPERATION_FIELD))
     arguments = _object(value.get(ARGUMENTS_FIELD), f"request.{ARGUMENTS_FIELD}")
@@ -958,7 +982,8 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
     if unexpected_arguments:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"{operation.value} contains unsupported arguments: {', '.join(unexpected_arguments)}.",
+            f"{operation.value} contains unsupported arguments: {', '.join(unexpected_arguments)}. "
+            f"Remove them; allowed arguments: {', '.join(sorted(contract.allowed_fields))}.",
         )
     if not any(
         shape.accepts(frozenset(arguments)) for shape in contract.request_shapes
@@ -1122,7 +1147,8 @@ def validate_operation_result(result: object) -> dict[str, object]:
     if value.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Operation result schema version must be {SCHEMA_VERSION}.",
+            f"Operation result schema version is {value.get(SCHEMA_VERSION_FIELD)!r}; "
+            f"it must be {SCHEMA_VERSION}. Regenerate the result with this script.",
         )
     operation_value = _text(value.get(OPERATION_FIELD), OPERATION_FIELD)
     try:
@@ -1130,13 +1156,15 @@ def validate_operation_result(result: object) -> dict[str, object]:
     except ValueError as error:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Unsupported operation result status: {value.get(STATUS_FIELD)!r}.",
+            f"Unsupported operation result status: {value.get(STATUS_FIELD)!r}. "
+            f"Valid statuses: {', '.join(sorted(m.value for m in ExecutionStatus))}.",
         ) from error
     if status is ExecutionStatus.SUCCEEDED:
         if set(value) != SUCCESS_RESULT_FIELDS:
             raise AgentMailError(
                 ExecutionStatus.INVALID_SCHEMA,
-                "Successful operation result fields do not match the source-owned schema.",
+                f"Successful operation result fields {sorted(value)} do not match the "
+                f"source-owned schema {sorted(SUCCESS_RESULT_FIELDS)}. Emit exactly those fields.",
             )
         return {
             SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
@@ -1156,7 +1184,9 @@ def validate_operation_result(result: object) -> dict[str, object]:
     if not FAILURE_RESULT_REQUIRED_FIELDS <= set(value) or set(value) - allowed:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            "Failed operation result fields do not match the source-owned schema.",
+            f"Failed operation result fields {sorted(value)} do not match the "
+            f"source-owned schema (required {sorted(FAILURE_RESULT_REQUIRED_FIELDS)}, "
+            f"optional {sorted(FAILURE_RESULT_OPTIONAL_FIELDS)}). Emit only those fields.",
         )
     validated: dict[str, object] = {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
