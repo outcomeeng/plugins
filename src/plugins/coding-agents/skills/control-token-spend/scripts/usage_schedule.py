@@ -17,10 +17,15 @@ from pathlib import Path
 from typing import Protocol
 
 from usage_accounting import AccountingField
-from usage_accounting import Config, Json
+from usage_accounting import (
+    DEFAULT_NAMESPACE,
+    NAMESPACE_ENV,
+    Config,
+    Json,
+    checked_namespace,
+)
 from usage_reports import atomic_write, json_write
 
-LABEL_PREFIX = "engineering.outcome.usage-control"
 COMMAND_SECONDS = 30
 COMMAND_BYTES = 64 * 1024
 AISE_VERSION = "aise 1.0.0-rc.4"
@@ -176,6 +181,10 @@ class SubprocessRunner:
         )
 
 
+def job_label(namespace: str, mode: str) -> str:
+    return namespace + "." + mode
+
+
 def checked(runner: Runner, argv: tuple[str, ...]) -> CommandResult:
     result = runner.run(argv)
     if result.returncode:
@@ -187,6 +196,114 @@ def checked(runner: Runner, argv: tuple[str, ...]) -> CommandResult:
 
 def absent(result: CommandResult) -> bool:
     return result.returncode != 0 and "could not find service" in result.stderr.lower()
+
+
+RETAINED_JOBS = "retained_jobs"
+RETENTION_REMOVALS = "retention_removals"
+RETAINED_NAMESPACES = 4
+RETAINED_JOB_LIMIT = RETAINED_NAMESPACES * len(MODES)
+
+
+def conforming_job_label(label: str) -> bool:
+    """Whether ``label`` is ``job_label(namespace, mode)`` for a valid namespace and a mode."""
+    namespace, _, mode = label.rpartition(".")
+    if mode not in MODES:
+        return False
+    try:
+        checked_namespace(namespace, NAMESPACE_ENV)
+    except ValueError:
+        return False
+    return label == job_label(namespace, mode)
+
+
+def record_namespace(path: Path, value: Json) -> str:
+    """Return the namespace the installation record names, requiring a string."""
+    raw = value.get(NAMESPACE_ENV, DEFAULT_NAMESPACE)
+    if not isinstance(raw, str):
+        raise ValueError(
+            f"Invalid {NAMESPACE_ENV} field: {path} must hold a string; "
+            "inspect the file and reinstall through install"
+        )
+    try:
+        return checked_namespace(raw, NAMESPACE_ENV)
+    except ValueError as error:
+        raise ValueError(
+            f"Invalid {NAMESPACE_ENV} field: {path} holds a namespace that breaks "
+            f"the namespace grammar: {error}; inspect the file and reinstall through install"
+        ) from error
+
+
+def retained_control_script(root: Path, argument: str) -> bool:
+    """Whether ``argument`` is ``usage_control.py`` in a versioned asset directory of ``root``."""
+    script = Path(argument)
+    version = script.parent.name
+    return (
+        script.name == "usage_control.py"
+        and script.parent.parent == root / "assets"
+        and len(version) == 64
+        and all(c in "0123456789abcdef" for c in version)
+    )
+
+
+def checked_retained_jobs(path: Path, root: Path, value: Json) -> None:
+    retained = value.get(RETAINED_JOBS, [])
+    if not isinstance(retained, list):
+        raise ValueError(
+            f"Invalid {RETAINED_JOBS} field: {path} must hold a list; "
+            "inspect the file and reinstall through install"
+        )
+    for job in retained:
+        if not isinstance(job, dict):
+            raise ValueError(
+                f"Invalid {RETAINED_JOBS} entry: {path} entries must be objects; "
+                "inspect the file and reinstall through install"
+            )
+        label, raw, settings = (
+            job.get("label"),
+            job.get("path"),
+            job.get(ScheduleField.PLIST),
+        )
+        if not isinstance(label, str) or not label or not isinstance(raw, str):
+            raise ValueError(
+                f"Invalid {RETAINED_JOBS} entry: {path} entries must carry a label "
+                "and a path string; inspect the file and reinstall through install"
+            )
+        if not conforming_job_label(label):
+            raise ValueError(
+                f"Invalid {RETAINED_JOBS} entry label {label!r}: {path} must name a "
+                f"job label of a namespace and one of {', '.join(MODES)}; "
+                "inspect the file and reinstall through install"
+            )
+        location = Path(raw)
+        if (
+            not location.is_absolute()
+            or location.name != label + ".plist"
+            or location.is_symlink()
+            or not isinstance(settings, dict)
+        ):
+            raise ValueError(
+                f"Invalid {RETAINED_JOBS} entry for {label}: {path} must name an "
+                f"absolute non-symlink {label}.plist path and a plist object; "
+                "inspect the file and reinstall through install"
+            )
+        arguments = settings.get(ScheduleField.PROGRAMARGUMENTS)
+        if (
+            settings.get("Label") != label
+            or settings.get("WorkingDirectory") != str(root)
+            or not isinstance(arguments, list)
+            or len(arguments) != 6
+            or not all(isinstance(item, str) for item in arguments)
+            or not Path(arguments[0]).is_absolute()
+            or arguments[1] != "-B"
+            or not retained_control_script(root, arguments[2])
+            or arguments[3] != label.rsplit(".", 1)[-1]
+            or arguments[4:] != ["--root", str(root)]
+        ):
+            raise ValueError(
+                f"Invalid {RETAINED_JOBS} entry for {label}: {path} does not match its installed form and must "
+                f"run usage_control.py in mode {label.rsplit('.', 1)[-1]} with --root {root}; "
+                "inspect the file and reinstall through install"
+            )
 
 
 def manifest(root: Path) -> Json | None:
@@ -214,6 +331,7 @@ def manifest(root: Path) -> Json | None:
             f"Invalid managed installation identity: {path} must carry schema_version 1 "
             f"and root {root}; inspect the file and reinstall through install"
         )
+    namespace = record_namespace(path, value)
     recorded_jobs = value.get(ScheduleField.JOBS)
     if not isinstance(recorded_jobs, list) or len(recorded_jobs) != len(MODES):
         raise ValueError(
@@ -239,12 +357,12 @@ def manifest(root: Path) -> Json | None:
             )
         label = job.get("label")
         if (
-            label not in tuple(LABEL_PREFIX + "." + mode for mode in MODES)
+            label not in tuple(job_label(namespace, mode) for mode in MODES)
             or label in labels
         ):
             raise ValueError(
                 f"Invalid managed job label {label!r}: {path} must use one distinct "
-                f"label per mode under {LABEL_PREFIX}; inspect the file and reinstall through install"
+                f"label per mode under {namespace}; inspect the file and reinstall through install"
             )
         labels.add(label)
         location = Path(str(job.get("path")))
@@ -276,6 +394,7 @@ def manifest(root: Path) -> Json | None:
                 f"Managed job {label} does not match installed assets: {path} must run "
                 f"{assets / 'usage_control.py'} with --root {root}; inspect the file and reinstall through install"
             )
+    checked_retained_jobs(path, root, value)
     return value
 
 
@@ -361,7 +480,7 @@ def install_plan(
     assets = config.root / "assets" / version
     jobs = []
     for mode in MODES:
-        label = LABEL_PREFIX + "." + mode
+        label = job_label(config.namespace, mode)
         schedule = (
             [{"Minute": minute} for minute in (0, 15, 30, 45)]
             if mode == "detect"
@@ -395,6 +514,7 @@ def install_plan(
         )
     return {
         "schema_version": 1,
+        NAMESPACE_ENV: config.namespace,
         ScheduleField.STATUS: "planned",
         "asset_version": version,
         ScheduleField.ASSETS: str(assets),
@@ -421,15 +541,26 @@ def install(
     plan = install_plan(
         config, source, Path(sys.executable).resolve(), agents_directory, platform
     )
-    if plan[ScheduleField.STATUS] == "unsupported" or not activate:
+    if plan[ScheduleField.STATUS] == "unsupported":
         return plan
     installed_path = config.root / INSTALL_NAME
     prior = manifest(config.root)
-    owned_paths = (
-        {job["path"] for job in prior.get(ScheduleField.JOBS, [])}
+    prior_jobs = (
+        [*prior.get(ScheduleField.JOBS, []), *prior.get(RETAINED_JOBS, [])]
         if isinstance(prior, dict)
-        else set()
+        else []
     )
+    owned_paths = {job["path"] for job in prior_jobs}
+    planned_paths = {job["path"] for job in plan[ScheduleField.JOBS]}
+    retained = [job for job in prior_jobs if job["path"] not in planned_paths]
+    plan[RETENTION_REMOVALS] = [
+        job["path"]
+        for job in retained[RETAINED_JOB_LIMIT:]
+        if Path(job["path"]).parent == agents_directory
+    ]
+    if not activate:
+        return plan
+    plan[RETAINED_JOBS] = retained
     for job in plan[ScheduleField.JOBS]:
         path = Path(job["path"])
         if path.is_symlink() or (path.exists() and str(path) not in owned_paths):
@@ -437,9 +568,7 @@ def install(
                 f"Unowned launch agent exists: {path}; inspect it before installation"
             )
         if path.exists() and isinstance(prior, dict):
-            old = next(
-                item for item in prior[ScheduleField.JOBS] if item["path"] == str(path)
-            )
+            old = next(item for item in prior_jobs if item["path"] == str(path))
             if path.read_bytes() != plistlib.dumps(old[ScheduleField.PLIST]):
                 raise ValueError(
                     f"Managed launch agent changed externally: {path}; inspect it before replacement"
@@ -480,9 +609,56 @@ def install(
                 )
         checked(runner, (LAUNCHCTL, LaunchctlOperation.BOOTSTRAP, domain, str(path)))
     plan[ScheduleField.STATUS] = "installed"
-    plan["retention_gaps"] = retain_assets(config.root, assets)
+    plan[RETAINED_JOBS], job_gaps = retain_jobs(
+        plan[RETAINED_JOBS], agents_directory, runner
+    )
+    plan["retention_gaps"] = [*retain_assets(config.root, assets), *job_gaps]
     json_write(installed_path, plan)
     return plan
+
+
+def retain_jobs(
+    retained: list[Json], agents_directory: Path, runner: Runner
+) -> tuple[list[Json], list[str]]:
+    """Keep the newest retained jobs; stop and remove the older ones this install owns.
+
+    A job past the limit whose removal reports a gap stays in the returned list, so
+    the record keeps owning the launch agent it still manages.
+    """
+    gaps: list[str] = []
+    kept = list(retained[:RETAINED_JOB_LIMIT])
+    domain = f"gui/{os.getuid()}"
+    for job in retained[RETAINED_JOB_LIMIT:]:
+        path = Path(job["path"])
+        if path.parent != agents_directory:
+            gaps.append(
+                f"job retention preserved launch agent outside {agents_directory}: {path}"
+            )
+            kept.append(job)
+            continue
+        try:
+            if path.is_symlink() or (
+                path.exists()
+                and path.read_bytes() != plistlib.dumps(job[ScheduleField.PLIST])
+            ):
+                gaps.append(f"job retention preserved changed launch agent: {path}")
+                kept.append(job)
+                continue
+            target = domain + "/" + job["label"]
+            result = runner.run((LAUNCHCTL, LaunchctlOperation.PRINT, target))
+            if result.returncode == 0:
+                checked(runner, (LAUNCHCTL, LaunchctlOperation.BOOTOUT, target))
+            elif not absent(result):
+                gaps.append(
+                    f"job retention could not establish status: {path}: {result.stderr[:2000]}"
+                )
+                kept.append(job)
+                continue
+            path.unlink(missing_ok=True)
+        except (OSError, RuntimeError) as error:
+            gaps.append(f"job retention failed: {path}: {error}")
+            kept.append(job)
+    return kept, gaps
 
 
 def retain_assets(root: Path, active: Path) -> list[str]:
@@ -555,6 +731,7 @@ def jobs(root: Path, operation: str, runner: Runner, platform: str) -> Json:
     value = manifest(root)
     if value is None:
         return {ScheduleField.STATUS: JobStatus.NOT_INSTALLED, "operation": operation}
+    namespace = record_namespace(installation, value)
     domain = f"gui/{os.getuid()}"
     result: Json = {
         "operation": operation,
@@ -563,7 +740,7 @@ def jobs(root: Path, operation: str, runner: Runner, platform: str) -> Json:
     }
     for job in value[ScheduleField.JOBS]:
         label, path = str(job["label"]), Path(job["path"])
-        if label not in tuple(LABEL_PREFIX + "." + mode for mode in MODES):
+        if label not in tuple(job_label(namespace, mode) for mode in MODES):
             raise ValueError(
                 f"Unrecognized managed label: {label}; inspect {installation}"
             )

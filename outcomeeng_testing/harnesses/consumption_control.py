@@ -8,17 +8,20 @@ import hashlib
 from html.parser import HTMLParser
 import json
 import os
+import plistlib
 import shutil
 import subprocess
 import sys
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
-from dataclasses import astuple, dataclass
+from dataclasses import astuple, dataclass, replace
+from enum import StrEnum
 from decimal import Decimal
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Any
+from uuid import uuid4
 
 from hypothesis import given, seed, settings
 from hypothesis import strategies as st
@@ -34,6 +37,16 @@ from outcomeeng_testing.generators.consumption_control import (
     unsupported_models,
     duration_snapshots,
     alert_reads,
+    differing_texts,
+    distinct_namespace_pairs,
+    namespace_histories,
+    invalid_namespaces,
+    foreign_job_labels,
+    non_list_retained_values,
+    non_string_namespace_values,
+    non_mapping_retained_entries,
+    nonconforming_plist_paths,
+    valid_namespaces,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
@@ -276,6 +289,142 @@ def configuration_property(check: Callable[[list[tuple[str, str]]], None]) -> No
             except ValueError as error:
                 diagnostics.append((field, str(error)))
         check(diagnostics)
+
+    run_replayable_property(
+        run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
+    )
+
+
+def valid_namespace_property(check: Callable[[str, str, str], None]) -> None:
+    """Resolve each valid namespace through the environment and the saved effective configuration."""
+    accounting, _, _, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(valid_namespaces())
+    def run(namespace: str) -> None:
+        environment = {
+            accounting.RESET_ENV: fixture()[AccountingField.TIMESTAMP],
+            accounting.NAMESPACE_ENV: namespace,
+        }
+        config = accounting.Config.from_environment(
+            environment, Path("/state"), Path("/transcripts")
+        )
+        check(
+            namespace,
+            config.namespace,
+            config.effective()[accounting.NAMESPACE_ENV],
+        )
+
+    run_replayable_property(
+        run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
+    )
+
+
+def invalid_namespace_property(check: Callable[[tuple[str, str]], None]) -> None:
+    accounting, _, _, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(invalid_namespaces(accounting.NAMESPACE_MAX_CHARS))
+    def run(namespace: str) -> None:
+        environment = {
+            accounting.RESET_ENV: fixture()[AccountingField.TIMESTAMP],
+            accounting.NAMESPACE_ENV: namespace,
+        }
+        try:
+            accounting.Config.from_environment(
+                environment, Path("/state"), Path("/transcripts")
+            )
+            check((accounting.NAMESPACE_ENV, ""))
+        except ValueError as error:
+            check((accounting.NAMESPACE_ENV, str(error)))
+
+    run_replayable_property(
+        run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
+    )
+
+
+class NamespaceRoute(StrEnum):
+    """The two operator-facing routes by which a namespace reaches the merged configuration."""
+
+    SAVED = "saved installation configuration"
+    OPTION = "--launchd-namespace"
+
+
+@contextmanager
+def _without_usage_environment() -> Iterator[None]:
+    held = {
+        key: os.environ.pop(key)
+        for key in list(os.environ)
+        if key.startswith("SPX_USAGE_")
+    }
+    try:
+        yield
+    finally:
+        os.environ.update(held)
+
+
+def _routed_configuration(route: NamespaceRoute, namespace: str) -> Any:
+    """Merge one namespace through usage_control.configuration() by the given route."""
+    accounting, _, _, control = modules()
+    reset = fixture()[AccountingField.TIMESTAMP]
+    with (
+        TemporaryDirectory(prefix="namespace-route-") as temporary,
+        _without_usage_environment(),
+    ):
+        root = Path(temporary)
+        arguments = [control.Option.ROOT, str(root), control.Option.END, reset]
+        if route is NamespaceRoute.SAVED:
+            (root / control.CONFIG_NAME).write_text(
+                json.dumps(
+                    {accounting.RESET_ENV: reset, accounting.NAMESPACE_ENV: namespace}
+                ),
+                encoding="utf-8",
+            )
+        else:
+            arguments += [control.Option.RESET_AT, reset]
+            arguments.append(f"{control.Option.LAUNCHD_NAMESPACE}={namespace}")
+        args = control.parser().parse_args(arguments)
+        return control.configuration(args, accounting.timestamp(reset))
+
+
+def valid_routed_namespace_property(
+    check: Callable[[NamespaceRoute, str, str], None],
+) -> None:
+    """Drive each valid namespace through usage_control.configuration() by each route."""
+    accounting, _, _, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(valid_namespaces())
+    def run(namespace: str) -> None:
+        for route in NamespaceRoute:
+            config = _routed_configuration(route, namespace)
+            check(route, namespace, config.effective()[accounting.NAMESPACE_ENV])
+
+    run_replayable_property(
+        run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
+    )
+
+
+def invalid_routed_namespace_property(
+    check: Callable[[NamespaceRoute, str, tuple[str, str]], None],
+) -> None:
+    """Drive each invalid namespace through usage_control.configuration() by each route;
+    the observation is the rejection message, empty when the namespace was accepted."""
+    accounting, _, _, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(invalid_namespaces(accounting.NAMESPACE_MAX_CHARS))
+    def run(namespace: str) -> None:
+        for route in NamespaceRoute:
+            try:
+                _routed_configuration(route, namespace)
+                check(route, namespace, (accounting.NAMESPACE_ENV, ""))
+            except ValueError as error:
+                check(route, namespace, (accounting.NAMESPACE_ENV, str(error)))
 
     run_replayable_property(
         run, seed_value=SEED, replay_path=REPLAY.replace("accounting", "configuration")
@@ -704,8 +853,9 @@ def native_installation_observation(work: Workspace) -> NativeInstallationObserv
             (),
         )
     domain = f"gui/{os.getuid()}"
+    config = replace(work.config, namespace=f"{work.config.namespace}-{uuid4().hex}")
     for mode in schedule.MODES:
-        handle = domain + "/" + schedule.LABEL_PREFIX + "." + mode
+        handle = domain + "/" + schedule.job_label(config.namespace, mode)
         observed = runner.run(
             (schedule.LAUNCHCTL, schedule.LaunchctlOperation.PRINT, handle)
         )
@@ -720,7 +870,7 @@ def native_installation_observation(work: Workspace) -> NativeInstallationObserv
     cleanup: dict[str, Any] = {}
     try:
         schedule.install(
-            work.config,
+            config,
             SCRIPTS,
             work.root / "native-launch-agents",
             runner,
@@ -1401,3 +1551,760 @@ def unreadable_alert_observations() -> Iterator[UnreadableAlertObservation]:
                 before,
                 _state_files(root),
             )
+
+
+@dataclass(frozen=True)
+class NamespaceScopeObservation:
+    namespace: str
+    foreign_labels: frozenset[str]
+    installed_labels: tuple[str, ...]
+    touched_labels: tuple[str, ...]
+    loaded_after: frozenset[str]
+
+
+INSTALLATION_REPLAY = REPLAY.replace(
+    "accounting.property.l1", "installation.compliance.l1"
+)
+
+
+def _address(schedule: Any, call: tuple[str, ...]) -> str:
+    """The job label one recorded launchctl call addresses."""
+    if call[1] == schedule.LaunchctlOperation.BOOTSTRAP:
+        return Path(call[-1]).stem
+    return call[-1].rsplit("/", 1)[-1]
+
+
+def _addressed(schedule: Any, calls: Iterable[tuple[str, ...]]) -> frozenset[str]:
+    """The job labels the recorded launchctl calls address."""
+    return frozenset(_address(schedule, call) for call in calls)
+
+
+def _install_under(
+    schedule: Any, work: Any, runner: Any, agents: Path, namespace: str
+) -> Any:
+    """Install the schedule under ``namespace`` against the workspace root."""
+    return schedule.install(
+        replace(work.config, namespace=namespace),
+        SCRIPTS,
+        agents,
+        runner,
+        "darwin",
+        True,
+    )
+
+
+def _manifest_rejection(schedule: Any, root: Path) -> str:
+    """The message of the ValueError reading the manifest raises, empty when the record
+    was accepted. Any other exception propagates."""
+    try:
+        schedule.manifest(root)
+    except ValueError as error:
+        return str(error)
+    return ""
+
+
+def namespace_scope_property(
+    check: Callable[[NamespaceScopeObservation], None],
+) -> None:
+    """Install, inspect, stop, and restart under one namespace beside another's jobs."""
+    _, _, schedule, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(distinct_namespace_pairs())
+    def run(namespaces: tuple[str, str]) -> None:
+        namespace, foreign = namespaces
+        with workspace() as work:
+            config = replace(work.config, namespace=namespace)
+            runner = RecordingRunner()
+            foreign_labels = frozenset(
+                schedule.job_label(foreign, mode) for mode in schedule.MODES
+            )
+            runner.loaded.update(foreign_labels)
+            plan = schedule.install(
+                config, SCRIPTS, work.root / "launch-agents", runner, "darwin", True
+            )
+            for operation in (
+                schedule.JobOperation.STATUS,
+                schedule.JobOperation.STOP,
+                schedule.JobOperation.RESTART,
+            ):
+                schedule.jobs(config.root, operation, runner, "darwin")
+            check(
+                NamespaceScopeObservation(
+                    namespace,
+                    foreign_labels,
+                    tuple(str(job["label"]) for job in plan[ScheduleField.JOBS]),
+                    tuple(_address(schedule, call) for call in runner.calls),
+                    frozenset(runner.loaded),
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=INSTALLATION_REPLAY,
+    )
+
+
+@dataclass(frozen=True)
+class NamespaceReturnObservation:
+    first: str
+    second: str
+    namespace_key: str
+    record_after: dict[str, Any]
+    first_labels: frozenset[str]
+    second_labels: frozenset[str]
+    second_files_before: dict[str, bytes]
+    second_files_after: dict[str, bytes]
+    return_labels: frozenset[str]
+    loaded_after_return: frozenset[str]
+
+
+def namespace_return_property(
+    check: Callable[[NamespaceReturnObservation], None],
+) -> None:
+    """Install under one namespace, then another, then the first again against the same
+    root. An install that raises propagates to the linked test."""
+    accounting, _, schedule, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(distinct_namespace_pairs())
+    def run(namespaces: tuple[str, str]) -> None:
+        first, second = namespaces
+        with workspace() as work:
+            runner = RecordingRunner()
+            agents = work.root / "launch-agents"
+            _install_under(schedule, work, runner, agents, first)
+            second_plan = _install_under(schedule, work, runner, agents, second)
+            second_paths = tuple(
+                Path(job["path"]) for job in second_plan[ScheduleField.JOBS]
+            )
+            second_files_before = {
+                str(path): path.read_bytes() for path in second_paths
+            }
+            mark = len(runner.calls)
+            _install_under(schedule, work, runner, agents, first)
+            check(
+                NamespaceReturnObservation(
+                    first,
+                    second,
+                    accounting.NAMESPACE_ENV,
+                    json.loads((work.config.root / schedule.INSTALL_NAME).read_text()),
+                    frozenset(
+                        schedule.job_label(first, mode) for mode in schedule.MODES
+                    ),
+                    frozenset(
+                        schedule.job_label(second, mode) for mode in schedule.MODES
+                    ),
+                    second_files_before,
+                    {str(path): path.read_bytes() for path in second_paths},
+                    _addressed(schedule, runner.calls[mark:]),
+                    frozenset(runner.loaded),
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=INSTALLATION_REPLAY,
+    )
+
+
+@dataclass(frozen=True)
+class NamespaceReinstallObservation:
+    first: str
+    second: str
+    namespace_key: str
+    record_after: dict[str, Any]
+    first_labels: frozenset[str]
+    second_labels: frozenset[str]
+    first_files_before: dict[str, bytes]
+    first_files_after: dict[str, bytes]
+    loaded_after_install: frozenset[str]
+    loaded_after_stop: frozenset[str]
+    loaded_after_restart: frozenset[str]
+    reinstall_labels: frozenset[str]
+    status_labels: frozenset[str]
+    stop_labels: frozenset[str]
+    restart_labels: frozenset[str]
+
+
+def namespace_reinstall_property(
+    check: Callable[[NamespaceReinstallObservation], None],
+) -> None:
+    """Install under one namespace, reinstall under another against the same root,
+    then inspect, stop, and restart through the installation record."""
+    accounting, _, schedule, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(distinct_namespace_pairs())
+    def run(namespaces: tuple[str, str]) -> None:
+        first, second = namespaces
+        with workspace() as work:
+            runner = RecordingRunner()
+            agents = work.root / "launch-agents"
+            first_plan = _install_under(schedule, work, runner, agents, first)
+            first_paths = tuple(
+                Path(job["path"]) for job in first_plan[ScheduleField.JOBS]
+            )
+            first_files_before = {str(path): path.read_bytes() for path in first_paths}
+            mark = len(runner.calls)
+            _install_under(schedule, work, runner, agents, second)
+            reinstall_labels = _addressed(schedule, runner.calls[mark:])
+            loaded_after_install = frozenset(runner.loaded)
+            labels: dict[str, frozenset[str]] = {}
+            loaded: dict[str, frozenset[str]] = {}
+            for operation in (
+                schedule.JobOperation.STATUS,
+                schedule.JobOperation.STOP,
+                schedule.JobOperation.RESTART,
+            ):
+                mark = len(runner.calls)
+                schedule.jobs(work.config.root, operation, runner, "darwin")
+                labels[operation] = _addressed(schedule, runner.calls[mark:])
+                loaded[operation] = frozenset(runner.loaded)
+            check(
+                NamespaceReinstallObservation(
+                    first,
+                    second,
+                    accounting.NAMESPACE_ENV,
+                    json.loads((work.config.root / schedule.INSTALL_NAME).read_text()),
+                    frozenset(
+                        schedule.job_label(first, mode) for mode in schedule.MODES
+                    ),
+                    frozenset(
+                        schedule.job_label(second, mode) for mode in schedule.MODES
+                    ),
+                    first_files_before,
+                    {str(path): path.read_bytes() for path in first_paths},
+                    loaded_after_install,
+                    loaded[schedule.JobOperation.STOP],
+                    loaded[schedule.JobOperation.RESTART],
+                    reinstall_labels,
+                    labels[schedule.JobOperation.STATUS],
+                    labels[schedule.JobOperation.STOP],
+                    labels[schedule.JobOperation.RESTART],
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=INSTALLATION_REPLAY,
+    )
+
+
+@dataclass(frozen=True)
+class RetainedBoundObservation:
+    limit: int
+    retained_labels: tuple[str, ...]
+    expected_retained: tuple[str, ...]
+    pruned_labels: frozenset[str]
+    pruned_files_remaining: frozenset[str]
+    loaded_after: frozenset[str]
+    record_bytes: int
+    record_ceiling: int
+    gaps: tuple[str, ...]
+
+
+def retained_bound_property(
+    check: Callable[[RetainedBoundObservation], None],
+) -> None:
+    """Install under more distinct namespaces than the retention bound keeps, against
+    one root, then observe the record, the launch-agent files, and the loaded jobs."""
+    _, _, schedule, _ = modules()
+    namespaces = schedule.RETAINED_NAMESPACES
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(namespace_histories(namespaces + 2))
+    def run(history: list[str]) -> None:
+        with workspace() as work:
+            runner = RecordingRunner()
+            agents = work.root / "launch-agents"
+            plans = [
+                _install_under(schedule, work, runner, agents, namespace)
+                for namespace in history
+            ]
+            jobs_by_install = [plan[ScheduleField.JOBS] for plan in plans[:-1]]
+            ordered = [job for jobs in reversed(jobs_by_install) for job in jobs]
+            kept = ordered[: schedule.RETAINED_JOB_LIMIT]
+            pruned = ordered[schedule.RETAINED_JOB_LIMIT :]
+            record_path = work.config.root / schedule.INSTALL_NAME
+            record = json.loads(record_path.read_text())
+            check(
+                RetainedBoundObservation(
+                    schedule.RETAINED_JOB_LIMIT,
+                    tuple(job["label"] for job in record[schedule.RETAINED_JOBS]),
+                    tuple(job["label"] for job in kept),
+                    frozenset(job["label"] for job in pruned),
+                    frozenset(
+                        job["path"] for job in pruned if Path(job["path"]).exists()
+                    ),
+                    frozenset(runner.loaded),
+                    record_path.stat().st_size,
+                    schedule.COMMAND_BYTES,
+                    tuple(gap for plan in plans for gap in plan["retention_gaps"]),
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=INSTALLATION_REPLAY,
+    )
+
+
+@dataclass(frozen=True)
+class RetentionPlanObservation:
+    planned_removals: frozenset[str]
+    expected_removals: frozenset[str]
+    removals_remaining_after_plan: frozenset[str]
+    calls_during_plan: int
+
+
+def retention_plan_property(
+    check: Callable[[RetentionPlanObservation], None],
+) -> None:
+    """Install under more distinct namespaces than the retention bound keeps, then plan
+    an install under one more namespace without activating it, and observe the removals
+    the plan names and that planning changed nothing."""
+    _, _, schedule, _ = modules()
+    namespaces = schedule.RETAINED_NAMESPACES
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(namespace_histories(namespaces + 2))
+    def run(history: list[str]) -> None:
+        with workspace() as work:
+            runner = RecordingRunner()
+            agents = work.root / "launch-agents"
+            plans = [
+                _install_under(schedule, work, runner, agents, namespace)
+                for namespace in history[:-1]
+            ]
+            ordered = [
+                job for plan in reversed(plans) for job in plan[ScheduleField.JOBS]
+            ]
+            expected = [
+                job
+                for job in ordered[schedule.RETAINED_JOB_LIMIT :]
+                if Path(job["path"]).exists()
+            ]
+            mark = len(runner.calls)
+            planned = schedule.install(
+                replace(work.config, namespace=history[-1]),
+                SCRIPTS,
+                agents,
+                runner,
+                "darwin",
+                False,
+            )
+            check(
+                RetentionPlanObservation(
+                    frozenset(planned[schedule.RETENTION_REMOVALS]),
+                    frozenset(job["path"] for job in expected),
+                    frozenset(
+                        path
+                        for path in planned[schedule.RETENTION_REMOVALS]
+                        if Path(path).exists()
+                    ),
+                    len(runner.calls) - mark,
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=INSTALLATION_REPLAY,
+    )
+
+
+@dataclass(frozen=True)
+class MalformedRetainedRecordObservation:
+    record_path: str
+    field: str
+    rejected_path: str
+    message: str
+
+
+def _retained_record_property(
+    mutate: Callable[[ModuleType, st.DataObject, Path, dict[str, Any]], object],
+    observe: Callable[[ModuleType, Path, str, object], None],
+) -> None:
+    """Install under one namespace, then another, so the installation record carries the
+    first namespace's jobs as retained jobs; let ``mutate`` corrupt the loaded record,
+    write it back, and hand ``observe`` the schedule module, the record path, the rejection message, and
+    whatever ``mutate`` returned."""
+    _, _, schedule, _ = modules()
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(distinct_namespace_pairs(), st.data())
+    def run(namespaces: tuple[str, str], data: st.DataObject) -> None:
+        first, second = namespaces
+        with workspace() as work:
+            runner = RecordingRunner()
+            agents = work.root / "launch-agents"
+            for namespace in (first, second):
+                _install_under(schedule, work, runner, agents, namespace)
+            record_path = work.config.root / schedule.INSTALL_NAME
+            record = json.loads(record_path.read_text())
+            extra = mutate(schedule, data, agents, record)
+            record_path.write_text(json.dumps(record), encoding="utf-8")
+            message = _manifest_rejection(schedule, work.config.root)
+            observe(schedule, record_path, message, extra)
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=INSTALLATION_REPLAY,
+    )
+
+
+def malformed_retained_record_property(
+    check: Callable[[MalformedRetainedRecordObservation], None],
+) -> None:
+    """Give one retained entry of the installation record a non-conforming path and read
+    the record. The observation is the rejection message, empty when the record was
+    accepted. Any exception other than ValueError propagates to the linked test."""
+
+    def mutate(
+        schedule: ModuleType,
+        data: st.DataObject,
+        agents: Path,
+        record: dict[str, Any],
+    ) -> object:
+        index = data.draw(st.integers(0, len(record[schedule.RETAINED_JOBS]) - 1))
+        entry = record[schedule.RETAINED_JOBS][index]
+        rejected = data.draw(
+            nonconforming_plist_paths(str(agents), str(entry["label"]))
+        )
+        entry["path"] = rejected
+        return rejected
+
+    def observe(
+        schedule: ModuleType, record_path: Path, message: str, rejected: object
+    ) -> None:
+        check(
+            MalformedRetainedRecordObservation(
+                str(record_path), schedule.RETAINED_JOBS, str(rejected), message
+            )
+        )
+
+    _retained_record_property(mutate, observe)
+
+
+class RetainedRecordMalformation(StrEnum):
+    MISSING_PATH = "missing_path"
+    NON_LIST_VALUE = "non_list_value"
+    NON_MAPPING_ENTRY = "non_mapping_entry"
+    FOREIGN_LABEL = "foreign_label"
+    MISMATCHED_PLIST_LABEL = "mismatched_plist_label"
+    MISMATCHED_PROGRAM_ARGUMENTS = "mismatched_program_arguments"
+    MISMATCHED_WORKING_DIRECTORY = "mismatched_working_directory"
+
+
+@dataclass(frozen=True)
+class MalformedRetainedFieldObservation:
+    record_path: str
+    field: str
+    message: str
+
+
+def _plist_key_holding(settings: dict[str, Any], value: str) -> str:
+    """The plist key whose value is ``value``, read from the plist the installer wrote."""
+    return next(key for key, held in settings.items() if held == value)
+
+
+def malformed_retained_field_property(
+    malformation: RetainedRecordMalformation,
+    check: Callable[[MalformedRetainedFieldObservation], None],
+) -> None:
+    """Apply ``malformation`` to the retained jobs field of the installation record and
+    read the record. The observation is the rejection message, empty when the record was
+    accepted. Any exception other than ValueError propagates to the linked test."""
+
+    def mutate(
+        schedule: ModuleType,
+        data: st.DataObject,
+        agents: Path,
+        record: dict[str, Any],
+    ) -> object:
+        retained = record[schedule.RETAINED_JOBS]
+        index = data.draw(st.integers(0, len(retained) - 1))
+        if malformation is RetainedRecordMalformation.MISSING_PATH:
+            del retained[index]["path"]
+        elif malformation is RetainedRecordMalformation.NON_LIST_VALUE:
+            record[schedule.RETAINED_JOBS] = data.draw(non_list_retained_values())
+        elif malformation is RetainedRecordMalformation.FOREIGN_LABEL:
+            label = data.draw(foreign_job_labels(schedule.MODES))
+            retained[index]["label"] = label
+            retained[index]["path"] = str(agents / (label + ".plist"))
+        elif malformation is RetainedRecordMalformation.MISMATCHED_PLIST_LABEL:
+            settings_ = retained[index][ScheduleField.PLIST]
+            key = _plist_key_holding(settings_, retained[index]["label"])
+            settings_[key] = data.draw(differing_texts(retained[index]["label"]))
+        elif malformation is RetainedRecordMalformation.MISMATCHED_PROGRAM_ARGUMENTS:
+            arguments = retained[index][ScheduleField.PLIST][
+                ScheduleField.PROGRAMARGUMENTS
+            ]
+            position = data.draw(st.integers(0, len(arguments) - 1))
+            arguments[position] = data.draw(differing_texts(arguments[position]))
+        elif malformation is RetainedRecordMalformation.MISMATCHED_WORKING_DIRECTORY:
+            settings_ = retained[index][ScheduleField.PLIST]
+            key = _plist_key_holding(settings_, record["root"])
+            settings_[key] = data.draw(differing_texts(record["root"]))
+        else:
+            retained[index] = data.draw(non_mapping_retained_entries())
+        return None
+
+    def observe(
+        schedule: ModuleType, record_path: Path, message: str, extra: object
+    ) -> None:
+        check(
+            MalformedRetainedFieldObservation(
+                str(record_path), schedule.RETAINED_JOBS, message
+            )
+        )
+
+    _retained_record_property(mutate, observe)
+
+
+def malformed_namespace_field_property(
+    check: Callable[[MalformedRetainedFieldObservation], None],
+) -> None:
+    """Give the installation record a namespace value that is not a string and read the
+    record. The observation is the rejection message, empty when the record was
+    accepted. Any exception other than ValueError propagates to the linked test."""
+    accounting, _, _, _ = modules()
+
+    def mutate(
+        schedule: ModuleType,
+        data: st.DataObject,
+        agents: Path,
+        record: dict[str, Any],
+    ) -> object:
+        record[accounting.NAMESPACE_ENV] = data.draw(non_string_namespace_values())
+        return None
+
+    def observe(
+        schedule: ModuleType, record_path: Path, message: str, extra: object
+    ) -> None:
+        check(
+            MalformedRetainedFieldObservation(
+                str(record_path), accounting.NAMESPACE_ENV, message
+            )
+        )
+
+    _retained_record_property(mutate, observe)
+
+
+def malformed_namespace_string_property(
+    check: Callable[[MalformedRetainedFieldObservation], None],
+) -> None:
+    """Give the installation record a string namespace that breaks the namespace grammar
+    and read the record. The observation is the rejection message, empty when the record
+    was accepted. Any exception other than ValueError propagates to the linked test."""
+    accounting, _, _, _ = modules()
+
+    def mutate(
+        schedule: ModuleType,
+        data: st.DataObject,
+        agents: Path,
+        record: dict[str, Any],
+    ) -> object:
+        record[accounting.NAMESPACE_ENV] = data.draw(
+            invalid_namespaces(accounting.NAMESPACE_MAX_CHARS)
+        )
+        return None
+
+    def observe(
+        schedule: ModuleType, record_path: Path, message: str, extra: object
+    ) -> None:
+        check(
+            MalformedRetainedFieldObservation(
+                str(record_path), accounting.NAMESPACE_ENV, message
+            )
+        )
+
+    _retained_record_property(mutate, observe)
+
+
+@dataclass(frozen=True)
+class OutsideRetentionObservation:
+    outside_paths: frozenset[str]
+    outside_files_remaining: frozenset[str]
+    gaps: tuple[str, ...]
+
+
+def outside_retention_property(
+    check: Callable[[OutsideRetentionObservation], None],
+) -> None:
+    """Move the oldest retained launch agent of the record to a directory other than the
+    one the install writes to, then install until retention passes the moved entry. The
+    observation is the moved files that remain and the retention gaps."""
+    _, _, schedule, _ = modules()
+    namespaces = schedule.RETAINED_NAMESPACES
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(namespace_histories(namespaces + 2))
+    def run(history: list[str]) -> None:
+        with workspace() as work:
+            runner = RecordingRunner()
+            agents = work.root / "launch-agents"
+            outside = work.root / "foreign-agents"
+            outside.mkdir()
+            for namespace in history[:namespaces]:
+                _install_under(schedule, work, runner, agents, namespace)
+            record_path = work.config.root / schedule.INSTALL_NAME
+            record = json.loads(record_path.read_text())
+            moved = [
+                entry
+                for entry in record[schedule.RETAINED_JOBS][-len(schedule.MODES) :]
+            ]
+            for entry in moved:
+                relocated = outside / (entry["label"] + ".plist")
+                relocated.write_bytes(plistlib.dumps(entry[ScheduleField.PLIST]))
+                entry["path"] = str(relocated)
+            record_path.write_text(json.dumps(record), encoding="utf-8")
+            plans = [
+                _install_under(schedule, work, runner, agents, namespace)
+                for namespace in history[namespaces:]
+            ]
+            paths = frozenset(entry["path"] for entry in moved)
+            check(
+                OutsideRetentionObservation(
+                    paths,
+                    frozenset(path for path in paths if Path(path).exists()),
+                    tuple(gap for plan in plans for gap in plan["retention_gaps"]),
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=INSTALLATION_REPLAY,
+    )
+
+
+class RetentionFailureRunner(RecordingRunner):
+    """Stage 5 failure-simulation collaborator: launchctl status reads and stops fail
+    for the labels it is told to refuse, and every other call behaves as the recorder."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.refused_status: set[str] = set()
+        self.refused_stop: set[str] = set()
+
+    def run(self, argv: tuple[str, ...], timeout: float = 30) -> Any:
+        _, _, schedule, _ = modules()
+        label = argv[-1].rsplit("/", 1)[-1]
+        refused = (
+            argv[1] == schedule.LaunchctlOperation.PRINT
+            and label in self.refused_status
+        ) or (
+            argv[1] == schedule.LaunchctlOperation.BOOTOUT
+            and label in self.refused_stop
+        )
+        if refused:
+            self.calls.append(argv)
+            return schedule.CommandResult(argv, 77, "", "permission denied")
+        return super().run(argv, timeout)
+
+
+class RetentionGap(StrEnum):
+    CHANGED_PLIST = "changed_plist"
+    STATUS_UNESTABLISHED = "status_unestablished"
+    UNREADABLE_PLIST = "unreadable_plist"
+    STOP_REFUSED = "stop_refused"
+
+
+@dataclass(frozen=True)
+class RetentionGapObservation:
+    targeted_paths: frozenset[str]
+    files_remaining: frozenset[str]
+    owned_paths_after: frozenset[str]
+    gaps: tuple[str, ...]
+    reinstall_rejection: str
+
+
+def retention_gap_property(
+    gap: RetentionGap,
+    check: Callable[[RetentionGapObservation], None],
+) -> None:
+    """Make the oldest retained launch agents of the record impossible to stop and remove
+    by ``gap``, install once more so retention passes them, and observe the record, the
+    files, and the gaps. Then restore the launch agents and reinstall under the namespace
+    that owned them. The reinstall observation is the rejection message, empty when the
+    reinstall was accepted. Any exception other than ValueError propagates."""
+    _, _, schedule, _ = modules()
+    namespaces = schedule.RETAINED_NAMESPACES
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(namespace_histories(namespaces + 2))
+    def run(history: list[str]) -> None:
+        with workspace() as work:
+            runner = RetentionFailureRunner()
+            agents = work.root / "launch-agents"
+            for namespace in history[: namespaces + 1]:
+                _install_under(schedule, work, runner, agents, namespace)
+            record_path = work.config.root / schedule.INSTALL_NAME
+            record = json.loads(record_path.read_text())
+            targets = record[schedule.RETAINED_JOBS][-len(schedule.MODES) :]
+            paths = [Path(entry["path"]) for entry in targets]
+            labels = {str(entry["label"]) for entry in targets}
+            originals = {path: path.read_bytes() for path in paths}
+            if gap is RetentionGap.CHANGED_PLIST:
+                for path in paths:
+                    path.write_bytes(originals[path] + b"\n")
+            elif gap is RetentionGap.STATUS_UNESTABLISHED:
+                runner.refused_status |= labels
+            elif gap is RetentionGap.UNREADABLE_PLIST:
+                for path in paths:
+                    path.chmod(0)
+            else:
+                runner.refused_stop |= labels
+            plan = _install_under(
+                schedule, work, runner, agents, history[namespaces + 1]
+            )
+            after = json.loads(record_path.read_text())
+            observed_paths = frozenset(str(path) for path in paths)
+            remaining = frozenset(str(path) for path in paths if path.exists())
+            owned = frozenset(
+                entry["path"]
+                for entry in [
+                    *after[ScheduleField.JOBS],
+                    *after[schedule.RETAINED_JOBS],
+                ]
+            )
+            for path in paths:
+                path.chmod(0o644)
+                path.write_bytes(originals[path])
+            runner.refused_status.clear()
+            runner.refused_stop.clear()
+            try:
+                _install_under(schedule, work, runner, agents, history[0])
+                rejection = ""
+            except ValueError as error:
+                rejection = str(error)
+            check(
+                RetentionGapObservation(
+                    observed_paths,
+                    remaining,
+                    owned,
+                    tuple(plan["retention_gaps"]),
+                    rejection,
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=INSTALLATION_REPLAY,
+    )

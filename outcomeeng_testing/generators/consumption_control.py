@@ -103,3 +103,146 @@ def alert_reads() -> st.SearchStrategy[tuple[list[tuple[str, int, int]], int]]:
         st.lists(record, max_size=12, unique_by=lambda value: value[0]),
         st.integers(min_value=-1, max_value=13),
     )
+
+
+_NAMESPACE_SEGMENT_ALPHABET = (
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
+)
+_NAMESPACE_SEPARATOR = "."
+
+
+def _segments() -> st.SearchStrategy[str]:
+    """One non-empty segment of ASCII letters, digits, hyphens and underscores."""
+    return st.text(alphabet=_NAMESPACE_SEGMENT_ALPHABET, min_size=1, max_size=14)
+
+
+def valid_namespaces() -> st.SearchStrategy[str]:
+    """Vary namespaces of one or more dot-separated non-empty segments, so hyphens and
+    underscores fall at segment edges and in the interior."""
+    return st.lists(_segments(), min_size=1, max_size=4).map(_NAMESPACE_SEPARATOR.join)
+
+
+def distinct_namespace_pairs() -> st.SearchStrategy[tuple[str, str]]:
+    """Vary two namespaces that name different job sets, including nested ones."""
+    return st.tuples(valid_namespaces(), valid_namespaces()).filter(
+        lambda pair: pair[0] != pair[1]
+    )
+
+
+def namespace_histories(minimum: int) -> st.SearchStrategy[list[str]]:
+    """Vary sequences of at least ``minimum`` pairwise-distinct namespaces."""
+    return st.lists(
+        valid_namespaces(), min_size=minimum, max_size=minimum + 3, unique=True
+    )
+
+
+def nonconforming_plist_paths(directory: str, label: str) -> st.SearchStrategy[str]:
+    """Vary recorded launch-agent paths that break the plist-naming convention for
+    ``label``: a relative path, a file under ``directory`` named for another label, or
+    the label without its plist suffix."""
+    relative = (
+        st.lists(_segments(), min_size=1, max_size=3)
+        .map("/".join)
+        .map(lambda prefix: prefix + "/" + label + ".plist")
+    )
+    renamed = _segments().map(lambda segment: directory + "/" + segment + ".plist")
+    unsuffixed = st.just(directory + "/" + label)
+    return st.one_of(relative, renamed, unsuffixed)
+
+
+def foreign_job_labels(modes: tuple[str, ...]) -> st.SearchStrategy[str]:
+    """Vary retained-entry labels that are no namespace's job label: a valid namespace
+    followed by a final segment that names none of ``modes``, or a single segment."""
+    foreign_mode = _segments().filter(lambda segment: segment not in modes)
+    return st.one_of(
+        st.tuples(valid_namespaces(), foreign_mode).map(
+            lambda parts: parts[0] + _NAMESPACE_SEPARATOR + parts[1]
+        ),
+        foreign_mode,
+    )
+
+
+def non_string_namespace_values() -> st.SearchStrategy[object]:
+    """Vary present namespace values that are not strings: a number, a boolean, null,
+    a list, or an object, each of which string coercion would turn into a name."""
+    return st.one_of(
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.lists(_segments(), max_size=3),
+        st.dictionaries(_segments(), _segments(), max_size=3),
+    )
+
+
+def non_list_retained_values() -> st.SearchStrategy[object]:
+    """Vary present retained-jobs values that are not a list of entries: a string, a
+    number, a boolean, null, or an object."""
+    return st.one_of(
+        _segments(),
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.dictionaries(_segments(), _segments(), max_size=3),
+    )
+
+
+def non_mapping_retained_entries() -> st.SearchStrategy[object]:
+    """Vary retained-job entries that are not objects: a string, a number, a boolean,
+    null, or a list."""
+    return st.one_of(
+        _segments(),
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.lists(_segments(), max_size=3),
+    )
+
+
+def invalid_namespaces(maximum: int) -> st.SearchStrategy[str]:
+    """Vary namespaces broken by construction: an empty value, an empty segment, a
+    whitespace or path-separator character, another foreign ASCII character, or a
+    length beyond ``maximum``."""
+    foreign = st.characters(codec="ascii").filter(
+        lambda character: (
+            character not in _NAMESPACE_SEGMENT_ALPHABET + _NAMESPACE_SEPARATOR
+        )
+    )
+    whitespace = st.sampled_from(" \t\n\r\v\f")
+    separators = st.sampled_from("/\\")
+    broken = st.one_of(foreign, whitespace, separators)
+
+    def insert(parts: tuple[str, str, int]) -> str:
+        namespace, character, position = parts
+        offset = position % (len(namespace) + 1)
+        return namespace[:offset] + character + namespace[offset:]
+
+    corrupted = st.tuples(valid_namespaces(), broken, st.integers(min_value=0)).map(
+        insert
+    )
+    edged = st.tuples(valid_namespaces(), st.booleans()).map(
+        lambda parts: (
+            _NAMESPACE_SEPARATOR + parts[0]
+            if parts[1]
+            else parts[0] + _NAMESPACE_SEPARATOR
+        )
+    )
+    gapped = st.tuples(valid_namespaces(), valid_namespaces()).map(
+        lambda parts: parts[0] + _NAMESPACE_SEPARATOR * 2 + parts[1]
+    )
+    overlong = st.integers(min_value=maximum + 1, max_value=maximum + 40).map(
+        lambda length: "a" * length
+    )
+    return st.one_of(
+        corrupted,
+        edged,
+        gapped,
+        overlong,
+        st.just(""),
+        st.just(_NAMESPACE_SEPARATOR),
+    )
+
+
+def differing_texts(original: str) -> st.SearchStrategy[str]:
+    """Vary text values that differ from ``original``, such as a plist value that no
+    longer matches the job or installation root the record names."""
+    return _segments().filter(lambda value: value != original)
