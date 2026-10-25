@@ -1,0 +1,30 @@
+{
+  "step": "12a-reject-nul",
+  "startedUtc": "2026-10-25T07:07:32.848325+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-4/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/4d58f2f5-4e26-4e2d-aa23-2117c0421768/scratchpad/is-repo4",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "arguments": {
+      "record": {
+        "schema": 1,
+        "kind": "fact",
+        "correlation": "installed-store-probe",
+        "sender": "CopperFinch",
+        "recipient": "SilverFinch",
+        "subject": "nul subject",
+        "body": "a\u0000b",
+        "ackRequired": false
+      }
+    }
+  },
+  "exitCode": 1,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "status": "invalid-schema",
+    "detail": "Text 'a\\x00b' at request.arguments.record.body carries a NUL byte, which cannot cross a process boundary. Remove the NUL byte from that text."
+  },
+  "stderr": ""
+}

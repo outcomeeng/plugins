@@ -1,0 +1,61 @@
+{
+  "step": "04c-send-second-recipient",
+  "startedUtc": "2026-10-25T07:07:16.562118+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-4/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/4d58f2f5-4e26-4e2d-aa23-2117c0421768/scratchpad/is-repo4",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "arguments": {
+      "record": {
+        "schema": 1,
+        "kind": "fact",
+        "correlation": "installed-store-probe",
+        "sender": "CopperFinch",
+        "recipient": "SilverOtter",
+        "subject": "second recipient record",
+        "body": "Body of second recipient record",
+        "ackRequired": true
+      }
+    }
+  },
+  "exitCode": 0,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "status": "succeeded",
+    "commandExitCode": 0,
+    "projectKey": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/4d58f2f5-4e26-4e2d-aa23-2117c0421768/scratchpad/is-repo4/.git",
+    "response": {
+      "id": 18775,
+      "subject": "[fact] second recipient record",
+      "body_md": "Body of second recipient record",
+      "importance": "normal",
+      "ack_required": true,
+      "thread_id": "installed-store-probe",
+      "created_ts": "2026-10-25T07:07:16.820467Z",
+      "from": "CopperFinch",
+      "sender_display_name": "Store Sender",
+      "to": [
+        "SilverOtter"
+      ],
+      "to_display_names": {
+        "SilverOtter": "Store Recipient Two"
+      }
+    },
+    "data": {
+      "record": {
+        "schema": 1,
+        "kind": "fact",
+        "ackRequired": true,
+        "correlation": "installed-store-probe",
+        "sender": "CopperFinch",
+        "recipient": "SilverOtter",
+        "subject": "second recipient record",
+        "body": "Body of second recipient record",
+        "id": 18775
+      }
+    }
+  },
+  "stderr": ""
+}

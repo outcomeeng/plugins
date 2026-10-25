@@ -1,8 +1,8 @@
 {
   "step": "09b-send-after-label-change",
-  "startedUtc": "2026-10-09T17:43:07.031106+00:00",
-  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
-  "cwd": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project",
+  "startedUtc": "2026-10-25T07:08:00.944663+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-4/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/4d58f2f5-4e26-4e2d-aa23-2117c0421768/scratchpad/pl-repo",
   "request": {
     "schemaVersion": 1,
     "operation": "send",
@@ -15,7 +15,7 @@
         "recipient": "SilverFinch",
         "schema": 1,
         "sender": "CopperFinch",
-        "subject": "send after label change"
+        "subject": "after label change"
       }
     }
   },
@@ -25,15 +25,15 @@
     "operation": "send",
     "status": "succeeded",
     "commandExitCode": 0,
-    "projectKey": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project/.git",
+    "projectKey": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/4d58f2f5-4e26-4e2d-aa23-2117c0421768/scratchpad/pl-repo/.git",
     "response": {
-      "id": 20,
-      "subject": "[fact] send after label change",
+      "id": 18780,
+      "subject": "[fact] after label change",
       "body_md": "Body after the label change.",
       "importance": "normal",
       "ack_required": false,
       "thread_id": "position-labels-probe",
-      "created_ts": "2026-10-09T17:43:07.147383Z",
+      "created_ts": "2026-10-25T07:08:01.121292Z",
       "from": "CopperFinch",
       "sender_display_name": "Renamed Sender",
       "to": [
@@ -51,9 +51,9 @@
         "correlation": "position-labels-probe",
         "sender": "CopperFinch",
         "recipient": "SilverFinch",
-        "subject": "send after label change",
+        "subject": "after label change",
         "body": "Body after the label change.",
-        "id": 20
+        "id": 18780
       }
     }
   },
