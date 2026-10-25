@@ -95,12 +95,18 @@ STORE_SENDER_DISPLAY_NAME_FIELD = "sender_display_name"
 STORE_TO_DISPLAY_NAMES_FIELD = "to_display_names"
 STORE_ACK_REQUIRED_FIELD = "ack_required"
 STORE_ACK_STATUS_FIELD = "ack_status"
-# The two states of a required acknowledgement on the store's inbox surface;
+# The three states of a required acknowledgement on the store's inbox surface:
+# required (sent, not yet judged), pending (read, not acknowledged), and acked;
 # every other status the store reports reads as no acknowledgement required.
+STORE_ACK_STATUS_REQUIRED = "required"
 STORE_ACK_STATUS_PENDING = "pending"
 STORE_ACK_STATUS_ACKED = "acked"
 STORE_ACK_REQUIRED_STATUSES = frozenset(
-    {STORE_ACK_STATUS_PENDING, STORE_ACK_STATUS_ACKED}
+    {
+        STORE_ACK_STATUS_REQUIRED,
+        STORE_ACK_STATUS_PENDING,
+        STORE_ACK_STATUS_ACKED,
+    }
 )
 STORE_INBOX_FIELD = "inbox"
 # The store's thread alphabet: an alphanumeric first character, then letters,
@@ -898,6 +904,24 @@ def repository_lookup_environment() -> dict[str, str]:
     }
 
 
+def _run_failure_message(command: str, error: Exception) -> str:
+    """Name the command that could not run, the cause class, and the fix."""
+    return (
+        f"{command} could not be run ({type(error).__name__}: {error}). "
+        f"Check that {command} is executable by this user and that its "
+        f"working directory is readable, then retry."
+    )
+
+
+def _unexpected_response_message(command: str, error: Exception) -> str:
+    """Name the command whose output did not parse and what to check."""
+    return (
+        f"{command} returned output this adapter cannot read ({error}). "
+        f"Check that the installed {command} is a version this skill supports "
+        f"and that its output is the JSON the operation expects, then retry."
+    )
+
+
 def resolve_project_key(runner: CommandRunner) -> str:
     """Return the invoking working directory's repository key, or raise."""
     try:
@@ -918,13 +942,14 @@ def resolve_project_key(runner: CommandRunner) -> str:
     except Exception as error:
         raise AgentMailError(
             ExecutionStatus.REPOSITORY_UNRESOLVED,
-            f"{GIT_COMMAND} failed to run: {error}",
+            _run_failure_message(GIT_COMMAND, error),
         ) from error
     if result.returncode != 0:
         detail = result.stderr.strip() or "no command detail"
         raise AgentMailError(
             ExecutionStatus.REPOSITORY_UNRESOLVED,
-            f"The working directory resolves to no repository: {detail}",
+            f"The working directory resolves to no repository: {detail}. "
+            f"Run from inside a Git repository or one of its worktrees.",
         )
     return project_key_from_common_dir(result.stdout)
 
@@ -1338,7 +1363,7 @@ def _execute_wait(
             return _failure_result(
                 operation,
                 ExecutionStatus.COMMAND_FAILED,
-                f"{AM_COMMAND} failed to run: {error}",
+                _run_failure_message(AM_COMMAND, error),
             )
         if result.returncode != 0:
             detail = (
@@ -1355,7 +1380,7 @@ def _execute_wait(
             return _failure_result(
                 operation,
                 ExecutionStatus.INVALID_SCHEMA,
-                f"{AM_COMMAND} returned an unexpected response: {error}",
+                _unexpected_response_message(AM_COMMAND, error),
                 result.returncode,
             )
         if not reaches:
@@ -1426,7 +1451,7 @@ def execute(
         return _failure_result(
             operation.value,
             ExecutionStatus.COMMAND_FAILED,
-            f"{AM_COMMAND} failed to run: {error}",
+            _run_failure_message(AM_COMMAND, error),
         )
     if result.returncode != 0:
         detail = result.stderr.strip() or result.stdout.strip() or "no command detail"
@@ -1440,7 +1465,7 @@ def execute(
             return _failure_result(
                 operation.value,
                 ExecutionStatus.INVALID_SCHEMA,
-                f"{AM_COMMAND} returned an unexpected response: {error}",
+                _unexpected_response_message(AM_COMMAND, error),
                 result.returncode,
             )
     else:
@@ -1472,7 +1497,9 @@ def _json_input(stream: TextIO, location: str) -> dict[str, object]:
         return _object(json.load(stream), location)
     except json.JSONDecodeError as error:
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"{location} is not valid JSON: {error.msg}"
+            ExecutionStatus.INVALID_SCHEMA,
+            f"{location} is not valid JSON: {error.msg} at line {error.lineno}, "
+            f"column {error.colno}. Supply one complete JSON object on stdin.",
         ) from error
 
 

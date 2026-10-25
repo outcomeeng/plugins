@@ -19,6 +19,11 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 - **Every validation error names the field, the received value, and the fix.** An over-long correlation reports the written thread id length against the 128-character limit and says to shorten the `correlation`; a NUL byte reports the offending text and its location and says to remove the byte; a wrongly typed, out-of-range, unsupported, or mismatched value reports what was received and what to supply instead.
 - **Every result carries the versioned shape.** Stdin that does not parse now answers with `schemaVersion`, `operation` as `unknown`, `status: "invalid-schema"`, and `detail`, still exiting 2, and a failure of the store command of any class answers `store-unavailable` or `command-failed`. A second terminal handback of the same kind with different content is rejected as a conflicting handback whose detail names the differing fields.
 
+### Fixed
+
+- **A record sent with an acknowledgement required reads back with `ackRequired` true before it is read.** The installed store reports the acknowledgement status `required` for such a record until it is read (`pending`) or acknowledged (`acked`); the adapter now treats all three as an acknowledgement requirement.
+- **Errors that relayed a raw exception now name the command, the cause, and the fix.** A Git or `am` invocation that cannot run, an `am` response the adapter cannot parse, a working directory that is no repository, and stdin that is not JSON each say what to check or supply. A store's own nonzero-exit message still reaches `detail` verbatim.
+
 ## 0.16.5
 
 ### Changed
