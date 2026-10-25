@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final
+from typing import Final, Literal
 
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
@@ -14,7 +14,8 @@ ID_SUBCOMMANDS: Final = ("run", "jobs", "log", "artifacts", "checks")
 _NON_DIGIT_ALPHABET: Final = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_.,+ "
 _NON_ASCII_DIGITS: Final = "٠١٢٣٤٥٦٧٨٩"
 _ASCII_DIGITS: Final = "0123456789"
-_TEXT_ALPHABET: Final = st.characters(blacklist_categories=("Cs",))
+_SURROGATE_CATEGORY: Final[tuple[Literal["Cs"]]] = ("Cs",)
+_TEXT_ALPHABET: Final = st.characters(blacklist_categories=_SURROGATE_CATEGORY)
 
 
 @dataclass(frozen=True)

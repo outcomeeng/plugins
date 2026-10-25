@@ -18,8 +18,7 @@ import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from types import ModuleType
-from typing import Any, Final
+from typing import Any, Final, Protocol, cast
 
 from hypothesis import given, seed, settings
 from hypothesis.strategies import SearchStrategy
@@ -80,7 +79,16 @@ class ProcessObservation:
     stderr: str
 
 
-def load_module() -> ModuleType:
+class WorkflowInspectModule(Protocol):
+    """The surface of the loaded script that the harness reads and replaces."""
+
+    SUBPROCESS_TIMEOUT_SECONDS: float
+    _run: Callable[[list[str]], tuple[int, str, str]]
+
+    def main(self, argv: list[str]) -> int: ...
+
+
+def load_module() -> WorkflowInspectModule:
     """Load a fresh copy of the script from its checkout path."""
     spec = importlib.util.spec_from_file_location(
         "workflow_inspect_under_test", SCRIPT_PATH
@@ -89,7 +97,7 @@ def load_module() -> ModuleType:
         raise RuntimeError(f"could not build module spec for {SCRIPT_PATH}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module
+    return cast(WorkflowInspectModule, module)
 
 
 def fixture_path(name: str) -> Path:
