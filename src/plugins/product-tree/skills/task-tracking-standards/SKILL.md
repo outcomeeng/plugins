@@ -11,7 +11,7 @@ One shared standard for routing heartbeat and timer creation that keeps active r
 </objective>
 
 <reference_note>
-This is a reference skill; `<when_to_load>` names the moments it applies. The heartbeat is the runtime tool; this skill owns the rules for using that tool. GitHub PR check/review waits fall outside it: they use `gh pr checks <pr-number> --watch --fail-fast --interval 30` directly.
+This is a reference skill; `<when_to_load>` names the moments it applies. The heartbeat is the runtime tool; this skill owns the rules for using that tool.
 </reference_note>
 
 <when_to_load>
@@ -99,8 +99,6 @@ When a backgrounded shell command or an ordinary background subagent is launched
 Typed verifier and reviewer agents are excluded from completion-notification handling. When the runtime router requires an exposed wait capability, collect their final result through that capability; treat any completion notification as supplemental rather than the planned result-collection mechanism.
 
 When the wait is short and ending the turn is overkill, run the command in the foreground with a timeout large enough to cover it — one bounded invocation, not a background launch followed by polling.
-
-Claude tends to launch a local background command and then poll it (`sleep N; check; repeat`) to "watch" it finish, treating the completion notification as unreliable. The notification is the resume path; the poll loop spawns a process tree per iteration that the harness does not reap, and across turns and concurrent agents it exhausts the host's process limit.
 </local_background_work>
 
 <prompt_template>

@@ -5,7 +5,7 @@ name: implementation-auditor
 description: >-
   Verifier running `/audit-implementation`: a calling skill launches it by exact name with one
   changeset scope selector when its gate requires an independent audit of that changeset's implementation.
-tools: Bash, Read, Glob, Grep, Write, Skill
+tools: Read, Glob, Grep, Write, Skill, Bash(python3 "*/skills/audit-implementation/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run:*)
 skills:
   - product-tree:audit-implementation
 ---
@@ -31,7 +31,7 @@ Run implementation audits in this already-dispatched, isolated verifier context.
 
 <workflow>
 
-1. Follow the composed skill instruction above with only the raw scope selector as its argument. If the installed skill is absent or its file cannot be read, return `BLOCKED` with run token `not-started`, required skill `product-tree:audit-implementation`, and the exact failed operation, then stop before starting an SPX verification run. Never treat the absence of a dedicated skill-invocation tool as an availability failure.
+1. Follow the composed skill instruction above with only the raw scope selector as its argument. If the installed skill is absent or its file cannot be read, return `BLOCKED` with run token `not-started`, required skill `product-tree:audit-implementation`, and the exact failed operation, then stop before starting an SPX verification run.
 2. Supply the run-driver identity separately: `{"producerKind":"agent","agentName":"implementation-auditor","agentOwningPluginName":"product-tree","skillName":"audit-implementation","skillOwningPluginName":"product-tree","invocationRole":"run-driver"}`. Do not append the identity to the selector; discovery belongs to the skill.
 3. If `product-tree:audit-implementation` reports a blocked preparation or SPX command, relay its complete blocked diagnostic verbatim: run token or `not-started`, exact command, payload source, payload key, exit code, and stderr. For a missing target or identity, relay its `not-started` diagnostic naming the missing input unchanged.
 4. If `product-tree:audit-implementation` renders a completed run, relay the run token, the run file, the rendered projection, and each filed line or `filed: none` verbatim.

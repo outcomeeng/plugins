@@ -156,22 +156,45 @@ def run_graphql(
     runner: CommandRunner,
 ) -> dict[str, object]:
     argv = graphql_argv(query, fields, host)
-    completed = runner(
-        argv,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+    try:
+        completed = runner(
+            argv,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError as exc:
+        raise launch_error(argv, exc) from exc
     if completed.returncode != 0:
         print(completed.stderr, file=sys.stderr, end="")
         raise SystemExit(completed.returncode)
-    return cast("dict[str, object]", json.loads(completed.stdout))
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"GitHub response to {' '.join(argv[:3])} must be JSON, got "
+            f"{completed.stdout[:200]!r} ({exc}) while parsing the GraphQL "
+            f"response. {RETRY_HINT}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise ValueError(
+            f"GitHub response to {' '.join(argv[:3])} must be a JSON object, "
+            f"got {payload!r} while parsing the GraphQL response. {RETRY_HINT}"
+        )
+    return cast("dict[str, object]", payload)
 
 
 RETRY_HINT = (
     "Re-run the command; if the error persists, check that the GitHub host "
     "returns the GraphQL schema this script queries."
 )
+
+
+def launch_error(argv: list[str], exc: OSError) -> ValueError:
+    return ValueError(
+        f"could not start {argv[0]!r} for {' '.join(argv[:3])}: {exc}. "
+        "Install the GitHub CLI (gh) and put it on PATH, then re-run the command."
+    )
 
 
 def shape_error(field: str, expected: str, value: object, where: str) -> ValueError:
@@ -356,13 +379,14 @@ def main(
             pr_number = validate_number(args.pr, "pr")
             comment_id = validate_comment_id(args.review_comment_id)
             thread_id = find_thread_id(owner, repo, pr_number, comment_id, host, runner)
+        resolve_argv = graphql_argv(QUERY, {"id": thread_id}, host, silent=True)
+        try:
+            completed = runner(resolve_argv, check=False)
+        except OSError as exc:
+            raise launch_error(resolve_argv, exc) from exc
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return 2
-    completed = runner(
-        graphql_argv(QUERY, {"id": thread_id}, host, silent=True),
-        check=False,
-    )
     return completed.returncode
 
 

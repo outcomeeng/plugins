@@ -24,7 +24,6 @@ Run the `product-tree:audit-eval-evidence` methodology in this already-dispatche
 - Load `product-tree:audit-eval-evidence` before relying on its methodology; if it cannot load, report the exact availability failure instead of auditing from remembered methodology.
 - MUST preserve the supplied spec node path unchanged; the invoked skill discovers its evidence scope.
 - MUST let `product-tree:audit-eval-evidence` own the evidence-property checks, their strict order, finding shape, and verdict calculation — the wrapper holds no audit policy, so every rule comes from the current skill.
-- NEVER edit files, run evals, run tests, run validation, or commit changes — the calling session and CI produce that evidence, and this verifier only judges it.
 
 </constraints>
 

@@ -204,7 +204,15 @@ def _resolve_target_kind() -> object:
     value = os.environ.get(ENV_TARGET_KIND, "").strip()
     if value == "":
         return jp.JournalTargetKind.BRANCH
-    return jp.JournalTargetKind(value)
+    try:
+        return jp.JournalTargetKind(value)
+    except ValueError as exc:
+        accepted = ", ".join(kind.value for kind in jp.JournalTargetKind)
+        raise ValueError(
+            f"{ENV_TARGET_KIND}={value!r} is not a valid target kind; "
+            f"accepted values: {accepted}. Set {ENV_TARGET_KIND} to one of "
+            "them or unset it to default to branch."
+        ) from exc
 
 
 def _resolve_pull_request_number(target_kind: object) -> int | None:
@@ -212,14 +220,30 @@ def _resolve_pull_request_number(target_kind: object) -> int | None:
     if target_kind == jp.JournalTargetKind.PULL_REQUEST:
         if value == "":
             raise ValueError(
-                f"{ENV_PULL_REQUEST_NUMBER} is required for pull-request target"
+                f"{ENV_PULL_REQUEST_NUMBER} is empty while {ENV_TARGET_KIND} is "
+                "pull-request; set it to the positive pull request number, "
+                "for example 123."
             )
-        number = int(value)
+        try:
+            number = int(value)
+        except ValueError as exc:
+            raise ValueError(
+                f"{ENV_PULL_REQUEST_NUMBER}={value!r} is not an integer; "
+                f"set {ENV_PULL_REQUEST_NUMBER} to the positive pull request "
+                "number, for example 123."
+            ) from exc
         if number <= 0:
-            raise ValueError(f"{ENV_PULL_REQUEST_NUMBER} must be positive")
+            raise ValueError(
+                f"{ENV_PULL_REQUEST_NUMBER}={value!r} must be a positive "
+                "integer; set it to the pull request number, for example 123."
+            )
         return number
     if value:
-        raise ValueError(f"{ENV_PULL_REQUEST_NUMBER} requires pull-request target")
+        raise ValueError(
+            f"{ENV_PULL_REQUEST_NUMBER}={value!r} is set while "
+            f"{ENV_TARGET_KIND} is not pull-request; set {ENV_TARGET_KIND} to "
+            f"pull-request or unset {ENV_PULL_REQUEST_NUMBER}."
+        )
     return None
 
 

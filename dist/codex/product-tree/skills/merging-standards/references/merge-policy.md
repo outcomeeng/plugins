@@ -75,7 +75,7 @@ Use full branch names and full commit SHAs. Do not abbreviate identity values in
 
 Safe cleanup policy:
 
-- Branch and ref deletion follows the occupancy, ancestry, and patch-equivalence proof in `merge-cleanup.md`.
+- Branch and ref deletion follows the occupancy, ancestry, and patch-equivalence proof of the `<merge_cleanup>` sequence.
 - If a preservation branch has no remote and all substantive commits are present on `origin/<base>` by ancestry or patch equivalence, report it as safe to delete and delete it unless the branch name or operator instruction marks it as retained evidence.
 
 Use git state observations rather than memory for every record field. The patch-equivalence observation is `git cherry -v --abbrev=40 origin/<base> <branch>`.
@@ -407,7 +407,7 @@ A path being foundational, not yet consumed by production code, behind a deferre
 </authority_gates>
 
 <merge_cleanup>
-Immediately before the merge mutation, read `merge-cleanup.md`; it owns the merge command, overlay checks, worktree transition, and branch cleanup sequence.
+The merge command, overlay checks, worktree transition, and branch cleanup sequence apply immediately before the merge mutation.
 
 </merge_cleanup>
 
@@ -544,7 +544,7 @@ For every audit and review, persist accepted requirements in decisions and specs
 </auditor_verdicts>
 
 <action_tokens>
-The token set, each token's trigger condition, and its required follow-up live in `action-tokens.md`.
+The token set, each token's trigger condition, and its required follow-up apply to every emitted action token.
 </action_tokens>
 <self_reference>No "Claude", "AI", "agent", "Co-Authored-By: Claude", or similar identity strings in any merge-flow artifact: branch names, commit messages, PR titles, PR bodies, review comments.</self_reference>
 
