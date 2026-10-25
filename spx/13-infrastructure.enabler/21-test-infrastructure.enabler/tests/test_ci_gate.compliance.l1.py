@@ -26,6 +26,7 @@ from outcomeeng.validation.ci_gate import (
     GATE_RECIPE_COMMAND,
     GATE_RECIPE_COMMANDS,
     GITHUB_TOKEN_ENVIRONMENT,
+    L3_RECIPE_COMMAND,
     MAXIMUM_JOB_TIMEOUT_MINUTES,
     PINNED_VERSION_ENVIRONMENT_SUFFIX,
     SOFT_PASS_SHELL_SNIPPETS,
@@ -34,6 +35,7 @@ from outcomeeng.validation.ci_gate import (
 from outcomeeng_testing.harnesses.ci_gate import (
     credential_violation_fixture_paths,
     gate_fixture_path,
+    l3_value_violation_fixture_paths,
     observe_ci_toolchain,
     observe_gate_job,
     observe_gate_python_versions,
@@ -89,8 +91,8 @@ def test_l3_tests_before_the_full_gate_are_detected() -> None:
     )
 
 
-def _run_credentials(workflow_path: Path | None = None) -> set[tuple[str, str]]:
-    """Return every (run command, credential) pair a gate step receives.
+def _run_credentials(workflow_path: Path | None = None) -> set[tuple[str, str, str]]:
+    """Return every (run command, credential, value) a gate step receives.
 
     A step receives the workflow's, the job's, and its own environment, so a
     credential declared at any of the three reaches the step.
@@ -99,20 +101,24 @@ def _run_credentials(workflow_path: Path | None = None) -> set[tuple[str, str]]:
         requirement.environment_name for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
     }
     return {
-        (run_command, name)
+        (run_command, name, value)
         for run_command, environment in observe_ci_toolchain(
             workflow_path
         ).effective_run_environments
-        for name in environment
+        for name, value in environment.items()
         if name in credentials
     }
 
 
-def test_only_the_l3_step_receives_the_l3_credentials() -> None:
-    assert _run_credentials() == {
-        (requirement.run_command, requirement.environment_name)
+def _required_credentials() -> set[tuple[str, str, str]]:
+    return {
+        (requirement.run_command, requirement.environment_name, requirement.value)
         for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
     }
+
+
+def test_only_the_l3_step_receives_the_l3_credentials() -> None:
+    assert _run_credentials() == _required_credentials()
 
 
 def test_credential_violation_fixtures_are_present() -> None:
@@ -123,7 +129,30 @@ def test_credential_violation_fixtures_are_present() -> None:
     "fixture", credential_violation_fixture_paths(), ids=lambda path: path.name
 )
 def test_a_credential_reaching_the_full_gate_step_is_detected(fixture: Path) -> None:
-    assert (GATE_RECIPE_COMMAND, GITHUB_TOKEN_ENVIRONMENT) in _run_credentials(fixture)
+    assert GITHUB_TOKEN_ENVIRONMENT in {
+        name
+        for run_command, name, _ in _run_credentials(fixture)
+        if run_command == GATE_RECIPE_COMMAND
+    }
+
+
+def test_l3_value_violation_fixtures_are_present() -> None:
+    assert l3_value_violation_fixture_paths()
+
+
+@pytest.mark.parametrize(
+    "fixture", l3_value_violation_fixture_paths(), ids=lambda path: path.name
+)
+def test_a_wrong_l3_credential_value_is_detected(fixture: Path) -> None:
+    received = {
+        credential
+        for credential in _run_credentials(fixture)
+        if credential[0] == L3_RECIPE_COMMAND
+    }
+    required = _required_credentials()
+
+    assert {name for _, name, _ in received} == {name for _, name, _ in required}
+    assert received != required
 
 
 def _inlined_gate_steps(workflow_path: Path | None = None) -> set[str]:
@@ -173,7 +202,8 @@ def test_gate_workflow_provisions_the_declared_toolchain() -> None:
     for step_requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS:
         assert any(
             run_command == step_requirement.run_command
-            and step_requirement.environment_name in environment
+            and environment.get(step_requirement.environment_name)
+            == step_requirement.value
             for run_command, environment in observation.run_environments
         )
 
@@ -198,13 +228,10 @@ def test_every_provisioned_tool_is_declared() -> None:
         if requirement.version_environment is not None
     }
     assert {
-        (run_command, name)
+        (run_command, name, value)
         for run_command, environment in observation.run_environments
-        for name in environment
-    } == {
-        (requirement.run_command, requirement.environment_name)
-        for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
-    }
+        for name, value in environment.items()
+    } == _required_credentials()
 
 
 def test_missing_tool_provisioning_is_detected() -> None:

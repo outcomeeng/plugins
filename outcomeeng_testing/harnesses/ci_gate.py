@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Final, cast
 
 import yaml
@@ -41,17 +43,19 @@ class CiToolchainObservation:
 
     Each step environment is keyed by the step's normalized `run:` body, empty
     for a step that runs no command, so a step's name never decides which
-    command its environment reaches. `run_environments` holds the names a step
-    declares itself; `effective_run_environments` holds every name the step
-    receives, from the workflow, the job, and the step together.
+    command its environment reaches. Every environment maps each name to the
+    value the workflow writes for it. `run_environments` holds what a step
+    declares itself; `effective_run_environments` holds what the step receives
+    from the workflow, the job, and the step together, a narrower scope's value
+    replacing a wider one's.
     """
 
-    workflow_environment: frozenset[str]
-    job_environment: frozenset[str]
+    workflow_environment: Mapping[str, str]
+    job_environment: Mapping[str, str]
     action_references: tuple[str, ...]
     run_commands: tuple[str, ...]
-    run_environments: tuple[tuple[str, frozenset[str]], ...]
-    effective_run_environments: tuple[tuple[str, frozenset[str]], ...]
+    run_environments: tuple[tuple[str, Mapping[str, str]], ...]
+    effective_run_environments: tuple[tuple[str, Mapping[str, str]], ...]
 
 
 @dataclass(frozen=True)
@@ -114,6 +118,9 @@ CI_GATE_FIXTURES: Final = REPO_ROOT / "outcomeeng_testing" / "fixtures" / "ci_ga
 # Each fixture under this name puts a gate credential on the `just check-full`
 # step from one scope or step layout.
 CREDENTIAL_VIOLATION_FIXTURE_GLOB: Final = "credentials_*.yml"
+# Each fixture under this name gives the `just test-l3` step every credential
+# name with one value other than the one the gate requires.
+L3_VALUE_VIOLATION_FIXTURE_GLOB: Final = "l3_value_*.yml"
 
 
 def gate_fixture_path(name: str) -> Path:
@@ -124,6 +131,11 @@ def gate_fixture_path(name: str) -> Path:
 def credential_violation_fixture_paths() -> tuple[Path, ...]:
     """Return every inert fixture that reaches the full-gate step with a credential."""
     return tuple(sorted(CI_GATE_FIXTURES.glob(CREDENTIAL_VIOLATION_FIXTURE_GLOB)))
+
+
+def l3_value_violation_fixture_paths() -> tuple[Path, ...]:
+    """Return every inert fixture that gives the L3 step a wrong credential value."""
+    return tuple(sorted(CI_GATE_FIXTURES.glob(L3_VALUE_VIOLATION_FIXTURE_GLOB)))
 
 
 def workflow(workflow_path: Path | None = None) -> dict[str, Any]:
@@ -189,21 +201,21 @@ def observe_validation_step_argvs() -> frozenset[tuple[str, ...]]:
     return frozenset(step.argv for step in VALIDATION_STEPS)
 
 
+def _environment(section: dict[str, Any]) -> Mapping[str, str]:
+    return MappingProxyType(dict(cast("dict[str, str]", section.get("env", {}))))
+
+
 def observe_ci_toolchain(
     workflow_path: Path | None = None,
 ) -> CiToolchainObservation:
     """Return the workflow surfaces that provision and authenticate gate tools."""
     workflow_data = workflow(workflow_path)
-    workflow_env = frozenset(cast("dict[str, str]", workflow_data.get("env", {})))
-    env = frozenset(cast("dict[str, str]", gate_job(workflow_data).get("env", {})))
+    workflow_env = _environment(workflow_data)
+    env = _environment(gate_job(workflow_data))
     steps = gate_steps(workflow_data)
     runs = tuple(cast("str", step["run"]) for step in steps if "run" in step)
     run_environments = tuple(
-        (
-            cast("str", step.get("run", "")).strip(),
-            frozenset(cast("dict[str, str]", step.get("env", {}))),
-        )
-        for step in steps
+        (cast("str", step.get("run", "")).strip(), _environment(step)) for step in steps
     )
     return CiToolchainObservation(
         workflow_environment=workflow_env,
@@ -214,7 +226,7 @@ def observe_ci_toolchain(
         run_commands=runs,
         run_environments=run_environments,
         effective_run_environments=tuple(
-            (run_command, workflow_env | env | step_env)
+            (run_command, MappingProxyType({**workflow_env, **env, **step_env}))
             for run_command, step_env in run_environments
         ),
     )
