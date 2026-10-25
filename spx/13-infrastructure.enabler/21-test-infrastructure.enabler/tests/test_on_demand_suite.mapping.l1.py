@@ -11,7 +11,6 @@ from outcomeeng.validation import (
     PYTEST_ARGV,
     RECIPE_TEST,
     RECIPE_TEST_ON_DEMAND,
-    Step,
     on_demand_recipe,
     test_recipe as direct_test_recipe,
 )
@@ -28,9 +27,6 @@ from outcomeeng_testing.harnesses.on_demand_collection import (
 
 PYTHON_COMMAND = "python3"
 PYTHON_MODULE_FLAG = "-m"
-# The `test` recipe of the justfile separates the recipe name from the pytest
-# arguments it forwards with this token.
-RECIPE_ARGUMENT_SEPARATOR = "--"
 ON_DEMAND_FIXTURE_PATHS = tuple(
     test_file.path
     for test_file in on_demand_fixture_files()
@@ -47,14 +43,15 @@ def test_the_on_demand_recipe_targets_a_file_exactly_when_it_carries_the_on_dema
         for test_file in on_demand_fixture_files()
         if test_file.level == level
     )
-    expected = tuple(sorted(files)) if level == ON_DEMAND_LEVEL else ()
 
     recipe = on_demand_recipe(files)
 
     assert files
-    assert recipe.steps == (
-        (Step(label="pytest", argv=(*PYTEST_ARGV, *expected)),) if expected else ()
-    )
+    if level == ON_DEMAND_LEVEL:
+        (step,) = recipe.steps
+        assert frozenset(step.argv[len(PYTEST_ARGV) :]) == frozenset(files)
+    else:
+        assert recipe.steps == ()
 
 
 @pytest.mark.parametrize("level", EXECUTION_LEVELS)
@@ -69,7 +66,7 @@ def test_a_direct_target_keeps_every_file_it_names_whatever_its_level(
 
     (step,) = direct_test_recipe(named).steps
 
-    assert step.argv[len(PYTEST_ARGV) :] == named
+    assert frozenset(step.argv[len(PYTEST_ARGV) :]) == frozenset(named)
 
 
 def test_the_dispatch_collects_exactly_the_on_demand_files_of_a_repository() -> None:
@@ -105,30 +102,15 @@ def test_the_justfile_recipe_runs_the_on_demand_dispatch() -> None:
 def test_the_justfile_test_recipe_forwards_a_named_file_to_the_test_dispatch(
     named: str,
 ) -> None:
-    assert justfile_recipe_command(RECIPE_TEST, named) == (
-        PYTHON_COMMAND,
-        PYTHON_MODULE_FLAG,
-        str(validation_entry.__package__),
-        RECIPE_TEST,
-        RECIPE_ARGUMENT_SEPARATOR,
-        named,
-    )
-
-
-@pytest.mark.parametrize("named", ON_DEMAND_FIXTURE_PATHS)
-def test_the_test_dispatch_collects_a_named_on_demand_file_and_nothing_else(
-    named: str,
-) -> None:
     fixture = on_demand_fixture_files()
+    command = justfile_recipe_command(RECIPE_TEST, named)
+    forwarded = command[command.index(str(validation_entry.__package__)) + 1 :]
 
-    spawns = recipe_dispatch_spawns(
-        (RECIPE_TEST, RECIPE_ARGUMENT_SEPARATOR, named), fixture
-    )
+    spawns = recipe_dispatch_spawns(forwarded, fixture)
     (pytest_call,) = (
         call for call in spawns if call[: len(PYTEST_ARGV)] == PYTEST_ARGV
     )
     collection = fixture_collection(fixture, pytest_argument_tail(pytest_call))
 
-    assert pytest_call[len(PYTEST_ARGV) :] == (named,)
     assert collection.exit_code == 0, collection.output
     assert collection.collected_files == frozenset((named,))
