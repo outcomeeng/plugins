@@ -54,23 +54,6 @@ surface for no verdict.
 gate consumes, and the ADR's toolchain paragraph names none of the `l3` tests'
 provisioning.
 
-## The verification PDR names the live-discovery exclusion as the CI scope
-
-[`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md)
-states that deterministic types widen in CI to the whole repository less the
-live-discovery exclusion. The exclusion CI applies is the on-demand suite, every
-test whose file name carries the execution level `l3`, of which the two
-live-discovery tests are members.
-
-**Evidence**: line 23 of `14-verification.pdr.md` against
-[`spx/13-infrastructure.enabler/21-test-infrastructure.enabler/14-on-demand-suite.pdr.md`](spx/13-infrastructure.enabler/21-test-infrastructure.enabler/14-on-demand-suite.pdr.md).
-
-**Impact**: a reader takes the CI scope to omit two tests, where it omits every
-`l3` test.
-
-**Settlement condition**: the sentence names the on-demand suite as the CI scope's
-one exclusion.
-
 ## DEBT [evidence]: the static-analysis steps are checked in a step list, not in the `check-full` recipe
 
 Defect class: `alignment`.
