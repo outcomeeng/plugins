@@ -3,7 +3,7 @@ name: direct-positions
 description: >-
   ALWAYS invoke this skill when directing positions across Products: resuming the directing session after a compaction, observing, waking, or steering a position's pane, or reading a position's mail. NEVER instruct, compact, restart, or reload a position's pane without this skill.
 argument-hint: "[resume | observe | wake | steer <position> | compact <position> | restart <position> | reload <position>]"
-allowed-tools: Read, Write, {{! tool('use_skill') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/direction.py":*), Bash(spx verification run paths:*)
+allowed-tools: Read, Write, {{! tool('use_skill') !}}, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/direction.py":*), Bash(spx -C * verification run paths *)
 ---
 
 Use skill `coding-agents:operate-herdr` for every pane operation on a position whose `environment` is `herdr`.
@@ -23,7 +23,6 @@ A report of each configured position's observed state, each action taken on its 
 - Reach every pane through `coding-agents:operate-herdr` or `coding-agents:operate-prowl`, by the position's `environment`, and every mail operation and the mail project key through `coding-agents:operate-agent-mail`; the script imports each adapter module from the sibling skill's `scripts` directory by a `__file__`-relative path and calls its typed operation. Construct no raw environment, mail, or Git command, and name no path into the plugin cache.
 - Read a pane's last prompt and context fill from the environment skill's result. When the result omits either, report it unavailable and act on neither. Read no harness transcript file.
 - Never believe a report unchecked: confirm a position's claim against its pane or its mail before relaying it or acting on it.
-- The host grants the verification-run write paths: every restart supplies the paths SPX reports through the harness's parent-session option and keeps the operator's approval policy, and no agent definition names a path.
 
 </essential_principles>
 
@@ -142,7 +141,7 @@ For `wake`, `steer`, `compact`, and `reload`, check `<authority>` and `<pane_gua
 <step name="restart">
 Check `<authority>` and `<pane_guards>` first, against the position's pane from `roster`; a restart needs a herdr session whose pane item names its agent kind, and any other pane stops with that reason. Then:
 
-1. **Write paths.** Run `spx verification run paths --verification-type <type> --scope-type changeset --scope <default-branch>..HEAD` from the position's working directory, once for each verification type the session records, `audit` and `review`. The union of the `writeDirectories` of the results, without duplicates, is the set the relaunch supplies; a path is supplied whether or not it exists yet. A command that fails stops the restart with its report verbatim, and the session is not stopped. Plan the paths anew for every restart and every change of the verification scope; no approval-policy setting of the session is changed to make a path writable.
+1. **Write paths.** Run `spx -C <working directory> verification run paths --verification-type <type> --scope-type changeset --scope origin/HEAD..HEAD`, where `<working directory>` is the working directory the position's entry in `positions` names and `-C` makes spx run as if started there, once for each verification type the session records, `audit` and `review`. The union of the `writeDirectories` of the results, without duplicates, is the set the relaunch supplies; a path is supplied whether or not it exists yet. A command that fails stops the restart with its report verbatim, and the session is not stopped. Plan the paths anew for every restart and every change of the verification scope; no approval-policy setting of the session is changed to make a path writable.
 2. Use skill `coding-agents:operate-herdr` for one `stop` of the pane and then one `relaunch` with the pane's `name`, `kind`, and `pane` id from `roster`, which is the relaunch's selector because the stopped session no longer resolves by agent name, a `timeout` of `60000`, `"mutationAuthorized": true`, and `agentArguments` carrying the harness's parent-session option for each path: for kind `claude` or `codex`, `"--add-dir"` followed by the path, once per path. Any other kind, such as `pi`, whose harness offers no such option stops the restart with a configuration error naming the kind and each path, before the stop.
 3. **Preflight.** Before the session's first verification round, read its effective native policy through the harness's own listing of its permissions: use skill `coding-agents:operate-herdr` for one `prompt` with `text` `/permissions` and one `read` of the pane. Each path from step 1 that the listing does not show as writable is a denied path. A denied path stops the restart with a configuration error naming each denied path, and the session receives no work.
 4. Read the pane and confirm the position is up before reporting it.
