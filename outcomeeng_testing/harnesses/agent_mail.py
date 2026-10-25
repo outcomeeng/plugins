@@ -72,6 +72,10 @@ USAGE_FIXTURE_ROOT = FIXTURE_ROOT / "usage"
 RESPONSE_FIXTURE_ROOT = FIXTURE_ROOT / "responses"
 RAW_MAIL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_command.py.txt"
 RAW_MAIL_SHELL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_shell_command.py.txt"
+RAW_MAIL_QUALIFIED_SHELL_VIOLATION_FIXTURES = (
+    FIXTURE_ROOT / "raw_am_absolute_shell_command.py.txt",
+    FIXTURE_ROOT / "raw_am_relative_shell_command.py.txt",
+)
 GIT_PROJECT_KEY_VIOLATION_FIXTURE = FIXTURE_ROOT / "git_project_key.py.txt"
 RECORD_ROUNDTRIP_SEED = 2026091801
 RECORD_ROUNDTRIP_EXAMPLES = 60
@@ -1211,6 +1215,15 @@ def raw_mail_shell_violation_source() -> tuple[str, dict[str, str]]:
     return (
         str(RAW_MAIL_SHELL_VIOLATION_FIXTURE.relative_to(ROOT)),
         _source_texts((RAW_MAIL_SHELL_VIOLATION_FIXTURE,)),
+    )
+
+
+def raw_mail_qualified_shell_violation_sources() -> tuple[
+    tuple[str, dict[str, str]], ...
+]:
+    return tuple(
+        (str(fixture.relative_to(ROOT)), _source_texts((fixture,)))
+        for fixture in RAW_MAIL_QUALIFIED_SHELL_VIOLATION_FIXTURES
     )
 
 

@@ -22,6 +22,7 @@ from outcomeeng_testing.harnesses.agent_mail import (
     mail_command_source_texts,
     mail_pool,
     nul_tainted_requests,
+    raw_mail_qualified_shell_violation_sources,
     raw_mail_shell_violation_source,
     raw_mail_violation_source,
     request_naming_repository,
@@ -322,6 +323,11 @@ def test_no_other_shipped_script_constructs_mail_commands_or_git_keys() -> None:
     assert module.raw_mail_command_violations(raw_source) == [raw_path]
     shell_path, shell_source = raw_mail_shell_violation_source()
     assert module.raw_mail_command_violations(shell_source) == [shell_path]
+    for (
+        qualified_path,
+        qualified_source,
+    ) in raw_mail_qualified_shell_violation_sources():
+        assert module.raw_mail_command_violations(qualified_source) == [qualified_path]
     git_path, git_source = git_project_key_violation_source()
     assert module.git_project_key_violations(git_source) == [git_path]
 
