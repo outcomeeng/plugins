@@ -9,7 +9,6 @@ invocation; the skill re-arms the next pass.
 from __future__ import annotations
 
 import argparse
-import contextlib
 import json
 import sys
 from pathlib import Path
@@ -178,24 +177,15 @@ def _mail_execute(
 ) -> dict[str, Any]:
     """Run one mail adapter request against the mail project `mail.channel` names.
 
-    The adapter derives its project key from the common Git directory of its own
-    working directory, so a configured channel is the adapter's working directory
-    for the call; an unset channel leaves the invocation checkout.
+    A configured channel is the adapter's `repository` argument; an unset
+    channel leaves the argument absent and the adapter resolves the invocation
+    checkout's repository. The working directory never changes.
     """
     directory = config["mailDirectory"]
     if directory is None:
         return mail.execute(request)
-    with contextlib.ExitStack() as stack:
-        try:
-            stack.enter_context(contextlib.chdir(directory))
-        except OSError as error:
-            raise DirectionError(
-                f"mail.channel {directory!r} cannot be entered: {error}; set "
-                f"mail.channel in the [mail] table of {config['overrideFile']['path']} "
-                "to the path of the repository whose mail project to use, or remove "
-                "the key to use the invocation checkout's repository."
-            ) from error
-        return mail.execute(request)
+    arguments = {**request["arguments"], "repository": directory}
+    return mail.execute({**request, "arguments": arguments})
 
 
 def _unjudged(

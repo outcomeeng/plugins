@@ -56,6 +56,10 @@ LIMIT_OPTION = "--limit"
 JSON_OPTION = "--json"
 PATH_FORMAT_ABSOLUTE_OPTION = "--path-format=absolute"
 GIT_COMMON_DIR_OPTION = "--git-common-dir"
+# Git runs as if started in the directory this option names, so a named
+# repository is read as Git's working directory without moving the process.
+GIT_DIRECTORY_OPTION = "-C"
+REPOSITORY_OPTION = "--repository"
 
 # Every variable that can make Git answer the location question from something
 # other than the invoking working directory. Git exports GIT_DIR into every hook
@@ -156,6 +160,8 @@ OUTCOME_FIELD = "outcome"
 ALL_RECORDS_FIELD = "allRecords"
 INCLUDE_BODIES_FIELD = "includeBodies"
 LIMIT_FIELD = "limit"
+# The optional absolute path of the repository whose store an operation acts on.
+REPOSITORY_FIELD = "repository"
 
 # Fields of a message record.
 RECORD_SCHEMA_FIELD = "schema"
@@ -298,27 +304,44 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
         (
             RequestShape(
                 frozenset({AGENT_FIELD, PROGRAM_FIELD, MODEL_FIELD}),
-                frozenset({TASK_FIELD, DISPLAY_NAME_FIELD}),
+                frozenset({TASK_FIELD, DISPLAY_NAME_FIELD, REPOSITORY_FIELD}),
             ),
         )
     ),
-    Operation.SEND: OperationContract((RequestShape(frozenset({RECORD_FIELD})),)),
+    Operation.SEND: OperationContract(
+        (RequestShape(frozenset({RECORD_FIELD}), frozenset({REPOSITORY_FIELD})),)
+    ),
     Operation.LIST: OperationContract(
         (
             RequestShape(
                 frozenset({AGENT_FIELD}),
-                frozenset({ALL_RECORDS_FIELD, INCLUDE_BODIES_FIELD, LIMIT_FIELD}),
+                frozenset({ALL_RECORDS_FIELD, INCLUDE_BODIES_FIELD, LIMIT_FIELD, REPOSITORY_FIELD}),
             ),
         )
     ),
     Operation.READ: OperationContract(
-        (RequestShape(frozenset({AGENT_FIELD, MESSAGE_ID_FIELD})),)
+        (
+            RequestShape(
+                frozenset({AGENT_FIELD, MESSAGE_ID_FIELD}),
+                frozenset({REPOSITORY_FIELD}),
+            ),
+        )
     ),
     Operation.ACKNOWLEDGE: OperationContract(
-        (RequestShape(frozenset({AGENT_FIELD, MESSAGE_ID_FIELD})),)
+        (
+            RequestShape(
+                frozenset({AGENT_FIELD, MESSAGE_ID_FIELD}),
+                frozenset({REPOSITORY_FIELD}),
+            ),
+        )
     ),
     Operation.WAIT: OperationContract(
-        (RequestShape(frozenset({AGENT_FIELD, AFTER_ID_FIELD, TIMEOUT_SECONDS_FIELD})),)
+        (
+            RequestShape(
+                frozenset({AGENT_FIELD, AFTER_ID_FIELD, TIMEOUT_SECONDS_FIELD}),
+                frozenset({REPOSITORY_FIELD}),
+            ),
+        )
     ),
 }
 PUBLIC_AM_COMMAND_PREFIXES: Final[Mapping[Operation, tuple[str, ...]]] = {
@@ -381,6 +404,7 @@ ARGUMENT_NAMES: Final[Mapping[str, str]] = {
     "all_records": ALL_RECORDS_FIELD,
     "include_bodies": INCLUDE_BODIES_FIELD,
     "limit": LIMIT_FIELD,
+    "repository": REPOSITORY_FIELD,
 }
 # The argument-vector form of a raw `am` command, and its shell-string form: the
 # executable followed by one of the store's command groups inside a string.
@@ -956,30 +980,62 @@ def repository_lookup_environment() -> dict[str, str]:
     }
 
 
-def resolve_project_key(runner: CommandRunner) -> str:
-    """Return the invoking working directory's repository key, or raise."""
-    try:
-        result = runner.run(
-            PUBLIC_GIT_COMMON_DIR_COMMAND, env=repository_lookup_environment()
+def repository_path(value: object, location: str) -> str:
+    """Return a named repository, which must be an absolute path string."""
+    if (
+        not isinstance(value, str)
+        or not value.startswith(PATH_SEPARATOR)
+        or NUL_CHARACTER in value
+    ):
+        raise AgentMailError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Reading {location}",
+            f"expected an absolute path string, received {value!r}",
+            "Name the repository by an absolute path.",
         )
+    return value
+
+
+def common_dir_command(repository: str | None) -> tuple[str, ...]:
+    """The lookup command: the adapter's own working directory, or the named path."""
+    if repository is None:
+        return PUBLIC_GIT_COMMON_DIR_COMMAND
+    return (
+        GIT_COMMAND,
+        GIT_DIRECTORY_OPTION,
+        repository,
+        *PUBLIC_GIT_COMMON_DIR_COMMAND[1:],
+    )
+
+
+def resolve_project_key(runner: CommandRunner, repository: str | None = None) -> str:
+    """Return the repository's key, or raise.
+
+    A named repository is read as Git's working directory; none named reads the
+    adapter's own. A named path that resolves no repository is unresolved and is
+    never answered from the adapter's working directory.
+    """
+    lookup = common_dir_command(repository)
+    try:
+        result = runner.run(lookup, env=repository_lookup_environment())
     except FileNotFoundError as error:
         raise AgentMailError(
             ExecutionStatus.REPOSITORY_UNRESOLVED,
-            " ".join(PUBLIC_GIT_COMMON_DIR_COMMAND),
+            " ".join(lookup),
             error,
             f"Install {GIT_COMMAND} and put it on PATH.",
         ) from error
     except subprocess.TimeoutExpired as error:
         raise AgentMailError(
             ExecutionStatus.REPOSITORY_UNRESOLVED,
-            " ".join(PUBLIC_GIT_COMMON_DIR_COMMAND),
+            " ".join(lookup),
             error,
             f"Check that {GIT_COMMAND} answers within its bound, then retry.",
         ) from error
     except Exception as error:
         raise AgentMailError(
             ExecutionStatus.REPOSITORY_UNRESOLVED,
-            " ".join(PUBLIC_GIT_COMMON_DIR_COMMAND),
+            " ".join(lookup),
             error,
             f"Check that {GIT_COMMAND} is executable by this user and that the "
             f"working directory is readable, then retry.",
@@ -987,7 +1043,7 @@ def resolve_project_key(runner: CommandRunner) -> str:
     if result.returncode != 0:
         raise AgentMailError(
             ExecutionStatus.REPOSITORY_UNRESOLVED,
-            " ".join(PUBLIC_GIT_COMMON_DIR_COMMAND),
+            " ".join(lookup),
             result.stderr.strip() or f"exit code {result.returncode} with no output",
             "Run from inside a Git repository or one of its worktrees.",
         )
@@ -1071,6 +1127,10 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
                 _string(arguments[field_name], location)
             else:
                 _text(arguments[field_name], location)
+    if REPOSITORY_FIELD in arguments:
+        repository_path(
+            arguments[REPOSITORY_FIELD], f"request.{ARGUMENTS_FIELD}.{REPOSITORY_FIELD}"
+        )
     for field_name in BOOLEAN_ARGUMENT_FIELDS:
         if field_name in arguments:
             _boolean(arguments[field_name], f"request.{ARGUMENTS_FIELD}.{field_name}")
@@ -1084,11 +1144,12 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
             )
     if operation is Operation.SEND:
         arguments = {
+            **arguments,
             RECORD_FIELD: validate_record(
                 arguments[RECORD_FIELD],
                 location=f"request.{ARGUMENTS_FIELD}.{RECORD_FIELD}",
                 with_id=False,
-            )
+            ),
         }
         store_fields_for(arguments[RECORD_FIELD])
     return operation, arguments
@@ -1510,7 +1571,10 @@ def execute(
         if isinstance(candidate, str) and candidate:
             operation_value = candidate
         operation, arguments = _validated_request(request)
-        project_key = resolve_project_key(runner)
+        repository = arguments.get(REPOSITORY_FIELD)
+        project_key = resolve_project_key(
+            runner, None if repository is None else str(repository)
+        )
     except AgentMailError as error:
         return _failure_result(operation_value, error.status, str(error))
     if operation is Operation.WAIT:
@@ -1594,6 +1658,7 @@ def _json_input(stream: TextIO, location: str) -> dict[str, object]:
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="agent_mail")
     parser.add_argument("cli_operation", choices=[op.value for op in CliOperation])
+    parser.add_argument(REPOSITORY_OPTION, dest="repository", default=None)
     return parser
 
 
@@ -1612,8 +1677,13 @@ def main(
     cli_operation = CliOperation(arguments.cli_operation)
     if cli_operation is CliOperation.PROJECT_KEY:
         try:
+            repository = (
+                None
+                if arguments.repository is None
+                else repository_path(arguments.repository, REPOSITORY_OPTION)
+            )
             payload: dict[str, object] = {
-                PROJECT_KEY_FIELD: resolve_project_key(runner)
+                PROJECT_KEY_FIELD: resolve_project_key(runner, repository)
             }
         except AgentMailError as error:
             payload = {STATUS_FIELD: error.status, DETAIL_FIELD: str(error)}

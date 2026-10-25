@@ -1105,12 +1105,21 @@ def mail_record(
     }
 
 
-def mail_send_request(record: Mapping[str, object]) -> dict[str, object]:
-    """The agent-mail capability's send request carrying one record."""
+def mail_send_request(
+    record: Mapping[str, object], repository: str | None = None
+) -> dict[str, object]:
+    """The agent-mail capability's send request carrying one record.
+
+    The request names the repository only when the caller names one; the
+    repository selects the store and never enters the record.
+    """
+    arguments: dict[str, object] = {RECORD_FIELD: dict(record)}
+    if repository is not None:
+        arguments[REPOSITORY_FIELD] = repository
     return {
         SCHEMA_VERSION_FIELD: MAIL_CAPABILITY_SCHEMA_VERSION,
         TRANSPORT_OPERATION_FIELD: MAIL_SEND_OPERATION,
-        ARGUMENTS_FIELD: {RECORD_FIELD: dict(record)},
+        ARGUMENTS_FIELD: arguments,
     }
 
 
@@ -1123,7 +1132,9 @@ def mail_request(request: object) -> dict[str, object]:
             f"Message request must not supply {RECORD_SCHEMA_FIELD!r}; "
             f"the script assigns record schema {RECORD_SCHEMA_VERSION}.",
         )
-    unexpected = sorted(set(value) - RECORD_FIELDS - {AUTHORITY_FIELD})
+    unexpected = sorted(
+        set(value) - RECORD_FIELDS - {AUTHORITY_FIELD, REPOSITORY_FIELD}
+    )
     if unexpected:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
@@ -1143,7 +1154,12 @@ def mail_request(request: object) -> dict[str, object]:
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
         RECORD_FIELD: record,
-        CAPABILITY_FIELD: mail_send_request(record),
+        CAPABILITY_FIELD: mail_send_request(
+            record,
+            _optional_text(
+                value.get(REPOSITORY_FIELD), f"request.{REPOSITORY_FIELD}"
+            ),
+        ),
     }
 
 
