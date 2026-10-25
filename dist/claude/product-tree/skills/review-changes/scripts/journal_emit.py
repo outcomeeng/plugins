@@ -77,9 +77,20 @@ def _load_module(name: str, path: pathlib.Path) -> ModuleType:
     cached = sys.modules.get(name)
     if cached is not None:
         return cached
+    if not path.is_file():
+        raise RuntimeError(
+            f"cannot load module {name!r}: {path} does not exist. The sibling "
+            "skills (project-run-journal, scope-changeset) must be installed "
+            "beside review-changes under the same skills directory; reinstall "
+            "the product-tree plugin so every skill is present."
+        )
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load module from {path}")
+        raise RuntimeError(
+            f"cannot load module {name!r} from {path}: Python found no import "
+            "loader for the file. Confirm it is a readable .py module and "
+            "reinstall the product-tree plugin if it is damaged."
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
     spec.loader.exec_module(module)
@@ -115,7 +126,10 @@ def _project_severity(severity: object) -> object:
         return jp.Severity.REJECT
     if str(severity) == "debt":
         return jp.Severity.WARNING
-    raise ValueError(f"unknown review severity {severity!s}")
+    raise ValueError(
+        f"unknown review severity {str(severity)!r}; accepted values: "
+        "'blocking', 'debt'. Set the finding's 'severity' to one of them."
+    )
 
 
 def _project_finding(finding: review_schema.Finding) -> object:
@@ -265,43 +279,80 @@ def _read_review_manifest(path: pathlib.Path) -> dict[str, object]:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise ValueError(f"review manifest is invalid JSON: {exc.msg}") from exc
+        raise ValueError(
+            f"review manifest {path} is invalid JSON: {exc.msg} at line "
+            f"{exc.lineno} column {exc.colno}. Regenerate it with "
+            "`compute_diff.py --bundle-dir <dir>` rather than editing it."
+        ) from exc
     except OSError as exc:
-        raise ValueError(f"cannot read review manifest {path}: {exc}") from exc
+        raise ValueError(
+            f"cannot read review manifest {path}: "
+            f"{str(exc) or type(exc).__name__}. Pass the manifest.json that "
+            "`compute_diff.py --bundle-dir <dir>` wrote, and confirm the file "
+            "is readable."
+        ) from exc
     if not isinstance(raw, dict):
-        raise ValueError("review manifest must be a JSON object")
+        raise ValueError(
+            f"review manifest {path} must be a JSON object, got "
+            f"{type(raw).__name__}. Regenerate it with "
+            "`compute_diff.py --bundle-dir <dir>`."
+        )
     schema_version = raw.get("schema_version")
     if schema_version != MANIFEST_SCHEMA_VERSION:
         raise ValueError(
-            "review manifest schema_version must be "
-            f"{MANIFEST_SCHEMA_VERSION}, got {schema_version!r}"
+            f"review manifest {path} schema_version must be "
+            f"{MANIFEST_SCHEMA_VERSION}, got {schema_version!r}. Regenerate "
+            "it with the compute_diff.py installed beside this script."
         )
     return raw
 
 
-def _require_manifest_str(manifest: dict[str, object], key: str) -> str:
+def _require_manifest_str(
+    manifest: dict[str, object], key: str, *, path: pathlib.Path
+) -> str:
     value = manifest.get(key)
     if not isinstance(value, str) or value == "":
-        raise ValueError(f"review manifest {key!r} must be a non-empty string")
+        raise ValueError(
+            f"review manifest {path} key {key!r} must be a non-empty string, "
+            f"got {value!r}; keys present: {', '.join(sorted(manifest))}. "
+            "Regenerate the manifest with `compute_diff.py --bundle-dir <dir>`."
+        )
     return value
 
 
-def _manifest_changed_files(manifest: dict[str, object]) -> list[str]:
+def _manifest_changed_files(
+    manifest: dict[str, object], *, path: pathlib.Path
+) -> list[str]:
     sections = manifest.get("sections")
     if not isinstance(sections, list):
-        raise ValueError("review manifest 'sections' must be a JSON array")
+        raise ValueError(
+            f"review manifest {path} key 'sections' must be a JSON array, got "
+            f"{type(sections).__name__}. Regenerate the manifest with "
+            "`compute_diff.py --bundle-dir <dir>`."
+        )
     changed_files: list[str] = []
     seen: set[str] = set()
-    for section in sections:
+    for section_index, section in enumerate(sections):
         if not isinstance(section, dict):
-            raise ValueError("review manifest section must be a JSON object")
+            raise ValueError(
+                f"review manifest {path} sections[{section_index}] must be a "
+                f"JSON object, got {type(section).__name__}. Regenerate the "
+                "manifest with `compute_diff.py --bundle-dir <dir>`."
+            )
         files = section.get("files")
         if not isinstance(files, list):
-            raise ValueError("review manifest section 'files' must be a JSON array")
-        for file_value in files:
+            raise ValueError(
+                f"review manifest {path} sections[{section_index}] key 'files' "
+                f"must be a JSON array, got {type(files).__name__}. Regenerate "
+                "the manifest with `compute_diff.py --bundle-dir <dir>`."
+            )
+        for file_index, file_value in enumerate(files):
             if not isinstance(file_value, str) or file_value == "":
                 raise ValueError(
-                    "review manifest section 'files' entries must be non-empty strings"
+                    f"review manifest {path} "
+                    f"sections[{section_index}].files[{file_index}] must be a "
+                    f"non-empty string, got {file_value!r}. Regenerate the "
+                    "manifest with `compute_diff.py --bundle-dir <dir>`."
                 )
             if file_value in seen:
                 continue
@@ -313,10 +364,12 @@ def _manifest_changed_files(manifest: dict[str, object]) -> list[str]:
 def _review_scope_from_manifest(manifest_path: pathlib.Path) -> dict[str, object]:
     manifest = _read_review_manifest(manifest_path)
     return {
-        "baseRef": _require_manifest_str(manifest, "base_ref"),
-        "headRef": _require_manifest_str(manifest, "head_ref"),
-        "changedFiles": _manifest_changed_files(manifest),
-        "reviewInputSha256": _require_manifest_str(manifest, "diff_sha256"),
+        "baseRef": _require_manifest_str(manifest, "base_ref", path=manifest_path),
+        "headRef": _require_manifest_str(manifest, "head_ref", path=manifest_path),
+        "changedFiles": _manifest_changed_files(manifest, path=manifest_path),
+        "reviewInputSha256": _require_manifest_str(
+            manifest, "diff_sha256", path=manifest_path
+        ),
     }
 
 
@@ -395,11 +448,19 @@ def _emit_event(event: dict) -> int:
     return 0
 
 
+def _error_text(exc: BaseException) -> str:
+    """Return the exception's message, naming its type when the message is empty."""
+    return str(exc) or f"{type(exc).__name__} raised with no message"
+
+
 def _scope_entered(args: argparse.Namespace) -> int:
     try:
         metadata = jp.run_metadata_from_json(args.metadata)
     except ValueError as exc:
-        sys.stderr.write(f"{exc}\n")
+        sys.stderr.write(
+            f"scope-entered: --metadata is invalid: {_error_text(exc)}. Pass "
+            "the JSON object that `journal_emit.py metadata` printed.\n"
+        )
         return 1
     return _emit_event(
         scope_entered_event(metadata, now=args.now, attempt=args.attempt)
@@ -416,7 +477,11 @@ def _finding_reported(args: argparse.Namespace) -> int:
     try:
         finding = review_result.parse_finding_json(sys.stdin.read())
     except (ValueError, review_result.ReviewResultValidationError) as exc:
-        sys.stderr.write(f"{exc}\n")
+        sys.stderr.write(
+            f"finding-reported: the finding JSON on stdin was rejected: "
+            f"{_error_text(exc)}. Correct the finding and emit it again; no "
+            "event was printed.\n"
+        )
         return 1
     return _emit_event(
         finding_reported_event(finding, now=args.now, attempt=args.attempt)
@@ -426,12 +491,27 @@ def _finding_reported(args: argparse.Namespace) -> int:
 def _run_completed(args: argparse.Namespace) -> int:
     try:
         metadata = jp.run_metadata_from_json(args.metadata)
-        prefix = json.load(sys.stdin)
     except ValueError as exc:
-        sys.stderr.write(f"{exc}\n")
+        sys.stderr.write(
+            f"run-completed: --metadata is invalid: {_error_text(exc)}. Pass "
+            "the JSON object that `journal_emit.py metadata` printed.\n"
+        )
+        return 1
+    try:
+        prefix = json.load(sys.stdin)
+    except json.JSONDecodeError as exc:
+        sys.stderr.write(
+            f"run-completed: the event prefix on stdin is invalid JSON: "
+            f"{exc.msg} at line {exc.lineno} column {exc.colno}. Pipe the "
+            "JSON array of events appended so far.\n"
+        )
         return 1
     if not isinstance(prefix, list):
-        sys.stderr.write("event prefix must be a JSON array\n")
+        sys.stderr.write(
+            "event prefix must be a JSON array of events on stdin, got "
+            f"{type(prefix).__name__}. Pipe the JSON array of events "
+            "appended so far.\n"
+        )
         return 1
     return _emit_event(
         run_completed_event(
@@ -445,7 +525,23 @@ def _run_completed(args: argparse.Namespace) -> int:
 
 
 def _render() -> int:
-    json.dump(render_events(json.load(sys.stdin)), sys.stdout)
+    try:
+        events = json.load(sys.stdin)
+    except json.JSONDecodeError as exc:
+        sys.stderr.write(
+            f"render: the event prefix on stdin is invalid JSON: {exc.msg} at "
+            f"line {exc.lineno} column {exc.colno}. Pipe the JSON array of "
+            "sealed events.\n"
+        )
+        return 1
+    if not isinstance(events, list):
+        sys.stderr.write(
+            "render: the event prefix on stdin must be a JSON array of events, "
+            f"got {type(events).__name__}. Pipe the JSON array of sealed "
+            "events.\n"
+        )
+        return 1
+    json.dump(render_events(events), sys.stdout)
     return 0
 
 
@@ -472,7 +568,13 @@ def _emit_metadata(args: argparse.Namespace) -> int:
         TypeError,
         ValueError,
     ) as exc:
-        sys.stderr.write(f"{exc}\n")
+        sys.stderr.write(
+            f"metadata: cannot derive the review run metadata in "
+            f"{pathlib.Path.cwd()}: {_error_text(exc)}. Check the "
+            f"{ENV_BASE_REF}, {ENV_HEAD_REF}, {ENV_TARGET_KIND}, and "
+            f"{ENV_PULL_REQUEST_NUMBER} environment values and the "
+            "--manifest path, then rerun.\n"
+        )
         return 1
     json.dump(metadata, sys.stdout)
     return 0

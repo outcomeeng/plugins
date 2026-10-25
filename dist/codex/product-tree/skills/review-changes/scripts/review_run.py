@@ -31,6 +31,7 @@ import importlib.util
 import json
 import os
 import pathlib
+import shlex
 import shutil
 import subprocess
 import sys
@@ -66,9 +67,20 @@ def _load_module(name: str, path: pathlib.Path) -> ModuleType:
     cached = sys.modules.get(name)
     if cached is not None:
         return cached
+    if not path.is_file():
+        raise RuntimeError(
+            f"cannot load module {name!r}: {path} does not exist. The sibling "
+            "skills (project-run-journal, scope-changeset) must be installed "
+            "beside review-changes under the same skills directory; reinstall "
+            "the product-tree plugin so every skill is present."
+        )
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"cannot load {name} from {path}")
+        raise RuntimeError(
+            f"cannot load module {name!r} from {path}: Python found no import "
+            "loader for the file. Confirm it is a readable .py module and "
+            "reinstall the product-tree plugin if it is damaged."
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[name] = module
     spec.loader.exec_module(module)
@@ -120,34 +132,68 @@ def _review_config_digest() -> str:
     )
 
 
+def _error_text(exc: BaseException) -> str:
+    """Return the exception's message, naming its type when the message is empty."""
+    return str(exc) or f"{type(exc).__name__} raised with no message"
+
+
 def _read_json_file(path: pathlib.Path, *, name: str) -> dict[str, Any]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise ValueError(f"{name} is invalid JSON: {exc.msg}") from exc
+        raise ValueError(
+            f"{name} {path} is invalid JSON: {exc.msg} at line {exc.lineno} "
+            f"column {exc.colno}. Do not edit the file by hand; start a new "
+            "run with `review_run.py start` to regenerate it."
+        ) from exc
     except OSError as exc:
-        raise ValueError(f"cannot read {name} at {path}: {exc}") from exc
+        raise ValueError(
+            f"cannot read {name} at {path}: {_error_text(exc)}. Pass the path "
+            "that `review_run.py start` printed, and confirm the run was not "
+            "already ended by `finish` or a failed verb, which remove its "
+            "scratch directory."
+        ) from exc
     if not isinstance(value, dict):
-        raise ValueError(f"{name} must be a JSON object")
+        raise ValueError(
+            f"{name} {path} must be a JSON object, got {type(value).__name__}. "
+            "Start a new run with `review_run.py start` to regenerate it."
+        )
     return value
 
 
-def _manifest_changed_files(manifest: dict[str, Any]) -> list[str]:
+def _manifest_changed_files(
+    manifest: dict[str, Any], *, path: pathlib.Path
+) -> list[str]:
     sections = manifest.get("sections")
     if not isinstance(sections, list):
-        raise ValueError("review manifest 'sections' must be a JSON array")
+        raise ValueError(
+            f"review manifest {path} key 'sections' must be a JSON array, got "
+            f"{type(sections).__name__}. Start a new run with "
+            "`review_run.py start` to regenerate the manifest."
+        )
     changed_files: list[str] = []
     seen: set[str] = set()
-    for section in sections:
+    for section_index, section in enumerate(sections):
         if not isinstance(section, dict):
-            raise ValueError("review manifest section must be a JSON object")
+            raise ValueError(
+                f"review manifest {path} sections[{section_index}] must be a "
+                f"JSON object, got {type(section).__name__}. Start a new run "
+                "with `review_run.py start` to regenerate the manifest."
+            )
         files = section.get("files")
         if not isinstance(files, list):
-            raise ValueError("review manifest section 'files' must be an array")
-        for file_value in files:
+            raise ValueError(
+                f"review manifest {path} sections[{section_index}] key 'files' "
+                f"must be a JSON array, got {type(files).__name__}. Start a "
+                "new run with `review_run.py start` to regenerate the manifest."
+            )
+        for file_index, file_value in enumerate(files):
             if not isinstance(file_value, str) or file_value == "":
                 raise ValueError(
-                    "review manifest file entries must be non-empty strings"
+                    f"review manifest {path} "
+                    f"sections[{section_index}].files[{file_index}] must be a "
+                    f"non-empty string, got {file_value!r}. Start a new run "
+                    "with `review_run.py start` to regenerate the manifest."
                 )
             if file_value not in seen:
                 seen.add(file_value)
@@ -155,10 +201,17 @@ def _manifest_changed_files(manifest: dict[str, Any]) -> list[str]:
     return changed_files
 
 
-def _require_manifest_str(manifest: dict[str, Any], key: str) -> str:
+def _require_manifest_str(
+    manifest: dict[str, Any], key: str, *, path: pathlib.Path
+) -> str:
     value = manifest.get(key)
     if not isinstance(value, str) or value == "":
-        raise ValueError(f"review manifest {key!r} must be a non-empty string")
+        raise ValueError(
+            f"review manifest {path} key {key!r} must be a non-empty string, "
+            f"got {value!r}; keys present: {', '.join(sorted(manifest))}. "
+            "Start a new run with `review_run.py start` to regenerate the "
+            "manifest."
+        )
     return value
 
 
@@ -230,15 +283,25 @@ def _journal_env_from_metadata(metadata: dict[str, Any]) -> dict[str, str]:
     return journal_env
 
 
-def _journal_env_from_state(state: dict[str, Any]) -> dict[str, str]:
+def _journal_env_from_state(
+    state: dict[str, Any], *, path: pathlib.Path
+) -> dict[str, str]:
     value = state.get("journalEnv")
     if not isinstance(value, dict):
-        raise ValueError("review runner state missing journalEnv object")
+        raise ValueError(
+            f"review runner state {path} key 'journalEnv' must be a JSON "
+            f"object, got {type(value).__name__}; keys present: "
+            f"{', '.join(sorted(state))}. Pass the statePath that "
+            "`review_run.py start` printed, or start a new run."
+        )
     journal_env: dict[str, str] = {}
     for key, env_value in value.items():
         if not isinstance(key, str) or not isinstance(env_value, str):
             raise ValueError(
-                "review runner state journalEnv must map strings to strings"
+                f"review runner state {path} key 'journalEnv' must map "
+                f"strings to strings; entry {key!r} has value {env_value!r} "
+                f"of type {type(env_value).__name__}. Pass the statePath "
+                "that `review_run.py start` printed, or start a new run."
             )
         journal_env[key] = env_value
     return journal_env
@@ -281,13 +344,15 @@ def _metadata_from_manifest(
 ) -> dict[str, Any]:
     repo = pathlib.Path.cwd()
     manifest = _read_json_file(manifest_path, name="review manifest")
-    base_ref = _require_manifest_str(manifest, "base_ref")
-    head_ref = _require_manifest_str(manifest, "head_ref")
+    base_ref = _require_manifest_str(manifest, "base_ref", path=manifest_path)
+    head_ref = _require_manifest_str(manifest, "head_ref", path=manifest_path)
     scope = {
         "baseRef": base_ref,
         "headRef": head_ref,
-        "changedFiles": _manifest_changed_files(manifest),
-        "reviewInputSha256": _require_manifest_str(manifest, "diff_sha256"),
+        "changedFiles": _manifest_changed_files(manifest, path=manifest_path),
+        "reviewInputSha256": _require_manifest_str(
+            manifest, "diff_sha256", path=manifest_path
+        ),
     }
     branch_name = _branch_identity(repo)
     target_kind = _target_kind()
@@ -336,6 +401,13 @@ def _propagate_failure(result: subprocess.CompletedProcess[str]) -> int | None:
         return None
     sys.stdout.write(result.stdout)
     sys.stderr.write(result.stderr)
+    if not result.stderr.strip():
+        sys.stderr.write(
+            f"`{shlex.join(str(arg) for arg in result.args)}` exited "
+            f"{result.returncode} and wrote nothing to stderr. Run `spx "
+            "journal --help` to confirm the installed spx supports the verb, "
+            "and rerun the review from `review_run.py start`.\n"
+        )
     return result.returncode or 1
 
 
@@ -349,7 +421,12 @@ def _journal_json(
     try:
         return 0, json.loads(result.stdout), result.stdout
     except json.JSONDecodeError as exc:
-        sys.stderr.write(f"spx journal returned invalid JSON: {exc.msg}\n")
+        sys.stderr.write(
+            f"`spx journal {shlex.join(args)}` returned invalid JSON on "
+            f"stdout: {exc.msg} at line {exc.lineno} column {exc.colno}. "
+            "Confirm the installed spx supports this journal verb and "
+            "rerun.\n"
+        )
         return 1, None, result.stdout
 
 
@@ -388,10 +465,20 @@ def _read_state(path: pathlib.Path) -> dict[str, Any]:
     state = _read_json_file(path, name="review runner state")
     run_token = state.get("runToken")
     if not isinstance(run_token, str) or run_token == "":
-        raise ValueError("review runner state missing non-empty runToken")
+        raise ValueError(
+            f"review runner state {path} key 'runToken' must be a non-empty "
+            f"string, got {run_token!r}; keys present: "
+            f"{', '.join(sorted(state))}. Pass the statePath that "
+            "`review_run.py start` printed, or start a new run."
+        )
     metadata = state.get("metadata")
     if not isinstance(metadata, dict):
-        raise ValueError("review runner state missing metadata object")
+        raise ValueError(
+            f"review runner state {path} key 'metadata' must be a JSON "
+            f"object, got {type(metadata).__name__}; keys present: "
+            f"{', '.join(sorted(state))}. Pass the statePath that "
+            "`review_run.py start` printed, or start a new run."
+        )
     return state
 
 
@@ -428,9 +515,18 @@ def _finding_event_from_stdin(*, now: str, attempt: int) -> dict[str, object]:
     try:
         raw = json.loads(sys.stdin.read())
     except json.JSONDecodeError as exc:
-        raise ValueError(f"finding input is invalid JSON: {exc.msg}") from exc
+        raise ValueError(
+            f"finding input on stdin is invalid JSON: {exc.msg} at line "
+            f"{exc.lineno} column {exc.colno}. Supply one JSON object with "
+            "the keys id, concern, severity, file, line, rule, message, and "
+            "action."
+        ) from exc
     if not isinstance(raw, dict):
-        raise ValueError("finding input must be a JSON object")
+        raise ValueError(
+            "finding input on stdin must be a JSON object, got "
+            f"{type(raw).__name__}. Supply one JSON object with the keys id, "
+            "concern, severity, file, line, rule, message, and action."
+        )
     finding = jp.Finding(
         file=str(raw.get("file", "")),
         line=_line_number(raw.get("line")),
@@ -506,12 +602,21 @@ def _scope_coverage_error(
 def _expected_scope_units(metadata: dict[str, Any]) -> set[str] | str:
     scope = metadata.get(jp.RUN_STATE_SCOPE)
     if not isinstance(scope, dict):
-        return "review run metadata missing scope"
+        return (
+            "review run metadata key 'scope' must be a JSON object, got "
+            f"{type(scope).__name__}; keys present: "
+            f"{', '.join(sorted(metadata))}. The state file is damaged; "
+            "start a new run with `review_run.py start`."
+        )
     changed_files = scope.get("changedFiles")
     if not isinstance(changed_files, list) or not all(
         isinstance(item, str) and item for item in changed_files
     ):
-        return "review run metadata scope.changedFiles must be non-empty strings"
+        return (
+            "review run metadata scope.changedFiles must be a list of "
+            f"non-empty strings, got {changed_files!r}. The state file is "
+            "damaged; start a new run with `review_run.py start`."
+        )
 
     return set(changed_files)
 
@@ -534,10 +639,16 @@ def _scope_unit_delta_message(*, expected: set[str], advanced: set[str]) -> str 
     unexpected = sorted(advanced - expected)
     parts: list[str] = []
     if missing:
-        parts.append(f"missing scope-advanced events for: {', '.join(missing)}")
+        parts.append(
+            f"missing scope-advanced events for: {', '.join(missing)}. Run "
+            "`review_run.py append-scope` for each of them, or pass --unread "
+            "<file> to `finish` for each file the review did not read"
+        )
     if unexpected:
         parts.append(
-            f"scope-advanced events outside changed files: {', '.join(unexpected)}"
+            f"scope-advanced events outside changed files: "
+            f"{', '.join(unexpected)}. `append-scope` accepts only changed "
+            "files; start a new run with `review_run.py start`"
         )
     return "; ".join(parts) if parts else None
 
@@ -587,10 +698,19 @@ def _start(args: argparse.Namespace) -> int:
         detail = " | ".join(
             line.strip() for line in (exc.stderr or "").splitlines() if line.strip()
         )
-        sys.stderr.write(f"{exc}: {detail}\n")
+        sys.stderr.write(
+            f"{exc}: {detail or 'git wrote nothing to stderr'}. Check that "
+            "the remote is reachable and the base ref exists, then rerun "
+            "`review_run.py start`.\n"
+        )
         return 1
     except (OSError, RuntimeError, TypeError, ValueError) as exc:
-        sys.stderr.write(f"{exc}\n")
+        sys.stderr.write(
+            f"start: cannot resolve the review refs in {pathlib.Path.cwd()}: "
+            f"{_error_text(exc)}. Set SPX_VERIFY_BASE_REF and "
+            "SPX_VERIFY_HEAD_REF if the defaults do not apply, then rerun "
+            "`review_run.py start`.\n"
+        )
         return 1
     scratch_dir = pathlib.Path(tempfile.mkdtemp(prefix="review-changes-"))
     started = False
@@ -613,7 +733,12 @@ def _start(args: argparse.Namespace) -> int:
         if code != 0:
             return code
         if not isinstance(opened, dict) or not isinstance(opened.get("runToken"), str):
-            sys.stderr.write("spx journal open did not return runToken\n")
+            sys.stderr.write(
+                "`spx journal open --type review` must print a JSON object "
+                "with a string 'runToken', got "
+                f"{opened!r}. Confirm the installed spx supports `spx "
+                "journal open` and rerun `review_run.py start`.\n"
+            )
             return 1
         run_token = str(opened["runToken"])
         event = jp.scope_entered_event(
@@ -639,7 +764,7 @@ def _start(args: argparse.Namespace) -> int:
             "statePath": str(state_path),
             "diffPath": str(summary["diff_path"]),
             "manifestPath": str(manifest_path),
-            "changedFiles": _manifest_changed_files(manifest),
+            "changedFiles": _manifest_changed_files(manifest, path=manifest_path),
         }
         json.dump(output, sys.stdout, sort_keys=True)
         sys.stdout.write("\n")
@@ -652,7 +777,11 @@ def _start(args: argparse.Namespace) -> int:
         TypeError,
         ValueError,
     ) as exc:
-        sys.stderr.write(f"{exc}\n")
+        sys.stderr.write(
+            f"start: the review run could not be opened: {_error_text(exc)}. "
+            "The scratch directory was removed; fix the cause and rerun "
+            "`review_run.py start`.\n"
+        )
         return 1
     finally:
         if not started and scratch_dir.is_dir():
@@ -662,10 +791,14 @@ def _start(args: argparse.Namespace) -> int:
 def _append_scope(args: argparse.Namespace) -> int:
     try:
         state = _read_state(args.state)
-        journal_env = _journal_env_from_state(state)
+        journal_env = _journal_env_from_state(state, path=args.state)
         event = jp.scope_advanced_event(args.unit, now=_utc_now())
     except (OSError, TypeError, ValueError) as exc:
-        sys.stderr.write(f"{exc}\n")
+        sys.stderr.write(
+            f"append-scope: cannot append unit {args.unit!r} using state "
+            f"{args.state}: {_error_text(exc)}. The run is ended; start a new "
+            "one with `review_run.py start`.\n"
+        )
         return 1
     code = _append_event(str(state["runToken"]), event, journal_env=journal_env)
     if code != 0:
@@ -678,10 +811,14 @@ def _append_scope(args: argparse.Namespace) -> int:
 def _append_finding(args: argparse.Namespace) -> int:
     try:
         state = _read_state(args.state)
-        journal_env = _journal_env_from_state(state)
+        journal_env = _journal_env_from_state(state, path=args.state)
         event = _finding_event_from_stdin(now=_utc_now(), attempt=1)
     except (OSError, TypeError, ValueError) as exc:
-        sys.stderr.write(f"{exc}\n")
+        sys.stderr.write(
+            f"append-finding: cannot append the finding using state "
+            f"{args.state}: {_error_text(exc)}. The run is ended; start a new "
+            "one with `review_run.py start`.\n"
+        )
         return 1
     code = _append_event(str(state["runToken"]), event, journal_env=journal_env)
     if code != 0:
@@ -694,7 +831,7 @@ def _append_finding(args: argparse.Namespace) -> int:
 def _finish(args: argparse.Namespace) -> int:
     try:
         state = _read_state(args.state)
-        journal_env = _journal_env_from_state(state)
+        journal_env = _journal_env_from_state(state, path=args.state)
         run_token = str(state["runToken"])
         code, prefix_value, _raw = _journal_json(
             "read",
@@ -709,7 +846,12 @@ def _finish(args: argparse.Namespace) -> int:
         if code != 0:
             return code
         if not isinstance(prefix_value, list):
-            sys.stderr.write("spx journal read output must be a JSON event array\n")
+            sys.stderr.write(
+                f"`spx journal read --type review --run {run_token} --from 0` "
+                "must print a JSON array of events, got "
+                f"{type(prefix_value).__name__}. Confirm the installed spx "
+                "supports `spx journal read` and rerun `finish`.\n"
+            )
             return 1
         prefix = [event for event in prefix_value if isinstance(event, dict)]
         unread = sorted(set(args.unread))
@@ -738,7 +880,11 @@ def _finish(args: argparse.Namespace) -> int:
         sys.stdout.write(f"{run_token}\n")
         return 0
     except (OSError, TypeError, ValueError) as exc:
-        sys.stderr.write(f"{exc}\n")
+        sys.stderr.write(
+            f"finish: cannot finish the run using state {args.state}: "
+            f"{_error_text(exc)}. The run is ended; start a new one with "
+            "`review_run.py start`.\n"
+        )
         return 1
 
 

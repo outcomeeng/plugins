@@ -32,6 +32,7 @@ import importlib.util
 import json
 import os
 import pathlib
+import shlex
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -88,9 +89,20 @@ def _load_changeset_scope() -> ModuleType:
         / "scripts"
         / "changeset_scope.py"
     )
+    if not path.is_file():
+        raise RuntimeError(
+            f"cannot load changeset_scope: {path} does not exist. The "
+            "scope-changeset skill must be installed beside review-changes "
+            "under the same skills directory; reinstall the product-tree "
+            "plugin so both skills are present."
+        )
     spec = importlib.util.spec_from_file_location("changeset_scope", path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load changeset_scope from {path}")
+        raise RuntimeError(
+            f"cannot load changeset_scope from {path}: Python found no import "
+            "loader for the file. Confirm the file is a readable .py module "
+            "and reinstall the product-tree plugin if it is damaged."
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules["changeset_scope"] = module
     spec.loader.exec_module(module)
@@ -131,39 +143,67 @@ def resolve_base_ref() -> str:
     except changeset_scope.BaseRefNotConfiguredError as exc:
         raise RuntimeError(
             "cannot resolve base_ref from any source; tried: "
-            f"{ENV_BASE_REF} env, git symbolic-ref refs/remotes/origin/HEAD ({exc})"
+            f"{ENV_BASE_REF} env (unset or empty), git symbolic-ref "
+            f"refs/remotes/origin/HEAD ({str(exc) or 'no detail reported'}) in "
+            f"{pathlib.Path.cwd()}. Set {ENV_BASE_REF} to the base ref, for "
+            "example origin/main, or run `git remote set-head origin --auto` "
+            "so origin/HEAD resolves."
         ) from exc
     except FileNotFoundError as exc:
         raise RuntimeError(
             "cannot resolve base_ref from any source; tried: "
-            f"{ENV_BASE_REF} env, git symbolic-ref refs/remotes/origin/HEAD "
-            "(git is not on PATH)"
+            f"{ENV_BASE_REF} env (unset or empty), git symbolic-ref "
+            "refs/remotes/origin/HEAD (the `git` executable was not found on "
+            f"PATH: {str(exc) or 'no detail reported'}). Install git or add "
+            f"it to PATH, or set {ENV_BASE_REF} and rerun."
         ) from exc
     return str(changeset_scope.remote_tracking_ref(bare_base))
 
 
+def _run_git(
+    args: list[str], *, accepted_codes: tuple[int, ...] = (0,)
+) -> subprocess.CompletedProcess[str]:
+    """Run ``git`` with ``args``, raising a located, actionable error on failure.
+
+    The error names the full command, the working directory, the exit code
+    against the accepted codes, and git's stderr (or states that stderr was
+    empty), then says what to check.
+    """
+    command = ["git", *args]
+    try:
+        completed = subprocess.run(  # noqa: S603 — refs derived from validated sources
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        raise RuntimeError(
+            f"cannot run `{shlex.join(command)}` in {pathlib.Path.cwd()}: "
+            f"{str(exc) or type(exc).__name__}. Install git or add it to "
+            "PATH, then rerun."
+        ) from exc
+    if completed.returncode not in accepted_codes:
+        stderr = (completed.stderr or "").strip()
+        accepted = " or ".join(str(code) for code in accepted_codes)
+        raise RuntimeError(
+            f"`{shlex.join(command)}` exited {completed.returncode} (expected "
+            f"{accepted}) in {pathlib.Path.cwd()}: "
+            f"{stderr or 'git wrote nothing to stderr'}. Run the command by "
+            "hand to reproduce it; confirm the working directory is inside a "
+            f"git worktree and that every ref it names exists (base ref from "
+            f"{ENV_BASE_REF} or origin/HEAD, head ref from {ENV_HEAD_REF} or "
+            f"{DEFAULT_HEAD_REF}), fetching the remote if a ref is missing."
+        )
+    return completed
+
+
 def _git_diff(args: list[str]) -> str:
-    completed = subprocess.run(  # noqa: S603 — refs derived from validated sources
-        ["git", "diff", *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if completed.returncode != 0:
-        raise RuntimeError(completed.stderr)
-    return completed.stdout
+    return _run_git(["diff", *args]).stdout
 
 
 def _git_stdout(args: list[str]) -> str:
-    completed = subprocess.run(  # noqa: S603 — fixed git subcommands
-        ["git", *args],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if completed.returncode != 0:
-        raise RuntimeError(completed.stderr)
-    return completed.stdout
+    return _run_git(args).stdout
 
 
 def _diff_section(title: str, diff: str) -> str:
@@ -183,9 +223,8 @@ def _dedupe_paths(paths: list[str]) -> tuple[str, ...]:
 
 
 def _diff_changed_paths(args: list[str]) -> tuple[str, ...]:
-    records = _git_stdout(
-        ["diff", "--name-status", "-z", *DIFF_RENAME_COPY_ARGS, *args]
-    ).split("\0")
+    command = ["git", "diff", "--name-status", "-z", *DIFF_RENAME_COPY_ARGS, *args]
+    records = _git_stdout(command[1:]).split("\0")
     if records and records[-1] == "":
         records.pop()
 
@@ -195,12 +234,24 @@ def _diff_changed_paths(args: list[str]) -> tuple[str, ...]:
         status = records[index]
         index += 1
         if not status:
-            raise RuntimeError("git diff --name-status emitted an empty status")
+            raise RuntimeError(
+                f"`{shlex.join(command)}` emitted an empty status field at "
+                f"record {index} of {len(records)}. The output is not the "
+                "NUL-separated name-status format this script parses; rerun "
+                "the command by hand and check that git is not wrapped by a "
+                "pager or alias that rewrites its output."
+            )
         path_count = (
             2 if status.startswith((RENAME_STATUS_PREFIX, COPY_STATUS_PREFIX)) else 1
         )
         if index + path_count > len(records):
-            raise RuntimeError("git diff --name-status emitted a truncated record")
+            raise RuntimeError(
+                f"`{shlex.join(command)}` emitted a truncated record: status "
+                f"{status!r} at record {index} needs {path_count} path field(s) "
+                f"but only {len(records) - index} remain of {len(records)} "
+                "records. Rerun the command by hand; a truncated stream "
+                "means git exited early or its output was cut."
+            )
         paths.extend(records[index : index + path_count])
         index += path_count
     return _dedupe_paths(paths)
@@ -219,14 +270,9 @@ def _untracked_paths() -> tuple[str, ...]:
 def _untracked_diff(paths: tuple[str, ...]) -> str:
     sections: list[str] = []
     for path in paths:
-        completed = subprocess.run(  # noqa: S603 — paths come from git ls-files
-            ["git", "diff", "--no-index", "--", os.devnull, path],
-            capture_output=True,
-            text=True,
-            check=False,
+        completed = _run_git(
+            ["diff", "--no-index", "--", os.devnull, path], accepted_codes=(0, 1)
         )
-        if completed.returncode not in (0, 1):
-            raise RuntimeError(completed.stderr)
         sections.append(completed.stdout)
     return "\n".join(sections)
 
@@ -333,14 +379,25 @@ def _resolve_bundle_dir(bundle_dir: pathlib.Path) -> pathlib.Path:
     """Return a normalized caller-owned bundle directory path."""
     resolved = bundle_dir.expanduser().resolve(strict=False)
     if resolved == resolved.parent:
-        raise RuntimeError("--bundle-dir must not be the filesystem root")
+        raise RuntimeError(
+            f"--bundle-dir must not be the filesystem root; got {bundle_dir} "
+            f"which resolves to {resolved}. Pass a dedicated scratch "
+            "directory outside the git worktree."
+        )
     if resolved.exists() and not resolved.is_dir():
-        raise RuntimeError(f"--bundle-dir exists and is not a directory: {resolved}")
+        raise RuntimeError(
+            f"--bundle-dir exists and is not a directory: {resolved}. Pass a "
+            "directory path, or a path that does not exist yet."
+        )
     worktree_root = pathlib.Path(
         _git_stdout(["rev-parse", "--show-toplevel"]).strip()
     ).resolve(strict=True)
     if resolved == worktree_root or resolved.is_relative_to(worktree_root):
-        raise RuntimeError("--bundle-dir must be outside the git worktree")
+        raise RuntimeError(
+            f"--bundle-dir must be outside the git worktree; {resolved} is "
+            f"inside the worktree rooted at {worktree_root}. Pass a scratch "
+            "directory elsewhere, for example one created with `mktemp -d`."
+        )
     return resolved
 
 
@@ -348,7 +405,13 @@ def _bundle_file_path(bundle_dir: pathlib.Path, filename: str) -> pathlib.Path:
     """Return a bundle file path guaranteed to stay inside ``bundle_dir``."""
     path = (bundle_dir / filename).resolve(strict=False)
     if not path.is_relative_to(bundle_dir):
-        raise RuntimeError(f"bundle file escapes --bundle-dir: {filename}")
+        raise RuntimeError(
+            f"bundle file escapes --bundle-dir: {filename!r} resolves to "
+            f"{path}, outside {bundle_dir}. Bundle filenames are fixed "
+            f"({BUNDLE_DIFF_FILENAME}, {BUNDLE_MANIFEST_FILENAME}); a symlink "
+            "inside the bundle directory points elsewhere, so remove it or "
+            "choose another --bundle-dir."
+        )
     return path
 
 
@@ -399,7 +462,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         base_ref = resolve_base_ref()
     except RuntimeError as exc:
-        sys.stderr.write(f"{exc}\n")
+        sys.stderr.write(
+            f"{str(exc) or 'compute_diff.py could not resolve base_ref'}\n"
+        )
         return 1
 
     head_ref = resolve_head_ref()
@@ -413,7 +478,9 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         diff = combined_diff(base_ref, head_ref)
     except RuntimeError as exc:
-        sys.stderr.write(str(exc))
+        sys.stderr.write(
+            f"{str(exc) or 'compute_diff.py failed with an empty RuntimeError'}\n"
+        )
         return 1
     sys.stdout.write(diff)
     return 0

@@ -60,9 +60,20 @@ def _sibling_provider(skill: str, module_name: str) -> ModuleType:
         return cached
     skills = pathlib.Path(__file__).resolve().parents[2]
     path = skills / skill / "scripts" / f"{module_name}.py"
+    if not path.is_file():
+        raise ImportError(
+            f"cannot load {module_name}: {path} does not exist. The {skill} "
+            "skill must be installed beside review-changes under the same "
+            "skills directory; reinstall the product-tree plugin so every "
+            "skill is present."
+        )
     spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:
-        raise ImportError(f"cannot load {module_name} from {path}")
+        raise ImportError(
+            f"cannot load {module_name} from {path}: Python found no import "
+            "loader for the file. Confirm it is a readable .py module and "
+            "reinstall the product-tree plugin if it is damaged."
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     try:
@@ -254,6 +265,8 @@ def rule_citation_family(rule: str) -> str | None:
     return None
 
 
+_SLUG_LIST_LIMIT = 40
+
 _SECTION_TITLES = {
     "SCENARIO": "Scenarios",
     "MAPPING": "Mappings",
@@ -291,10 +304,13 @@ def parse_json(text: str) -> ReviewResult:
     try:
         raw = json.loads(text)
     except json.JSONDecodeError as exc:
-        raise ReviewResultValidationError(f"invalid JSON: {exc.msg}") from exc
+        raise ReviewResultValidationError(_invalid_json_message(exc)) from exc
     if not isinstance(raw, dict):
         raise ReviewResultValidationError(
-            "review-result document must be a JSON object"
+            "review-result document must be a JSON object with keys "
+            f"{list(_REQUIRED_DOCUMENT_KEYS)}, got {type(raw).__name__}. "
+            "Wrap the findings in an object that also carries "
+            f"'schema_version': {SCHEMA_VERSION}."
         )
     return from_json_dict(raw)
 
@@ -313,8 +329,24 @@ def parse_finding_json(text: str) -> Finding:
     try:
         raw = json.loads(text)
     except json.JSONDecodeError as exc:
-        raise ReviewResultValidationError(f"invalid JSON: {exc.msg}") from exc
+        raise ReviewResultValidationError(_invalid_json_message(exc)) from exc
     return _parse_finding(raw)
+
+
+def _invalid_json_message(exc: json.JSONDecodeError) -> str:
+    return (
+        f"invalid JSON: {exc.msg} at line {exc.lineno} column {exc.colno} "
+        f"(character {exc.pos}). Correct the syntax at that position and "
+        "emit the document again."
+    )
+
+
+def _where(data: dict[str, Any]) -> str:
+    """Label a finding by its id when it carries a string one."""
+    finding_id = data.get("id")
+    if isinstance(finding_id, str) and finding_id:
+        return f"finding {finding_id}"
+    return "finding"
 
 
 def from_json_dict(data: dict[str, Any]) -> ReviewResult:
@@ -325,16 +357,21 @@ def from_json_dict(data: dict[str, Any]) -> ReviewResult:
     :class:`ReviewResultValidationError` with a message that names the
     offending value and (for enum violations) the allowed set.
     """
-    _require_keys(data, _REQUIRED_DOCUMENT_KEYS)
-    schema_version = _require_int(data, "schema_version")
+    _require_keys(data, _REQUIRED_DOCUMENT_KEYS, where="review-result document")
+    schema_version = _require_int(data, "schema_version", where="document")
     if schema_version != SCHEMA_VERSION:
         raise ReviewResultValidationError(
-            f"unsupported schema_version {schema_version}; expected {SCHEMA_VERSION}"
+            f"unsupported schema_version {schema_version}; expected "
+            f"{SCHEMA_VERSION}. Set 'schema_version' to {SCHEMA_VERSION} and "
+            "emit the document in the current shape."
         )
 
     findings_raw = data["findings"]
     if not isinstance(findings_raw, list):
-        raise ReviewResultValidationError("findings must be a JSON array")
+        raise ReviewResultValidationError(
+            "'findings' must be a JSON array (empty when there are no "
+            f"findings), got {type(findings_raw).__name__}."
+        )
     findings = tuple(_parse_finding(entry) for entry in findings_raw)
 
     return ReviewResult(
@@ -371,40 +408,50 @@ def _finding_to_dict(finding: Finding) -> dict[str, Any]:
 
 def _parse_finding(data: Any) -> Finding:
     if not isinstance(data, dict):
-        raise ReviewResultValidationError("finding must be a JSON object")
-    _require_keys(data, _REQUIRED_FINDING_KEYS)
-    concern_raw = _require_str(data, "concern")
-    concern = _parse_enum(concern_raw, Concern, field="concern")
-    severity_raw = _require_str(data, "severity")
-    severity = _parse_enum(severity_raw, Severity, field="severity")
-    line = _require_int(data, "line")
-    rule = _require_str(data, "rule")
+        raise ReviewResultValidationError(
+            "a finding must be a JSON object with keys "
+            f"{list(_REQUIRED_FINDING_KEYS)}, got {type(data).__name__}."
+        )
+    where = _where(data)
+    _require_keys(data, _REQUIRED_FINDING_KEYS, where=where)
+    concern_raw = _require_str(data, "concern", where=where)
+    concern = _parse_enum(concern_raw, Concern, field="concern", where=where)
+    severity_raw = _require_str(data, "severity", where=where)
+    severity = _parse_enum(severity_raw, Severity, field="severity", where=where)
+    line = _require_int(data, "line", where=where)
+    rule = _require_str(data, "rule", where=where)
     _validate_rule_citation(rule)
-    finding_id = _require_str(data, "id")
+    finding_id = _require_str(data, "id", where=where)
     _validate_finding_id(finding_id)
     return Finding(
         id=finding_id,
         concern=concern,
         severity=severity,
-        file=_require_str(data, "file"),
+        file=_require_str(data, "file", where=where),
         line=line,
         rule=rule,
-        message=_require_str(data, "message"),
-        action=_require_str(data, "action"),
+        message=_require_str(data, "message", where=where),
+        action=_require_str(data, "action", where=where),
     )
 
 
 def _validate_finding_id(finding_id: str) -> None:
     if not _FINDING_ID_RE.fullmatch(finding_id):
         raise ReviewResultValidationError(
-            f"finding 'id' must match F-NNN; got {finding_id!r}"
+            f"finding 'id' must match F-NNN (F- followed by three digits, "
+            f"for example F-001); got {finding_id!r}. Rename the id and emit "
+            "the finding again."
         )
 
 
 def _validate_rule_citation(rule: str) -> None:
     """Reject ``rule`` values that do not cite a repository rule."""
     if not rule:
-        raise ReviewResultValidationError("finding 'rule' must be a non-empty string")
+        raise ReviewResultValidationError(
+            "finding 'rule' must be a non-empty string citing a repository "
+            "rule, for example 'spx/<path>.md:ALWAYS:1' or "
+            "'plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>'; got ''."
+        )
     if match := _SPEC_ASSERTION_RE.fullmatch(rule):
         _validate_spec_assertion(match)
         return
@@ -426,7 +473,9 @@ def _validate_rule_citation(rule: str) -> None:
         "'spx/<path>.md:ALWAYS:1', "
         "'plugins/<plugin>/skills/<skill>/SKILL.md:<rule-slug>', "
         "or 'AGENTS.md:<rule-slug>'/'CLAUDE.md:<rule-slug>'; "
-        f"got {rule!r}"
+        f"got {rule!r}. Accepted citation families: "
+        f"{', '.join(RULE_CITATION_FAMILIES)}. Rewrite the rule in one of "
+        "those forms."
     )
 
 
@@ -443,7 +492,9 @@ def _validate_spec_assertion(match: re.Match[str]) -> None:
     if assertion_count < expected_index:
         raise ReviewResultValidationError(
             f"finding 'rule' cites {kind}:{expected_index}, "
-            f"but {path} does not contain that assertion"
+            f"but {path} does not contain that assertion; it holds "
+            f"{assertion_count} {kind} assertion(s). Cite an index from 1 to "
+            f"{assertion_count} or the file's actual assertion kind."
         )
 
 
@@ -455,12 +506,17 @@ def _validate_decision_path(path: str, rule: str) -> None:
         stem = filename.removesuffix(".pdr.md")
     else:
         raise ReviewResultValidationError(
-            f"finding 'rule' cites an invalid decision file: {rule}"
+            f"finding 'rule' cites an invalid decision file: {rule}; the "
+            "filename must end in '.adr.md' or '.pdr.md'. Cite "
+            "'spx/<path>/NN-<slug>.adr.md' or the '.pdr.md' equivalent."
         )
     index, separator, slug = stem.partition("-")
     if not separator or not index.isdigit() or int(index) <= 0 or not _is_slug(slug):
         raise ReviewResultValidationError(
-            f"finding 'rule' cites an invalid decision file: {rule}"
+            f"finding 'rule' cites an invalid decision file: {rule}; the "
+            f"filename stem {stem!r} must be a positive integer index, a "
+            "hyphen, then a slug of letters, digits, and hyphens (for example "
+            "'21-example-decision'). Cite the decision file by its exact name."
         )
 
 
@@ -482,9 +538,17 @@ def _section_assertions(text: str, section_title: str) -> list[str]:
 
 def _validate_slug(path: pathlib.Path, slug: str, rule: str) -> None:
     text = _require_repo_file(path, rule)
-    if slug not in _declared_rule_slugs(text):
+    declared = sorted(_declared_rule_slugs(text))
+    if slug not in declared:
+        shown = declared[:_SLUG_LIST_LIMIT]
+        more = len(declared) - len(shown)
+        listing = ", ".join(shown) if shown else "none"
+        if more > 0:
+            listing += f", and {more} more"
         raise ReviewResultValidationError(
-            f"finding 'rule' cites slug {slug!r}, but {path} does not contain it"
+            f"finding 'rule' cites slug {slug!r}, but {path} does not contain "
+            f"it; declared rule slugs: {listing}. Cite one of the declared "
+            "slugs."
         )
 
 
@@ -601,8 +665,11 @@ def _resolve_plugin_skill_path(plugin: str, skill: str, rule: str) -> pathlib.Pa
     for candidate in candidates:
         if candidate.exists():
             return candidate
+    searched = ", ".join(str(candidate) for candidate in candidates)
     raise ReviewResultValidationError(
-        f"finding 'rule' cites a missing plugin skill file: {rule}"
+        f"finding 'rule' cites a missing plugin skill file: {rule}; searched "
+        f"{searched}. Check the plugin and skill names in the citation "
+        "against the installed skills."
     )
 
 
@@ -626,7 +693,9 @@ def _require_repo_file(path: str | pathlib.Path, rule: str) -> str:
         return _read_existing_file(repo_path, rule)
     if ".." in repo_path.parts:
         raise ReviewResultValidationError(
-            f"finding 'rule' must cite a repository-relative file; got {rule!r}"
+            f"finding 'rule' must cite a repository-relative file; got "
+            f"{rule!r}, whose path contains '..'. Cite the path from the "
+            "repository root without parent-directory segments."
         )
     root = _repo_root()
     try:
@@ -635,15 +704,21 @@ def _require_repo_file(path: str | pathlib.Path, rule: str) -> str:
         return _read_existing_file(resolved, rule)
     except ValueError as exc:
         raise ReviewResultValidationError(
-            f"finding 'rule' must cite a repository-relative file; got {rule!r}"
+            f"finding 'rule' must cite a repository-relative file; got "
+            f"{rule!r}, which resolves outside the repository root {root}. "
+            "Cite a path inside the repository."
         ) from exc
     except FileNotFoundError as exc:
         raise ReviewResultValidationError(
-            f"finding 'rule' cites a missing file: {repo_path}"
+            f"finding 'rule' cites a missing file: {repo_path} (looked under "
+            f"{root}). Run the review from the repository root and cite a "
+            "file that exists there."
         ) from exc
     except OSError as exc:
         raise ReviewResultValidationError(
-            f"finding 'rule' cannot read cited file {repo_path}: {exc}"
+            f"finding 'rule' cannot read cited file {repo_path}: "
+            f"{str(exc) or type(exc).__name__}. Check the file's permissions "
+            "and cite a readable file."
         ) from exc
 
 
@@ -659,50 +734,63 @@ def _read_existing_file(path: pathlib.Path, rule: str) -> str:
     try:
         if not path.is_file():
             raise ReviewResultValidationError(
-                f"finding 'rule' cites a non-file path: {path}"
+                f"finding 'rule' cites a non-file path: {path}. Cite a "
+                "regular file, not a directory."
             )
         return path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
         raise ReviewResultValidationError(
-            f"finding 'rule' cites a missing file: {path}"
+            f"finding 'rule' cites a missing file: {path}. Cite a file that exists."
         ) from exc
     except OSError as exc:
         raise ReviewResultValidationError(
-            f"finding 'rule' cannot read cited file for {rule}: {exc}"
+            f"finding 'rule' cannot read cited file for {rule}: "
+            f"{str(exc) or type(exc).__name__}. Check the file's permissions "
+            "and cite a readable UTF-8 file."
         ) from exc
 
 
-def _parse_enum(value: str, enum_cls: type[StrEnum], *, field: str) -> Any:
+def _parse_enum(
+    value: str, enum_cls: type[StrEnum], *, field: str, where: str = "finding"
+) -> Any:
     try:
         return enum_cls(value)
     except ValueError as exc:
         allowed = sorted(member.value for member in enum_cls)
         raise ReviewResultValidationError(
-            f"unknown {field} {value!r}; allowed values: {allowed}"
+            f"unknown {field} {value!r} in {where}; allowed values: {allowed}. "
+            f"Set '{field}' to one of them."
         ) from exc
 
 
-def _require_keys(data: dict[str, Any], keys: tuple[str, ...]) -> None:
+def _require_keys(
+    data: dict[str, Any], keys: tuple[str, ...], *, where: str = "finding"
+) -> None:
     missing = [k for k in keys if k not in data]
     if missing:
-        raise ReviewResultValidationError(f"missing required key(s): {missing}")
+        raise ReviewResultValidationError(
+            f"missing required key(s): {missing} in {where}; keys present: "
+            f"{sorted(data)}. Add the missing key(s) and emit again."
+        )
 
 
-def _require_str(data: dict[str, Any], key: str) -> str:
+def _require_str(data: dict[str, Any], key: str, *, where: str = "finding") -> str:
     value = data[key]
     if not isinstance(value, str):
         raise ReviewResultValidationError(
-            f"{key!r} must be a string, got {type(value).__name__}"
+            f"{key!r} must be a string in {where}, got {type(value).__name__}. "
+            f"Set {key!r} to a JSON string."
         )
     return value
 
 
-def _require_int(data: dict[str, Any], key: str) -> int:
+def _require_int(data: dict[str, Any], key: str, *, where: str = "finding") -> int:
     value = data[key]
     # ``bool`` is a subclass of ``int`` in Python; reject explicitly so
     # ``True`` / ``False`` does not silently coerce to ``1`` / ``0``.
     if isinstance(value, bool) or not isinstance(value, int):
         raise ReviewResultValidationError(
-            f"{key!r} must be an integer, got {type(value).__name__}"
+            f"{key!r} must be an integer in {where}, got {type(value).__name__}. "
+            f"Set {key!r} to a JSON integer, not a string or boolean."
         )
     return cast(int, value)
