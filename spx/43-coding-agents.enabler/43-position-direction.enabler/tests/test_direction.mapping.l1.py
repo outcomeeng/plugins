@@ -258,29 +258,6 @@ def test_unresolved_pane_detail_names_cwd_match_count_and_available_cwds() -> No
     assert "/work/a" in detail
 
 
-class _Herdr:
-    def __init__(self) -> None:
-        self.requests: list[dict] = []
-
-    def execute(self, request: dict) -> dict:
-        self.requests.append(request)
-        return {"status": "succeeded"}
-
-
-def test_restart_relaunches_the_same_agent_kind_with_no_launch_arguments() -> None:
-    herdr = _Herdr()
-    envs = core.Environments(herdr, None)  # type: ignore[arg-type]
-    pane = core.Pane("herdr", "w1:p1", "/work/a", "idle", "exec", "claude")
-
-    result = envs.restart(pane, 1000)
-
-    assert result["status"] == "succeeded"
-    assert [r["operation"] for r in herdr.requests] == ["stop", "relaunch"]
-    relaunch = herdr.requests[-1]
-    assert relaunch["arguments"]["kind"] == "claude"
-    assert "agent_arguments" not in relaunch["arguments"]
-
-
 def test_prompt_without_text_stops_naming_the_argument_and_fix(
     tmp_path: Path,
 ) -> None:

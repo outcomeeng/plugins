@@ -40,10 +40,9 @@ from direction_core import (
 
 COMPACT_TEXT = "/compact"
 RELOAD_TEXT = "/reload-plugins"
-RESTART_TIMEOUT_MS = 60_000
 MAIL_LIMIT = 100
 
-ACT_OPERATIONS = ("prompt", "compact", "restart", "reload")
+ACT_OPERATIONS = ("prompt", "compact", "reload")
 
 
 def absent_authority(subcommand: str) -> str:
@@ -445,8 +444,8 @@ def _act_stop(config, target: str, operation: str, text: str | None) -> str | No
     if operation == "prompt" and not text:
         return (
             f"act --operation prompt for {target!r} needs --text; pass "
-            '--text "<the prompt to type>" or choose --operation compact, '
-            "restart, or reload."
+            '--text "<the prompt to type>" or choose --operation compact '
+            "or reload."
         )
     return None
 
@@ -491,13 +490,10 @@ def act(
             "untouchable pane stays untouched until the operator removes it from "
             f"untouchable_panes in {config['overrideFile']['path']}.",
         }
-    if operation == "restart":
-        result = envs.restart(pane, RESTART_TIMEOUT_MS)
-    else:
-        wording = {"prompt": text, "compact": COMPACT_TEXT, "reload": RELOAD_TEXT}[
-            operation
-        ]
-        result = envs.prompt(pane, wording)
+    wording = {"prompt": text, "compact": COMPACT_TEXT, "reload": RELOAD_TEXT}[
+        operation
+    ]
+    result = envs.prompt(pane, wording)
     outcome: dict[str, Any] = {
         "status": result.get("status"),
         "operation": operation,
