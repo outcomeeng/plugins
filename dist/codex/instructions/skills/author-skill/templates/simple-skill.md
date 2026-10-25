@@ -10,7 +10,7 @@ allowed-tools: "{{least-privilege tool list required by this workflow}}"
 </objective>
 
 <quick_start>
-{{Include only for an on-demand skill with a complete, safe fast path; otherwise remove this section.}}
+{{Include only for a tool skill with a complete, safe fast path; otherwise remove this section.}}
 </quick_start>
 
 <workflow>
