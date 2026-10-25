@@ -629,8 +629,17 @@ def assert_plan_selects_full_suite_for_eval_definition_change() -> None:
             os.chdir(original_cwd)
 
 
-def assert_plan_full_mode_excludes_manual_evals() -> None:
-    """Assert full-mode planning excludes manual eval definitions."""
+@dataclass(frozen=True)
+class PlanFullModeObservation:
+    """Observed full-mode plan output over one automatic and one manual eval."""
+
+    exit_code: int
+    output: str
+    automatic_eval_toml: Path
+
+
+def observe_plan_full_mode_with_manual_eval() -> PlanFullModeObservation:
+    """Run full-mode planning over an automatic and a manual eval definition."""
 
     with TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -660,14 +669,11 @@ def assert_plan_full_mode_excludes_manual_evals() -> None:
             ],
         )
 
-        assert result.exit_code == EXIT_SUCCESS
-        assert json.loads(result.output) == [
-            {
-                "eval_toml": str(automatic_eval),
-                "plugin_dir": PLAN_PLUGIN_DIR,
-                "case_ids": [],
-            }
-        ]
+        return PlanFullModeObservation(
+            exit_code=result.exit_code,
+            output=result.output,
+            automatic_eval_toml=automatic_eval,
+        )
 
 
 def assert_plan_skips_unrelated_pr_change() -> None:

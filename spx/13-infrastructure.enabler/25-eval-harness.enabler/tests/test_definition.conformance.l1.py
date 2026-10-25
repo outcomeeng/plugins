@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from outcomeeng_evals.definition import (
+    OWNED_PATH_ALPHABET,
+    OWNED_PATH_RECURSIVE_SUFFIX,
+)
 from outcomeeng_testing.evals.factories import (
-    assert_definition_accepts_owned_path_shapes_ci_matches_identically,
     assert_definition_accepts_trials_at_cap,
     assert_definition_applies_default_model_when_omitted,
     assert_definition_applies_default_threshold_when_omitted,
@@ -25,6 +28,7 @@ from outcomeeng_testing.evals.factories import (
     assert_definition_uses_explicit_threshold_when_set,
     assert_definition_uses_explicit_trials_when_set,
     assert_owned_path_alphabet_excludes_every_glob_magic_character,
+    load_definition_with_owned_paths,
 )
 
 
@@ -109,7 +113,16 @@ def test_rejects_nonexistent_prompt_file() -> None:
 
 
 def test_accepts_owned_path_shapes_ci_matches_identically() -> None:
-    assert_definition_accepts_owned_path_shapes_ci_matches_identically()
+    exact = "AGENTS.md"
+    recursive_base = "src/plugins/product-tree/skills/merge"
+    recursive = f"{recursive_base}{OWNED_PATH_RECURSIVE_SUFFIX}"
+    assert OWNED_PATH_ALPHABET.fullmatch(exact)
+    assert OWNED_PATH_ALPHABET.fullmatch(recursive_base)
+
+    accepted = (exact, recursive)
+    definition = load_definition_with_owned_paths(accepted)
+
+    assert definition.owned_paths == accepted
 
 
 def test_owned_path_alphabet_excludes_every_glob_magic_character() -> None:

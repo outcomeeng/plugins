@@ -6,6 +6,7 @@ import json
 import os
 import stat
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 from outcomeeng_evals.settings import (
@@ -13,6 +14,7 @@ from outcomeeng_evals.settings import (
     DEFAULT_TIMEOUT_SECONDS_TEXT,
 )
 from outcomeeng_testing.harnesses.eval_workspaces import (
+    temporary_workspace,
     with_temp_workspace,
     with_temp_workspace_under,
 )
@@ -165,22 +167,33 @@ def assert_eval_node_recipe_runs_all_node_evals_serially(tmp_path: Path) -> None
     assert_printed_command_precedes_suite_result(completed)
 
 
-@with_temp_workspace_under(REPO_ROOT)
-def assert_eval_materialize_prompts_recipe_writes_producer_prompt(
-    tmp_path: Path,
-) -> None:
-    eval_root, prompt_path = write_producer_prompt_fixture(tmp_path)
+@dataclass(frozen=True)
+class MaterializePromptsObservation:
+    """Observed outcome of the materialize-prompts recipe over a producer fixture."""
 
-    completed = run_just_eval(
-        tmp_path,
-        write_fake_claude(tmp_path),
-        "eval-materialize-prompts",
-        str(eval_root),
-    )
+    completed: subprocess.CompletedProcess[str]
+    prompt_path: Path
+    prompt_text: str
 
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert f"materialized: {prompt_path.resolve()}" in completed.stdout
-    assert PRODUCER_FIXTURE_SECTION in prompt_path.read_text(encoding="utf-8")
+
+def observe_eval_materialize_prompts_recipe() -> MaterializePromptsObservation:
+    """Run the materialize-prompts recipe over a producer-section fixture."""
+
+    with temporary_workspace(REPO_ROOT) as tmp_path:
+        eval_root, prompt_path = write_producer_prompt_fixture(tmp_path)
+
+        completed = run_just_eval(
+            tmp_path,
+            write_fake_claude(tmp_path),
+            "eval-materialize-prompts",
+            str(eval_root),
+        )
+
+        return MaterializePromptsObservation(
+            completed=completed,
+            prompt_path=prompt_path,
+            prompt_text=prompt_path.read_text(encoding="utf-8"),
+        )
 
 
 @with_temp_workspace_under(REPO_ROOT)

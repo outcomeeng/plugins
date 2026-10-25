@@ -11,6 +11,8 @@ import glob
 import json
 import math
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from string import printable
 from dataclasses import dataclass
 from pathlib import Path
@@ -696,32 +698,16 @@ def assert_definition_rejects_non_string_model() -> None:
     _assert_definition_raises(lines=("model = 1",), match="model")
 
 
-def assert_definition_accepts_owned_path_shapes_ci_matches_identically() -> None:
-    """Assert an exact path and a trailing recursive glob both load.
+def load_definition_with_owned_paths(owned_paths: tuple[str, ...]) -> EvalDefinition:
+    """Load an eval definition declaring ``owned_paths`` and return it."""
 
-    Both shapes are built from the source-owned alphabet and recursive suffix,
-    so narrowing either contract reaches this evidence rather than passing
-    beside it.
-    """
-
-    exact = "AGENTS.md"
-    recursive = f"src/plugins/product-tree/skills/merge{OWNED_PATH_RECURSIVE_SUFFIX}"
-    assert OWNED_PATH_ALPHABET.fullmatch(exact)
-    assert OWNED_PATH_ALPHABET.fullmatch(
-        recursive.removesuffix(OWNED_PATH_RECURSIVE_SUFFIX)
-    )
-
-    accepted = (exact, recursive)
     with TemporaryDirectory() as tmp:
-        entries = ", ".join(f'"{path}"' for path in accepted)
+        entries = ", ".join(f'"{path}"' for path in owned_paths)
         toml_path = _write_eval_definition(
             Path(tmp),
             lines=(f"owned_paths = [{entries}]",),
         )
-
-        definition = load_definition(toml_path)
-
-        assert definition.owned_paths == accepted
+        return load_definition(toml_path)
 
 
 def assert_owned_path_alphabet_excludes_every_glob_magic_character() -> None:
@@ -844,7 +830,19 @@ def assert_definition_rejects_nonexistent_prompt_file() -> None:
     _assert_definition_raises(lines=(), match="prompt", with_prompt=False)
 
 
-def assert_root_instruction_changes_select_full_suites() -> None:
+@dataclass(frozen=True)
+class RootInstructionPlanWorkspace:
+    """An eval tree whose one suite owns the default CI path."""
+
+    eval_root: Path
+    eval_toml: Path
+    plugin_dir: Path
+
+
+@contextmanager
+def root_instruction_plan_workspace() -> Iterator[RootInstructionPlanWorkspace]:
+    """Yield an eval tree holding one suite owned by the default CI path."""
+
     with TemporaryDirectory() as tmp:
         eval_toml = make_eval_dir(
             Path(tmp) / "evals" / "rule",
@@ -852,21 +850,11 @@ def assert_root_instruction_changes_select_full_suites() -> None:
             owned_paths=(DEFAULT_CI_OWNED_PATH,),
             smoke_case_ids=DEFAULT_PLAN_CASE_IDS,
         )
-
-        for root_instruction_path in ROOT_INSTRUCTION_PATHS:
-            plan = build_ci_plan(
-                eval_toml.parent.parent,
-                mode=CiMode.PR,
-                changed_paths=(root_instruction_path,),
-            )
-
-            assert plan == [
-                EvalPlanItem(
-                    eval_toml=eval_toml,
-                    plugin_dir=_DEFAULT_PLUGIN_DIR,
-                    case_ids=(),
-                )
-            ]
+        yield RootInstructionPlanWorkspace(
+            eval_root=eval_toml.parent.parent,
+            eval_toml=eval_toml,
+            plugin_dir=_DEFAULT_PLUGIN_DIR,
+        )
 
 
 def assert_empty_plan_exits_successfully_without_commands() -> None:
