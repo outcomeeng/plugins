@@ -111,9 +111,19 @@ class GatePythonObservation:
 CI_GATE_FIXTURES: Final = REPO_ROOT / "outcomeeng_testing" / "fixtures" / "ci_gate"
 
 
+# Each fixture under this name puts a gate credential on the `just check-full`
+# step from one scope or step layout.
+CREDENTIAL_VIOLATION_FIXTURE_GLOB: Final = "credentials_*.yml"
+
+
 def gate_fixture_path(name: str) -> Path:
     """Return the path to an inert violating- or conforming-workflow fixture."""
     return CI_GATE_FIXTURES / name
+
+
+def credential_violation_fixture_paths() -> tuple[Path, ...]:
+    """Return every inert fixture that reaches the full-gate step with a credential."""
+    return tuple(sorted(CI_GATE_FIXTURES.glob(CREDENTIAL_VIOLATION_FIXTURE_GLOB)))
 
 
 def workflow(workflow_path: Path | None = None) -> dict[str, Any]:

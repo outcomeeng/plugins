@@ -32,6 +32,7 @@ from outcomeeng.validation.ci_gate import (
     TRAP_COMMAND_PREFIX,
 )
 from outcomeeng_testing.harnesses.ci_gate import (
+    credential_violation_fixture_paths,
     gate_fixture_path,
     observe_ci_toolchain,
     observe_gate_job,
@@ -114,19 +115,15 @@ def test_only_the_l3_step_receives_the_l3_credentials() -> None:
     }
 
 
+def test_credential_violation_fixtures_are_present() -> None:
+    assert credential_violation_fixture_paths()
+
+
 @pytest.mark.parametrize(
-    "fixture",
-    (
-        "credentials_on_full_gate_step.yml",
-        "credentials_in_job_environment.yml",
-        "credentials_in_workflow_environment.yml",
-        "credentials_under_swapped_step_names.yml",
-    ),
+    "fixture", credential_violation_fixture_paths(), ids=lambda path: path.name
 )
-def test_a_credential_reaching_the_full_gate_step_is_detected(fixture: str) -> None:
-    assert (GATE_RECIPE_COMMAND, GITHUB_TOKEN_ENVIRONMENT) in _run_credentials(
-        gate_fixture_path(fixture)
-    )
+def test_a_credential_reaching_the_full_gate_step_is_detected(fixture: Path) -> None:
+    assert (GATE_RECIPE_COMMAND, GITHUB_TOKEN_ENVIRONMENT) in _run_credentials(fixture)
 
 
 def _inlined_gate_steps(workflow_path: Path | None = None) -> set[str]:
