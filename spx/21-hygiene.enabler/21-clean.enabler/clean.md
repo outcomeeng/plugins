@@ -1,6 +1,6 @@
 # Clean
 
-PROVIDES on-demand removal of gitignored cache directories and artifacts from the working tree
+PROVIDES removal of gitignored cache directories and artifacts from the working tree when a maintainer runs `just clean`
 SO THAT contributors invoking `just clean`
 CAN reclaim disk space and reset cache state without remembering ad-hoc `find -delete` invocations
 

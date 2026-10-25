@@ -33,27 +33,6 @@ head `f445d049316d7ccb1368c53fdad9d26eb1e0deb5`. The diff from merge base
 **Settlement condition**: the placement rule is source-owned enforcement that
 the linked tests drive, and no predicate lives in a test-file helper.
 
-## CI still provisions credentials the on-demand suite alone consumes
-
-[`spx/13-infrastructure.enabler/21-test-infrastructure.enabler/14-on-demand-suite.pdr.md`](spx/13-infrastructure.enabler/21-test-infrastructure.enabler/14-on-demand-suite.pdr.md)
-keeps every `l3` test out of CI, yet `.github/workflows/check.yml` still grants
-`actions: read` for the `l3` workflow-observability tests and passes `GH_TOKEN`,
-`SUBAGENT_DISCOVERY_AUTH_MODE`, and `OPENAI_API_KEY` to the gate step for the `l3`
-subagent-discovery probe, and the toolchain paragraph of
-[`spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`](spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md)
-still names an authenticated `gh` for those tests.
-
-**Evidence**: `.github/workflows/check.yml` lines 17 and 106 to 112; the toolchain
-paragraph of `15-ci-gate.adr.md`.
-
-**Impact**: CI hands a model-provider key and a workflow token to a run that
-executes no test consuming either, which spends no quota and widens the secret
-surface for no verdict.
-
-**Settlement condition**: the workflow grants and passes only what the executed
-gate consumes, and the ADR's toolchain paragraph names none of the `l3` tests'
-provisioning.
-
 ## DEBT [evidence]: the static-analysis steps are checked in a step list, not in the `check-full` recipe
 
 Defect class: `alignment`.

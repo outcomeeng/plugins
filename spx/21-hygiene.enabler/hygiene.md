@@ -1,6 +1,6 @@
 # Hygiene
 
-PROVIDES the pre-commit hygiene operations that keep the working tree clean — markdown formatting fixers run by lefthook and on-demand workspace cleanup
+PROVIDES the pre-commit hygiene operations that keep the working tree clean — markdown formatting fixers run by lefthook and the workspace cleanup a maintainer runs
 SO THAT contributors and CI
 CAN commit consistent markdown and reclaim disk space from gitignored caches without remembering ad-hoc shell incantations
 
