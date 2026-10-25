@@ -28,13 +28,8 @@ Load this skill before any workflow:
 - Runtime tracking is a coordination handle for the next wake-up. Keep it sparse.
 - Durable facts stay in GitHub, the repository, the product tree, and command output. Re-read those sources on wake-up; conversation memory is not durable and is not a fact source.
 - The continuation prompt is a pointer, never a payload; `<heartbeat_payload>` defines its content.
-- Never assume conversation memory survives to the next fire. Compaction, session resumption, and a fresh automation thread each discard it, and none can be anticipated when the prompt is written.
 - On wake-up, reload the named workflow skills, this skill, repository instructions, and authoritative state before acting. The reload is mandatory recovery: the protocol a skill carries cannot be assumed to have survived in context, so re-invoking restores it.
 - A failed check keeps the work active. Fetch failed logs once, classify the layer, then continue the repair loop or ask for the exact missing approval, credential, or judgment.
-- "Stop before retrying" means classify before rerunning the same external job. It never means abandon active work.
-- Delayed external convergence requires an updated heartbeat before ending the turn when the governing workflow has no foreground wait command.
-- Use one active heartbeat per work item. Refresh it instead of creating duplicates.
-- Delete a heartbeat only when no timer-backed repository action remains.
 
 </principles>
 
@@ -56,8 +51,6 @@ The continuation prompt carries exactly two things:
 2. **The pointers each skill must handle** — the work-item identifiers the skill resumes from (PR number, run id, branch, issue, or rollout id), plus the repository when a cold reader needs it to resolve them. The pointers say what each skill operates on; the skill resolves everything else from them.
 
 It carries nothing else. The wake-up reconstructs the directive, the plan, the finding assessments, the next action, and the stop condition by reloading the named skills and re-reading the durable artifacts (PR body, commits, `PLAN.md`, `ISSUES.md`) and live state. The prompt is re-sent unchanged on every fire and would be stale by fire time, so the directive, the finding assessments, and the rationale never appear in it. If the next fire must know something, write it to a durable artifact (`PLAN.md` / `ISSUES.md`), the source the wake-up already re-reads.
-
-A re-entry into a context that still holds the prior conversation can be as terse as the re-entry command plus the work-item pointer; a cold reader (a fresh thread) needs the repository and the skills named explicitly so the pointers resolve. The two differ only in how much a reader needs to resolve the same pointers — neither carries state.
 </heartbeat_payload>
 
 <stale_context_boundary>

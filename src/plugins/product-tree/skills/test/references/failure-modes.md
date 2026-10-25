@@ -4,19 +4,19 @@
 
 - **What happened:** Claude wrote a harness that returned booleans whose names and implementations already decided whether each requirement passed, leaving the linked test to assert only that boolean.
 - **Why it failed:** The predicate moved out of the linked test, so reversing the linked assertion no longer changed the harness behavior and the spec-to-test evidence chain became indirect.
-- **How to avoid:** Infrastructure exposes observations, resources, and recording collaborators. The linked test alone applies assertion APIs and owns the behavioral predicate.
+- **How to avoid:** Apply the predicate-seam rule in `/test-evidence-standards`.
 
 **Implementation logic generated both actual and expected values**
 
 - **What happened:** Claude derived expected outputs from the same table, parser, branch logic, or collaborator verdict method that produced the actual output.
 - **Why it failed:** The oracle repeated the implementation; the same defect changed both sides and the test stayed green.
-- **How to avoid:** Derive expectations from an independent contract, source-owned finite mapping, generated invariant, or real-system response.
+- **How to avoid:** Apply the case-provenance and oracle-independence rules in `/test-evidence-standards`.
 
 **Test-local bindings laundered domain truth**
 
 - **What happened:** Claude stored expected outputs, boundary bags, runner settings, or source-owned singleton values in constants, local functions, fixture parameters, or renamed variables inside the executed test file.
 - **Why it failed:** Renaming the declaration preserved test ownership of data and configuration, hiding an invalid seam instead of correcting it.
-- **How to avoid:** Move source truth to the production contract, variable domains to generators, execution policy to harnesses, and whole payloads to inert fixtures. Keep only the assertion flow in the test.
+- **How to avoid:** Apply the semantic-binding ownership rule in `/test-evidence-standards`.
 
 **A heading selected the assertion type**
 

@@ -75,12 +75,8 @@ Use full branch names and full commit SHAs. Do not abbreviate identity values in
 
 Safe cleanup policy:
 
-- Establish occupancy before removing any ref, remote or local. `git worktree list` names a worktree holding the branch; `git status` in every worktree sitting at the branch tip proves no uncommitted work would be lost. A worktree detached at the tip carries no `branch` line, so the worktree-list check alone misses it, and `git branch --merged` hides its uncommitted work. Both proofs precede deletion, because a removed remote ref cannot be restored from a retained local branch alone.
-- If the remote feature branch exists after merge and both occupancy proofs hold, delete it through the merge lifecycle's approved deletion command.
-- If the local feature branch exists, its remote ref is absent, no live worktree checks it out, and its work is fully upstream — its tip an ancestor of `origin/<base>`, or every branch commit patch-equivalent to an `origin/<base>` commit (`git cherry -v --abbrev=40 origin/<base> <branch>` reports no `+` commit, the state a rebase merge or single-commit squash leaves behind; a multi-commit squash collapses its patches into one upstream commit that no per-commit patch-id matches, so that branch stays retained with its evidence) — delete it regardless of upstream configuration: use `git branch -d` on the ancestry path or `git branch -D` on the patch-equivalence path, because `-d` itself re-checks ancestry and refuses a rebase-merged branch. Type the resolved branch name literally into that direct command; never supply it through shell expansion.
+- Branch and ref deletion follows the occupancy, ancestry, and patch-equivalence proof in `merge-cleanup.md`.
 - If a preservation branch has no remote and all substantive commits are present on `origin/<base>` by ancestry or patch equivalence, report it as safe to delete and delete it unless the branch name or operator instruction marks it as retained evidence.
-- Never delete a branch checked out in another live worktree, or one whose tip a worktree sits at with uncommitted work. Report the exact worktree path, branch, and status output instead.
-- Never delete a branch whose commits are neither ancestors nor patch-equivalent to `origin/<base>`. Report the unmatched full SHAs and keep the branch.
 
 Use git state observations rather than memory for every record field. The patch-equivalence observation is `git cherry -v --abbrev=40 origin/<base> <branch>`.
 
@@ -411,7 +407,7 @@ A path being foundational, not yet consumed by production code, behind a deferre
 </authority_gates>
 
 <merge_cleanup>
-Immediately before the merge mutation, the merge command, overlay checks, worktree transition, and branch cleanup run as one sequence: merge with explicit `--delete-branch=false`, detach this worktree onto the refreshed base tip, delete the remote ref, then delete the local branch after its ancestry or patch-equivalence proof.
+Immediately before the merge mutation, read `merge-cleanup.md`; it owns the merge command, overlay checks, worktree transition, and branch cleanup sequence.
 
 </merge_cleanup>
 
@@ -548,7 +544,7 @@ For every audit and review, persist accepted requirements in decisions and specs
 </auditor_verdicts>
 
 <action_tokens>
-Every merge lifecycle action token carries an exact trigger condition and required follow-up. The tokens are `WAIT_FOR_CHECKS`, `WAIT_FOR_REVIEW`, `FIX_FINDING:<item>`, `MENTION_REVIEW_NEEDED:<trigger-phrase>`, `MERGE_BLOCKED:<reason>`, `AWAIT_DEPLOYMENT_AUTHORIZATION`, and `AWAIT_RELEASE_AUTHORIZATION`.
+The token set, each token's trigger condition, and its required follow-up live in `action-tokens.md`.
 </action_tokens>
 <self_reference>No "Claude", "AI", "agent", "Co-Authored-By: Claude", or similar identity strings in any merge-flow artifact: branch names, commit messages, PR titles, PR bodies, review comments.</self_reference>
 

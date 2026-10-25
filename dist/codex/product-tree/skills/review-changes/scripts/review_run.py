@@ -19,12 +19,8 @@ terminal event, a finish that leaves a changed file neither advanced nor marked
 unread refused, a branch value naming a commit replaced by the checked-out
 branch as the run's branch identity, and scratch cleanup: `start` removes its
 scratch directory on every failure exit and on any exception after creating it,
-`finish` removes it on every exit (success, journal failure, seal failure, or
-handled error) except a coverage refusal, which seals nothing and keeps the run
-open so a missing `append-scope` and a second `finish` can follow, and a run
-stopped after a failed `append-scope` or `append-finding` keeps its scratch
-directory, under the system temporary root, for the single `append-finding`
-rerun, with no later `finish` to remove it.
+and each later verb removes it on every non-zero exit, so a failed verb, a
+coverage refusal included, ends the run, and `finish` removes it on every exit.
 """
 
 from __future__ import annotations
@@ -39,6 +35,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import UTC, datetime
 from types import ModuleType
@@ -547,9 +544,6 @@ def _cleanup_state(state_path: pathlib.Path) -> None:
         shutil.rmtree(scratch_dir)
 
 
-_COVERAGE_REFUSED = -1
-
-
 def _start(args: argparse.Namespace) -> int:
     started_at = _utc_now()
     # A head behind the fetched base is refused before any journal exists, so
@@ -674,17 +668,6 @@ def _append_finding(args: argparse.Namespace) -> int:
 
 
 def _finish(args: argparse.Namespace) -> int:
-    refused_for_coverage = False
-    try:
-        code = _finish_run(args)
-        refused_for_coverage = code == _COVERAGE_REFUSED
-        return 1 if refused_for_coverage else code
-    finally:
-        if not refused_for_coverage:
-            _cleanup_state(args.state)
-
-
-def _finish_run(args: argparse.Namespace) -> int:
     try:
         state = _read_state(args.state)
         journal_env = _journal_env_from_state(state)
@@ -711,7 +694,7 @@ def _finish_run(args: argparse.Namespace) -> int:
         )
         if coverage_error is not None:
             sys.stderr.write(f"{coverage_error}\n")
-            return _COVERAGE_REFUSED
+            return 1
         completed_at = _utc_now()
         event = _completed_event(
             metadata=state["metadata"],
@@ -733,6 +716,24 @@ def _finish_run(args: argparse.Namespace) -> int:
     except (OSError, TypeError, ValueError) as exc:
         sys.stderr.write(f"{exc}\n")
         return 1
+
+
+def _run_run_verb(
+    handler: Callable[[argparse.Namespace], int], args: argparse.Namespace
+) -> int:
+    """Run a verb on an open run and remove the run's scratch on every end.
+
+    `finish` ends the run on every exit; `append-scope` and `append-finding`
+    end it on a non-zero exit or an unhandled exception and leave it open on
+    success.
+    """
+    code = 1
+    try:
+        code = handler(args)
+        return code
+    finally:
+        if args.command == "finish" or code != 0:
+            _cleanup_state(args.state)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -763,13 +764,14 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     args = parser.parse_args(argv)
+    if args.command == "start":
+        return _start(args)
     handlers = {
-        "start": _start,
         "append-scope": _append_scope,
         "append-finding": _append_finding,
         "finish": _finish,
     }
-    return handlers[args.command](args)
+    return _run_run_verb(handlers[args.command], args)
 
 
 if __name__ == "__main__":

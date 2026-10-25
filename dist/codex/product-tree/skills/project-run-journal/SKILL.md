@@ -124,6 +124,8 @@ Each bundled script was tested at `l1` against its real code, with a stub `spx` 
 - A current-scope miss with no list match, or with several matches, reports the original miss ✓
 - A direct render failure other than a miss is reported without a branch-slug retry ✓
 - A run token `../bad` → exit 1, error on stderr, `spx` never invoked ✓
+- An empty or malformed `--branch-slug` → exit 1, error naming the rejected characters and the accepted form ✓
+- `spx` absent from PATH → exit 1, error naming the failing command and the install hint ✓
 - A prefix with no terminal completion event → exit 1 naming the token ✓
 - `spx` exits nonzero → that exit code and stderr pass through ✓
 - `spx journal render` or `spx journal list` returns invalid JSON → exit 1 naming the failed command ✓

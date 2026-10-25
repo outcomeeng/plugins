@@ -131,7 +131,13 @@ def cmd_runs(branch: str | None, limit: int) -> dict[str, Any]:
             "schema_version": SCHEMA_VERSION,
             "runs": [],
             "error": err
-            or _error("runs", None, "gh run list returned no list", "retry"),
+            or _error(
+                "runs",
+                None,
+                f"gh run list returned {type(data).__name__}, not a list",
+                "run python3 gh_access.py to check the gh version and "
+                "authentication, then rerun `workflow_inspect.py runs`",
+            ),
         }
     return {"schema_version": SCHEMA_VERSION, "runs": data, "error": None}
 

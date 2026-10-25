@@ -70,7 +70,7 @@ Before writing or repairing evidence, read the spec assertion, the existing or p
 
 - source-owned values: protocol tokens, status values, command names, route names, schema fields, rule identifiers, message identifiers, registries, constructors, typed factories, or public vocabulary
 - observable behavior: pure functions, constructors, dataclasses, enums, schemas, protocols, typed collaborators, emitted artifacts, or side-effect boundaries
-- oracle: expected output derived from the input through an independently owned computation, an independent reference, a source-owned contract, or a real system response — never recomputed by the production path under test
+- oracle: the independent expected-result source that `/test-evidence-standards` requires
 
 If the source does not expose the contract the assertion needs, fix the source contract first. Do not patch test predicates around a reviewer example, copy literals into tests, hide domain values in fixtures or generators, or replace behavior the assertion claims to verify.
 
@@ -90,9 +90,9 @@ An executed test file is a typed assertion file. It owns the assertion flow: arr
 | Whole-payload samples            | Inert fixtures read, copied, or passed by path when the complete payload shape matters                                     |
 | Curated LLM/eval cases           | Eval case data when generating the case set as JSONL would be wasteful and not tractable                                   |
 
-Judge every binding — variable, constant, fixture parameter, property-generated parameter, alias, or local callback — by the semantic ownership rule in `/test-evidence-standards`. A binding may receive or rename a value an owning source already chose; it may never introduce a case, expected result, configuration choice, setup policy, generator domain, or verdict rule. Those belong in a source contract, spec-governed harness, spec-governed generator, inert whole-payload fixture, independently owned oracle, or curated eval case data when generation is wasteful and not tractable. Naming a value or wrapping it in a local function never changes its owner.
+Judge every binding by the semantic-binding ownership rule in `/test-evidence-standards`.
 
-Property-based tests require reproducible failures. Use a harness that owns seed selection, run-count policy, and failure diagnostics. Failure output includes the seed and replay path. Seeds and run counts never live in the test file.
+Property-based tests require reproducible failures: the property rules in `/test-evidence-standards` assign seed selection, run count, and replay diagnostics to a spec-governed harness, and failure output includes the seed and replay path.
 
 </assertion_file_ownership>
 
@@ -115,7 +115,7 @@ Keep evidence, execution pain, and tool choice independent:
 
 A temporary-directory test can be `L1` when the filesystem is available, setup is trivial, and runtime is cheap. A Playwright test can be `L2` or `L3` depending on whether it uses local infrastructure or remote systems and credentials. Runner never defines level, and level never defines runner.
 
-An execution level permits a dependency; it never selects the case domain. Classify each assertion from its own quantifier before composing its level with the dependency it exercises.
+Classify each assertion from its own quantifier before composing its level with the dependency it exercises.
 
 </independent_axes>
 
@@ -133,17 +133,7 @@ Use evidence terms that describe what the test proves:
 
 <execution_levels>
 
-Use `L1`, `L2`, and `L3` for execution pain and environment dependence:
-
-- `L1`: almost certainly available, cheap, local, safe, deterministic
-- `L2`: real but heavier local infrastructure or setup
-- `L3`: remote, shared, credentialed, or network-dependent systems
-
-Examples:
-
-- `L1`: pure logic, temporary files, normal filesystem work, git, repository-required test runners, and standard subprocesses expected on a working machine
-- `L2`: local development servers, Docker, browsers, product-specific binaries, full bootstrap or install costs, and other slower or less ubiquitous local dependencies
-- `L3`: network access, shared environments, live third-party services, and anything requiring credentials
+Use the `l1`, `l2`, and `l3` execution levels, their discriminator, and their harness obligations as `/test-evidence-standards` defines them. `${SKILL_DIR}/references/execution-level-lookup.md` maps spec promises and dependencies to their minimum level.
 
 </execution_levels>
 
@@ -480,7 +470,7 @@ Testing output is sound when:
 - Every decision `### Testing` rule carries exactly one assertion-type tag selected from its quantifier plus the universal claim's domain, contract-oracle, or violating-rule shape, and no executable evidence link.
 - Every explicitly supplied untagged test assertion is moved under its selected assertion-type heading and receives one canonical `[test](path)` link; unrelated untagged assertions remain unchanged.
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
-- Every test asserts source-coupled behavior with no test-owned data or configuration in the assertion file.
+- Every test asserts source-coupled behavior and satisfies the binding-ownership rule in `/test-evidence-standards`.
 - Every source-owned value in the authored evidence is imported from its production owner, with no literal spelling of it left in a linked test, harness, or generator.
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
 - Every property test generates product-owned variable behavior and separates finite real-boundary wiring unless the boundary itself is part of that variable behavior.

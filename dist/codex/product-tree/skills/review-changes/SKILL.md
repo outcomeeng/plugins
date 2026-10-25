@@ -11,7 +11,7 @@ allowed-tools:
 ---
 
 <objective>
-The skill's output is the raw run token that `finish` prints for a sealed `spx journal --type review` run.
+The raw run token that `finish` prints for a sealed `spx journal --type review` run.
 </objective>
 
 <inputs>
@@ -39,9 +39,9 @@ The bracketed `SPX_VERIFY_*=<value>` assignments are optional and appear only wh
 
 `append-finding` reads one finding JSON object from its standard input, which the input redirect from `<finding-file>` supplies, wraps it in the journal event envelope, and appends it. The runner does not perform the full review finding schema or citation validation; `spx journal append` is the authoritative event boundary.
 
-`finish` refuses, with a non-zero exit, while a changed file is neither advanced nor marked unread. Otherwise it reads the journal prefix, appends the terminal run-completed event with review status, finding counts, and each unread file, and seals the run `failed` when any file is marked unread, never `approved`. It removes runner-owned scratch storage on every `finish` exit, success or failure, except the coverage refusal above, which keeps the state so the missing `append-scope` and a second `finish` can follow; on a successful `finish` it prints the raw run token. `start` removes its scratch storage on every failure. A run stopped after a failed `append-scope` or `append-finding` and never finished keeps its scratch directory under the system temporary root, because the single `append-finding` rerun needs the state file; the operating system's temporary-directory cleanup reclaims it, and no skill command removes it.
+`finish` refuses, with a non-zero exit, while a changed file is neither advanced nor marked unread. Otherwise it reads the journal prefix, appends the terminal run-completed event with review status, finding counts, and each unread file, and seals the run `failed` when any file is marked unread, never `approved`. On a successful `finish` it prints the raw run token. The runner removes its scratch storage on every `finish` exit and on every non-zero exit of `start`, `append-scope`, or `append-finding`, so a failed verb, a coverage refusal included, ends the run and a later verb finds no state.
 
-When any runner verb exits non-zero, stop and surface its stderr, except for the single `append-finding` rerun `<finding_payload>` directs; the command boundary in `<constraints>` admits no repair outside the runner.
+When any runner verb exits non-zero, stop and surface its stderr, except for the single `append-finding` rerun `<finding_payload>` directs, which follows a shell diagnostic that names an absent finding file and so a runner that never ran and left its state in place; the command boundary in `<constraints>` admits no repair outside the runner.
 
 </api_surface>
 
@@ -117,7 +117,6 @@ A finding is a payload: it carries code spans, quotes, and JSON.
 
 <success_criteria>
 
-- [ ] The final output is exactly the raw `runToken` that `finish` printed.
 - [ ] The sealed journal prefix ends in a terminal run-completed event that records review status, finding counts, and each unread file by name.
 - [ ] Every changed file is either advanced after being read or named unread, so no unread file is sealed `approved`.
 - [ ] The final output contains no rendered findings, count line, verdict, or summary.

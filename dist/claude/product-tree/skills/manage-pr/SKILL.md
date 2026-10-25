@@ -1,7 +1,7 @@
 ---
 name: manage-pr
 description: >-
-  ALWAYS invoke this skill by exact name to run the composed re-entry protocol on an already open PR: foreground check and review waits, re-entry after compaction or push, the merge-readiness decision, and merge command selection. NEVER invoke it for a user request to open or manage a PR; that request selects the GitHub PR skill, which routes here.
+  Composed re-entry protocol for an already open PR: foreground check and review waits, re-entry after compaction or push, the merge-readiness decision, and merge command selection.
 argument-hint: "[pr-number|url|branch] [--return-closeout]"
 allowed-tools: Read, Glob, Grep, Edit, Write, Agent, Skill, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(gh auth status:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr checks:*), Bash(gh pr comment:*), Bash(gh pr merge:*), Bash(gh run view:*), Bash(gh api repos/*/pulls/*/comments:*), Bash(gh api repos/*/actions/jobs/*:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_review_thread.py":*), Bash(git fetch:*), Bash(git branch:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git push:*), Bash(git switch:*), Bash(git ls-remote:*), Bash(git cherry:*), Bash(git worktree list:*)
 ---

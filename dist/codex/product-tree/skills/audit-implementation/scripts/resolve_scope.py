@@ -105,8 +105,13 @@ def _sibling_provider(skill: str, module_name: str) -> ModuleType:
     skills = pathlib.Path(__file__).resolve().parents[2]
     path = skills / skill / "scripts" / f"{module_name}.py"
     spec = importlib.util.spec_from_file_location(module_name, path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"cannot load {module_name} from {path}")
+    if spec is None or spec.loader is None or not path.is_file():
+        raise ImportError(
+            f"cannot load the `{skill}` provider script {path}: the installed "
+            f"tree has no importable `{module_name}.py` at that location. "
+            f"Reinstall the product-tree plugin so the `{skill}` skill "
+            "directory sits beside this skill's directory."
+        )
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     try:

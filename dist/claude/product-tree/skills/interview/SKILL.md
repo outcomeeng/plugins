@@ -181,17 +181,23 @@ Claude loads this skill, reads the intake question, and immediately starts askin
 
 Why it failed: Claude treated the intake question as the start of the interview and the research as optional preparation.
 
+How to avoid: Complete the Pre-Analysis Protocol and share the structured brief before the first question. Treat the intake question as the end of preparation, never the start of the interview. Ask the user only what the codebase and product docs left unsettled.
+
 **Failure 6: Asking a question the evidence already settled**
 
 Claude framed a question — "should the parser tolerate trailing commas?" — whose answer the loaded spec and the existing parser already fixed. The operator answered the obvious, and the turn produced nothing the code did not already say. A variant: Claude reasoned to a clear recommendation, then asked anyway "to confirm", staging a decision it had already made.
 
 Why it failed: Claude framed a question before reasoning the decision through, so it never checked whether the loaded evidence already fixed the answer, and treated asking as a substitute for deciding.
 
+How to avoid: Reason each decision to a recommendation under the Decide-First Protocol before composing a question. When the loaded evidence or a sensible default fixes the answer, state the call and proceed. Ask only when the decision is operator-owned and the evidence leaves a real fork.
+
 **Failure 7: Strawman options and false balance**
 
 Claude offered "use the existing validation harness" against "hand-roll a bespoke validator from scratch" — the second option a strawman no one would pick, dressed up to make the question look like a real choice. Or it split a single judgment into a fabricated 50/50 to appear neutral, when one option was plainly correct.
 
 Why it failed: Claude shaped the question to look neutral instead of reasoning to the option the evidence favored.
+
+How to avoid: Offer only options that are materially distinct end-states a reasonable operator might choose, with the recommended option first. When one option is plainly correct, state it as the decision instead of staging a choice.
 
 </failure_modes>
 

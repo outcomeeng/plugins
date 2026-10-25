@@ -2,7 +2,6 @@
 name: refocus
 description: >-
   ALWAYS invoke this skill when running ad hoc commands or writing code without a spec inside a repository whose root contains `spx/`.
-  NEVER invoke this skill outside such a repository.
 allowed-tools: Read, Glob, Grep
 ---
 
@@ -52,7 +51,6 @@ Use skill `product-tree:apply`.
 
 - Ad hoc commands stopped.
 - The `/apply` skill is invoked and proper flow started from Step 1.
-- No further ad hoc commands executed, whether they require permission or not is immaterial.
 - No throwaway scripts or debug code written, and any already written are left uncommitted and reported.
 
 </success_criteria>

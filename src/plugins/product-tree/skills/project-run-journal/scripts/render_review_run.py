@@ -14,6 +14,7 @@ import journal_projection as jp
 
 REVIEW_TYPE = "review"
 RUN_TOKEN = re.compile(r"^[A-Za-z0-9_-]+$")
+BRANCH_SLUG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 RUN_NOT_FOUND_MARKER = "journal run not found"
 RECENT_RUN_LIST_LIMIT = "200"
 
@@ -46,7 +47,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             branch_slug = _branch_slug(args.branch_slug)
         result = _render_review_run(run_token, branch_slug=branch_slug)
     except (OSError, RuntimeError) as exc:
-        sys.stderr.write(f"failed to run spx journal: {exc}\n")
+        sys.stderr.write(
+            f"failed to launch `spx journal` for review run {args.run_token}: "
+            f"{type(exc).__name__}: {exc}. The helper runs `spx journal render "
+            f"--type {REVIEW_TYPE} --run <run-token>` and, on a current-scope "
+            f"miss, `spx journal list --type {REVIEW_TYPE}`. Install `spx` and "
+            "put it on PATH (check with `spx --version`), then re-run this "
+            "command.\n"
+        )
         return 1
     except ValueError as exc:
         sys.stderr.write(f"{exc}\n")
@@ -104,6 +112,20 @@ def _run_token(value: str) -> RunToken:
 
 
 def _branch_slug(value: str) -> BranchSlug:
+    if not BRANCH_SLUG.fullmatch(value):
+        offending = "".join(
+            sorted(
+                {char for char in value if not re.fullmatch(r"[A-Za-z0-9._-]", char)}
+            )
+        )
+        raise ValueError(
+            "branch slug must start with an ASCII letter or digit and contain "
+            "only ASCII letters, digits, dots, underscores, and hyphens; "
+            f"received {value!r} with rejected characters {offending!r} (an "
+            "empty slug is also rejected). Pass the branchSlug exactly as "
+            "reported by `spx journal list --type review`, or omit "
+            "--branch-slug to let the helper look it up."
+        )
     return BranchSlug(value)
 
 

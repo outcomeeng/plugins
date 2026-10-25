@@ -404,6 +404,20 @@ def run_subprocess(
     )
 
 
+_RENDER_HINT: Final = (
+    "; rerun the run's render command by hand and confirm the installed spx "
+    "version prints the rendered projection"
+)
+_STORE_HINT: Final = (
+    "; rerun the store query by hand and confirm gh is authenticated for the "
+    "store's repository"
+)
+_BOUND_HINT: Final = (
+    "; the runner reads no further, so report this block rather than judge the "
+    "unread part"
+)
+
+
 class Blocked(Exception):
     """A request stops with a reason and the evidence that explains it.
 
@@ -472,7 +486,7 @@ def _command(
         evidence[ResultField.STDERR] = str(exc)
         raise Blocked(
             BlockReason.UNREADABLE_OUTPUT,
-            f"{argv[0]} printed output that is not UTF-8",
+            f"{argv[0]} printed output that is not UTF-8; rerun the command in this result's command field by hand and confirm the installed tool prints UTF-8 text",
             run_token=run_token,
             evidence=evidence,
         ) from exc
@@ -481,7 +495,7 @@ def _command(
         evidence[ResultField.STDERR] = str(exc)
         raise Blocked(
             BlockReason.COMMAND_FAILED,
-            f"{argv[0]} could not be executed",
+            f"{argv[0]} could not be executed; confirm {argv[0]} is installed and on PATH, then repeat the request",
             run_token=run_token,
             evidence=evidence,
         ) from exc
@@ -490,7 +504,7 @@ def _command(
         evidence[ResultField.STDERR] = result.stderr
         raise Blocked(
             BlockReason.COMMAND_FAILED,
-            f"{argv[0]} exited {result.exit_code}",
+            f"{argv[0]} exited {result.exit_code}; the stderr and command fields of this result show the failure, so rerun that command by hand to reproduce it before repeating the request",
             run_token=run_token,
             evidence=evidence,
         )
@@ -564,11 +578,20 @@ def _repository_root(context: _Context) -> pathlib.Path:
     return pathlib.Path(stdout)
 
 
+def _received(request: Mapping[str, object], field: RequestField) -> str:
+    """Describe the value a request carries for ``field``."""
+    if field not in request:
+        return "no value"
+    return f"a {type(request[field]).__name__}"
+
+
 def _string(request: Mapping[str, object], field: RequestField) -> str:
     value = request.get(field)
     if not isinstance(value, str) or not value:
         raise Blocked(
-            BlockReason.INVALID_REQUEST, f"{field} must be a non-empty string"
+            BlockReason.INVALID_REQUEST,
+            f"request field {field.value} must be a non-empty JSON string, "
+            f"received {_received(request, field)}; set it to a non-empty string",
         )
     return value
 
@@ -577,7 +600,10 @@ def _normalized_path(value: str) -> str:
     """Accept only a normalized repository-relative POSIX path."""
     defect = _system_text_defect(value)
     if defect is not None:
-        raise Blocked(BlockReason.PATH_REJECTED, f"path {defect}: {value!r}")
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"path {defect}: {value!r}; pass a repository-relative path of printable UTF-8 text",
+        )
     pure = pathlib.PurePosixPath(value)
     if pure.is_absolute():
         raise Blocked(
@@ -608,7 +634,10 @@ def _reference_path(request: Mapping[str, object]) -> str:
     named = _string(request, RequestField.PATH)
     defect = _system_text_defect(named)
     if defect is not None:
-        raise Blocked(BlockReason.PATH_REJECTED, f"path {defect}: {named!r}")
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"path {defect}: {named!r}; pass a path of printable UTF-8 text",
+        )
     return named
 
 
@@ -620,7 +649,10 @@ def _run_token(request: Mapping[str, object]) -> str:
     token = _string(request, RequestField.RUN_TOKEN)
     defect = _system_text_defect(token)
     if defect is not None:
-        raise Blocked(BlockReason.INVALID_REQUEST, f"{RequestField.RUN_TOKEN} {defect}")
+        raise Blocked(
+            BlockReason.INVALID_REQUEST,
+            f"{RequestField.RUN_TOKEN} {defect}; pass the runToken string that start returned",
+        )
     return token
 
 
@@ -630,12 +662,13 @@ def _unit_id(request: Mapping[str, object]) -> str:
     if not isinstance(unit_id, str) or not unit_id:
         raise Blocked(
             BlockReason.INVALID_REQUEST,
-            f"payload must be an object with a non-empty {SpxField.UNIT_ID}",
+            f"payload must be an object with a non-empty {SpxField.UNIT_ID}; set payload.{SpxField.UNIT_ID} to the scope unit's id string",
         )
     defect = _system_text_defect(unit_id)
     if defect is not None:
         raise Blocked(
-            BlockReason.INVALID_REQUEST, f"payload {SpxField.UNIT_ID} {defect}"
+            BlockReason.INVALID_REQUEST,
+            f"payload {SpxField.UNIT_ID} {defect}; pass the unit id as printable UTF-8 text",
         )
     return unit_id
 
@@ -646,7 +679,7 @@ def _finding_rule(request: Mapping[str, object]) -> str:
     if not isinstance(rule, str) or not RULE_ID_PATTERN.fullmatch(rule):
         raise Blocked(
             BlockReason.INVALID_REQUEST,
-            f"payload {SpxField.RULE} must match {RULE_ID_PATTERN.pattern}",
+            f"payload {SpxField.RULE} must match {RULE_ID_PATTERN.pattern}, received {rule!r}; pass the finding's catalog rule identifier",
         )
     return rule
 
@@ -656,7 +689,8 @@ def _payload_text(request: Mapping[str, object]) -> str:
         return json.dumps(request.get(RequestField.PAYLOAD), separators=(",", ":"))
     except RecursionError as exc:
         raise Blocked(
-            BlockReason.INVALID_REQUEST, "payload nests too deeply to serialize"
+            BlockReason.INVALID_REQUEST,
+            "payload nests too deeply to serialize; flatten it to the fields its record declares",
         ) from exc
 
 
@@ -665,7 +699,7 @@ def _terminal_status(request: Mapping[str, object]) -> TerminalStatus:
     if terminal not in {status.value for status in TerminalStatus}:
         raise Blocked(
             BlockReason.INVALID_REQUEST,
-            f"terminal status must be one of {', '.join(TerminalStatus)}: {terminal}",
+            f"{RequestField.TERMINAL_STATUS} must be one of {', '.join(TerminalStatus)}, received {terminal!r}; pass one of those values",
         )
     return TerminalStatus(terminal)
 
@@ -677,7 +711,7 @@ def _issue_identity(request: Mapping[str, object]) -> tuple[str, str, str]:
     if found is None:
         raise Blocked(
             BlockReason.INVALID_REQUEST,
-            f"{RequestField.ISSUE} must match {ISSUE_IDENTITY_PATTERN.pattern}",
+            f"{RequestField.ISSUE} must match {ISSUE_IDENTITY_PATTERN.pattern}, received {named!r}; write the issue as owner/repository#number, such as acme/changes#12",
         )
     owner, repository, number = found.groups()
     return owner, repository, number
@@ -728,7 +762,7 @@ def validate_request(request: Mapping[str, object]) -> Operation:
     if operation is None:
         raise Blocked(
             BlockReason.INVALID_REQUEST,
-            f"{RequestField.OPERATION} must be one of {', '.join(Operation)}",
+            f"{RequestField.OPERATION} must be one of {', '.join(Operation)}, received {request.get(RequestField.OPERATION)!r}; name one of those operations",
         )
     allowed = REQUIRED_FIELDS[operation] | {RequestField.OPERATION}
     missing = sorted(field.value for field in allowed if field not in request)
@@ -736,7 +770,7 @@ def validate_request(request: Mapping[str, object]) -> Operation:
     if missing or unexpected:
         raise Blocked(
             BlockReason.INVALID_REQUEST,
-            f"{operation} request fields: missing {missing}, unexpected {unexpected}",
+            f"{operation} request fields: missing {missing}, unexpected {unexpected}; send exactly {sorted(str(field) for field in allowed)}",
         )
     for check in _REQUEST_CHECKS[operation]:
         check(request)
@@ -749,7 +783,8 @@ def _within(root: pathlib.Path, path: pathlib.Path, named: str) -> bool:
         return path.resolve().is_relative_to(root.resolve())
     except (OSError, ValueError) as exc:
         raise Blocked(
-            BlockReason.PATH_REJECTED, f"path cannot be resolved: {named!r}: {exc}"
+            BlockReason.PATH_REJECTED,
+            f"path cannot be resolved: {named!r}: {exc}; pass a path whose parent directories exist and are readable",
         ) from exc
 
 
@@ -759,31 +794,36 @@ def _live_content(root: pathlib.Path, relative: str) -> str:
     if not _within(root, candidate, relative):
         raise Blocked(
             BlockReason.PATH_REJECTED,
-            f"path resolves outside the repository: {relative}",
+            f"path resolves outside the repository: {relative}; pass a path that stays inside the repository and is not a link leaving it",
         )
     if not candidate.exists():
-        raise Blocked(BlockReason.CANDIDATE_MISSING, f"candidate is absent: {relative}")
+        raise Blocked(
+            BlockReason.CANDIDATE_MISSING,
+            f"candidate is absent: {relative}; pass the repository-relative path of an existing file",
+        )
     if not candidate.is_file():
         raise Blocked(
             BlockReason.PATH_REJECTED,
-            f"candidate is not a regular file: {relative}",
+            f"candidate is not a regular file: {relative}; pass the path of a file, not a directory or special file",
         )
     try:
         stored = candidate.read_bytes()
     except FileNotFoundError as exc:
         raise Blocked(
-            BlockReason.CANDIDATE_MISSING, f"candidate is absent: {relative}"
+            BlockReason.CANDIDATE_MISSING,
+            f"candidate is absent: {relative}; pass the repository-relative path of an existing file",
         ) from exc
     except OSError as exc:
         raise Blocked(
             BlockReason.CANDIDATE_UNREADABLE,
-            f"candidate cannot be read: {relative}: {exc.strerror or exc}",
+            f"candidate cannot be read: {relative}: {exc.strerror or exc}; fix the file's read permission and repeat the request",
         ) from exc
     try:
         return stored.decode(TEXT_ENCODING)
     except UnicodeDecodeError as exc:
         raise Blocked(
-            BlockReason.PATH_REJECTED, f"candidate is not UTF-8 text: {relative}"
+            BlockReason.PATH_REJECTED,
+            f"candidate is not UTF-8 text: {relative}; save the file as UTF-8 text and repeat the request",
         ) from exc
 
 
@@ -830,7 +870,7 @@ def _retained_content(
     if not isinstance(content, str):
         raise Blocked(
             BlockReason.UNREADABLE_OUTPUT,
-            "retained input carries no content string",
+            f"retained input carries no content string{_RENDER_HINT}",
             run_token=run_token,
         )
     return content
@@ -886,7 +926,7 @@ def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object
     if _sha256(content) != expected:
         raise Blocked(
             BlockReason.CANDIDATE_CHANGED,
-            "candidate differs from the content read before the run",
+            "candidate differs from the content read before the run; call read-candidate again and restart with the new candidateSha256",
             evidence={
                 ResultField.LIVE_SHA256: _sha256(content),
                 ResultField.SHA256: expected,
@@ -926,7 +966,7 @@ def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object
     if retained != content:
         raise Blocked(
             BlockReason.RETAINED_INPUT_MISMATCH,
-            "retained input differs from the candidate the runner read",
+            "retained input differs from the candidate the runner read; the candidate changed during start, so repeat read-candidate and start",
             run_token=run_token,
             evidence={
                 ResultField.RETAINED_SHA256: _sha256(retained),
@@ -994,14 +1034,14 @@ def _finding_entries(
     if not isinstance(groups, dict):
         raise Blocked(
             BlockReason.UNREADABLE_OUTPUT,
-            "rendered projection carries no findings object",
+            f"rendered projection carries no findings object{_RENDER_HINT}",
         )
     entries: dict[int, dict[str, object]] = {}
     for group in groups.values():
         if not isinstance(group, list):
             raise Blocked(
                 BlockReason.UNREADABLE_OUTPUT,
-                "rendered findings group is not an array",
+                f"rendered findings group is not an array{_RENDER_HINT}",
             )
         for entry in group:
             seq = entry.get(SpxField.SEQ) if isinstance(entry, dict) else None
@@ -1009,7 +1049,7 @@ def _finding_entries(
             if not isinstance(seq, int) or not isinstance(payload, dict):
                 raise Blocked(
                     BlockReason.UNREADABLE_OUTPUT,
-                    "rendered finding lacks an integer seq and a payload object",
+                    f"rendered finding lacks an integer seq and a payload object{_RENDER_HINT}",
                 )
             entries.setdefault(seq, payload)
     return sorted(entries.items())
@@ -1024,7 +1064,7 @@ def _reconcile(context: _Context, request: Mapping[str, object]) -> dict[str, ob
     if live != retained:
         raise Blocked(
             BlockReason.CANDIDATE_CHANGED,
-            "candidate differs from the retained input",
+            "candidate differs from the retained input; the candidate changed after start, so call read-candidate again and start a new run for the changed content",
             evidence={
                 ResultField.RETAINED_SHA256: _sha256(retained),
                 ResultField.LIVE_SHA256: _sha256(live),
@@ -1036,7 +1076,7 @@ def _reconcile(context: _Context, request: Mapping[str, object]) -> dict[str, ob
     if not isinstance(units, list) or not all(isinstance(unit, dict) for unit in units):
         raise Blocked(
             BlockReason.UNREADABLE_OUTPUT,
-            f"rendered projection lacks a {SpxField.AUDIT_SCOPE_UNITS} array of objects",
+            f"rendered projection lacks a {SpxField.AUDIT_SCOPE_UNITS} array of objects{_RENDER_HINT}",
         )
     scope_units = [
         {
@@ -1106,7 +1146,7 @@ def _connection(
     if not isinstance(connection, dict):
         raise Blocked(
             BlockReason.UNREADABLE_OUTPUT,
-            f"store answer carries no {_AUTHORITY_CONNECTIONS[kind]} connection",
+            f"store answer carries no {_AUTHORITY_CONNECTIONS[kind]} connection{_STORE_HINT}",
         )
     return connection
 
@@ -1158,12 +1198,12 @@ def _read_connection(
         if not isinstance(nodes, list) or not isinstance(info, dict):
             raise Blocked(
                 BlockReason.UNREADABLE_OUTPUT,
-                f"{kind} page carries no nodes array and pageInfo object",
+                f"{kind} page carries no nodes array and pageInfo object{_STORE_HINT}",
             )
         if not all(isinstance(node, dict) for node in nodes):
             raise Blocked(
                 BlockReason.UNREADABLE_OUTPUT,
-                f"{kind} page holds an entry that is not an object",
+                f"{kind} page holds an entry that is not an object{_STORE_HINT}",
             )
         entries.extend(_event(node) for node in nodes)
         if info.get(StoreField.HAS_NEXT_PAGE) is not True:
@@ -1172,12 +1212,12 @@ def _read_connection(
         if not isinstance(cursor, str) or not cursor:
             raise Blocked(
                 BlockReason.UNREADABLE_OUTPUT,
-                f"{kind} page reports a further page and no end cursor",
+                f"{kind} page reports a further page and no end cursor{_STORE_HINT}",
             )
     bound = f"{AUTHORITY_PAGE_SIZE} {kind} per page, {AUTHORITY_MAX_PAGES} pages"
     raise Blocked(
         BlockReason.PAGE_BOUND_REACHED,
-        f"the {kind} read is not complete at {bound}",
+        f"the {kind} read is not complete at {bound}{_BOUND_HINT}",
         evidence={ResultField.BOUND: bound},
     )
 
@@ -1215,7 +1255,7 @@ def _read_published(
     if not isinstance(body, str):
         raise Blocked(
             BlockReason.UNREADABLE_OUTPUT,
-            f"store answer carries no issue {StoreField.BODY} string",
+            f"store answer carries no issue {StoreField.BODY} string{_STORE_HINT}",
         )
     return {ResultField.ISSUE: request[RequestField.ISSUE], ResultField.BODY: body}
 
@@ -1230,7 +1270,7 @@ def _field_values(node: Mapping[str, object]) -> dict[str, object]:
         bound = f"{ISSUE_FIELD_VALUES_PAGE_SIZE} issue field values per issue"
         raise Blocked(
             BlockReason.PAGE_BOUND_REACHED,
-            f"the issue field values read is not complete at {bound}",
+            f"the issue field values read is not complete at {bound}{_BOUND_HINT}",
             evidence={ResultField.BOUND: bound},
         )
     for entry in entries if isinstance(entries, list) else []:
@@ -1287,14 +1327,14 @@ def _read_relations(
         if not isinstance(nodes, list) or not isinstance(info, dict):
             raise Blocked(
                 BlockReason.UNREADABLE_OUTPUT,
-                "relations page carries no nodes array and pageInfo object",
+                f"relations page carries no nodes array and pageInfo object{_STORE_HINT}",
             )
         for entry in nodes:
             numbered = entry.get(StoreField.NUMBER) if isinstance(entry, dict) else None
             if not isinstance(numbered, int):
                 raise Blocked(
                     BlockReason.UNREADABLE_OUTPUT,
-                    "relations page holds an entry with no issue number",
+                    f"relations page holds an entry with no issue number{_STORE_HINT}",
                 )
             by_number[numbered] = _field_values(entry)
         if info.get(StoreField.HAS_NEXT_PAGE) is not True:
@@ -1334,12 +1374,12 @@ def _read_relations(
         if not isinstance(cursor, str) or not cursor:
             raise Blocked(
                 BlockReason.UNREADABLE_OUTPUT,
-                "relations page reports a further page and no end cursor",
+                f"relations page reports a further page and no end cursor{_STORE_HINT}",
             )
     bound = f"{AUTHORITY_PAGE_SIZE} issues per page, {AUTHORITY_MAX_PAGES} pages"
     raise Blocked(
         BlockReason.PAGE_BOUND_REACHED,
-        f"the issues read is not complete at {bound}",
+        f"the issues read is not complete at {bound}{_BOUND_HINT}",
         evidence={ResultField.BOUND: bound},
     )
 
@@ -1449,15 +1489,18 @@ def _parse_request(text: str) -> dict[str, object]:
         request = json.loads(text)
     except json.JSONDecodeError as exc:
         raise Blocked(
-            BlockReason.INVALID_REQUEST, f"request is not JSON: {exc.msg}"
+            BlockReason.INVALID_REQUEST,
+            f"request is not JSON: {exc.msg} at line {exc.lineno} column {exc.colno}; write the request as one JSON object and pass it again",
         ) from exc
     except ValueError as exc:
         raise Blocked(
-            BlockReason.INVALID_REQUEST, f"request cannot be parsed: {exc}"
+            BlockReason.INVALID_REQUEST,
+            f"request cannot be parsed: {exc}; write the request as one JSON object and pass it again",
         ) from exc
     except RecursionError as exc:
         raise Blocked(
-            BlockReason.INVALID_REQUEST, "request nests too deeply to parse"
+            BlockReason.INVALID_REQUEST,
+            "request nests too deeply to parse; flatten the request to the fields its operation takes",
         ) from exc
     if not isinstance(request, dict):
         raise Blocked(
@@ -1529,7 +1572,8 @@ def _serialized(code: ExitCode, result: Mapping[str, object]) -> tuple[ExitCode,
         code, blocked = _blocked_result(
             Operation(named) if isinstance(named, str) else None,
             Blocked(
-                BlockReason.UNREADABLE_OUTPUT, "result nests too deeply to serialize"
+                BlockReason.UNREADABLE_OUTPUT,
+                "result nests too deeply to serialize; report this block, since the operation's result cannot be printed",
             ),
             token if isinstance(token, str) else NOT_STARTED,
         )
@@ -1549,13 +1593,19 @@ def main(
     except UnicodeDecodeError:
         code, result = _blocked_result(
             None,
-            Blocked(BlockReason.INVALID_REQUEST, "request is not UTF-8 text"),
+            Blocked(
+                BlockReason.INVALID_REQUEST,
+                "request is not UTF-8 text; write the request file as UTF-8 and pass it again",
+            ),
             NOT_STARTED,
         )
     except OSError as exc:
         code, result = _blocked_result(
             None,
-            Blocked(BlockReason.INVALID_REQUEST, f"request could not be read: {exc}"),
+            Blocked(
+                BlockReason.INVALID_REQUEST,
+                f"request could not be read: {exc}; confirm stdin is open and readable, then repeat the request",
+            ),
             NOT_STARTED,
         )
     else:

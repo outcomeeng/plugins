@@ -24,7 +24,7 @@ Walk these steps in order. Every step is a routine workflow operation — verify
 
 **Step 0 — Load references.** {!% require_skill 'product-tree:merging-standards' %!} It supplies the shared vocabulary. {!% require_skill 'product-tree:commit-changes' %!} It supplies the commit type and scope classification. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 1; invoking the compact loader alone does not load the tagged policy sections used below.
 
-**Step 1 — GATE: Pre-flight.** Run `spx worktree status` from the assigned root and require a fresh passing /merging-standards `<occupancy_preflight>` before any checkout-sensitive mutation. Run `<repository_target_gate>`, every overlay-declared preflight check per `<overlay_safety_checks>`, then `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition. Run this step before the push even when an earlier lifecycle entry already ran a preflight before branch or commit work; the later check guards the checkout state at publication time.
+**Step 1 — GATE: Pre-flight.** Run `spx worktree status` from the assigned root and require a fresh passing /merging-standards `<occupancy_preflight>` before any checkout-sensitive mutation. Run `<repository_target_gate>`, every overlay-declared preflight check per `<overlay_safety_checks>`, then `<branch_hygiene>` checks. Every condition must hold or the flow stops at the first failed condition. Run this step before the push; it guards the checkout state at publication time.
 
 <repository_target_gate>
 
@@ -181,7 +181,7 @@ The narrow Bash grants in frontmatter authorize approval-free execution. Run req
 
 **Push rejection after local readiness.** Claude reached `VERIFICATION_READINESS`, then the explicit destination push was rejected because the remote branch advanced or credentials failed. For a remote advancement: {!% require_skill 'product-tree:sync-base' %!} Re-run it, re-establish `VERIFICATION_READINESS` on the resulting tree, and push again; for credentials or permission failure, stop with the exact command output and no PR mutation.
 
-**Duplicate PR already exists.** Claude attempted `gh pr create` on a branch that already had an open PR, because no pre-flight step looks up an existing PR and an earlier run or another session may have opened one. Detect an existing PR before creation or classify the `gh pr create` failure; switch to /manage-pr for that PR instead of opening a second PR or changing the branch name.
+**Duplicate PR already exists.** Claude attempted `gh pr create` on a branch that already had an open PR, because no pre-flight step looks up an existing PR. Detect an existing PR before creation or classify the `gh pr create` failure; switch to /manage-pr for that PR instead of opening a second PR or changing the branch name.
 
 **Stacked topology opened ready too early.** Claude treated a stacked branch like a peer branch and opened it ready against the default base. When `<branch_topology>` classifies a stack, set the previous stack branch as `--base` and keep the PR draft until its base merges; do not satisfy `VERIFICATION_READINESS` against the wrong base.
 

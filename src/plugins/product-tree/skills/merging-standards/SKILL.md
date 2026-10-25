@@ -4,7 +4,7 @@ user-invocable: false
 description: >-
   Shared merge-lifecycle invariants and routing for detailed preflight, branch,
   review, authority-gate, delivery, and closeout policy.
-allowed-tools: Read
+allowed-tools: Read, {{! tool('use_skill') !}}
 ---
 
 <objective>

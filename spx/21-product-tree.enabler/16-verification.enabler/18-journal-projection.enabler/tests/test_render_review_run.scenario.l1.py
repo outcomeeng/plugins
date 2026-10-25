@@ -7,6 +7,7 @@ import os
 import pathlib
 import stat
 import subprocess
+import sys
 from typing import Any
 
 from outcomeeng_testing.harnesses.journal_projection import (
@@ -293,6 +294,56 @@ def test_explicit_branch_slug_accepts_state_store_slug(
     assert result.returncode == 0
     assert f"Review run: {RUN_TOKEN}" in result.stdout
     assert "Status: approved" in result.stdout
+
+
+def test_empty_branch_slug_is_rejected_with_accepted_input(
+    tmp_path: pathlib.Path,
+) -> None:
+    result = _run_helper(
+        tmp_path,
+        spx_stdout=json.dumps(_completed_events()),
+        branch_slug="",
+        pass_branch_slug=True,
+    )
+
+    assert result.returncode == 1
+    assert "branch slug must start with an ASCII letter or digit" in result.stderr
+    assert "empty slug is also rejected" in result.stderr
+    assert "spx journal list --type review" in result.stderr
+
+
+def test_malformed_branch_slug_names_rejected_characters(
+    tmp_path: pathlib.Path,
+) -> None:
+    result = _run_helper(
+        tmp_path,
+        spx_stdout=json.dumps(_completed_events()),
+        branch_slug="work/bad slug",
+        pass_branch_slug=True,
+    )
+
+    assert result.returncode == 1
+    assert "'work/bad slug'" in result.stderr
+    assert "rejected characters ' /'" in result.stderr
+
+
+def test_missing_spx_executable_reports_install_hint(
+    tmp_path: pathlib.Path,
+) -> None:
+    env = os.environ.copy()
+    env["PATH"] = str(tmp_path)
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, str(RENDER_REVIEW_RUN_SCRIPT), RUN_TOKEN],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+
+    assert result.returncode == 1
+    assert f"failed to launch `spx journal` for review run {RUN_TOKEN}" in result.stderr
+    assert "FileNotFoundError" in result.stderr
+    assert "Install `spx` and put it on PATH" in result.stderr
 
 
 def test_missing_current_scope_run_uses_listed_branch_slug(

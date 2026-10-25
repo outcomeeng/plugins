@@ -16,7 +16,7 @@ Contents:
 
 <objective>
 
-The long tail of operational failure modes of the implementation audit. A failed preparation, concern invocation, payload submission, or projection that matches one below keeps its exact diagnostic and takes no retry beyond the one absent-payload rerun the payload contract allows.
+The long tail of operational failure modes of the implementation audit. A failed preparation, concern invocation, payload submission, or projection that matches one below keeps its exact diagnostic and takes no retry beyond the single rerun of a scope-add or finding-add whose diagnostic names its payload file as absent.
 
 </objective>
 
@@ -60,8 +60,8 @@ Why it failed: The published scope contract requires `unitId`, one string
 `recordedByRunDriver`. A command-only fallback also discarded the
 evidence needed to reproduce the rejected payload boundary.
 
-How to avoid: Construct scope and finding payloads from the exact JSON contracts
-in the payload contract and relay the complete blocked diagnostic from
+How to avoid: Construct scope and finding payloads from the exact JSON shapes read
+before the first payload write and relay the complete blocked diagnostic from
 `<verdict_format>` without reformatting or omission.
 
 **Failure 8: An unquoted idempotency key split the command**
@@ -82,7 +82,7 @@ existing non-executable file. Each symptom names a path fragment, which reads as
 a file problem rather than the quoting defect it is.
 
 How to avoid: Pass every key as one single-quoted argument,
-`--idempotency-key '<stable-scope-key>'`, per the payload contract.
+`--idempotency-key '<stable-scope-key>'`.
 
 **Failure 9: Deterministic verification ran inside the audit**
 

@@ -351,7 +351,34 @@ class TestReviewRunnerBoundary:
         event_types = [event["type"] for event in journal["events"]]
         assert event_types == ["verification.scope.entered"]
         assert journal["sealed"] is False
+        assert pathlib.Path(start_payload["statePath"]).exists() is False
+        assert pathlib.Path(start_payload["diffPath"]).parent.exists() is False
+
+    def test_runner_removes_scratch_when_append_finding_fails(
+        self, tmp_path: pathlib.Path
+    ) -> None:
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        base_ref = init_repo_with_branch(repo)
+        env, _journal_path = runner_env(tmp_path, repo, base_ref)
+
+        started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+        assert started.returncode == 0, started.stderr
+        start_payload = json.loads(started.stdout)
         assert pathlib.Path(start_payload["statePath"]).exists() is True
+
+        appended = run_script(
+            REVIEW_RUN_SCRIPT,
+            "append-finding",
+            "--state",
+            start_payload["statePath"],
+            stdin="not json",
+            env=env,
+            cwd=repo,
+        )
+        assert appended.returncode == 1
+        assert pathlib.Path(start_payload["statePath"]).exists() is False
+        assert pathlib.Path(start_payload["diffPath"]).parent.exists() is False
 
     def test_runner_requires_rename_source_and_destination_scope(
         self, tmp_path: pathlib.Path
