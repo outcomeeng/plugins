@@ -38,6 +38,14 @@ from typing import Final
 
 from outcomeeng.validation.hook_contract import SESSION_START_EVENT
 
+# The hook configuration shape the validator reads: the file it scans for, the
+# directory that file sits in, and the fields of each handler it judges.
+HOOKS_FILENAME: Final = "hooks.json"
+HOOKS_DIRNAME: Final = "hooks"
+HOOKS_FIELD: Final = "hooks"
+COMMAND_FIELD: Final = "command"
+TIMEOUT_FIELD: Final = "timeout"
+
 # Events observational on EVERY runtime the marketplace ships a hook to. The same
 # hooks.json ships byte-identical to dist/claude and dist/codex, so an event is safe
 # only when it is non-blocking on both Claude Code and Codex. The set is the
@@ -139,7 +147,7 @@ def hook_config_violations(config: Mapping[str, object]) -> list[str]:
     cache path.
     """
     violations: list[str] = []
-    hooks = config.get("hooks")
+    hooks = config.get(HOOKS_FIELD)
     if not isinstance(hooks, Mapping):
         return violations
     for raw_event, blocks in hooks.items():
@@ -151,18 +159,18 @@ def hook_config_violations(config: Mapping[str, object]) -> list[str]:
         for block in blocks:
             if not isinstance(block, Mapping):
                 continue
-            handlers = block.get("hooks")
+            handlers = block.get(HOOKS_FIELD)
             if not isinstance(handlers, list):
                 continue
             for handler in handlers:
                 if not isinstance(handler, Mapping):
                     continue
                 saw_handler = True
-                if "timeout" not in handler:
+                if TIMEOUT_FIELD not in handler:
                     violations.append(
                         f"{event}: hook handler declares no explicit timeout"
                     )
-                command = handler.get("command")
+                command = handler.get(COMMAND_FIELD)
                 if isinstance(command, str):
                     violations.extend(_command_violations(event, command))
         # Report the event-level violation once per event, not once per handler.
@@ -174,8 +182,8 @@ def hook_config_violations(config: Mapping[str, object]) -> list[str]:
 def iter_tree_violations(root: Path) -> list[str]:
     """Scan every ``hooks/hooks.json`` under ``root`` and return located violations."""
     violations: list[str] = []
-    for hooks_file in sorted(root.rglob("hooks.json")):
-        if hooks_file.parent.name != "hooks":
+    for hooks_file in sorted(root.rglob(HOOKS_FILENAME)):
+        if hooks_file.parent.name != HOOKS_DIRNAME:
             continue
         try:
             parsed: object = json.loads(hooks_file.read_text(encoding="utf-8"))
