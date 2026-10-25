@@ -382,10 +382,25 @@ WAIT_FOR_LOAD_LIGHTWEIGHT_EXEMPTION: Final = (
     "validation, an instruction-block render, a status read — runs with neither the "
     "lock nor the waiter"
 )
+WAIT_FOR_LOAD_LOCK_SWITCH_REQUIREMENT: Final = (
+    "**ALWAYS** read the lock switch from `spx/local/wait-for-load.md`: where that "
+    "overlay holds the line `orchestration-lock: on`, run the command as the "
+    "argument vector of `spx orchestration lock --run-id <id> -- <command>`, so it "
+    "starts only when the host-wide slot admits it; where the overlay is absent or "
+    "leaves the switch off, chain the command behind the waiter with `&&`."
+)
+WAIT_FOR_LOAD_LOCK_RECOVERY_REQUIREMENT: Final = (
+    "**ALWAYS** recover the existing invocation and its matching terminal record "
+    "after a lock record is lost from view; start no new invocation while that "
+    "invocation's state is unresolved, and report the outcome unknown when its "
+    "terminal exit is known but the record is gone."
+)
 WAIT_FOR_LOAD_SCOPE_REQUIREMENT: Final = "**NEVER** use host load to reduce scope, workers, limits, deadlines, or verification."
 WAIT_FOR_LOAD_POLICY_REQUIREMENTS: Final = (
     ("stop trigger", WAIT_FOR_LOAD_STOP_TRIGGER),
+    ("lock switch lines", WAIT_FOR_LOAD_LOCK_SWITCH_REQUIREMENT),
     ("ready command", WAIT_FOR_LOAD_READY_REQUIREMENT),
+    ("lock record recovery", WAIT_FOR_LOAD_LOCK_RECOVERY_REQUIREMENT),
     ("class definition", WAIT_FOR_LOAD_CLASS_DEFINITION),
     ("lightweight exemption", WAIT_FOR_LOAD_LIGHTWEIGHT_EXEMPTION),
     ("scope preservation", WAIT_FOR_LOAD_SCOPE_REQUIREMENT),
