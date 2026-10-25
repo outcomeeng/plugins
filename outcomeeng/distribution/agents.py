@@ -41,6 +41,14 @@ AGENT_TARGETS_FIELD: Final = "targets"
 AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD: Final = "include_instructions"
 APPROVAL_POLICY_FIELD: Final = "approval_policy"
 SANDBOX_MODE_FIELD: Final = "sandbox_mode"
+PERMISSION_MODE_FIELD: Final = "permissionMode"
+# The frontmatter field through which each target's rendering of an agent
+# definition declares native execution policy; absent, the rendering inherits
+# the invoking session's policy.
+NATIVE_PERMISSION_FIELDS: Final[Mapping[Target, str]] = {
+    Target.CLAUDE: PERMISSION_MODE_FIELD,
+    Target.CODEX: SANDBOX_MODE_FIELD,
+}
 SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
     {
         AGENT_NAME_FIELD,
@@ -50,7 +58,7 @@ SUPPORTED_FRONTMATTER_FIELDS: Final = frozenset(
         SANDBOX_MODE_FIELD,
         "nickname_candidates",
         "mcp_servers",
-        "permissionMode",
+        PERMISSION_MODE_FIELD,
         "skills",
         AGENT_TOOLS_FIELD,
         "disallowedTools",
@@ -222,7 +230,7 @@ def parse_agent_text(text: str, *, source_path: Path, name: str) -> SourceAgent:
         approval_policy=_optional_string(frontmatter, APPROVAL_POLICY_FIELD),
         nickname_candidates=_string_tuple(frontmatter, "nickname_candidates"),
         mcp_servers=_optional_mapping(frontmatter, "mcp_servers"),
-        permission_mode=_optional_string(frontmatter, "permissionMode"),
+        permission_mode=_optional_string(frontmatter, PERMISSION_MODE_FIELD),
         skills=_string_tuple(frontmatter, "skills"),
         tools=_string_tuple(frontmatter, AGENT_TOOLS_FIELD),
         tools_declared=AGENT_TOOLS_FIELD in frontmatter,
@@ -943,6 +951,8 @@ __all__ = [
     "CODEX_AGENT_ENV_VAR",
     "CODEX_AGENT_ENV_SEPARATOR",
     "DEFAULT_SOURCE_ROOT",
+    "NATIVE_PERMISSION_FIELDS",
+    "PERMISSION_MODE_FIELD",
     "PERMISSION_MODE_MAPPINGS",
     "READ_ONLY_SANDBOX_MODE",
     "READ_ONLY_TOOLS",
