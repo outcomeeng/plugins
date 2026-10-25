@@ -191,6 +191,8 @@ def message_record_input(
 def _request_argument_value(
     module: ModuleType, field_name: str, ordinal: int
 ) -> object:
+    if field_name == module.REPOSITORY_FIELD:
+        return f"/generated/repository-{ordinal}"
     if field_name in module.TEXT_ARGUMENT_FIELDS:
         return f"generated-{field_name}-{ordinal}"
     if field_name in module.INTEGER_BOUNDS:
@@ -257,6 +259,33 @@ def project_key_paths() -> st.SearchStrategy[str]:
     """
     return st.from_regex(
         r"/[a-z0-9]{1,12}(?:/[a-z0-9][a-z0-9._-]{0,15}){0,5}", fullmatch=True
+    )
+
+
+def relative_repository_texts() -> st.SearchStrategy[str]:
+    """Strings no absolute path is: every string that does not open with a
+    separator, the empty string among them. NUL is outside the domain because
+    a NUL-bearing text argument is rejected by its own rule, and surrogates
+    because they cannot cross a process boundary."""
+    return st.text(
+        alphabet=st.characters(
+            blacklist_categories=("Cs",), blacklist_characters="\x00"
+        ),
+        max_size=40,
+    ).filter(lambda text: not text.startswith("/"))
+
+
+def non_path_repository_values() -> st.SearchStrategy[object]:
+    """Values a request's `repository` must reject: any value that is not an
+    absolute path string — relative strings and every other JSON value type."""
+    return st.one_of(
+        relative_repository_texts(),
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.floats(allow_nan=False),
+        st.lists(st.text(max_size=8), max_size=3),
+        st.dictionaries(st.text(max_size=8), st.text(max_size=8), max_size=2),
     )
 
 

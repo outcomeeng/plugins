@@ -18,7 +18,7 @@ from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Protocol, cast
 
-from hypothesis import given, seed, settings
+from hypothesis import assume, given, seed, settings
 from hypothesis import strategies as st
 
 from outcomeeng_testing.generators.agent_mail import (
@@ -36,6 +36,7 @@ from outcomeeng_testing.generators.agent_mail import (
     expected_project_key,
     message_records,
     message_texts,
+    non_path_repository_values,
     operation_requests,
     program_names,
     project_key_paths,
@@ -124,6 +125,10 @@ LABEL_RESPONSE_EXAMPLES = 5
 LABEL_RESPONSE_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
 LABEL_TARGETING_SEED = 2026100902
 LABEL_TARGETING_EXAMPLES = 10
+NAMED_REPOSITORY_SEED = 2026102601
+NAMED_REPOSITORY_EXAMPLES = 10
+INVALID_REPOSITORY_SEED = 2026102602
+INVALID_REPOSITORY_EXAMPLES = 40
 COMPLIANCE_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.compliance.l1.py"
@@ -1318,16 +1323,27 @@ def mail_pool() -> Iterator[MailPool]:
 def run_cli_project_key(
     working_directory: Path,
     environment: Mapping[str, str] | None = None,
+    repository: Path | str | None = None,
 ) -> tuple[int, dict[str, object]]:
     """Run the shipped CLI's project-key operation in ``working_directory``.
 
     ``environment`` names variables to add to the inherited environment for
     this run, so the variables a caller could answer a location question from
-    are carried into the process the way a hook carries them.
+    are carried into the process the way a hook carries them. ``repository``
+    names the repository whose key is asked for; the attached form carries a
+    value that opens with a dash.
     """
     module = _load()
+    repository_arguments = (
+        [] if repository is None else [f"{module.REPOSITORY_OPTION}={repository}"]
+    )
     completed = subprocess.run(
-        [sys.executable, str(AGENT_MAIL_PATH), module.CliOperation.PROJECT_KEY],
+        [
+            sys.executable,
+            str(AGENT_MAIL_PATH),
+            module.CliOperation.PROJECT_KEY,
+            *repository_arguments,
+        ],
         cwd=working_directory,
         capture_output=True,
         text=True,
@@ -1957,3 +1973,218 @@ def nul_tainted_requests(
         }
         for path in paths
     ]
+
+
+@dataclass(frozen=True)
+class NamedRepositoryCase:
+    """One generated naming of a repository.
+
+    ``repository`` is the path a request names, ``project_key`` the key its
+    lookup answers, and ``other_key`` the key the adapter's own working
+    directory would answer, so a call that followed the working directory
+    rather than the named path is told apart by the key it reports. The store
+    reply a case needs, if any, is ``exit_code`` with its ``detail``.
+    """
+
+    repository: str
+    project_key: str
+    other_key: str
+    exit_code: int
+    detail: str
+
+
+def run_named_repository_cases(
+    assert_case: Callable[[ModuleType, NamedRepositoryCase], None],
+) -> None:
+    """Drive generated repository namings through a linked predicate."""
+    module = _load()
+
+    @seed(NAMED_REPOSITORY_SEED)
+    @settings(max_examples=NAMED_REPOSITORY_EXAMPLES, deadline=None, print_blob=True)
+    @given(
+        repository=project_key_paths(),
+        project_key=project_key_paths(),
+        other_key=project_key_paths(),
+        exit_code=store_exit_codes(),
+        detail=message_texts(),
+    )
+    def generated_case(
+        repository: str,
+        project_key: str,
+        other_key: str,
+        exit_code: int,
+        detail: str,
+    ) -> None:
+        assume(len({repository, project_key, other_key}) == 3)
+        assert_case(
+            module,
+            NamedRepositoryCase(
+                repository=repository,
+                project_key=project_key,
+                other_key=other_key,
+                exit_code=exit_code,
+                detail=detail,
+            ),
+        )
+
+    run_replayable_property(
+        generated_case,
+        seed_value=NAMED_REPOSITORY_SEED,
+        replay_path=COMPLIANCE_REPLAY_PATH,
+    )
+
+
+def run_invalid_repository_cases(
+    assert_case: Callable[[ModuleType, object], None],
+) -> None:
+    """Drive generated values that are no absolute path string through a linked
+    predicate."""
+    module = _load()
+
+    @seed(INVALID_REPOSITORY_SEED)
+    @settings(max_examples=INVALID_REPOSITORY_EXAMPLES, deadline=None, print_blob=True)
+    @given(value=non_path_repository_values())
+    def generated_case(value: object) -> None:
+        assert_case(module, value)
+
+    run_replayable_property(
+        generated_case,
+        seed_value=INVALID_REPOSITORY_SEED,
+        replay_path=COMPLIANCE_REPLAY_PATH,
+    )
+
+
+def request_naming_repository(
+    module: ModuleType, request: dict[str, object], repository: object
+) -> dict[str, object]:
+    """The request with its optional ``repository`` set to ``repository``,
+    built without the request builder's own check so an invalid value reaches
+    the adapter as a caller could send it."""
+    arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+    return {
+        **request,
+        module.ARGUMENTS_FIELD: {**arguments, module.REPOSITORY_FIELD: repository},
+    }
+
+
+def unresolved_then_fallback_runner(
+    module: ModuleType,
+    case: NamedRepositoryCase,
+    store_result: CommandResultContract,
+) -> RecordingRunner:
+    """A runner whose first reply is the failed lookup of the named path.
+
+    The replies after it are what a fallback would consume: the working
+    directory's own lookup naming ``case.other_key``, then the store's reply.
+    An adapter that answered the unresolved path from anywhere else would
+    consume them and succeed.
+    """
+    return RecordingRunner(
+        [
+            failed_command_result(module, case.exit_code, case.detail),
+            text_command_result(
+                module, common_dir_output(COMMON_DIR_EXACT, case.other_key)
+            ),
+            store_result,
+        ]
+    )
+
+
+# Overlay and configuration files a repository-selecting reader could consult,
+# each placed where such a reader would look: beside the working directory and
+# at and above the named repository.
+DECOY_RELATIVE_PATHS = (
+    Path("spx/local/agent-mail.md"),
+    Path("spx.config.yaml"),
+    Path(".claude/settings.json"),
+    Path(".codex/config.toml"),
+    Path(".mcp.json"),
+    Path(".env"),
+)
+
+# Runs the adapter's script with every file open recorded, so a read the
+# adapter makes shows as an observation rather than being inferred from its
+# source. The recorded paths are absolute against the process's working
+# directory.
+OPEN_AUDIT_SOURCE = """
+import json, os, runpy, sys
+opened = []
+def record(event, arguments):
+    if event == "open" and arguments and isinstance(arguments[0], (str, bytes, os.PathLike)):
+        opened.append(os.path.abspath(os.fsdecode(arguments[0])))
+sys.addaudithook(record)
+script, report = sys.argv[1], sys.argv[2]
+sys.argv = [script] + sys.argv[3:]
+code = 0
+try:
+    runpy.run_path(script, run_name="__main__")
+except SystemExit as request:
+    code = request.code if isinstance(request.code, int) else 0
+with open(report, "w", encoding="utf-8") as stream:
+    json.dump({"code": code, "opened": opened}, stream)
+sys.exit(code)
+"""
+
+
+@contextmanager
+def decoy_workspace(pool: MailPool) -> Iterator[Path]:
+    """Yield a working directory that is no repository, with overlay and
+    configuration decoys in it, in the pool's main checkout, and in the pool's
+    parent directory, each naming the pool's foreign repository."""
+    with TemporaryDirectory(ignore_cleanup_errors=True) as raw:
+        workspace = Path(raw).resolve()
+        for root in (workspace, pool.main_checkout, pool.outside):
+            for relative in DECOY_RELATIVE_PATHS:
+                decoy = root / relative
+                decoy.parent.mkdir(parents=True, exist_ok=True)
+                decoy.write_text(f"repository: {pool.foreign}\n", encoding="utf-8")
+        yield workspace
+
+
+def run_cli_project_key_recording_opens(
+    working_directory: Path,
+    repository: Path | None,
+    roots: tuple[Path, ...],
+) -> tuple[int, dict[str, object], list[str]]:
+    """Run the shipped CLI's project-key operation under the open recorder.
+
+    Returns the exit code, the emitted payload, and every file the process
+    opened that lies at or below one of ``roots``.
+    """
+    module = _load()
+    repository_arguments = (
+        [] if repository is None else [f"{module.REPOSITORY_OPTION}={repository}"]
+    )
+    with TemporaryDirectory(ignore_cleanup_errors=True) as raw:
+        report = Path(raw) / "opened.json"
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                OPEN_AUDIT_SOURCE,
+                str(AGENT_MAIL_PATH),
+                str(report),
+                module.CliOperation.PROJECT_KEY,
+                *repository_arguments,
+            ],
+            cwd=working_directory,
+            capture_output=True,
+            text=True,
+            timeout=CLI_TIMEOUT_SECONDS,
+            check=False,
+        )
+        opened = cast(
+            list[str], json.loads(report.read_text(encoding="utf-8"))["opened"]
+        )
+    inside = [
+        path
+        for path in opened
+        if any(
+            path == str(root) or path.startswith(f"{root}{os.sep}") for root in roots
+        )
+    ]
+    return (
+        completed.returncode,
+        cast(dict[str, object], json.loads(completed.stdout)),
+        inside,
+    )

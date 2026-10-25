@@ -7,25 +7,37 @@ from typing import cast
 from outcomeeng_testing.generators.agent_mail import operation_requests
 from outcomeeng_testing.harnesses.cli_usage import read_argv
 from outcomeeng_testing.harnesses.agent_mail import (
+    ROOT,
+    NamedRepositoryCase,
+    RecordingRunner,
     ScriptedClock,
     captured_inbox_responses_with_bodies,
     common_dir_seeded_absent_store_runner,
     common_dir_seeded_runner,
+    decoy_workspace,
+    failed_command_result,
     git_project_key_violation_source,
     label_collision_variant,
     load_agent_mail,
     mail_command_source_texts,
+    mail_pool,
     nul_tainted_requests,
     raw_mail_shell_violation_source,
     raw_mail_violation_source,
+    request_naming_repository,
     requests_over_every_operation,
+    run_cli_project_key,
+    run_cli_project_key_recording_opens,
     run_cli_with_only_adapter_programs,
     run_cli_without_executables,
     run_generated_identities,
     run_hung_command_under_bound,
+    run_invalid_repository_cases,
     run_label_targeting_cases,
+    run_named_repository_cases,
     run_operation_mapping,
     run_wait_cases,
+    unresolved_then_fallback_runner,
     store_error_runner,
     store_program_names,
     store_response_payload,
@@ -71,6 +83,148 @@ def test_unavailable_results_admit_no_fallback() -> None:
             ]
 
     run_generated_identities(assert_case)
+
+
+def test_a_repository_that_is_no_absolute_path_string_never_reaches_a_command() -> None:
+    def assert_case(module: ModuleType, value: object) -> None:
+        for request in requests_over_every_operation(module):
+            operation = module.Operation(request[module.OPERATION_FIELD])
+            runner = RecordingRunner([])
+
+            result = module.execute(
+                request_naming_repository(module, request, value), runner
+            )
+
+            assert result[module.STATUS_FIELD] == (
+                module.ExecutionStatus.INVALID_SCHEMA
+            ), (operation, value)
+            assert module.PROJECT_KEY_FIELD not in result, (operation, value)
+            assert runner.calls == [], (operation, value)
+
+        if isinstance(value, str):
+            exit_code, payload = run_cli_project_key(ROOT, repository=value)
+            assert exit_code != 0, value
+            assert payload[module.STATUS_FIELD] == (
+                module.ExecutionStatus.INVALID_SCHEMA
+            ), value
+            assert module.PROJECT_KEY_FIELD not in payload, value
+
+    run_invalid_repository_cases(assert_case)
+
+
+def test_a_named_path_that_resolves_to_no_repository_admits_no_fallback() -> None:
+    def assert_case(module: ModuleType, case: NamedRepositoryCase) -> None:
+        for request in requests_over_every_operation(module):
+            operation = module.Operation(request[module.OPERATION_FIELD])
+            arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+            runner = unresolved_then_fallback_runner(
+                module, case, store_response_result(module, operation, arguments)
+            )
+
+            result = module.execute(
+                request_naming_repository(module, request, case.repository), runner
+            )
+
+            assert result[module.STATUS_FIELD] == (
+                module.ExecutionStatus.REPOSITORY_UNRESOLVED
+            ), operation
+            assert module.PROJECT_KEY_FIELD not in result, operation
+            assert case.other_key not in json.dumps(result), operation
+            # The failed lookup is the only command: no second lookup answers
+            # from the working directory and no store command follows.
+            assert len(runner.calls) == 1, (operation, runner.calls)
+
+    run_named_repository_cases(assert_case)
+
+    module = load_agent_mail()
+    with mail_pool() as pool:
+        unresolved = {
+            "directory that is no repository": run_cli_project_key(
+                pool.main_checkout, repository=pool.outside
+            ),
+            "path that does not exist": run_cli_project_key(
+                pool.main_checkout, repository=pool.outside / "absent-checkout"
+            ),
+        }
+
+    # The working directory is a repository, so a key that fell back to it
+    # would resolve; each named path instead resolves nothing.
+    for case, (exit_code, payload) in unresolved.items():
+        assert exit_code != 0, (case, payload)
+        assert payload[module.STATUS_FIELD] == (
+            module.ExecutionStatus.REPOSITORY_UNRESOLVED
+        ), (case, payload)
+        assert module.PROJECT_KEY_FIELD not in payload, (case, payload)
+
+
+def test_a_send_from_a_name_the_store_does_not_hold_registers_nobody() -> None:
+    def assert_case(module: ModuleType, case: NamedRepositoryCase) -> None:
+        send = module.Operation.SEND
+        register = module.Operation.REGISTER
+        send_path = (module.AM_COMMAND, *usage_contract_for(module, send).command_path)
+        register_path = (
+            module.AM_COMMAND,
+            *usage_contract_for(module, register).command_path,
+        )
+        sends = [
+            request
+            for request in requests_over_every_operation(module)
+            if request[module.OPERATION_FIELD] == send
+        ]
+        assert len(sends) == 1
+
+        for request in (
+            sends[0],
+            request_naming_repository(module, sends[0], case.repository),
+        ):
+            runner = common_dir_seeded_runner(
+                module,
+                case.project_key,
+                failed_command_result(module, case.exit_code, case.detail),
+            )
+
+            result = module.execute(request, runner)
+
+            assert result[module.STATUS_FIELD] == (
+                module.ExecutionStatus.COMMAND_FAILED
+            )
+            assert result[module.DETAIL_FIELD] == case.detail
+            assert result[module.COMMAND_EXIT_CODE_FIELD] == case.exit_code
+            # The lookup and the send are the only commands: the store's
+            # refusal ends the operation, and no registration precedes a retry.
+            assert len(runner.calls) == 2, runner.calls
+            sent = runner.calls[1][0]
+            assert sent[: len(send_path)] == send_path
+            assert all(
+                argv[: len(register_path)] != register_path for argv, _ in runner.calls
+            )
+
+    run_named_repository_cases(assert_case)
+
+
+def test_the_adapter_reads_no_overlay_or_configuration_to_select_a_repository() -> None:
+    module = load_agent_mail()
+
+    with mail_pool() as pool, decoy_workspace(pool) as workspace:
+        roots = (workspace, pool.outside)
+        named = run_cli_project_key_recording_opens(
+            workspace, pool.main_checkout, roots
+        )
+        standing = run_cli_project_key_recording_opens(pool.main_checkout, None, roots)
+        expected_key = str(pool.bare)
+        decoy_key = str(pool.foreign)
+
+    # The decoys sit beside the working directory and at and above the named
+    # repository, each naming another repository: a reader that selected a
+    # repository from one would report that key or open the file.
+    for case, (exit_code, payload, opened) in {
+        "named from a working directory beside decoys": named,
+        "standing in a checkout holding decoys": standing,
+    }.items():
+        assert exit_code == 0, (case, payload)
+        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (case, payload)
+        assert payload[module.PROJECT_KEY_FIELD] != decoy_key, (case, payload)
+        assert opened == [], (case, opened)
 
 
 def test_registration_result_carries_no_token() -> None:

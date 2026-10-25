@@ -9,6 +9,7 @@ from outcomeeng_testing.harnesses.agent_mail import (
     AttestedListing,
     CapturedInboxResponse,
     CapturedLabelResponse,
+    NamedRepositoryCase,
     RecordingRunner,
     ScriptedClock,
     captured_inbox_responses_with_bodies,
@@ -20,10 +21,13 @@ from outcomeeng_testing.harnesses.agent_mail import (
     inbox_response_with_ids,
     load_agent_mail,
     mail_pool,
+    request_naming_repository,
+    requests_over_every_operation,
     run_cli_project_key,
     run_attested_ack_mapping,
     run_inbox_row_mapping,
     run_label_response_mapping,
+    run_named_repository_cases,
     run_operation_mapping,
     run_project_key_mapping,
     run_recipient_boundary,
@@ -480,6 +484,107 @@ def test_git_location_variables_leave_the_project_key_on_its_own_repository() ->
     # dropped one would leave the shape that confirmed it resolving the wrong
     # repository or none at all.
     assert set(redirections) <= set(module.GIT_LOCATION_VARIABLES), redirections
+
+
+def test_a_named_repository_maps_every_operation_to_the_same_command_under_its_key() -> (
+    None
+):
+    def assert_case(module: ModuleType, case: NamedRepositoryCase) -> None:
+        for request in requests_over_every_operation(module):
+            operation = module.Operation(request[module.OPERATION_FIELD])
+            arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+            store_result = store_response_result(module, operation, arguments)
+            unnamed = common_dir_seeded_runner(module, case.project_key, store_result)
+            named = common_dir_seeded_runner(module, case.project_key, store_result)
+
+            unnamed_result = module.execute(request, unnamed)
+            named_result = module.execute(
+                request_naming_repository(module, request, case.repository), named
+            )
+
+            # The named path is the working directory Git is asked from.
+            lookup = named.calls[0][0]
+            assert lookup[lookup.index(module.GIT_DIRECTORY_OPTION) + 1] == (
+                case.repository
+            ), operation
+            assert case.repository not in unnamed.calls[0][0], operation
+            # Every store command is the one the unnamed request runs, under
+            # the key the lookup answered, and the result reports that key.
+            assert named.calls[1:] == unnamed.calls[1:], operation
+            assert named_result[module.STATUS_FIELD] == (
+                module.ExecutionStatus.SUCCEEDED
+            ), operation
+            assert named_result[module.PROJECT_KEY_FIELD] == case.project_key
+            assert named_result == unnamed_result, operation
+
+    run_named_repository_cases(assert_case)
+
+
+def test_a_named_repository_resolves_the_key_every_checkout_of_its_pool_shares() -> (
+    None
+):
+    module = load_agent_mail()
+
+    with mail_pool() as pool:
+        shapes = pool.checkout_shapes
+        standing = {name: run_cli_project_key(shape) for name, shape in shapes.items()}
+        named = {
+            (working_directory.name, name): run_cli_project_key(
+                working_directory, repository=shape
+            )
+            for working_directory in (pool.foreign, pool.outside, pool.main_checkout)
+            for name, shape in shapes.items()
+        }
+        foreign_from_pool = run_cli_project_key(
+            pool.main_checkout, repository=pool.foreign
+        )
+        expected_key = str(pool.bare)
+        foreign_key = str(pool.foreign)
+
+    # Standing in any shape, the adapter derives the pool's key; naming any
+    # shape from any working directory reports the same key, so a named
+    # checkout equals the key the adapter derives when it stands in it.
+    for name, (exit_code, payload) in standing.items():
+        assert exit_code == 0, (name, payload)
+        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (name, payload)
+    for case, (exit_code, payload) in named.items():
+        assert exit_code == 0, (case, payload)
+        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (case, payload)
+
+    # A named repository other than the working directory's own answers its own
+    # key, never the working directory's.
+    assert foreign_from_pool[0] == 0, foreign_from_pool
+    assert foreign_from_pool[1][module.PROJECT_KEY_FIELD] == foreign_key
+    assert foreign_key != expected_key
+
+
+def test_git_location_variables_leave_a_named_repository_on_its_own_key() -> None:
+    module = load_agent_mail()
+
+    with mail_pool() as pool:
+        confirmed = git_location_variables(pool)
+        every_variable = {
+            variable: value
+            for probe in confirmed
+            for variable, value in probe.environment.items()
+        }
+        environments = {probe.variable: probe.environment for probe in confirmed}
+        environments["every-confirmed-variable"] = every_variable
+        named = {
+            (case, str(working_directory)): run_cli_project_key(
+                working_directory, environment, repository=pool.main_checkout
+            )
+            for case, environment in environments.items()
+            for working_directory in (pool.outside, pool.foreign)
+        }
+        expected_key = str(pool.bare)
+
+    # The variables are the ones Git itself confirms move its answer, so a
+    # value that names another repository, or that bounds discovery above the
+    # named checkout, still leaves the named repository on its own key.
+    for case, (exit_code, payload) in named.items():
+        assert exit_code == 0, (case, payload)
+        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (case, payload)
 
 
 def test_store_responses_map_to_results_without_rewriting() -> None:
