@@ -535,9 +535,9 @@ def _state_path(scratch_dir: pathlib.Path) -> pathlib.Path:
 def _write_state(state: dict[str, object], scratch_dir: pathlib.Path) -> pathlib.Path:
     """Write the run state into the scratch directory `start` created."""
     path = _state_path(scratch_dir)
-    with path.open("w", encoding="utf-8") as handle:
-        json.dump(state, handle, sort_keys=True, indent=2)
-        handle.write("\n")
+    path.write_text(
+        json.dumps(state, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+    )
     return path
 
 
