@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from outcomeeng.validation import ACTIONLINT_ARGV, SHELLCHECK_ARGV
+from outcomeeng.validation.spx_version import SPX_PACKAGE_NAME
 from outcomeeng.validation.ci_gate import (
     CI_STEP_ENVIRONMENT_REQUIREMENTS,
     CI_TOOL_REQUIREMENTS,
     CONTINUE_ON_ERROR_FALSY,
+    FULL_COMMIT_SHA_PATTERN,
+    RETIRED_SPX_VERSION_ENVIRONMENT,
+    SPX_CHECKOUT_REFERENCE,
+    SPX_REPOSITORY,
     FAIL_FAST_PREAMBLE,
     GATE_PULL_REQUEST_EVENT,
     GATE_PUSH_BRANCH,
@@ -27,6 +33,7 @@ from outcomeeng_testing.harnesses.ci_gate import (
     observe_gate_run_commands,
     observe_gate_steps,
     observe_gate_triggers,
+    observe_spx_source,
     observe_validation_step_argvs,
     observe_workflow_jobs,
 )
@@ -340,3 +347,59 @@ def test_missing_push_trigger_is_detected() -> None:
     triggers = observe_gate_triggers(gate_fixture_path("missing_push_trigger.yml"))
 
     assert GATE_PUSH_EVENT not in triggers.events
+
+
+def test_gate_workflow_pins_one_full_spx_commit() -> None:
+    pin = observe_spx_source().commit_pin
+
+    assert pin is not None
+    assert re.fullmatch(FULL_COMMIT_SHA_PATTERN, pin)
+
+
+def test_gate_workflow_checks_out_spx_at_the_pinned_commit() -> None:
+    assert (SPX_REPOSITORY, SPX_CHECKOUT_REFERENCE) in observe_spx_source().checkouts
+
+
+def test_gate_workflow_never_installs_spx_from_the_registry() -> None:
+    observation = observe_ci_toolchain()
+
+    assert RETIRED_SPX_VERSION_ENVIRONMENT not in observation.job_environment
+    assert not any(
+        SPX_PACKAGE_NAME in surface
+        for surface in (*observation.action_references, *observation.run_commands)
+    )
+
+
+def test_registry_installed_spx_is_detected() -> None:
+    workflow_path = gate_fixture_path("spx_installed_from_registry.yml")
+    observation = observe_ci_toolchain(workflow_path)
+
+    assert RETIRED_SPX_VERSION_ENVIRONMENT in observation.job_environment
+    assert any(
+        SPX_PACKAGE_NAME in surface
+        for surface in (*observation.action_references, *observation.run_commands)
+    )
+    assert observe_spx_source(workflow_path).commit_pin is None
+
+
+def test_spx_pinned_to_a_moving_ref_is_detected() -> None:
+    observation = observe_spx_source(gate_fixture_path("spx_pinned_to_moving_ref.yml"))
+
+    assert observation.commit_pin is not None
+    assert not re.fullmatch(FULL_COMMIT_SHA_PATTERN, observation.commit_pin)
+    assert (SPX_REPOSITORY, SPX_CHECKOUT_REFERENCE) not in observation.checkouts
+
+
+def test_spx_built_from_a_pinned_commit_satisfies_the_provisioning_rule() -> None:
+    workflow_path = gate_fixture_path("spx_built_from_commit.yml")
+    observation = observe_spx_source(workflow_path)
+
+    assert observation.commit_pin is not None
+    assert re.fullmatch(FULL_COMMIT_SHA_PATTERN, observation.commit_pin)
+    assert (SPX_REPOSITORY, SPX_CHECKOUT_REFERENCE) in observation.checkouts
+    toolchain = observe_ci_toolchain(workflow_path)
+    assert RETIRED_SPX_VERSION_ENVIRONMENT not in toolchain.job_environment
+    assert not any(
+        SPX_PACKAGE_NAME in surface
+        for surface in (*toolchain.action_references, *toolchain.run_commands)
+    )

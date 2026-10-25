@@ -13,6 +13,7 @@ from outcomeeng.validation import VALIDATION_STEPS
 from outcomeeng.validation.ci_gate import (
     GATE_JOB_NAME,
     JOB_TIMEOUT_KEY,
+    SPX_COMMIT_ENVIRONMENT,
     PYTHON_SETUP_STEP_NAME,
     REUSABLE_WORKFLOW_CALL_KEY,
     WORKFLOW_FILE_GLOBS,
@@ -80,6 +81,14 @@ class WorkflowJobObservation:
     job: str
     calls_reusable_workflow: bool
     timeout_minutes: str | None
+
+
+@dataclass(frozen=True)
+class SpxSourceObservation:
+    """The spx commit pin and every repository checkout the gate job declares."""
+
+    commit_pin: str | None
+    checkouts: tuple[tuple[str | None, str | None], ...]
 
 
 @dataclass(frozen=True)
@@ -242,3 +251,20 @@ def observe_workflow_jobs(
             for job_id, job in jobs.items()
         )
     return tuple(observations)
+
+
+def observe_spx_source(workflow_path: Path | None = None) -> SpxSourceObservation:
+    """Return the spx commit pin and the (repository, ref) of each checkout step."""
+    job = gate_job(workflow(workflow_path))
+    env = cast("dict[str, str]", job.get("env", {}))
+    checkouts = tuple(
+        (
+            cast("dict[str, str]", step.get("with", {})).get("repository"),
+            cast("dict[str, str]", step.get("with", {})).get("ref"),
+        )
+        for step in gate_steps(workflow(workflow_path))
+        if "actions/checkout@" in cast("str", step.get("uses", ""))
+    )
+    return SpxSourceObservation(
+        commit_pin=env.get(SPX_COMMIT_ENVIRONMENT), checkouts=checkouts
+    )

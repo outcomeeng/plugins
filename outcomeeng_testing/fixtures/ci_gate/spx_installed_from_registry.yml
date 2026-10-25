@@ -1,0 +1,22 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SPX_VERSION: "0.8.0"
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install spx
+        run: |
+          set -euo pipefail
+          bun add -g "@outcomeeng/spx@${SPX_VERSION}"
+      - name: Run quality gate
+        run: just check-full

@@ -18,23 +18,6 @@ Closing this needs an assertion naming the recipe-to-module dispatch and a
 harness that reads the recipe body, so it reaches beyond the evidence surfaces
 the current changeset touches.
 
-## The spx version-floor compliance test picks its own violating data
-
-`tests/test_spx_version_floor.compliance.l1.py` picks version literals
-(`"99.0.0"`, `"1.2.3"`) and builds one-line workflow text in
-`_workflow_with_pin` at the test site. It passes no real violating
-whole-payload workflow fixture by path, so the compliance evidence exercises a
-workflow shape no repository writes.
-
-**Evidence**: filed finding f-002 (rule test-owned data) of the
-`spec-tree:test-evidence-auditor` verdict on this node at head
-`f445d049316d7ccb1368c53fdad9d26eb1e0deb5`. The diff from merge base
-`2cf9cd80eebb49dc8a682f45dd08922551d54d76` changes neither the test file nor
-`outcomeeng/validation/spx_version.py`.
-
-**Settlement condition**: the compliance test reads a whole violating workflow
-fixture by path and takes its versions from the fixture and the floor's owner.
-
 ## The infrastructure-placement predicate lives in a test-file helper
 
 `tests/test_infra_placement.compliance.l1.py` holds the placement predicate
