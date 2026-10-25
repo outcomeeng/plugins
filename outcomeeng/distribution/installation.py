@@ -612,8 +612,10 @@ class PluginMigration:
     plugin: str
     scope: str | None
     enabled: bool | None = None
-    """The retired record's activation: True enables the current id, False
-    disables it, and None declares none, so the install's own activation stands."""
+    """The retired record's activation as its listing reports it: True enables
+    the current id, False disables it, and None declares none. For Claude Code
+    the install's own activation then stands; for Codex, whose home activates
+    only what its declaration enables, None disables the current id."""
 
 
 @dataclass(frozen=True)
@@ -1834,12 +1836,28 @@ def _build_plan(
         claude_source=claude_source,
         claude_catalog=claude_catalog,
         codex_disabled=tuple(
-            command.plugin
-            for command in commands
-            if codex_bootstrapping
-            and command.agent is Target.CODEX
-            and command.operation is Operation.PLUGIN_INSTALL
-            and command.plugin is not None
+            dict.fromkeys(
+                (
+                    *(
+                        command.plugin
+                        for command in commands
+                        if codex_bootstrapping
+                        and command.agent is Target.CODEX
+                        and command.operation is Operation.PLUGIN_INSTALL
+                        and command.plugin is not None
+                    ),
+                    # The Codex home activates a plugin only where its
+                    # declaration says so, so a retired entry listed disabled
+                    # or declaring nothing carries disabled activation to the
+                    # successor the migration installs.
+                    *(
+                        migration.plugin
+                        for migration in migrations
+                        if migration.agent is Target.CODEX
+                        and migration.enabled is not True
+                    ),
+                )
+            )
         ),
         migrations=migrations,
     )
@@ -2100,6 +2118,16 @@ def installed_plugin_names(
             and record.scope in CLAUDE_REFRESH_SCOPES
             and record.project_path == resolved_checkout
         )
+    return frozenset(codex_listing_activations(payload, marketplace))
+
+
+def codex_listing_activations(payload: str, marketplace: str) -> dict[str, bool | None]:
+    """Each marketplace entry of the Codex plugin listing with the activation it reports.
+
+    The value is the entry's `enabled` field where the listing carries one as
+    a boolean, and None where the entry declares none.
+    """
+    agent = Target.CODEX
     try:
         document = cast(object, json.loads(payload))
     except json.JSONDecodeError as error:
@@ -2110,7 +2138,7 @@ def installed_plugin_names(
     if not isinstance(entries, list):
         raise ValueError(f"{agent.value} plugin listing must contain an array")
 
-    installed: set[str] = set()
+    activations: dict[str, bool | None] = {}
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
             raise ValueError(
@@ -2131,8 +2159,9 @@ def installed_plugin_names(
             )
         if listed_marketplace != marketplace:
             continue
-        installed.add(plugin)
-    return frozenset(installed)
+        enabled = entry.get(CODEX_PLUGIN_ENABLED_FIELD)
+        activations[plugin] = enabled if isinstance(enabled, bool) else None
+    return activations
 
 
 def _isolated_selection(
@@ -2219,11 +2248,18 @@ def retired_plugin_migrations(
             )
             for record in records
         )
-    if RETIRED_PLUGIN not in installed_plugin_names(
-        agent, payload, checkout=checkout, marketplace=marketplace
-    ):
+    activations = codex_listing_activations(payload, marketplace)
+    if RETIRED_PLUGIN not in activations:
         return ()
-    return (PluginMigration(agent, RETIRED_PLUGIN, PRODUCT_TREE_PLUGIN, None),)
+    return (
+        PluginMigration(
+            agent,
+            RETIRED_PLUGIN,
+            PRODUCT_TREE_PLUGIN,
+            None,
+            activations[RETIRED_PLUGIN],
+        ),
+    )
 
 
 def _first_install_warnings(

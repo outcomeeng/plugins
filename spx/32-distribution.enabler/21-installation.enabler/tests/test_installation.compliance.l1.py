@@ -312,12 +312,15 @@ def test_a_failed_inspection_stops_before_any_planned_operation() -> None:
 def test_invalid_installed_selection_never_reaches_a_state_changing_operation() -> None:
     for observation in observe_invalid_persistent_selections():
         assert observation.selected is not None
-        assert all(
-            PRODUCT_TREE_PLUGIN not in selected and RETIRED_PLUGIN not in selected
-            for selected in observation.selected.values()
-        )
+        omitting = [
+            agent
+            for agent, selected in observation.selected.items()
+            if PRODUCT_TREE_PLUGIN not in selected and RETIRED_PLUGIN not in selected
+        ]
+        assert len(omitting) == 1
         assert observation.error is not None
         assert PRODUCT_TREE_PLUGIN in observation.error
+        assert omitting[0].value in observation.error
         assert observation.attempted
         assert all(
             command.operation

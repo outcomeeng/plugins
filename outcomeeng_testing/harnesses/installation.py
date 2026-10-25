@@ -3539,6 +3539,8 @@ class ListedRecord:
     scope: str | None
     enabled: bool | None
     """The activation the listing reports; None where the entry declares none."""
+    version: str = LISTED_VERSION
+    """The version the Claude Code listing reports for the record."""
 
 
 @dataclass(frozen=True)
@@ -3582,6 +3584,8 @@ class _MigrationRunner:
     stays listed is the state the closing listing exposes, and a real CLI does
     not fail into it on demand.
     """
+    installed_version: str = LISTED_VERSION
+    """The version a native install records, as the real install writes the target it fetched."""
     calls: list[InstallationCommand] = field(default_factory=list)
 
     def __call__(self, command: InstallationCommand) -> CommandResult:
@@ -3592,7 +3596,14 @@ class _MigrationRunner:
                 (record.plugin, record.scope) == (command.plugin, command.scope)
                 for record in records
             ):
-                records.append(ListedRecord(str(command.plugin), command.scope, True))
+                records.append(
+                    ListedRecord(
+                        str(command.plugin),
+                        command.scope,
+                        True,
+                        self.installed_version,
+                    )
+                )
         elif command.operation is Operation.PLUGIN_ENABLE:
             for index, record in enumerate(records):
                 if (record.plugin, record.scope) == (command.plugin, command.scope):
@@ -3635,7 +3646,7 @@ def _records_listing_payload(
                 ),
                 CLAUDE_PLUGIN_SCOPE_FIELD: record.scope,
                 CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout.resolve()),
-                CLAUDE_PLUGIN_VERSION_FIELD: LISTED_VERSION,
+                CLAUDE_PLUGIN_VERSION_FIELD: record.version,
             }
             if record.enabled is not None:
                 entry[CLAUDE_PLUGIN_ENABLED_FIELD] = record.enabled
@@ -3676,7 +3687,10 @@ def observe_migrating_inventory(
     `uninstall_retains_record` makes the native uninstall leave its record
     listed; `declare_selection` writes an `enabledPlugins` selection into the
     mirrored checkout's project settings, carrying the former id's key at the
-    case activation between two unrelated keys.
+    case activation between two unrelated keys. The mirrored checkout is the
+    clone the registry names, so its manifests serve the target version, and
+    the native install the migration plans records that version as the real
+    install does.
     """
     from outcomeeng.distribution.installation import RETIRED_PLUGIN
 
@@ -3687,6 +3701,9 @@ def observe_migrating_inventory(
         mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
+        catalog = _catalogs_from_documents(mirror)[Target.CLAUDE]
+        target_version = served_version(1)
+        _serve_clone_versions(mirror, catalog, target_version)
         settings_path = mirror / CLAUDE_PROJECT_SETTINGS_PATH
         selection_before: dict[str, bool] | None = None
         if declare_selection:
@@ -3727,6 +3744,7 @@ def observe_migrating_inventory(
             },
             fallback=RecordingRunner(),
             retains_uninstalled=uninstall_retains_record,
+            installed_version=target_version,
         )
         report = execute_persistent_installation(mirror, environment, runner)
         written = json.loads(settings_path.read_text(encoding="utf-8"))
