@@ -9,7 +9,7 @@ allowed-tools: Read, Glob, Grep
 
 <objective>
 
-A factual report of Product Tree files' non-conformances to templates, atemporal voice, and content-placement rules — including an atemporal rewrite for each temporal-language finding and no severities or prioritization.
+A factual report of Product Tree files' non-conformances to templates, atemporal voice, and content-placement rules.
 
 </objective>
 
