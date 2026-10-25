@@ -44,11 +44,15 @@ from outcomeeng_testing.generators.installation import (
     generated_absent_plugins,
     generated_boolean_states,
 )
+import outcomeeng.validation.__main__ as validation_entry
 from outcomeeng.validation import L3_LEVEL, PYTEST_ARGV
 from outcomeeng.validation._steps import PYTEST_NODE_ID_SEPARATOR, RECIPE_TEST
-from outcomeeng_testing.harnesses.l3_collection import pytest_argument_tail
+from outcomeeng_testing.harnesses.l3_collection import (
+    justfile_recipe_command,
+    pytest_argument_tail,
+    recipe_dispatch_spawns,
+)
 from outcomeeng_testing.harnesses.real_agent_selection import (
-    direct_test_observation,
     pytest_collection_observation,
 )
 from outcomeeng_testing.harnesses.installation import (
@@ -134,7 +138,11 @@ def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
         Path(__file__).parent.relative_to(repository_root()).as_posix(),
     )
     node_directory = observation.invoked[1:]
-    recipe_spawns = direct_test_observation(node_directory).spawn_calls
+    test_command = justfile_recipe_command(*observation.invoked)
+    forwarded = test_command[
+        test_command.index(str(validation_entry.__package__)) + 1 :
+    ]
+    recipe_spawns = recipe_dispatch_spawns(forwarded, ())
     (pytest_call,) = (
         call for call in recipe_spawns if call[: len(PYTEST_ARGV)] == PYTEST_ARGV
     )
