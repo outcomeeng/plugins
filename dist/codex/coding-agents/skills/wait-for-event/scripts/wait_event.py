@@ -4,7 +4,7 @@
 A request is one JSON object on standard input. The run prints exactly one JSON
 line and exits: an event line, an unreadable-source line, a timeout line, or an
 invalid-request line. It keeps no cursor, state file, or lock, sends nothing,
-marks nothing read, starts no background process, and never outlives its timeout.
+reads and acknowledges no record, starts no background process, and never outlives its timeout.
 """
 
 from __future__ import annotations
@@ -370,7 +370,7 @@ def _poll_mail(
     if outcome == "unreachable":
         return Unreadable(
             SOURCE_MAIL,
-            f"the inbox listing does not reach back to id {source.after_id}",
+            f"the complete listing of {source.agent} does not reach back to id {source.after_id}",
             {**identity, STATUS_FIELD: "unreachable"},
         )
     record = data["record"]
