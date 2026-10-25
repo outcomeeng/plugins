@@ -4761,9 +4761,11 @@ def _copy_committed_project_settings(
         return
     document = _settings_json(source)
     extra = cast("dict[str, object]", document[EXTRA_MARKETPLACES_FIELD])
-    extra[MARKETPLACE] = claude_marketplace_settings(published_source.url, MARKETPLACE)[
-        EXTRA_MARKETPLACES_FIELD
-    ][MARKETPLACE]
+    declared = cast(
+        "dict[str, dict[str, object]]",
+        claude_marketplace_settings(published_source.url, MARKETPLACE),
+    )
+    extra[MARKETPLACE] = declared[EXTRA_MARKETPLACES_FIELD][MARKETPLACE]
     destination.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
 
 
