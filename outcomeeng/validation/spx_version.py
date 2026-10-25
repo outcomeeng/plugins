@@ -162,6 +162,25 @@ def minimum_release_package_command(
     )
 
 
+def floor_spx_command(
+    floor: str = REQUIRED_SPX_VERSION,
+    executable: str = SPX_EXECUTABLE,
+) -> tuple[str, ...]:
+    """Return the command for the ``spx`` build on the path that meets ``floor``.
+
+    The build the gate provisions — from source at the pinned commit — is the
+    floor's provider, so no release channel is consulted. A build that reports
+    a version below ``floor``, or none, is a named gap.
+    """
+    reported = read_reported_version(executable)
+    if reported is None or not is_satisfied(reported, floor):
+        raise RuntimeError(
+            f"skills require spx >= {floor}, the {executable} on the path "
+            f"reports {reported}"
+        )
+    return (executable,)
+
+
 def main(floor: str = REQUIRED_SPX_VERSION, executable: str = SPX_EXECUTABLE) -> int:
     """Fail when the version the ``spx`` CLI reports is below ``floor``."""
     if not verification_run_floor_is_satisfied(floor):

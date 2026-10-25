@@ -65,6 +65,7 @@ from outcomeeng.validation.spx_version import (
     SPX_PACKAGE_NAME,
     VERIFICATION_RUN_MINIMUM_SPX_VERSION,
     VERIFICATION_RUN_REQUIRED_COMMANDS,
+    floor_spx_command,
     is_satisfied,
     minimum_release_package_command,
     parse_version,
@@ -915,27 +916,15 @@ def _plugin_version(plugin_name: str) -> str:
     return _required_string(manifest, "version")
 
 
-def _exact_release_spx_command(version: str) -> tuple[str, ...]:
-    package_spec = f"{SPX_PACKAGE_NAME}@{version}"
-    command = minimum_release_package_command(package_spec)
-
-    actual_version = _spx_version(command)
-    if actual_version != version:
-        raise RuntimeError(
-            f"exact-release SPX command returned {actual_version}, expected {version}"
-        )
-    return command
-
-
 def _floor_release_spx_command() -> tuple[str, ...]:
-    """Return the command for the release the repository pins as its floor.
+    """Return the command for the spx build that meets the repository's floor.
 
-    The lifecycle observations run against this release, because the payload
+    The lifecycle observations run against that build, because the payload
     contracts and the sealed projection they observe are the ones a consumer
     at the floor receives; the first lifecycle release stays with the
     floor-provides-lifecycle proof.
     """
-    return _exact_release_spx_command(REQUIRED_SPX_VERSION)
+    return floor_spx_command()
 
 
 def _find_npx_only(executable: str) -> str | None:
