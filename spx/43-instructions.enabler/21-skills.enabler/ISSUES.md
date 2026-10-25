@@ -245,3 +245,13 @@ The `audit-skill` and `audit-subagent` skills and the `skill-auditor` and `subag
 **Impact.** Every defect an edited skill file already carries rejects any changeset that touches one line of it, so a holder spends the two-run gate cap on findings the disposition rule in [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) files, and judges touched text by hand where the run should carry that judgment.
 
 **Settlement condition.** A run against a changeset that changes some lines of a skill file returns each finding on an unchanged, uninvalidated line as `filed`, with `baseRefEvidence` and `issuesEntry` per properties 11 and 13 of [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md), and rejects only on touched text.
+
+## The skill auditor reports `closing_tag_after_list` at line numbers shifted by one
+
+`/audit-skill` reports a `closing_tag_after_list` finding for a closing tag that does follow a blank line. The finding's location is the committed file's line numbers shifted by one, and its stated condition, a closing tag following the last list item with no blank line, does not hold in the committed file. The rule is defined in `src/plugins/instructions/skills/skill-standards/references/rule-catalog.md` as a blank line separating an unordered list from the closing tag after it.
+
+**Evidence.** `instructions:skill-auditor` run `2026-10-25_03-58-11-025-b75e6cb8f63c` on branch `work/change-767` located a `closing_tag_after_list` finding at `src/plugins/product-tree/skills/audit-change/SKILL.md:384-385`, stating that `</success_criteria>` followed the last list item with no blank line. The committed file at head `45ef81248aa7049bd51baa2041f2f238d6abcf25` reads `verdict.` at line 383, an empty line at line 384, and `</success_criteria>` at line 385, so the blank line is present and the run's line numbers are shifted by one. Earlier audit rounds on the same branch raised the same shape. The finding was dropped as unbacked. The defect is independent of the branch's content.
+
+**Impact.** A false positive on a conforming file costs a gate round to disprove, and a holder who cannot tell a shifted location from a real defect either repairs a file that needs no repair or discards a true finding with the false one.
+
+**Settlement condition.** A skill audit of a file whose closing tag follows a blank line records no `closing_tag_after_list` finding, and every `closing_tag_after_list` finding it records locates the line pair of the committed file at which the list item and the closing tag are adjacent.
