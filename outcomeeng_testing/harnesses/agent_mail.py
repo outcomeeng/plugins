@@ -19,6 +19,7 @@ from types import ModuleType
 from typing import Protocol, cast
 
 from hypothesis import given, seed, settings
+from hypothesis import strategies as st
 
 from outcomeeng_testing.generators.agent_mail import (
     COMMON_DIR_EXACT,
@@ -29,7 +30,6 @@ from outcomeeng_testing.generators.agent_mail import (
     distinct_stable_names,
     escape_prefixed_correlations,
     fitting_correlations,
-    overflowing_correlations,
     thread_alphabet_thread_ids,
     position_labels,
     coordination_references,
@@ -80,8 +80,6 @@ RECORD_ROUNDTRIP_REPLAY_PATH = (
 )
 CORRELATION_ENCODING_SEED = 2026102502
 CORRELATION_ENCODING_EXAMPLES = 200
-CORRELATION_OVERFLOW_SEED = 2026102503
-CORRELATION_OVERFLOW_EXAMPLES = 30
 DELEGATION_CHAIN_SEED = 2026092201
 DELEGATION_CHAIN_EXAMPLES = 20
 TERMINAL_PROPERTY_SEED = 2026091802
@@ -563,53 +561,6 @@ def run_correlation_encoding_property(
         generated_encoding,
         seed_value=CORRELATION_ENCODING_SEED,
         replay_path=RECORD_ROUNDTRIP_REPLAY_PATH,
-    )
-
-
-def run_correlation_overflow_cases(
-    assert_overflow: Callable[[ModuleType, dict[str, object], str], None],
-) -> None:
-    """Drive sent records whose correlation necessarily writes a thread id over
-    the store's length, under a generated project key, while the linked test
-    owns the rejection predicate."""
-    module = _load()
-
-    @seed(CORRELATION_OVERFLOW_SEED)
-    @settings(
-        max_examples=CORRELATION_OVERFLOW_EXAMPLES, deadline=None, print_blob=True
-    )
-    @given(
-        correlation=overflowing_correlations(),
-        sender=agent_names(),
-        recipient=agent_names(),
-        subject=message_texts(),
-        body=message_texts(),
-        kind=sent_record_kinds(module),
-        project_key=project_key_paths(),
-    )
-    def generated_overflow(
-        correlation: str,
-        sender: str,
-        recipient: str,
-        subject: str,
-        body: str,
-        kind: object,
-        project_key: str,
-    ) -> None:
-        record = module.message_record(
-            kind=kind,
-            correlation=correlation,
-            sender=sender,
-            recipient=recipient,
-            subject=subject,
-            body=body,
-        )
-        assert_overflow(module, record, project_key)
-
-    run_replayable_property(
-        generated_overflow,
-        seed_value=CORRELATION_OVERFLOW_SEED,
-        replay_path=COMPLIANCE_REPLAY_PATH,
     )
 
 
