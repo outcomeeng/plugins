@@ -52,7 +52,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Requires
 
-- **An `@outcomeeng/spx` release that carries `spx verification run paths`.**
+- **`@outcomeeng/spx` 0.10.0 or newer, any build that reports that version, which carries `spx verification run paths`.**
 
 ## 0.16.3
 
