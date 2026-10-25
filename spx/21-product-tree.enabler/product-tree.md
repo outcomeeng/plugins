@@ -36,6 +36,7 @@ CAN operate within a structured framework with deterministic context, where spec
 
 ### Compliance
 
+- ALWAYS: each product-tree subagent definition that declares a tools allowlist and no native permission field in a harness rendering — `adr-auditor`, `assertion-auditor`, `change-auditor`, `changes-reviewer`, `changeset-coherence-auditor`, `eval-evidence-auditor`, `implementation-auditor`, `instruction-block-updater`, `pdr-auditor`, `spec-auditor`, and `test-evidence-auditor` — inherits the invoking session's execution policy in that rendering, as [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) declares; a native permission field a rendering declares governs that rendering instead ([test](tests/test_subagent_policy_inheritance.compliance.l1.py))
 - ALWAYS: root guides retain explicit standing authorization for every subagent
   supplied by a plugin in their complete authorized plugin list, requiring an
   active skill's explicit request before launch, per

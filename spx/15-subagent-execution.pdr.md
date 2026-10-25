@@ -81,11 +81,31 @@ definitions a plugin ships and audits without adding behavior the skills lack.
    requires evidence for every profile of that harness. Evidence for one
    harness establishes no execution claim for another; a combined acceptance
    claim requires complete evidence for every harness it names.
+4. A subagent definition that declares a tools allowlist and, in a harness
+   rendering, no native permission field (`permissionMode`, `sandbox_mode`, or
+   the harness's equivalent) inherits the invoking session's execution policy in
+   that rendering. The tools allowlist bounds the capabilities the subagent can
+   call; the invoking session's policy governs approval and sandboxing, and the
+   definition adds no second policy of its own. A definition that must bound
+   execution more tightly than the invoking session declares the native
+   permission field in that rendering, and the field then governs. This
+   inheritance is the declaration `/subagent-standards` requires of a governing
+   decision; it holds for every subagent definition the marketplace ships, and
+   an absent native permission field in a rendering is that declaration's
+   expected form, never a defect.
 
 ## Verification
 
+- NEVER: a definition's frontmatter or body stands as its own inheritance
+  declaration; the inheritance holds through this decision and the linked
+  evidence of the owning node's spec
+
 ### Testing
 
+- ALWAYS: a subagent definition that declares a tools allowlist and no native
+  permission field in a harness rendering inherits the invoking session's
+  execution policy in that rendering; a native permission field a rendering
+  declares governs that rendering instead ([compliance])
 - ALWAYS: generate the complete authorized plugin list from the owning catalog;
   adding a subagent within an authorized plugin leaves the root guide unchanged,
   while adding an authorized plugin updates the list ([property])
