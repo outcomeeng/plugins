@@ -2373,7 +2373,7 @@ Evidence files carrying the term:
 
 ## Code, tests, and infrastructure outside the tree
 
-Files outside `spx/`, `src/plugins/spec-tree/`, and `dist/` that carry the term, with the number of lines each. A `CHANGELOG.md` keeps its history and takes only the Breaking entry named above. A file under `prototypes/` renames its prose and keeps its identifiers, except the five `prototypes/interview-live` files below that keep their spec-tree prose. A fixture whose text is a captured CLI payload or a retired-marker sample keeps the spelling the capture or the sample needs.
+Files outside `spx/`, `src/plugins/spec-tree/`, and `dist/` that carry the term, with the number of lines each. A `CHANGELOG.md` keeps its history and takes only the Breaking entry named above. A file under `prototypes/` renames its prose and keeps its identifiers. The `prototypes/interview-live` group follows the same rule: every description, docstring, comment, option label, and seeded option string in its files writes Product Tree, and only the identifiers `spec-tree-surface` and `SERVER_NAME` and the recorded eval-cache-amortization measurements keep their spelling. A fixture whose text is a captured CLI payload or a retired-marker sample keeps the spelling the capture or the sample needs.
 
 - [x] `.agents/plugins/marketplace.json` (2 lines)
 - [x] `.claude-plugin/marketplace.json` (3 lines)
@@ -2470,12 +2470,12 @@ Files outside `spx/`, `src/plugins/spec-tree/`, and `dist/` that carry the term,
 - [x] `prototypes/eval-cache-amortization/investigation.md` (2 lines)
 - [x] `prototypes/interview-live/README.md` (3 lines)
 - [x] `prototypes/interview-live/boot.py` (1 lines)
-- [x] `prototypes/interview-live/mcp_server.py` (7 lines) keeps its spec-tree prose: prototype code outside the Product Tree's governance and outside the rename's scope
-- [x] `prototypes/interview-live/projection.py` (3 lines) keeps its spec-tree prose: prototype code outside the Product Tree's governance and outside the rename's scope
-- [x] `prototypes/interview-live/seed.json` (2 lines) keeps its spec-tree prose: prototype data outside the Product Tree's governance and outside the rename's scope
+- [x] `prototypes/interview-live/mcp_server.py` (7 lines) descriptions, docstrings, and the argparse description write Product Tree; identifiers keep their spelling
+- [x] `prototypes/interview-live/projection.py` (3 lines) docstrings and comments write Product Tree
+- [x] `prototypes/interview-live/seed.json` (2 lines) seeded option strings write Product Tree
 - [x] `prototypes/interview-live/shell.html` (5 lines)
-- [x] `prototypes/interview-live/spx_seed.py` (2 lines) keeps its spec-tree prose: prototype code outside the Product Tree's governance and outside the rename's scope
-- [x] `prototypes/interview-live/state.py` (2 lines) keeps its spec-tree prose: prototype code outside the Product Tree's governance and outside the rename's scope
+- [x] `prototypes/interview-live/spx_seed.py` (2 lines) docstrings and comments write Product Tree
+- [x] `prototypes/interview-live/state.py` (2 lines) comments write Product Tree
 - [x] `renovate.json` (3 lines)
 - [x] `scripts/distribution.yml` (5 lines)
 - [x] `spx/local/generated-sources.toml` (9 lines)
