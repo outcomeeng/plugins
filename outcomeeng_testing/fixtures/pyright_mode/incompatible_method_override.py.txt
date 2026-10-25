@@ -1,0 +1,8 @@
+class Base:
+    def run(self, value: int) -> int:
+        return value
+
+
+class Child(Base):
+    def run(self, value: str) -> str:
+        return value
