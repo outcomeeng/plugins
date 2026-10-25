@@ -16,7 +16,7 @@ This capability is an agent adapter: the configured way the agent harness lets o
 - Every operation accepts an optional `repository`; a request naming one maps to the same store command under that repository's project key, the result's project key equals that key, and the project-key form given a repository answers that repository's key
 - NEVER: a request whose `repository` is not an absolute path string reaches a store command; it is rejected as an invalid schema first
 - NEVER: the adapter registers an identity on a caller's behalf; a send from a name the named store does not hold returns the store's failure as the command-failed result
-- ALWAYS: `/operate-agent-mail` documents the optional `repository` and states that the result's project key reports the store the operation acted on
+- ALWAYS: `/operate-agent-mail` documents the optional `repository` and states that the result's project key reports the store the operation acted on ([audit:repository-documented])
 
 ### Mappings
 

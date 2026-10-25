@@ -60,15 +60,15 @@ The adapter binds to one store's command surface, and that surface changes betwe
 ## Verification
 
 - ALWAYS: for every operation, the argument vector the adapter builds is accepted by the installed store, and every response the adapter parses is a shape that store emits, as the attested installed-store probe run records
-- ALWAYS: every operation accepts an optional `repository`; a request naming one maps to the same store command under that repository's project key, the result's project key equals that key, and the project-key form given a repository answers that repository's key
-- ALWAYS: a named checkout, a linked worktree of its pool, the pool's bare repository, and the pool's main checkout resolve one project key when named, and equal the key the adapter derives when it stands in any of them
-- ALWAYS: a named path that resolves to no repository yields the repository-unresolved result and no fallback, and a named path never yields the key of the adapter's working directory
-- NEVER: a request whose `repository` is not an absolute path string reaches a store command; it is rejected as an invalid schema first
-- NEVER: the adapter registers an identity on a caller's behalf; a send from a name the named store does not hold returns the store's failure as the command-failed result
-- NEVER: the adapter reads an overlay or configuration to select a repository
 
 ### Testing
 
+- ALWAYS: every operation accepts an optional `repository`; a request naming one maps to the same store command under that repository's project key, the result's project key equals that key, and the project-key form given a repository answers that repository's key ([mapping])
+- ALWAYS: a named checkout, a linked worktree of its pool, the pool's bare repository, and the pool's main checkout resolve one project key when named, and equal the key the adapter derives when it stands in any of them ([mapping])
+- ALWAYS: a named path that resolves to no repository yields the repository-unresolved result and no fallback, and a named path never yields the key of the adapter's working directory ([compliance])
+- NEVER: a request whose `repository` is not an absolute path string reaches a store command; it is rejected as an invalid schema first ([compliance])
+- NEVER: the adapter registers an identity on a caller's behalf; a send from a name the named store does not hold returns the store's failure as the command-failed result ([compliance])
+- NEVER: the adapter reads an overlay or configuration to select a repository ([compliance])
 - ALWAYS: each source-owned operation maps a valid versioned request to the exact `am` argument vector for that operation under the resolved project key ([mapping])
 - ALWAYS: a linked worktree, the pool's bare repository, the pool's main checkout, and a symlinked route to one of them each map to one project key, that key being the pool's bare repository directory, and a working directory that is no repository maps to the repository-unresolved result ([mapping])
 - ALWAYS: each variable that can make Git answer the location question from something other than the invoking working directory, and the complete set together, maps to no change in the resolved key — a working directory carrying a value that names another repository, or a value that bounds discovery above itself, still maps to its own repository's key, and a working directory that is no repository still maps to the repository-unresolved result. The domain is the set Git's own behaviour confirms moves the answer off the working directory, read from Git rather than from the adapter's removal list ([mapping])
