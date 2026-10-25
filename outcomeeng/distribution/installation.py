@@ -166,6 +166,13 @@ CODEX_DISABLED_ENTRY = f"{CODEX_PLUGIN_ENABLED_FIELD} {TOML_KEY_VALUE_SEPARATOR}
 """The raw configuration line declaring a Codex plugin's home activation disabled."""
 CODEX_PLUGIN_MARKETPLACE_FIELD = "marketplaceName"
 PRODUCT_TREE_PLUGIN = "product-tree"
+RETIRED_PLUGIN = "spec-tree"
+"""The former id of the product-tree plugin.
+
+It is accepted only as the input of the one-time migration to `product-tree`:
+a record holding it is installed under the current id and uninstalled, and no
+command, selection, or report line treats it as `product-tree`.
+"""
 STDERR_WARNING_PREFIX = "warning: "
 """The prefix every warning line the run prints to stderr carries."""
 
@@ -334,7 +341,9 @@ class Operation(StrEnum):
     MARKETPLACE_HEAD = "marketplace-head"
     """Read the registered clone's head commit after the marketplace refresh."""
     PLUGIN_INSTALL = "plugin-install"
+    PLUGIN_UNINSTALL = "plugin-uninstall"
     PLUGIN_ENABLE = "plugin-enable"
+    PLUGIN_DISABLE = "plugin-disable"
     PLUGIN_UPDATE = "plugin-update"
     PLUGIN_LIST = "plugin-list"
 
@@ -391,7 +400,9 @@ CLAUDE_SCOPE_BEARING_OPERATIONS: frozenset[Operation] = frozenset(
     {
         Operation.MARKETPLACE_ADD,
         Operation.PLUGIN_INSTALL,
+        Operation.PLUGIN_UNINSTALL,
         Operation.PLUGIN_ENABLE,
+        Operation.PLUGIN_DISABLE,
         Operation.PLUGIN_UPDATE,
     }
 )
@@ -491,6 +502,11 @@ class ClaudeInstallRecord:
     Excluded from identity and ordering: Claude Code keys the record by plugin,
     scope, and project path, and the version is what a refresh moves.
     """
+    enabled: bool | None = field(default=None, compare=False)
+    """The activation the listing reports for the record; None when it reports none.
+
+    Excluded from identity and ordering for the same reason as the version.
+    """
 
 
 @dataclass(frozen=True, order=True)
@@ -578,6 +594,26 @@ type ListedInstallRecord = (
     ClaudeInstallRecord | PathlessInstallRecord | VersionlessInstallRecord
 )
 """One entry of Claude Code's install-record listing, defects included."""
+
+
+@dataclass(frozen=True, order=True)
+class PluginMigration:
+    """One record of the retired plugin id carried to the current id.
+
+    The plan installs and enables `plugin` where the record sat, then
+    uninstalls `retired` from the same place. A Claude Code record keys its
+    place by scope; the migration is read from the invocation checkout's own
+    records, so `scope` is that record's scope. A Codex record keys none, so
+    its `scope` is None.
+    """
+
+    agent: Target
+    retired: str
+    plugin: str
+    scope: str | None
+    enabled: bool | None = None
+    """The retired record's activation: True enables the current id, False
+    disables it, and None declares none, so the install's own activation stands."""
 
 
 @dataclass(frozen=True)
@@ -773,6 +809,8 @@ class InstallationPlan:
     """Every plugin the committed Claude catalog carries; the rewrite's target ranges over it."""
     codex_disabled: tuple[str, ...] = ()
     """Codex plugins whose home activation the run declares disabled once installed."""
+    migrations: tuple[PluginMigration, ...] = ()
+    """Retired-id records carried to the current id: each installs `plugin` before it uninstalls `retired`."""
 
 
 @dataclass(frozen=True, order=True)
@@ -890,6 +928,7 @@ class AgentAdapter(Protocol):
         clone: Path | None = None,
         bootstrap: bool = True,
         bootstrap_source: str | None = None,
+        migrations: Sequence[PluginMigration] = (),
     ) -> tuple[InstallationCommand, ...]: ...
 
     def closing(
@@ -926,6 +965,7 @@ class ClaudeInstallationAdapter:
         clone: Path | None = None,
         bootstrap: bool = True,
         bootstrap_source: str | None = None,
+        migrations: Sequence[PluginMigration] = (),
     ) -> tuple[InstallationCommand, ...]:
         scope = (
             CLAUDE_PROJECT_SCOPE
@@ -949,8 +989,17 @@ class ClaudeInstallationAdapter:
         commands: list[InstallationCommand] = list(
             _claude_source_commands(source_action, source, scope, roots, environment)
         )
+        if bootstrap:
+            commands.extend(
+                self._migration_commands(migrations, recorded, roots, environment)
+            )
+        migrating = frozenset(
+            migration.plugin
+            for migration in migrations
+            if migration.agent is self.agent
+        )
         for plugin in plugins:
-            if plugin in recorded or not bootstrap:
+            if plugin in recorded or not bootstrap or plugin in migrating:
                 continue
             plugin_id = marketplace_plugin_identifier(plugin, roots.marketplace)
             commands.append(
@@ -1018,6 +1067,67 @@ class ClaudeInstallationAdapter:
             )
         return tuple(commands)
 
+    def _migration_commands(
+        self,
+        migrations: Sequence[PluginMigration],
+        recorded: frozenset[str],
+        roots: InstallationRoots,
+        environment: tuple[tuple[str, str], ...],
+    ) -> tuple[InstallationCommand, ...]:
+        """Install and enable the current id at each retired record's scope, then uninstall it.
+
+        Each migration's install and enable precede its uninstall, so a failed
+        install leaves the retired record in place. The install is skipped
+        where the checkout already records the current id.
+        """
+        commands: list[InstallationCommand] = []
+        for migration in migrations:
+            if migration.agent is not self.agent or migration.scope is None:
+                continue
+            scope = migration.scope
+            current = marketplace_plugin_identifier(migration.plugin, roots.marketplace)
+            retired = marketplace_plugin_identifier(
+                migration.retired, roots.marketplace
+            )
+            if migration.plugin not in recorded:
+                steps = [(Operation.PLUGIN_INSTALL, "install")]
+                if migration.enabled is True:
+                    steps.append((Operation.PLUGIN_ENABLE, "enable"))
+                elif migration.enabled is False:
+                    steps.append((Operation.PLUGIN_DISABLE, "disable"))
+                for operation, verb in steps:
+                    commands.append(
+                        _command(
+                            self.agent,
+                            operation,
+                            migration.plugin,
+                            _claude_argv(
+                                operation, "plugin", verb, current, scope=scope
+                            ),
+                            roots,
+                            environment,
+                            scope=scope,
+                        )
+                    )
+            commands.append(
+                _command(
+                    self.agent,
+                    Operation.PLUGIN_UNINSTALL,
+                    migration.retired,
+                    _claude_argv(
+                        Operation.PLUGIN_UNINSTALL,
+                        "plugin",
+                        "uninstall",
+                        retired,
+                        scope=scope,
+                    ),
+                    roots,
+                    environment,
+                    scope=scope,
+                )
+            )
+        return tuple(commands)
+
     def closing(
         self,
         mode: InstallationMode,
@@ -1076,6 +1186,7 @@ class CodexInstallationAdapter:
         clone: Path | None = None,
         bootstrap: bool = True,
         bootstrap_source: str | None = None,
+        migrations: Sequence[PluginMigration] = (),
     ) -> tuple[InstallationCommand, ...]:
         # Codex keys no install record by project path, so the shared
         # signature's Claude records, clone, and bootstrap switch carry
@@ -1102,6 +1213,26 @@ class CodexInstallationAdapter:
                         "add",
                         marketplace_plugin_identifier(plugin, roots.marketplace),
                         "--json",
+                    ),
+                    roots,
+                    environment,
+                )
+            )
+        for migration in migrations:
+            if migration.agent is not self.agent:
+                continue
+            commands.append(
+                _command(
+                    self.agent,
+                    Operation.PLUGIN_UNINSTALL,
+                    migration.retired,
+                    (
+                        CODEX_EXECUTABLE,
+                        "plugin",
+                        "remove",
+                        marketplace_plugin_identifier(
+                            migration.retired, roots.marketplace
+                        ),
                     ),
                     roots,
                     environment,
@@ -1368,16 +1499,31 @@ def build_persistent_installation_plan(
         claude_installed,
         marketplace,
     )
+    codex_installed = installed_plugin_names(
+        Target.CODEX,
+        codex_plugins_payload,
+        checkout=preflight.roots.checkout,
+        marketplace=marketplace,
+    )
     codex_selection, codex_bootstrapping = _persistent_selection(
         Target.CODEX,
         preflight.codex_plugins,
-        installed_plugin_names(
+        codex_installed,
+        marketplace,
+    )
+    migrations = (
+        *retired_plugin_migrations(
+            Target.CLAUDE,
+            claude_plugins_payload,
+            checkout=preflight.roots.checkout,
+            marketplace=marketplace,
+        ),
+        *retired_plugin_migrations(
             Target.CODEX,
             codex_plugins_payload,
             checkout=preflight.roots.checkout,
             marketplace=marketplace,
         ),
-        marketplace,
     )
     native_records, rewrite_records, record_warnings = claude_refresh_records(
         claude_install_records(claude_plugins_payload, marketplace),
@@ -1447,6 +1593,7 @@ def build_persistent_installation_plan(
         ),
         codex_bootstrap_source=codex_bootstrap_source,
         codex_bootstrapping=codex_bootstrapping,
+        migrations=migrations,
     )
     first_install = _first_install_warnings(
         plan,
@@ -1511,7 +1658,15 @@ def execute_persistent_installation(
     try:
         return execute_installation(plan, runner, completed=tuple(inspection_results))
     finally:
-        _restore_plugin_selection(settings, declared)
+        _restore_plugin_selection(
+            settings,
+            declared,
+            migrated_marketplace=(
+                plan.roots.marketplace
+                if any(m.agent is Target.CLAUDE for m in plan.migrations)
+                else None
+            ),
+        )
 
 
 @dataclass(frozen=True)
@@ -1536,9 +1691,32 @@ def _declared_plugin_selection(settings: Path) -> DeclaredSelection | None:
     return _selection_of(_settings_document(settings))
 
 
+def _migrated_selection(value: object, marketplace: str) -> object:
+    """Rename the retired plugin's selection key to the current id, keeping its boolean.
+
+    The key keeps its position. Where the selection already declares the
+    current id, that entry stands and the retired key is dropped.
+    """
+    if not isinstance(value, dict):
+        return value
+    retired_key = marketplace_plugin_identifier(RETIRED_PLUGIN, marketplace)
+    current_key = marketplace_plugin_identifier(PRODUCT_TREE_PLUGIN, marketplace)
+    if retired_key not in value:
+        return value
+    renamed: dict[object, object] = {}
+    for key, entry in cast(dict[object, object], value).items():
+        if key == retired_key:
+            renamed.setdefault(current_key, entry)
+        else:
+            renamed[key] = entry
+    return renamed
+
+
 def _restore_plugin_selection(
     settings: Path,
     declared: DeclaredSelection | None,
+    *,
+    migrated_marketplace: str | None = None,
 ) -> None:
     """Re-apply a declared plugin selection, leaving the rest of the document.
 
@@ -1550,6 +1728,11 @@ def _restore_plugin_selection(
     """
     if declared is None or not settings.exists():
         return
+    if migrated_marketplace is not None and declared.present:
+        declared = DeclaredSelection(
+            present=True,
+            value=_migrated_selection(declared.value, migrated_marketplace),
+        )
     document = _settings_document(settings)
     if _selection_of(document) == declared:
         return
@@ -1581,6 +1764,7 @@ def _build_plan(
     claude_bootstrap_source: str | None = None,
     codex_bootstrap_source: str | None = None,
     codex_bootstrapping: bool = False,
+    migrations: tuple[PluginMigration, ...] = (),
 ) -> InstallationPlan:
     selected_codex_agents = (
         generated_codex_agent_definitions(
@@ -1615,6 +1799,7 @@ def _build_plan(
             claude_clone,
             claude_bootstrap,
             bootstrap_sources[adapter.agent],
+            migrations,
         )
     )
     closing = tuple(
@@ -1656,6 +1841,7 @@ def _build_plan(
             and command.operation is Operation.PLUGIN_INSTALL
             and command.plugin is not None
         ),
+        migrations=migrations,
     )
 
 
@@ -1712,6 +1898,7 @@ def _claude_install_record(
         )
     resolved_path = Path(project_path).expanduser().resolve()
     version = entry.get(CLAUDE_PLUGIN_VERSION_FIELD)
+    enabled = entry.get(CLAUDE_PLUGIN_ENABLED_FIELD)
     if not isinstance(version, str):
         return VersionlessInstallRecord(
             plugin=plugin, scope=scope, project_path=resolved_path
@@ -1721,6 +1908,7 @@ def _claude_install_record(
         scope=scope,
         project_path=resolved_path,
         version=version,
+        enabled=enabled if isinstance(enabled, bool) else None,
     )
 
 
@@ -1728,6 +1916,7 @@ def compare_install_listings(
     refreshed: Sequence[ClaudeInstallRecord],
     after: Sequence[ListedInstallRecord],
     target: MarketplaceTarget | None,
+    migrated: Sequence[ClaudeInstallRecord] = (),
 ) -> RecordDrift:
     """Pair every refreshed record with its closing version and judge the rest.
 
@@ -1739,7 +1928,9 @@ def compare_install_listings(
     warned about, one whose plugin turned out pending publication, or one
     another agent session wrote between the two reads; and every project- or
     local-scope record of a plugin the target names whose closing version is
-    not the target's is off target, whatever the plan did with it. A run that
+    not the target's is off target, whatever the plan did with it; a record of
+    the retired plugin id the plan migrated that the closing listing still
+    reports is off target too. A run that
     registers the marketplace itself has no target, so nothing is off one:
     every record it left unmoved is still reported as unrefreshed, and the
     blocking warning that run raises is what makes its exit nonzero. The
@@ -1773,8 +1964,12 @@ def compare_install_listings(
             and record.version != target.versions[record.plugin]
         )
     )
+    migrated_identities = frozenset(migrated)
+    still_retired = tuple(record for record in closing if record in migrated_identities)
     return RecordDrift(
-        refreshed=refreshes, unrefreshed=unrefreshed, off_target=off_target
+        refreshed=refreshes,
+        unrefreshed=unrefreshed,
+        off_target=(*off_target, *still_retired),
     )
 
 
@@ -1852,6 +2047,10 @@ def claude_refresh_records(
                 scope=record.scope,
                 project_path=record.project_path,
             )
+        elif (
+            record.plugin == RETIRED_PLUGIN and record.project_path == resolved_checkout
+        ):
+            continue
         elif record.plugin not in catalog:
             message = UNCATALOGED_RECORD_WARNING.format(
                 plugin=record.plugin,
@@ -1976,12 +2175,55 @@ def _persistent_selection(
         )
     if not installed:
         return (PRODUCT_TREE_PLUGIN,), True
-    if PRODUCT_TREE_PLUGIN not in installed:
+    if PRODUCT_TREE_PLUGIN not in installed and RETIRED_PLUGIN not in installed:
         raise ValueError(
             f"invalid {agent.value} installed selection: nonempty {marketplace} "
-            f"inventory must include `{PRODUCT_TREE_PLUGIN}`"
+            f"inventory must include `{PRODUCT_TREE_PLUGIN}` or the former id "
+            f"`{RETIRED_PLUGIN}`"
         )
-    return tuple(plugin for plugin in catalog if plugin in installed), False
+    selected = installed | {PRODUCT_TREE_PLUGIN}
+    return tuple(plugin for plugin in catalog if plugin in selected), False
+
+
+def retired_plugin_migrations(
+    agent: Target,
+    payload: str,
+    *,
+    checkout: Path,
+    marketplace: str,
+) -> tuple[PluginMigration, ...]:
+    """The records of the retired plugin id one agent's inventory holds.
+
+    Claude Code's are the project- and local-scope records of the invocation
+    checkout, the places the inventory reads, each migrating at its own scope;
+    Codex's is the selected home's single entry. Nothing here maps the retired
+    id to the current one: the result names both ids as the two sides of one
+    migration.
+    """
+    if agent is Target.CLAUDE:
+        resolved_checkout = checkout.resolve()
+        records = sorted(
+            (
+                record
+                for record in claude_install_records(payload, marketplace)
+                if isinstance(record, ClaudeInstallRecord)
+                and record.plugin == RETIRED_PLUGIN
+                and record.scope in CLAUDE_REFRESH_SCOPES
+                and record.project_path == resolved_checkout
+            ),
+            key=lambda record: record.scope,
+        )
+        return tuple(
+            PluginMigration(
+                agent, RETIRED_PLUGIN, PRODUCT_TREE_PLUGIN, record.scope, record.enabled
+            )
+            for record in records
+        )
+    if RETIRED_PLUGIN not in installed_plugin_names(
+        agent, payload, checkout=checkout, marketplace=marketplace
+    ):
+        return ()
+    return (PluginMigration(agent, RETIRED_PLUGIN, PRODUCT_TREE_PLUGIN, None),)
 
 
 def _first_install_warnings(
@@ -3053,6 +3295,16 @@ def _record_drift(
                     closing_results[offset].stdout, plan.roots.marketplace
                 ),
                 target,
+                tuple(
+                    ClaudeInstallRecord(
+                        plugin=migration.retired,
+                        scope=migration.scope,
+                        project_path=plan.roots.checkout,
+                        version="",
+                    )
+                    for migration in plan.migrations
+                    if migration.agent is Target.CLAUDE and migration.scope is not None
+                ),
             )
     return None
 
@@ -4266,6 +4518,9 @@ __all__ = [
     "SourceAction",
     "STATE_ENV_NAMES",
     "PRODUCT_TREE_PLUGIN",
+    "RETIRED_PLUGIN",
+    "PluginMigration",
+    "retired_plugin_migrations",
     "apply_agent_home_plan",
     "without_pending_plugins",
     "build_agent_home_plan",
