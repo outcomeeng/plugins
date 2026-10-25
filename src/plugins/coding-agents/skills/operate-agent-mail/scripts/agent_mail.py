@@ -414,10 +414,11 @@ ARGUMENT_NAMES: Final[Mapping[str, str]] = {
     "repository": REPOSITORY_FIELD,
 }
 # The argument-vector form of a raw `am` command, and its shell-string form: the
-# executable followed by one of the store's command groups inside a string.
+# executable, bare or qualified by a path, followed by one of the store's command
+# groups inside a string.
 RAW_MAIL_COMMAND_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"\bAM_COMMAND\b|[\[(]['\"]am['\"]"),
-    re.compile(r"(?<![\w./-])am\s+(?:mail|agents|robot)\b"),
+    re.compile(r"(?<![\w.-])am\s+(?:mail|agents|robot)\b"),
 )
 GIT_PROJECT_KEY_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"[\[(]['\"]git['\"]\s*,"),
