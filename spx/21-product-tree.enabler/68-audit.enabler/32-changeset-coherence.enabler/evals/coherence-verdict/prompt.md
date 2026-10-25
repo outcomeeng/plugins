@@ -50,12 +50,9 @@ A verdict on whether one exact committed changeset forms one coherent review uni
 - `REJECTED`: two or more semantic clusters are independently mergeable. `publication_authorized` is `false`; `recommended_pr_sequence` covers every cluster exactly once in dependency order.
 - `UNKNOWN`: missing evidence can change cluster membership, dependency order, generated-source attribution, verification unity, rollback unity, or independent mergeability. `publication_authorized` is `false`.
 
-In the final schema every cluster carries `independently_mergeable: true`; the verdict is distinguished by cluster count — one cluster approves, two or more independently mergeable clusters reject — never by a per-cluster `false`.
+An empty rollback story for any cluster ALWAYS yields `UNKNOWN`, `publication_authorized: false`, and a blocking finding whose rule is `missing-rollback-evidence`. Missing verification evidence follows the same boundary with rule `missing-verification-evidence`. Every finding is keyed `<unit>:<rule-id>` and takes its rule identifier from `${CLAUDE_SKILL_DIR}/references/rule-catalog.md`, which carries the identifiers for the other evidence classes and defines the unit; NEVER emit an identifier outside that catalog. A review-load baseline may be absent without forcing `UNKNOWN` when the semantic evidence is otherwise complete; missing calibration yields `UNKNOWN` only when a repository-specific signal explicitly requires that calibration to determine whether the available semantic evidence is sufficient.
 
-An empty rollback story for any cluster ALWAYS yields `UNKNOWN`, `publication_authorized: false`, and a blocking finding whose rule is `missing-rollback-evidence`. Missing verification evidence follows the same boundary with rule `missing-verification-evidence`. Use `missing-behavioral-claim-evidence`, `missing-dependency-evidence`, `missing-generated-source-evidence`, and `missing-calibration-evidence` for the other evidence classes. A review-load baseline may be absent without forcing `UNKNOWN` when the semantic evidence is otherwise complete; missing calibration yields `UNKNOWN` only when a repository-specific signal explicitly requires that calibration to determine whether the available semantic evidence is sufficient.
-
-For two or more semantic clusters, an absent or `null` dependency set ALWAYS yields `UNKNOWN` with `missing-dependency-evidence`; an explicit empty dependency array establishes that no dependency exists. In every projected cluster the `dependencies` field is an array — `[]` when no dependency on another cluster is established — NEVER a `null` copied from the packet; unresolved packet dependency evidence is recorded only in the `missing-dependency-evidence` finding, NEVER echoed into a cluster. Every artifact classified as generated MUST resolve through an explicit repository-declared relationship or a `generated_from` field in an already-collected evidence packet. NEVER infer a generated artifact's producer from path similarity, artifact count, or the presence of only one authored artifact; unresolved attribution yields `UNKNOWN` with `missing-generated-source-evidence`.
-
+For two or more semantic clusters, an absent or `null` dependency set ALWAYS yields `UNKNOWN` with `missing-dependency-evidence`; an explicit empty dependency array establishes that no dependency exists. In every projected cluster the `dependencies` field is an array — `[]` when no dependency on another cluster is established — NEVER a `null` copied from the packet; unresolved packet dependency evidence is recorded only in the `missing-dependency-evidence` finding, NEVER echoed into a cluster.
 When an evidence packet supplies already-collected claims, artifact paths, evidence paths, dependencies, or review-load signals, preserve those values verbatim in the projection. Sort claim and path arrays lexicographically. Copy `review_load` without reinterpretation. Every normal verdict carries every field in the schema, using empty arrays or objects when a field has no entries.
 
 Use deterministic identities: `cluster-1`, `cluster-2`, and so on in dependency order; rejected review units are `review-unit-1`, `review-unit-2`, and so on in the same order.
@@ -102,7 +99,8 @@ For an exact committed changeset, return one coherence-verdict JSON object:
   },
   "findings": [
     {
-      "rule": "<rule-id>",
+      "key": "<unit>:<rule-id>",
+      "rule": "<rule-id from references/rule-catalog.md>",
       "severity": "blocking | debt",
       "location": "<path-or-scope>",
       "message": "<finding>",
