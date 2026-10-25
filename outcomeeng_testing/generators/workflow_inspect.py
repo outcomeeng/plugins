@@ -14,6 +14,7 @@ ID_SUBCOMMANDS: Final = ("run", "jobs", "log", "artifacts", "checks")
 _NON_DIGIT_ALPHABET: Final = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_.,+ "
 _NON_ASCII_DIGITS: Final = "٠١٢٣٤٥٦٧٨٩"
 _ASCII_DIGITS: Final = "0123456789"
+_DASH_PREFIXES: Final = ("-", "--")
 _SURROGATE_CATEGORY: Final[tuple[Literal["Cs"]]] = ("Cs",)
 _TEXT_ALPHABET: Final = st.characters(blacklist_categories=_SURROGATE_CATEGORY)
 
@@ -34,7 +35,10 @@ def id_subcommands() -> SearchStrategy[str]:
 def invalid_numbers() -> SearchStrategy[str]:
     """Strings that are not positive integers, each invalid by construction.
 
-    No value starts with a dash: the argument parser treats a dash-led token as an option.
+    Dash-led tokens are included: a single dash or a double dash followed by digits
+    or by non-digit text. The bare ``-`` and the bare ``--`` are excluded because
+    the argument parser treats them as the stdin marker and the option separator,
+    not as identifiers.
     """
     return st.one_of(
         st.just(""),
@@ -51,6 +55,13 @@ def invalid_numbers() -> SearchStrategy[str]:
         st.text(alphabet=_ASCII_DIGITS, min_size=1, max_size=6).map(
             lambda digits: f" {digits}"
         ),
+        st.tuples(
+            st.sampled_from(_DASH_PREFIXES),
+            st.one_of(
+                st.text(alphabet=_ASCII_DIGITS, min_size=1, max_size=6),
+                st.text(alphabet=_NON_DIGIT_ALPHABET, min_size=1, max_size=12),
+            ),
+        ).map("".join),
     )
 
 

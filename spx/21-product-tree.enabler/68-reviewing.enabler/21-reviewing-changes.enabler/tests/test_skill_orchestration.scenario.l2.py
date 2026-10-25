@@ -34,12 +34,12 @@ from outcomeeng_testing.harnesses.changeset_scope import (
     ORIGIN_TRACKING_REF_PREFIX,
     build_stale_local_base_repo,
 )
+from outcomeeng_testing.generators.reviewing_changes_runs import pure_rename_case
 from outcomeeng_testing.harnesses.reviewing_changes import (
     COMPUTE_DIFF_SCRIPT,
     JOURNAL_EMIT_SCRIPT,
     REVIEW_RUN_SCRIPT,
     init_repo_with_branch,
-    init_repo_with_committed_rename,
     isolated_git_env,
     make_finding_dict,
     make_review_result_dict,
@@ -52,6 +52,12 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     runner_env,
 )
 
+from outcomeeng_testing.harnesses.reviewing_changes_runs import (
+    build_changeset_repo,
+    finish_changeset_review,
+    scope_advanced_units,
+    start_changeset_review,
+)
 
 NOW = "2026-06-23T00:00:06Z"
 COMPLETED_AT = "2026-06-23T00:00:05Z"
@@ -380,67 +386,25 @@ class TestReviewRunnerBoundary:
         assert pathlib.Path(start_payload["statePath"]).exists() is False
         assert pathlib.Path(start_payload["diffPath"]).parent.exists() is False
 
-    def test_runner_requires_rename_source_and_destination_scope(
+    def test_runner_rejects_finish_naming_only_unexamined_non_rename_files(
         self, tmp_path: pathlib.Path
     ) -> None:
+        case = pure_rename_case()
         repo = tmp_path / "repo"
-        repo.mkdir()
-        base_ref = init_repo_with_committed_rename(repo)
-        env, journal_path = runner_env(tmp_path, repo, base_ref)
-
-        started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
-        assert started.returncode == 0, started.stderr
-        start_payload = json.loads(started.stdout)
-        assert start_payload["changedFiles"] == ["README.md", "RENAMED.md"]
-
-        scoped = run_script(
-            REVIEW_RUN_SCRIPT,
-            "append-scope",
-            "--state",
-            start_payload["statePath"],
-            "RENAMED.md",
-            env=env,
-            cwd=repo,
+        base_ref = build_changeset_repo(
+            repo, declaration=None, changed_paths=[case.companion_path], rename=case
         )
-        assert scoped.returncode == 0, scoped.stderr
+        started = start_changeset_review(tmp_path / "run", repo, base_ref)
 
-        missing_source = run_script(
-            REVIEW_RUN_SCRIPT,
-            "finish",
-            "--state",
-            start_payload["statePath"],
-            env=env,
-            cwd=repo,
-        )
-        assert missing_source.returncode == 1
-        assert "missing scope-advanced events for: README.md" in missing_source.stderr
-        assert pathlib.Path(start_payload["statePath"]).exists() is False
+        finished = finish_changeset_review(started)
 
-        restarted = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
-        assert restarted.returncode == 0, restarted.stderr
-        start_payload = json.loads(restarted.stdout)
-        for unit in ("RENAMED.md", "README.md"):
-            scoped = run_script(
-                REVIEW_RUN_SCRIPT,
-                "append-scope",
-                "--state",
-                start_payload["statePath"],
-                unit,
-                env=env,
-                cwd=repo,
-            )
-            assert scoped.returncode == 0, scoped.stderr
-
-        finished = run_script(
-            REVIEW_RUN_SCRIPT,
-            "finish",
-            "--state",
-            start_payload["statePath"],
-            env=env,
-            cwd=repo,
-        )
-        assert finished.returncode == 0, finished.stderr
-        assert finished.stdout == "run-001\n"
+        assert finished.finished.returncode == 1
+        assert case.companion_path in finished.finished.stderr
+        assert case.new_path not in finished.finished.stderr
+        assert case.old_path not in finished.finished.stderr
+        assert finished.sealed is False
+        assert scope_advanced_units(finished.events) == []
+        assert pathlib.Path(started.start_payload["statePath"]).exists() is False
 
 
 def _set_origin_head(repo: pathlib.Path, branch: str) -> None:

@@ -6,6 +6,7 @@ import itertools
 import pathlib
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
+from enum import StrEnum
 
 
 @dataclass(frozen=True)
@@ -107,3 +108,69 @@ def distinct_subject_paths(count: int) -> tuple[str, ...]:
     paths as opaque subjects, so any distinct tokens serve.
     """
     return tuple(f"subject-{index}.txt" for index in range(count))
+
+
+class RemediationFailure(StrEnum):
+    """The finite set of changeset-scope failures that carry a remedy."""
+
+    UNSET_ORIGIN_HEAD = "unset-origin-head"
+    UNEXPECTED_ORIGIN_HEAD_SHAPE = "unexpected-origin-head-shape"
+    DETACHED_HEAD = "detached-head"
+    GIT_FAILURE_WITHOUT_STDERR = "git-failure-without-stderr"
+    GIT_FAILURE_WITH_STDERR = "git-failure-with-stderr"
+
+
+@dataclass(frozen=True)
+class RemediationCase:
+    """One failure and the error class and message content it maps to.
+
+    ``fragments`` are ``str.format`` templates over the placeholders the
+    harness scenario and the observed failure supply.
+    """
+
+    failure: RemediationFailure
+    error_name: str
+    fragments: tuple[str, ...]
+
+
+_SET_HEAD_AUTO = "remote set-head origin --auto"
+_SET_HEAD_BRANCH = "remote set-head origin <branch>"
+_SWITCH_BRANCH = "switch <branch>"
+_SWITCH_NEW_BRANCH = "switch -c <new-branch>"
+_VERIFY_REF = "git rev-parse --verify <ref>"
+_FETCH_ORIGIN = "git fetch origin"
+
+
+def remediation_cases() -> tuple[RemediationCase, ...]:
+    """Return the failure-to-remedy table the changeset-scope mappings declare.
+
+    Each row restates one mapping sentence of the governing spec: the failure,
+    the error class it maps to, and the message content the sentence names.
+    """
+    return (
+        RemediationCase(
+            failure=RemediationFailure.UNSET_ORIGIN_HEAD,
+            error_name="BaseRefNotConfiguredError",
+            fragments=("{repo}", _SET_HEAD_AUTO, _SET_HEAD_BRANCH),
+        ),
+        RemediationCase(
+            failure=RemediationFailure.UNEXPECTED_ORIGIN_HEAD_SHAPE,
+            error_name="BaseRefNotConfiguredError",
+            fragments=("{value!r}", "{origin_head_prefix}", _SET_HEAD_AUTO),
+        ),
+        RemediationCase(
+            failure=RemediationFailure.DETACHED_HEAD,
+            error_name="DetachedHeadError",
+            fragments=("{repo}", _SWITCH_BRANCH, _SWITCH_NEW_BRANCH),
+        ),
+        RemediationCase(
+            failure=RemediationFailure.GIT_FAILURE_WITHOUT_STDERR,
+            error_name="ScopeResolutionError",
+            fragments=("{command}", "exited {status}", _VERIFY_REF, _FETCH_ORIGIN),
+        ),
+        RemediationCase(
+            failure=RemediationFailure.GIT_FAILURE_WITH_STDERR,
+            error_name="ScopeResolutionError",
+            fragments=("{stderr}",),
+        ),
+    )

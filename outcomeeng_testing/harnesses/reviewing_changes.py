@@ -331,19 +331,6 @@ def init_repo_with_branch(repo: pathlib.Path) -> str:
     return "main"
 
 
-def init_repo_with_committed_rename(repo: pathlib.Path) -> str:
-    """Create a synthetic repository whose feature branch renames a tracked file."""
-    run_git("init", "-q", "-b", "main", str(repo), cwd=pathlib.Path.cwd())
-    run_git("config", "commit.gpgsign", "false", cwd=repo)
-    (repo / "README.md").write_text("hello\n", encoding="utf-8")
-    run_git("add", "README.md", cwd=repo)
-    run_git("commit", "-q", "-m", "initial", cwd=repo)
-    run_git("switch", "-c", "feature/x", cwd=repo)
-    run_git("mv", "README.md", "RENAMED.md", cwd=repo)
-    run_git("commit", "-q", "-m", "rename readme", cwd=repo)
-    return "main"
-
-
 def isolated_git_env(cwd: pathlib.Path) -> dict[str, str]:
     """Return a subprocess environment whose git reads no workstation config."""
     return {
