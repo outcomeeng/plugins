@@ -1720,10 +1720,11 @@ def _migrated_selection(
         return value
     renamed: dict[object, object] = {}
     for key, entry in cast(dict[object, object], value).items():
-        if key in successors:
-            renamed.setdefault(successors[cast(str, key)], entry)
-        else:
+        successor = successors.get(key) if isinstance(key, str) else None
+        if successor is None:
             renamed[key] = entry
+        else:
+            renamed.setdefault(successor, entry)
     return renamed
 
 
