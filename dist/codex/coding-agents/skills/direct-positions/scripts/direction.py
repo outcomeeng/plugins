@@ -198,18 +198,18 @@ def _mail_execute(
         return mail.execute(request)
 
 
-def _unread(
+def _unjudged(
     mail: Any, config: Mapping[str, Any], mail_name: str
 ) -> list[dict[str, Any]]:
     request = {
         "schemaVersion": ADAPTER_SCHEMA_VERSION,
-        "operation": "inbox",
-        "arguments": {"agent": mail_name, "unreadOnly": True, "limit": MAIL_LIMIT},
+        "operation": "list",
+        "arguments": {"agent": mail_name, "limit": MAIL_LIMIT},
     }
     result = _mail_execute(mail, config, request)
     if result["status"] != "succeeded":
         raise DirectionError(
-            f"mail inbox for {mail_name} failed with status {result.get('status')!r}: "
+            f"mail list for {mail_name} failed with status {result.get('status')!r}: "
             f"{result.get('detail')}; confirm the mail name is registered through "
             "coding-agents:operate-agent-mail."
         )
@@ -289,8 +289,8 @@ def _ring(
     if pane is None:
         return "skipped", {"label": position["name"], "detail": target["detail"]}
     try:
-        unread = _unread(mail, config, position["mail_name"])
-        newest = max((int(r["id"]) for r in unread), default=0)
+        unjudged = _unjudged(mail, config, position["mail_name"])
+        newest = max((int(r["id"]) for r in unjudged), default=0)
         if newest <= int(rungs.get(position["name"], 0)):
             return None
         screen = envs.read(pane)
@@ -629,7 +629,7 @@ def _inbox(args, config, mail) -> dict[str, Any]:
             "status": "unavailable",
             "detail": "inbox received no --recipient, and " + _mail_agent_unset(config),
         }
-    return {"records": _unread(mail, config, recipient)}
+    return {"records": _unjudged(mail, config, recipient)}
 
 
 def _roster(config, envs) -> dict[str, Any]:
