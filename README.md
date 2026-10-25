@@ -229,15 +229,12 @@ The `spec-tree` plugin is now `product-tree`. Five places in a consumer's setup 
 
 ### The installed plugin
 
-Claude Code lists `spec-tree` as `failed to load` after the marketplace refresh until its install record is replaced. Install the successor at the scope that holds the old record, then uninstall the old one, and commit the changed `.claude/settings.json`:
+The marketplace catalog maps `spec-tree` to `product-tree`. After the marketplace refresh, the first Claude Code plugin command rewrites the `spec-tree@outcomeeng` key in `.claude/settings.json` to `product-tree@outcomeeng`, moves the key to the end of the `enabledPlugins` map, and drops `spec-tree` from `claude plugin list`. The rewrite changes a committed file, so commit it. `product-tree` stays enabled and not installed until you install it at the scope that holds the old record:
 
 ```bash
 claude plugin marketplace update outcomeeng
 claude plugin install product-tree@outcomeeng --scope project
-claude plugin uninstall spec-tree@outcomeeng --scope project
 ```
-
-The install only adds a key, so the uninstall is what removes the `spec-tree` key. For a plugin installed at user scope, run both commands without `--scope project`.
 
 Codex adds the successor first and then removes the old plugin. After the marketplace refresh, `spec-tree` no longer appears in `codex plugin list`, and `codex plugin remove spec-tree@outcomeeng` still removes it, together with its entry in `$CODEX_HOME/config.toml` and its cache:
 
@@ -248,7 +245,7 @@ codex plugin remove spec-tree@outcomeeng
 
 ### Project activation
 
-The `enabledPlugins` key in `.claude/settings.json` is handled by the commands above. No Codex command edits a project's committed `.codex/config.toml`: replace `[plugins."spec-tree@outcomeeng"]` with `[plugins."product-tree@outcomeeng"]` in that file by hand.
+Claude Code rewrites the `enabledPlugins` key in `.claude/settings.json` as described above. No Codex command edits a project's committed `.codex/config.toml`: replace `[plugins."spec-tree@outcomeeng"]` with `[plugins."product-tree@outcomeeng"]` in that file by hand.
 
 ### Repository instruction blocks
 
