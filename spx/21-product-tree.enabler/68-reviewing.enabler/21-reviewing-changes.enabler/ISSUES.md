@@ -93,18 +93,9 @@ Required handling:
 
 ## 7. Review scope carries deterministically generated artifacts
 
-Review scope is the raw changed-file set, so a changeset that edits authored plugin sources reviews each generated mirror as an independent unit. A run over a 128-file scope drew 38 units from `src/plugins`, 38 from `dist/claude`, 38 from `dist/codex`, 13 from `spx`, and 1 from `README.md`: the 76 `dist/` units are 59% of the scope and carry no information the `src/` units do not, because `spx/18-plugin-build.enabler/plugin-build.md` declares build determinism (`same src/ content always produces byte-identical dist/claude/ and dist/codex/ outputs`) and generated-artifact provenance (`every committed file under dist/ traces to a src/ ancestor through the build`), both `[test]`-backed, and the gate's `dist-diff` step fails the build on any divergence. A finding raised against a generated file is also unfixable at its own location — its fix belongs to the `src/` ancestor — so the scope admits findings the cited site has no authority to satisfy.
-
-`compute_diff.py` applies no path classification; the reviewer receives every changed path.
-
-This is a separate larger concern rather than a bounded fix: the changeset definition is declared at product level in [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) as `the files changed between the base ref and HEAD`, governing all five verification types, so narrowing review scope amends a decision above this node rather than a script inside it. It also runs against [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) and this node's own rule that the reviewer resolves its own scope and treats caller-supplied scope as non-authoritative — a generated-path exclusion must be established as the reviewer's own derivation, never a caller filter, and the two must be told apart in the declaration. `dist/` is this repository's generated root; a consumer's differs, so the exclusion has to be a declared property of the project rather than a hardcoded path, and [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) sends a shipped script's logic to the SPX CLI once it passes fifty lines and proves its value.
-
-Governing decision settled: [`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md) amends the product-level scope model — the exclusion is a property of agentic verification only (deterministic verification keeps the complete changeset), the generated roots are a committed project-supplied declaration at `spx/local/generated-sources.toml` (never a hardcoded `dist/`), and findings about generated content resolve to the declaring relation's sources.
-
 Required handling:
 
-- Consume the declared attribution in this node's scope derivation as the reviewer's own derivation, never a caller filter, preserving the caller-independence rule this node already carries; the skip-and-record mechanics arrive with the `spx` verification scope projection recorded in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.
-- Keep base-sync scope on the real changed-file set — the governing decision widens no exclusion beyond agentic verification.
+- The skip-and-record mechanics arrive with the `spx` verification scope projection recorded in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.
 
 ## 9. Four shipped review scripts await extraction into the SPX CLI
 
