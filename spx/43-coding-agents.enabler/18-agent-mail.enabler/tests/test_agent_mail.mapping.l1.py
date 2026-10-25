@@ -118,7 +118,7 @@ def test_agent_mail_operation_mappings() -> None:
                         in argv
                     )
         else:
-            if operation is module.Operation.RECEIPT:
+            if operation in (module.Operation.READ, module.Operation.ACKNOWLEDGE):
                 assert reading.positionals == (str(arguments[module.MESSAGE_ID_FIELD]),)
             if operation is module.Operation.WAIT:
                 bodies_option = module.PUBLIC_AM_ARGUMENT_OPTIONS[
@@ -126,9 +126,8 @@ def test_agent_mail_operation_mappings() -> None:
                 ]
                 limit_option = module.PUBLIC_AM_ARGUMENT_OPTIONS[module.LIMIT_FIELD]
                 assert bodies_option in reading.options_seen
-                assert module.PUBLIC_AM_ARGUMENT_OPTIONS[
-                    module.UNREAD_ONLY_FIELD
-                ] not in (reading.options_seen)
+                assert module.ALL_OPTION in reading.options_seen
+                assert module.UNREAD_OPTION not in reading.options_seen
                 assert argv[argv.index(limit_option) + 1] == str(
                     module.WAIT_LISTING_LIMIT
                 )
@@ -154,7 +153,7 @@ def test_agent_mail_operation_mappings() -> None:
         assert result[module.PROJECT_KEY_FIELD] == project_key
         response = cast(dict[str, object], result[module.RESPONSE_FIELD])
         data = cast(dict[str, object], result[module.DATA_FIELD])
-        if operation is module.Operation.RECEIPT:
+        if operation in (module.Operation.READ, module.Operation.ACKNOWLEDGE):
             assert response[module.OUTPUT_FIELD] == payload
             assert data[module.MESSAGE_ID_FIELD] == arguments[module.MESSAGE_ID_FIELD]
             return
@@ -174,7 +173,7 @@ def test_agent_mail_operation_mappings() -> None:
             assert record[module.RECORD_ID_FIELD] == first[module.STORE_ID_FIELD]
             (bound,) = cast(list[float], runner.timeouts[1:])
             assert 0 < bound <= cast(int, arguments[module.TIMEOUT_SECONDS_FIELD])
-        elif operation is module.Operation.INBOX:
+        elif operation is module.Operation.LIST:
             items = cast(list[dict[str, object]], store[module.STORE_INBOX_FIELD])
             records = cast(list[dict[str, object]], data[module.RECORDS_FIELD])
             assert response == store
@@ -342,7 +341,7 @@ def test_project_key_mapping() -> None:
         agent: str,
     ) -> None:
         runner = RecordingRunner([text_command_result(module, output)])
-        request = module.operation_request(module.Operation.INBOX, agent=agent)
+        request = module.operation_request(module.Operation.LIST, agent=agent)
         if expected_key is None:
             try:
                 module.project_key_from_common_dir(output)
@@ -462,7 +461,7 @@ def test_store_responses_map_to_results_without_rewriting() -> None:
         malformed_text: str,
         unsupported_name: str,
     ) -> None:
-        request = module.operation_request(module.Operation.INBOX, agent=agent)
+        request = module.operation_request(module.Operation.LIST, agent=agent)
 
         failed = module.execute(
             request,
@@ -685,3 +684,75 @@ def test_wait_names_a_listing_that_cannot_reach_back_to_the_id() -> None:
             assert record[module.RECORD_ID_FIELD] == after_id + 1, reaching.capture
 
     run_wait_cases(assert_case)
+
+
+def test_list_maps_to_the_non_marking_listing_in_its_unjudged_or_complete_form() -> (
+    None
+):
+    module = load_agent_mail()
+    contract = usage_contract_for(module, module.Operation.LIST)
+    assert {module.UNREAD_OPTION, module.ALL_OPTION} <= set(contract.options)
+    forms: set[bool] = set()
+
+    def assert_list(
+        module: ModuleType, request: dict[str, object], project_key: str
+    ) -> None:
+        if module.Operation(request[module.OPERATION_FIELD]) is not (
+            module.Operation.LIST
+        ):
+            return
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        reading = read_argv(contract, module.command_for(request, project_key))
+        complete = arguments.get(module.ALL_RECORDS_FIELD) is True
+        forms.add(complete)
+
+        assert reading.command_path == (module.AM_COMMAND, *contract.command_path)
+        assert reading.unknown_options == ()
+        assert (module.ALL_OPTION in reading.options_seen) is complete
+        assert (module.UNREAD_OPTION in reading.options_seen) is not complete
+        assert reading.positionals == ()
+
+    run_operation_mapping(assert_list)
+
+    assert forms == {False, True}
+
+
+def test_read_and_acknowledge_each_map_to_their_own_command_for_one_message_id() -> (
+    None
+):
+    module = load_agent_mail()
+    read = usage_contract_for(module, module.Operation.READ)
+    acknowledge = usage_contract_for(module, module.Operation.ACKNOWLEDGE)
+    assert read.command_path != acknowledge.command_path
+    contracts = {
+        module.Operation.READ: read,
+        module.Operation.ACKNOWLEDGE: acknowledge,
+    }
+    seen: set[object] = set()
+
+    def assert_judgment(
+        module: ModuleType, request: dict[str, object], project_key: str
+    ) -> None:
+        operation = module.Operation(request[module.OPERATION_FIELD])
+        if operation not in contracts:
+            return
+        seen.add(operation)
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        argv = module.command_for(request, project_key)
+        reading = read_argv(contracts[operation], argv)
+
+        assert reading.command_path == (
+            module.AM_COMMAND,
+            *contracts[operation].command_path,
+        )
+        assert reading.unknown_options == ()
+        assert reading.positionals == (str(arguments[module.MESSAGE_ID_FIELD]),)
+        other = acknowledge if operation is module.Operation.READ else read
+        assert argv[: len(other.command_path) + 1] != (
+            module.AM_COMMAND,
+            *other.command_path,
+        )
+
+    run_operation_mapping(assert_judgment)
+
+    assert seen == set(contracts)

@@ -125,3 +125,44 @@ def test_terminal_handbacks_reduce_to_exactly_one_result() -> None:
             )
 
     run_terminal_property(assert_terminal)
+
+
+def test_a_second_handback_of_one_kind_with_different_content_is_a_named_conflict() -> (
+    None
+):
+    def assert_conflict(
+        module: ModuleType,
+        reference: str,
+        first_kind: object,
+        second_kind: object,
+        content: dict[str, str],
+    ) -> None:
+        body = content[module.BODY_FIELD]
+        other_body = content[module.RECORD_SUBJECT_FIELD]
+        if body == other_body:
+            return
+        first = module.terminal_handback(
+            kind=first_kind,
+            correlation=reference,
+            sender=content[module.SENDER_FIELD],
+            recipient=content[module.RECIPIENT_FIELD],
+            subject=content[module.RECORD_SUBJECT_FIELD],
+            body=body,
+        )
+        second = {**first, module.BODY_FIELD: other_body}
+
+        try:
+            module.reduce_terminal(first, second)
+        except module.AgentMailError as error:
+            assert error.status == module.ExecutionStatus.INVALID_SCHEMA
+            assert module.BODY_FIELD in str(error)
+            assert [
+                field_name
+                for field_name in first
+                if field_name != module.BODY_FIELD
+                and field_name in str(error).split("differ in")[-1]
+            ] == []
+        else:
+            raise AssertionError("a conflicting same-kind handback was accepted")
+
+    run_terminal_property(assert_conflict)

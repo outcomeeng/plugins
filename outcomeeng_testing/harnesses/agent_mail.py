@@ -331,7 +331,7 @@ def _inbox_captures_with_bodies(module: ModuleType) -> list[Path]:
     order: the store answered the same command while a receipt was pending and
     again after it was recorded."""
     base = _response_fixture_path(
-        module, module.Operation.INBOX, {module.INCLUDE_BODIES_FIELD: True}
+        module, module.Operation.LIST, {module.INCLUDE_BODIES_FIELD: True}
     )
     return sorted(RESPONSE_FIXTURE_ROOT.glob(f"{base.stem}*.json"))
 
@@ -664,7 +664,7 @@ def inbox_request_with_bodies(module: ModuleType) -> dict[str, object]:
     for request in operation_requests(module):
         arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
         if (
-            module.Operation(request[module.OPERATION_FIELD]) is module.Operation.INBOX
+            module.Operation(request[module.OPERATION_FIELD]) is module.Operation.LIST
             and arguments.get(module.INCLUDE_BODIES_FIELD) is True
         ):
             return request
@@ -724,7 +724,7 @@ def _first_request(
         arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
         if module.Operation(request[module.OPERATION_FIELD]) is not operation:
             continue
-        if operation is module.Operation.INBOX:
+        if operation is module.Operation.LIST:
             if (arguments.get(module.INCLUDE_BODIES_FIELD) is True) is include_bodies:
                 return request
         elif operation is module.Operation.REGISTER:
@@ -757,12 +757,12 @@ def captured_label_responses(module: ModuleType) -> list[CapturedLabelResponse]:
             _response_fixture_path(module, module.Operation.SEND, None),
         ),
         (
-            module.Operation.INBOX,
+            module.Operation.LIST,
             False,
-            _response_fixture_path(module, module.Operation.INBOX, None),
+            _response_fixture_path(module, module.Operation.LIST, None),
         ),
         *(
-            (module.Operation.INBOX, True, path)
+            (module.Operation.LIST, True, path)
             for path in _inbox_captures_with_bodies(module)
         ),
     ]
@@ -779,7 +779,7 @@ def captured_label_responses(module: ModuleType) -> list[CapturedLabelResponse]:
     senders = [
         cast(dict[str, object], row).get(module.STORE_SENDER_DISPLAY_NAME_FIELD)
         for response in responses
-        if response.operation is module.Operation.INBOX
+        if response.operation is module.Operation.LIST
         for row in _label_rows(module, response.payload)
     ]
     if not any(label is None for label in senders) or not any(
@@ -1470,7 +1470,7 @@ def store_project_fallback_variable(module: ModuleType) -> str:
     adapter, and a capture whose wording drifts fails the read.
     """
     capture = USAGE_FIXTURE_ROOT / (
-        f"{_command_fixture_name(module, module.Operation.INBOX)}.txt"
+        f"{_command_fixture_name(module, module.Operation.LIST)}.txt"
     )
     names = {
         match.group(1)
@@ -1742,3 +1742,65 @@ def wait_workspace() -> Iterator[Path]:
 def workspace_entries(workspace: Path) -> list[str]:
     """Every path under the workspace, relative to it, in sorted order."""
     return sorted(str(path.relative_to(workspace)) for path in workspace.rglob("*"))
+
+
+@dataclass
+class StoreErrorRunner:
+    """Failure-simulation collaborator: the repository lookup answers with the
+    generated project key and every store command raises the supplied error."""
+
+    reply: CommandResultContract
+    error: BaseException
+    calls: list[tuple[tuple[str, ...], str | None]] = field(default_factory=list)
+
+    def run(
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        env: Mapping[str, str] | None = None,
+        timeout_seconds: float | None = None,
+    ) -> CommandResultContract:
+        self.calls.append((argv, stdin))
+        if len(self.calls) == 1:
+            return self.reply
+        raise self.error
+
+
+def store_error_runner(
+    module: ModuleType, project_key: str, error: BaseException
+) -> StoreErrorRunner:
+    return StoreErrorRunner(
+        text_command_result(module, common_dir_output(COMMON_DIR_EXACT, project_key)),
+        error,
+    )
+
+
+def nul_tainted_requests(
+    module: ModuleType, request: dict[str, object]
+) -> list[dict[str, object]]:
+    """One copy of the request per text value it carries, that value followed
+    by the NUL character the source declares."""
+
+    def taint(value: object, paths: list[tuple[object, ...]], prefix: tuple) -> None:
+        if isinstance(value, str):
+            paths.append(prefix)
+        elif isinstance(value, dict):
+            for key, item in value.items():
+                taint(item, paths, (*prefix, key))
+
+    def replaced(value: object, path: tuple[object, ...]) -> object:
+        if not path:
+            return f"{value}{module.NUL_CHARACTER}"
+        copy = dict(cast(dict[object, object], value))
+        copy[path[0]] = replaced(copy[path[0]], path[1:])
+        return copy
+
+    paths: list[tuple[object, ...]] = []
+    taint(request[module.ARGUMENTS_FIELD], paths, ())
+    return [
+        {
+            **request,
+            module.ARGUMENTS_FIELD: replaced(request[module.ARGUMENTS_FIELD], path),
+        }
+        for path in paths
+    ]
