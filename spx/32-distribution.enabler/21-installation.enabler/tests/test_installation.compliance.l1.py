@@ -22,6 +22,7 @@ from outcomeeng.distribution.installation import (
     CODEX_HOME_ENV,
     FETCH_PROJECT_PREFIX,
     FIRST_INSTALL_WARNING,
+    RETIRED_PLUGIN,
     InstallationMode,
     Operation,
     ReportField,
@@ -32,8 +33,10 @@ from outcomeeng.distribution.installation import (
 )
 from outcomeeng_testing.generators.installation import (
     ClosingDisposition,
+    MigrationActivation,
     RecordDisposition,
     generated_boolean_states,
+    generated_migration_cases,
     UNCACHED_OTHER_CHECKOUT_STATE,
 )
 from outcomeeng_testing.harnesses.installation import (
@@ -50,6 +53,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_first_failure,
     observe_inspection_failure,
     observe_invalid_persistent_selections,
+    observe_migrating_inventory,
     observe_missing_codex_home,
     observe_persistent_execution,
     observe_persistent_plan,
@@ -104,7 +108,29 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     bootstrapping = observe_persistent_plan(
         installed={agent: frozenset() for agent in Target},
     )
-    plans = (refreshing.report.plan, registering.plan, bootstrapping.plan)
+    migrating = observe_migrating_inventory(
+        next(
+            case
+            for case in generated_migration_cases()
+            if case.agent is Target.CLAUDE and case.scope == CLAUDE_PROJECT_SCOPE
+        )
+    )
+    disabled_migrating = observe_migrating_inventory(
+        next(
+            case
+            for case in generated_migration_cases()
+            if case.agent is Target.CLAUDE
+            and case.scope == CLAUDE_PROJECT_SCOPE
+            and case.activation is MigrationActivation.DISABLED
+        )
+    )
+    plans = (
+        refreshing.report.plan,
+        registering.plan,
+        bootstrapping.plan,
+        migrating.plan,
+        disabled_migrating.plan,
+    )
     claude_commands = [
         command
         for plan in plans
@@ -285,6 +311,11 @@ def test_a_failed_inspection_stops_before_any_planned_operation() -> None:
 
 def test_invalid_installed_selection_never_reaches_a_state_changing_operation() -> None:
     for observation in observe_invalid_persistent_selections():
+        assert observation.selected is not None
+        assert all(
+            PRODUCT_TREE_PLUGIN not in selected and RETIRED_PLUGIN not in selected
+            for selected in observation.selected.values()
+        )
         assert observation.error is not None
         assert PRODUCT_TREE_PLUGIN in observation.error
         assert observation.attempted
@@ -293,6 +324,135 @@ def test_invalid_installed_selection_never_reaches_a_state_changing_operation() 
             in {Operation.MARKETPLACE_INSPECT, Operation.PLUGIN_INSPECT}
             for command in observation.attempted
         )
+
+
+def test_a_former_id_inventory_migrates_to_product_tree_at_its_scope_and_activation() -> (
+    None
+):
+    for case in generated_migration_cases():
+        observation = observe_migrating_inventory(case)
+        commands = [
+            command
+            for command in observation.plan.commands
+            if command.agent is case.agent
+        ]
+        installs = [
+            command
+            for command in commands
+            if command.operation is Operation.PLUGIN_INSTALL
+            and command.plugin == PRODUCT_TREE_PLUGIN
+        ]
+        uninstalls = [
+            command
+            for command in commands
+            if command.operation is Operation.PLUGIN_UNINSTALL
+            and command.plugin == RETIRED_PLUGIN
+        ]
+
+        assert len(installs) == 1, case
+        assert len(uninstalls) == 1, case
+        assert installs[0].scope == case.scope, case
+        assert uninstalls[0].scope == case.scope, case
+        assert commands.index(installs[0]) < commands.index(uninstalls[0]), case
+        activation = {
+            command.operation
+            for command in commands
+            if command.operation in {Operation.PLUGIN_ENABLE, Operation.PLUGIN_DISABLE}
+            and command.plugin == PRODUCT_TREE_PLUGIN
+            and command.scope == case.scope
+        }
+        if case.agent is Target.CLAUDE:
+            assert (
+                activation
+                == {
+                    MigrationActivation.ENABLED: {Operation.PLUGIN_ENABLE},
+                    MigrationActivation.DISABLED: {Operation.PLUGIN_DISABLE},
+                    MigrationActivation.UNDECLARED: set(),
+                }[case.activation]
+            ), case
+        if case.agent is Target.CODEX:
+            assert (PRODUCT_TREE_PLUGIN in observation.plan.codex_disabled) == (
+                case.activation is not MigrationActivation.ENABLED
+            ), case
+        assert {(record.plugin, record.scope) for record in observation.after} == {
+            (PRODUCT_TREE_PLUGIN, case.scope)
+        }, case
+        assert all(record.plugin != RETIRED_PLUGIN for record in observation.after)
+        assert all(
+            record.plugin != RETIRED_PLUGIN for record in observation.other_agent_after
+        )
+
+
+def test_a_retired_record_the_closing_listing_still_reports_is_off_target() -> None:
+    for case in generated_migration_cases():
+        if case.agent is not Target.CLAUDE:
+            continue
+        observation = observe_migrating_inventory(case, uninstall_retains_record=True)
+
+        assert observation.record_drift is not None, case
+        assert {
+            (record.plugin, record.scope)
+            for record in observation.record_drift.off_target
+        } == {(RETIRED_PLUGIN, case.scope)}, case
+
+
+def test_a_retired_record_the_uninstall_removes_is_not_off_target() -> None:
+    for case in generated_migration_cases():
+        if case.agent is not Target.CLAUDE:
+            continue
+        observation = observe_migrating_inventory(case)
+
+        assert observation.record_drift is not None, case
+        assert not any(
+            record.plugin == RETIRED_PLUGIN
+            for record in observation.record_drift.off_target
+        ), case
+
+
+def test_a_declared_selection_renames_the_retired_key_and_keeps_its_boolean() -> None:
+    marketplace = observe_committed_declarations().marketplace
+    retired_key = marketplace_plugin_identifier(RETIRED_PLUGIN, marketplace)
+    current_key = marketplace_plugin_identifier(PRODUCT_TREE_PLUGIN, marketplace)
+    renamed = 0
+
+    for case in generated_migration_cases():
+        if case.agent is not Target.CLAUDE:
+            continue
+        observation = observe_migrating_inventory(case, declare_selection=True)
+        before = observation.selection_before
+        after = observation.selection_after
+
+        assert before is not None and after is not None, case
+        assert retired_key not in after, case
+        if retired_key in before:
+            renamed += 1
+            assert after == {
+                (current_key if key == retired_key else key): value
+                for key, value in before.items()
+            }, case
+            assert list(after) == [
+                current_key if key == retired_key else key for key in before
+            ], case
+        else:
+            assert after == before, case
+
+    assert renamed > 0
+
+
+def test_a_former_id_migration_widens_neither_selection_nor_other_agent() -> None:
+    for case in generated_migration_cases():
+        observation = observe_migrating_inventory(case)
+        installed = {
+            command.plugin
+            for command in observation.plan.commands
+            if command.operation is Operation.PLUGIN_INSTALL
+            and command.agent is case.agent
+        }
+
+        assert installed == {PRODUCT_TREE_PLUGIN}, case
+        assert {record.plugin for record in observation.other_agent_after} == {
+            PRODUCT_TREE_PLUGIN
+        }, case
 
 
 def test_a_codex_operation_failure_reports_the_codex_agent_and_stops() -> None:

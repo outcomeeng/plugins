@@ -18,6 +18,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_REPOSITORY_FIELD,
     CLAUDE_SCOPE_FLAG,
     FIRST_INSTALL_WARNING,
+    RETIRED_PLUGIN,
     Operation,
     PATHLESS_LISTING_ENTRY_WARNING,
     VERSIONLESS_LISTING_ENTRY_WARNING,
@@ -43,6 +44,7 @@ from outcomeeng_testing.generators.installation import (
     RecordDisposition,
     generated_absent_plugins,
     generated_boolean_states,
+    generated_migration_cases,
 )
 import outcomeeng.validation.__main__ as validation_entry
 from outcomeeng.validation import L3_LEVEL, PYTEST_ARGV
@@ -66,6 +68,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_inspection_failure,
     observe_invalid_isolated_selection,
     observe_invalid_persistent_selection,
+    observe_migrating_inventory,
     observe_persistent_plan,
     observe_bootstrap_record_drift,
     observe_unreadable_head_record,
@@ -198,6 +201,11 @@ def test_first_persistent_run_installs_only_product_tree_and_warns() -> None:
 def test_invalid_persistent_subset_is_rejected_before_mutation() -> None:
     observation = observe_invalid_persistent_selection()
 
+    assert observation.selected is not None
+    assert all(
+        PRODUCT_TREE_PLUGIN not in selected and RETIRED_PLUGIN not in selected
+        for selected in observation.selected.values()
+    )
     assert observation.error is not None
     assert PRODUCT_TREE_PLUGIN in observation.error
     assert observation.attempted
@@ -205,6 +213,27 @@ def test_invalid_persistent_subset_is_rejected_before_mutation() -> None:
         command.operation in {Operation.MARKETPLACE_INSPECT, Operation.PLUGIN_INSPECT}
         for command in observation.attempted
     )
+
+
+def test_a_former_id_inventory_installs_product_tree_and_uninstalls_the_former_id() -> (
+    None
+):
+    (case, *_) = generated_migration_cases()
+    observation = observe_migrating_inventory(case)
+    operations = [
+        (command.operation, command.plugin, command.scope)
+        for command in observation.plan.commands
+        if command.agent is case.agent
+        and command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_UNINSTALL}
+    ]
+
+    assert operations == [
+        (Operation.PLUGIN_INSTALL, PRODUCT_TREE_PLUGIN, case.scope),
+        (Operation.PLUGIN_UNINSTALL, RETIRED_PLUGIN, case.scope),
+    ]
+    assert [(record.plugin, record.scope) for record in observation.after] == [
+        (PRODUCT_TREE_PLUGIN, case.scope)
+    ]
 
 
 def test_invalid_isolated_subset_is_rejected_before_mutation() -> None:

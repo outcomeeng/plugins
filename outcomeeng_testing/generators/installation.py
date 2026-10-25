@@ -1143,3 +1143,39 @@ __all__ = [
     "generated_publication_states",
     "generated_valid_catalog_subsets",
 ]
+
+
+class MigrationActivation(StrEnum):
+    """How a former-id install record declares its activation."""
+
+    ENABLED = "enabled"
+    DISABLED = "disabled"
+    UNDECLARED = "undeclared"
+
+
+@dataclass(frozen=True)
+class MigrationCase:
+    """One agent's former-id install record: its scope and declared activation."""
+
+    agent: Target
+    scope: str | None
+    """The install-record scope the record is keyed by; None where the agent keys none."""
+    activation: MigrationActivation
+
+
+def generated_migration_cases() -> tuple[MigrationCase, ...]:
+    """Enumerate the former-id record domain: every scope the harness models per agent.
+
+    Claude Code keys records by the refresh scopes; Codex keys none. Each
+    agent's scopes cross every activation declaration, so the domain grows
+    with the product of the two source-owned sets.
+    """
+    scopes: dict[Target, tuple[str | None, ...]] = {
+        Target.CLAUDE: tuple(sorted(CLAUDE_REFRESH_SCOPES)),
+        Target.CODEX: (None,),
+    }
+    return tuple(
+        MigrationCase(agent=agent, scope=scope, activation=activation)
+        for agent in Target
+        for scope, activation in product(scopes[agent], MigrationActivation)
+    )

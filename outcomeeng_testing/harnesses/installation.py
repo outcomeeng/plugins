@@ -100,6 +100,7 @@ from outcomeeng.distribution.installation import (
     InstallationMode,
     InstallationPlan,
     InstallationReport,
+    RecordDrift,
     JSON_OUTPUT_OPTION,
     Operation,
     ListedInstallRecord,
@@ -157,6 +158,9 @@ from outcomeeng.distribution.installation import (
     marketplace_plugin_name,
 )
 from outcomeeng_testing.generators.installation import (
+    MigrationActivation,
+    foreign_marketplace_name,
+    MigrationCase,
     ClosingDisposition,
     FetchOutcome,
     FetchState,
@@ -359,6 +363,8 @@ class SelectionRejectionObservation:
 
     error: str | None
     attempted: tuple[InstallationCommand, ...]
+    selected: Mapping[Target, frozenset[str]] | None = None
+    """The per-agent selection the rejected run met, where the observer fixes one."""
 
 
 @dataclass(frozen=True)
@@ -3486,6 +3492,7 @@ def observe_invalid_persistent_selection() -> SelectionRejectionObservation:
         return SelectionRejectionObservation(
             error=rejection,
             attempted=tuple(runner.calls),
+            selected=installed,
         )
 
 
@@ -3518,9 +3525,222 @@ def observe_invalid_persistent_selections() -> tuple[
                     SelectionRejectionObservation(
                         error=rejection,
                         attempted=tuple(runner.calls),
+                        selected=installed,
                     )
                 )
     return tuple(observations)
+
+
+@dataclass(frozen=True)
+class ListedRecord:
+    """One install record as an agent's listing reports it."""
+
+    plugin: str
+    scope: str | None
+    enabled: bool | None
+    """The activation the listing reports; None where the entry declares none."""
+
+
+@dataclass(frozen=True)
+class MigrationObservation:
+    """Plan, calls, and listings of one persistent run over a former-id record."""
+
+    case: MigrationCase
+    plan: InstallationPlan
+    attempted: tuple[InstallationCommand, ...]
+    before: tuple[ListedRecord, ...]
+    """The case agent's listing the run planned from."""
+    after: tuple[ListedRecord, ...]
+    """The case agent's listing once the run's native operations have applied."""
+    other_agent_after: tuple[ListedRecord, ...]
+    record_drift: RecordDrift | None
+    """The closing-listing comparison the run's report carries."""
+    selection_before: Mapping[str, bool] | None
+    """The `enabledPlugins` selection the checkout declared before the run."""
+    selection_after: Mapping[str, bool] | None
+    """The `enabledPlugins` selection the checkout declares after the run."""
+
+
+@dataclass
+class _MigrationRunner:
+    """Recording collaborator holding each agent's install records across a run.
+
+    Controlled under `/test` Stage 5 Combinatorial cost and Observability: a
+    real agent CLI needs a registered marketplace and a network fetch for every
+    generated scope and activation, so this configurable fake applies the
+    native effects of install, enable, and uninstall to a record list and
+    renders every later listing from it, preserving the runner boundary. It
+    returns observations only; the linked test decides what they mean.
+    """
+
+    records: dict[Target, list[ListedRecord]]
+    fallback: RecordingRunner
+    retains_uninstalled: bool = False
+    """Whether a native uninstall leaves its record in the listing.
+
+    Stage 5 Failure simulation: an uninstall that exits zero while the record
+    stays listed is the state the closing listing exposes, and a real CLI does
+    not fail into it on demand.
+    """
+    calls: list[InstallationCommand] = field(default_factory=list)
+
+    def __call__(self, command: InstallationCommand) -> CommandResult:
+        self.calls.append(command)
+        records = self.records[command.agent]
+        if command.operation is Operation.PLUGIN_INSTALL:
+            if not any(
+                (record.plugin, record.scope) == (command.plugin, command.scope)
+                for record in records
+            ):
+                records.append(ListedRecord(str(command.plugin), command.scope, True))
+        elif command.operation is Operation.PLUGIN_ENABLE:
+            for index, record in enumerate(records):
+                if (record.plugin, record.scope) == (command.plugin, command.scope):
+                    records[index] = replace(record, enabled=True)
+        elif command.operation is Operation.PLUGIN_DISABLE:
+            for index, record in enumerate(records):
+                if (record.plugin, record.scope) == (command.plugin, command.scope):
+                    records[index] = replace(record, enabled=False)
+        elif (
+            command.operation is Operation.PLUGIN_UNINSTALL
+            and not self.retains_uninstalled
+        ):
+            records[:] = [
+                record
+                for record in records
+                if (record.plugin, record.scope) != (command.plugin, command.scope)
+            ]
+        if command.operation in {Operation.PLUGIN_INSPECT, Operation.PLUGIN_LIST}:
+            return CommandResult(
+                argv=command.argv,
+                exit_code=0,
+                stdout=_records_listing_payload(
+                    command.agent, command.cwd, tuple(records)
+                ),
+                stderr="",
+            )
+        return self.fallback(command)
+
+
+def _records_listing_payload(
+    agent: Target, checkout: Path, records: Sequence[ListedRecord]
+) -> str:
+    """One agent's installed listing for `records`, declaring activation only where set."""
+    if agent is Target.CLAUDE:
+        entries: list[dict[str, object]] = []
+        for record in records:
+            entry: dict[str, object] = {
+                CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
+                    record.plugin, MARKETPLACE
+                ),
+                CLAUDE_PLUGIN_SCOPE_FIELD: record.scope,
+                CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout.resolve()),
+                CLAUDE_PLUGIN_VERSION_FIELD: LISTED_VERSION,
+            }
+            if record.enabled is not None:
+                entry[CLAUDE_PLUGIN_ENABLED_FIELD] = record.enabled
+            entries.append(entry)
+        return json.dumps(entries)
+    codex_entries: list[dict[str, object]] = []
+    for record in records:
+        codex_entry: dict[str, object] = {
+            CODEX_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
+                record.plugin, MARKETPLACE
+            ),
+            CODEX_PLUGIN_MARKETPLACE_FIELD: MARKETPLACE,
+        }
+        if record.enabled is not None:
+            codex_entry[CODEX_PLUGIN_ENABLED_FIELD] = record.enabled
+        codex_entries.append(codex_entry)
+    return json.dumps({CODEX_PLUGIN_ENTRIES_FIELD: codex_entries})
+
+
+_ACTIVATION_DECLARATION: dict[MigrationActivation, bool | None] = {
+    MigrationActivation.ENABLED: True,
+    MigrationActivation.DISABLED: False,
+    MigrationActivation.UNDECLARED: None,
+}
+
+
+def observe_migrating_inventory(
+    case: MigrationCase,
+    *,
+    uninstall_retains_record: bool = False,
+    declare_selection: bool = False,
+) -> MigrationObservation:
+    """Run persistent installation over an inventory holding only the former id.
+
+    The case agent's inventory is one former-id record at the case scope with
+    the case activation; the other agent's inventory is the valid
+    `product-tree` selection, so the run's only subject is the migration.
+    `uninstall_retains_record` makes the native uninstall leave its record
+    listed; `declare_selection` writes an `enabledPlugins` selection into the
+    mirrored checkout's project settings, carrying the former id's key at the
+    case activation between two unrelated keys.
+    """
+    from outcomeeng.distribution.installation import RETIRED_PLUGIN
+
+    checkout = repository_root()
+    with TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory)
+        mirror = temporary_root / "checkout"
+        mirror_installation_inputs(checkout, mirror)
+        _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
+        environment = _persistent_environment(temporary_root)
+        settings_path = mirror / CLAUDE_PROJECT_SETTINGS_PATH
+        selection_before: dict[str, bool] | None = None
+        if declare_selection:
+            selection_before = {
+                marketplace_plugin_identifier(UNCATALOGED_PLUGIN, MARKETPLACE): True,
+                **(
+                    {}
+                    if case.activation is MigrationActivation.UNDECLARED
+                    else {
+                        marketplace_plugin_identifier(
+                            RETIRED_PLUGIN, MARKETPLACE
+                        ): case.activation is MigrationActivation.ENABLED
+                    }
+                ),
+                marketplace_plugin_identifier(
+                    UNCATALOGED_PLUGIN, foreign_marketplace_name(MARKETPLACE)
+                ): False,
+            }
+            document = json.loads(settings_path.read_text(encoding="utf-8"))
+            document[CLAUDE_ENABLED_PLUGINS_FIELD] = selection_before
+            settings_path.write_text(json.dumps(document), encoding="utf-8")
+        before = (
+            ListedRecord(
+                RETIRED_PLUGIN, case.scope, _ACTIVATION_DECLARATION[case.activation]
+            ),
+        )
+        other = next(agent for agent in Target if agent is not case.agent)
+        runner = _MigrationRunner(
+            records={
+                case.agent: list(before),
+                other: [
+                    ListedRecord(
+                        PRODUCT_TREE_PLUGIN,
+                        CLAUDE_PROJECT_SCOPE if other is Target.CLAUDE else None,
+                        True,
+                    )
+                ],
+            },
+            fallback=RecordingRunner(),
+            retains_uninstalled=uninstall_retains_record,
+        )
+        report = execute_persistent_installation(mirror, environment, runner)
+        written = json.loads(settings_path.read_text(encoding="utf-8"))
+        return MigrationObservation(
+            case=case,
+            plan=report.plan,
+            attempted=tuple(runner.calls),
+            before=before,
+            after=tuple(runner.records[case.agent]),
+            other_agent_after=tuple(runner.records[other]),
+            record_drift=report.record_drift,
+            selection_before=selection_before,
+            selection_after=written.get(CLAUDE_ENABLED_PLUGINS_FIELD),
+        )
 
 
 def observe_invalid_isolated_selection() -> SelectionRejectionObservation:
