@@ -15,7 +15,9 @@ When the command tokens match a gated pattern (e.g., `gh auth switch`,
     naming the missing flag and the gated subcommand.
   - With `--user-instructed`: exit 0, append one line to
     `${CLAUDE_PROJECT_DIR}/.spx/mutation-audit.log` recording the timestamp,
-    current gh account, gate label, and gated command.
+    current gh account, gate label, and gated command. An audit log that
+    cannot be written is exit 1 with a JSON error on stderr naming the log
+    path, so no gated command passes unrecorded.
 
 Commands that do not match any gated pattern pass through with exit 0 and
 `gated: false` in the JSON payload on stdout.
@@ -66,7 +68,9 @@ def get_current_account() -> str:
             text=True,
             timeout=SUBPROCESS_TIMEOUT_SECONDS,
         )
-    except subprocess.TimeoutExpired:
+    except (subprocess.TimeoutExpired, OSError):
+        # A hung, absent, or non-executable `gh` leaves the account unknown; the
+        # audit line still records the gated command.
         return "unknown"
     out = proc.stdout.strip()
     return out if proc.returncode == 0 and out else "unknown"
@@ -180,7 +184,29 @@ def main(argv: list[str]) -> int:
         )
         return 1
 
-    audit_path = append_audit(label, command_str)
+    try:
+        audit_path = append_audit(label, command_str)
+    except OSError as exc:
+        log_path = audit_log_path()
+        sys.stderr.write(
+            json.dumps(
+                {
+                    "schema_version": SCHEMA_VERSION,
+                    "gated": True,
+                    "label": label,
+                    "command": command_str,
+                    "audit_log": str(log_path),
+                    "error": (
+                        f"could not append to the mutation audit log {log_path}: {exc}. "
+                        f"Next action: make {log_path.parent} writable, or point "
+                        "CLAUDE_PROJECT_DIR at a writable checkout, then rerun"
+                    ),
+                },
+                indent=2,
+            )
+            + "\n"
+        )
+        return 1
     sys.stdout.write(
         json.dumps(
             {

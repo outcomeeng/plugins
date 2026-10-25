@@ -19,7 +19,8 @@ Output: a single JSON object on stdout with these fields:
 
 Exit codes:
     0 — success; JSON written to stdout
-    1 — non-fatal error; JSON written to stdout with `error` field set
+    1 — non-fatal error; JSON written to stdout with `error` field set, which
+        includes a `gh` or `git` executable that could not be started
     2 — argument parse error written to stderr (no JSON on stdout)
 
 The helper consolidates owner/repo detection, host detection, account
@@ -43,6 +44,22 @@ SUBPROCESS_TIMEOUT_SECONDS = 30
 # The command a next action names carries this script's absolute path, so the action
 # runs as written from any working directory.
 SELF_COMMAND = f'python3 "{pathlib.Path(__file__).resolve()}"'
+INSTALL_ACTIONS = {
+    "gh": "install the GitHub CLI (https://cli.github.com) and ensure `gh` is on PATH",
+    "git": "install git and ensure `git` is on PATH",
+}
+
+
+class CommandUnavailableError(Exception):
+    """An executable the helper runs could not be started."""
+
+    def __init__(self, executable: str, cause: OSError) -> None:
+        super().__init__(f"{executable} could not be started: {cause}")
+        self.executable = executable
+        self.install_action = INSTALL_ACTIONS.get(
+            executable, f"install {executable} and ensure it is on PATH"
+        )
+
 
 # Two URL forms cover every remote shape:
 #   - `git@host:owner/repo[.git][/]` — the SCP-style form, no scheme, no port
@@ -92,6 +109,8 @@ def _run(cmd: list[str]) -> tuple[int, str, str]:
         )
     except subprocess.TimeoutExpired as exc:
         return 124, "", f"subprocess timed out after {exc.timeout}s: {' '.join(cmd)}"
+    except OSError as exc:
+        raise CommandUnavailableError(cmd[0], exc) from exc
     return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
 
 
@@ -143,10 +162,9 @@ def get_available_accounts(host: str | None) -> list[str]:
     hosts = data.get("hosts", {})
     if not isinstance(hosts, dict):
         return []
-    if host is None:
-        host_entry_groups = hosts.values()
-    else:
-        host_entry_groups = [hosts.get(host, [])]
+    host_entry_groups: list[Any] = (
+        list(hosts.values()) if host is None else [hosts.get(host, [])]
+    )
     for host_entries in host_entry_groups:
         if not isinstance(host_entries, list):
             continue
@@ -171,58 +189,68 @@ def main(argv: list[str]) -> int:
     error: str | None = None
     host: str | None = None
     owner_repo: str | None = args.owner_repo
+    current_account: str | None = None
+    has_access = False
+    available_accounts: list[str] = []
 
-    if owner_repo is None:
-        remote = detect_remote_url()
-        if remote is None:
-            error = (
-                "no git remote 'origin' found and no OWNER/REPO argument provided. "
-                "Next action: run from inside a checkout that has an origin remote "
-                "(git remote add origin <url>), or pass the repository explicitly: "
-                f"{SELF_COMMAND} owner/repo"
-            )
-        else:
-            parsed = parse_remote(remote)
-            if parsed is None:
+    try:
+        if owner_repo is None:
+            remote = detect_remote_url()
+            if remote is None:
                 error = (
-                    f"could not parse git remote {remote!r}. "
-                    "Accepted forms: git@HOST:owner/repo[.git], "
-                    "https://HOST/owner/repo[.git], ssh://git@HOST[:port]/owner/repo[.git]. "
-                    "Next action: fix the origin URL (git remote set-url origin <url>), "
-                    f"or pass the repository explicitly: {SELF_COMMAND} owner/repo"
+                    "no git remote 'origin' found and no OWNER/REPO argument provided. "
+                    "Next action: run from inside a checkout that has an origin remote "
+                    "(git remote add origin <url>), or pass the repository explicitly: "
+                    f"{SELF_COMMAND} owner/repo"
                 )
             else:
-                host, owner_repo = parsed
-    elif "/" not in owner_repo:
-        error = (
-            f"invalid OWNER/REPO argument {owner_repo!r}: expected one slash-separated "
-            "pair such as outcomeeng/plugins. "
-            f"Next action: rerun as {SELF_COMMAND} owner/repo, "
-            "or omit the argument to detect it from the origin remote"
-        )
-        owner_repo = None
-    else:
-        remote = detect_remote_url()
-        if remote is not None:
-            parsed = parse_remote(remote)
-            if parsed is not None:
-                host = parsed[0]
-        if host is None:
-            # Explicit OWNER/REPO without a parseable remote: default to the
-            # gh CLI's default host. GitHub Enterprise users should invoke
-            # gh_access.py from inside a checkout whose remote names the
-            # enterprise host so detect_remote_url() picks it up.
-            host = "github.com"
+                parsed = parse_remote(remote)
+                if parsed is None:
+                    error = (
+                        f"could not parse git remote {remote!r}. "
+                        "Accepted forms: git@HOST:owner/repo[.git], "
+                        "https://HOST/owner/repo[.git], ssh://git@HOST[:port]/owner/repo[.git]. "
+                        "Next action: fix the origin URL (git remote set-url origin <url>), "
+                        f"or pass the repository explicitly: {SELF_COMMAND} owner/repo"
+                    )
+                else:
+                    host, owner_repo = parsed
+        elif "/" not in owner_repo:
+            error = (
+                f"invalid OWNER/REPO argument {owner_repo!r}: expected one slash-separated "
+                "pair such as outcomeeng/plugins. "
+                f"Next action: rerun as {SELF_COMMAND} owner/repo, "
+                "or omit the argument to detect it from the origin remote"
+            )
+            owner_repo = None
+        else:
+            remote = detect_remote_url()
+            if remote is not None:
+                parsed = parse_remote(remote)
+                if parsed is not None:
+                    host = parsed[0]
+            if host is None:
+                # Explicit OWNER/REPO without a parseable remote: default to the
+                # gh CLI's default host. GitHub Enterprise users should invoke
+                # gh_access.py from inside a checkout whose remote names the
+                # enterprise host so detect_remote_url() picks it up.
+                host = "github.com"
 
-    has_access = check_repo_access(host, owner_repo) if owner_repo else False
+        if owner_repo:
+            has_access = check_repo_access(host, owner_repo)
+        current_account = get_current_account(host)
+        available_accounts = get_available_accounts(host)
+    except CommandUnavailableError as exc:
+        unavailable = f"{exc}. Next action: {exc.install_action}"
+        error = unavailable if error is None else f"{error}; {unavailable}"
 
     result = {
         "schema_version": SCHEMA_VERSION,
         "owner_repo": owner_repo,
         "host": host,
-        "current_account": get_current_account(host),
+        "current_account": current_account,
         "has_access": has_access,
-        "available_accounts": get_available_accounts(host),
+        "available_accounts": available_accounts,
         "is_tty": sys.stdin.isatty() and sys.stdout.isatty(),
         "error": error,
     }

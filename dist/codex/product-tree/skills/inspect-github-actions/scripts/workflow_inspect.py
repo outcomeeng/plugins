@@ -18,7 +18,9 @@ A run id or pull request number that is not a positive integer, a dash-led
 token such as `--5` or `-abc` included, is rejected before any `gh` call.
 
 Failures set `error` to `<subcommand> <argument>: <cause>. Next: <action>.` and
-exit 1. Every `gh` call goes through the module-level `_run` function.
+exit 1. Every `gh` call goes through the module-level `_run` function. A `gh`
+that cannot start — absent from PATH or not executable — is reported through
+the same seam as exit 127 with the install action in its stderr text.
 
 Subprocess invocations use `subprocess.run(..., capture_output=True, text=True)`
 with bounded lifetime — no streaming gh subcommands, no polling.
@@ -36,6 +38,11 @@ from typing import Any
 SCHEMA_VERSION = 1
 DEFAULT_LOG_MAX_BYTES = 100_000
 SUBPROCESS_TIMEOUT_SECONDS = 60
+# The shell convention for a command that could not be found or started.
+EXIT_COMMAND_UNAVAILABLE = 127
+GH_INSTALL_ACTION = (
+    "install the GitHub CLI (https://cli.github.com) and ensure `gh` is on PATH"
+)
 _SCRIPTS_DIR = pathlib.Path(__file__).resolve().parent
 # The commands a next action names carry the absolute path of the script, so the
 # action runs as written from any working directory.
@@ -72,6 +79,12 @@ def _run(cmd: list[str]) -> tuple[int, str, str]:
         )
     except subprocess.TimeoutExpired as exc:
         return 124, "", f"subprocess timed out after {exc.timeout}s: {' '.join(cmd)}"
+    except OSError as exc:
+        return (
+            EXIT_COMMAND_UNAVAILABLE,
+            "",
+            f"{cmd[0]} could not be started: {exc}; {GH_INSTALL_ACTION}",
+        )
     return proc.returncode, proc.stdout, proc.stderr.strip()
 
 
