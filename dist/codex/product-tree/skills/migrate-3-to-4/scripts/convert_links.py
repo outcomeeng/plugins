@@ -391,9 +391,16 @@ def path_error(root: Path, path: str) -> str | None:
     product_tree = (root / PRODUCT_TREE_DIRECTORY).resolve()
     target = (root / path).resolve()
     if not target.is_relative_to(product_tree):
-        return f"error: {path} lies outside {product_tree}"
+        return (
+            f"error: {path} lies outside {product_tree}; pass files or directories "
+            f"beneath {product_tree}, or omit the paths to convert the whole tree."
+        )
     if not target.exists():
-        return f"error: {path} does not exist beneath {product_tree}"
+        return (
+            f"error: {path} does not exist beneath {product_tree}; pass an existing "
+            f"file or directory beneath {product_tree}, or omit the paths to "
+            f"convert the whole tree."
+        )
     return None
 
 
@@ -413,7 +420,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     root = arguments.root.resolve()
     if not (root / PRODUCT_TREE_DIRECTORY).is_dir():
         print(
-            f"error: {root} holds no {PRODUCT_TREE_DIRECTORY}/ directory",
+            f"error: {root} holds no {PRODUCT_TREE_DIRECTORY}/ directory; pass the "
+            f"product root that holds {PRODUCT_TREE_DIRECTORY}/ as the first argument.",
             file=sys.stderr,
         )
         return EXIT_ERROR

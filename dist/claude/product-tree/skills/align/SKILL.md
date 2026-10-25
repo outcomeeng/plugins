@@ -17,7 +17,7 @@ A factual report of Product Tree files' non-conformances to templates, atemporal
 
 1. **FACTS AND REQUIRED REWRITES ONLY** — Report what violates which rule. Include the atemporal rewrite required for each temporal-language finding; suggest no other fix. Never rate severity. Never say "should", "consider", or "recommend."
 2. **RULES FROM UNDERSTANDING** — All conformance rules live in the understanding skill's inline foundation and templates. This skill owns zero rules. Read them at check time.
-3. **STRICT CLASSIFICATION** — Only the seven kinds — `.product`, `.substrate`, `.capability`, `.domain`, `.interface`, `.surface`, `.variant` — and the prior `.enabler` and `.outcome` forms a tree authored under a 3.x methodology version still carries are recognized node kinds. Only `.adr.md`, `.pdr.md`, `{slug}.spec.md`, `{slug}.outcome.md`, and the prior forms `{slug}.md` and `*.product.md` are recognized files. Anything else is "unrecognized."
+3. **STRICT CLASSIFICATION** — Only the node kinds and file forms live `/understand` `<identity_and_kinds>` and `<files_in_a_node>` recognize, with the prior forms a tree authored under a 3.x methodology version still carries, are recognized. Anything else is "unrecognized."
 4. **COMPLETE SCAN** — Check every `.md` file in scope. Do not skip files. Do not sample.
 5. **FOUNDATION REQUIRED** — The `<PRODUCT_TREE_FOUNDATION>` marker must be present.
 6. **CHANGESET SCOPE FROM THE SHARED PRIMITIVE** — When checking downstream alignment for a branch changeset, consume the supplied changed-file set derived through `/scope-changeset`. Do not hand-roll base-ref or git-diff derivation in this skill.
@@ -29,10 +29,10 @@ A factual report of Product Tree files' non-conformances to templates, atemporal
 Use skill `product-tree:understand` and use its live inline foundation. Read the conditional templates in full before checking conformance:
 
 - Live `/understand` `<atemporal_voice>` and `<decision_to_spec_alignment>`
-- Live `/understand` `<assertion_types>` — the five assertion types and their canonical headings
+- Live `/understand` `<assertion_types>` — the assertion types and their canonical headings
 - The `artifact-placement.md` reference the live `/understand` `<artifact_placement>` section names, `<common_misplacements>` — a conditional reference, read in full
 - Live `/understand` `<files_in_a_node>` — the canonical node shape, including the skip targets it declares
-- Live `/understand` `<identity_and_kinds>` and `<product_scope>` — the seven kinds, their openings, and containment
+- Live `/understand` `<identity_and_kinds>` and `<product_scope>` — the node kinds, their openings, and containment
 - The canonical templates beneath the `Template root` the live `<PRODUCT_TREE_FOUNDATION>` marker records: `decisions/decision-name.adr.md`, `decisions/decision-name.pdr.md`, `product/product-name.spec.md`, `nodes/substrate-name.spec.md`, `nodes/capability-name.spec.md`, `nodes/domain-name.spec.md`, `nodes/interface-name.spec.md`, `nodes/surface-name.spec.md`, `nodes/variant-name.spec.md`, and `records/node-name.outcome.md`; a marker that lacks `Template root` requires `/understand` to run again before any template is read
 
 </required_references>
@@ -83,7 +83,7 @@ Compare each classified file's `##` headings against its template's `##` heading
 
 - **Missing section**: Template has `## Purpose` but file does not
 - **Name mismatch**: File has `## Problem` where template expects `## Purpose`
-- **Unrecognized assertion type**: Assertion heading not in the five types defined by live `/understand` `<assertion_types>` (Scenarios, Mappings, Conformance, Properties, Compliance)
+- **Unrecognized assertion type**: Assertion heading not among the types live `/understand` `<assertion_types>` defines
 
 **Do NOT report:**
 

@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when the user asks to open or manage a GitHub pull request.
   NEVER open or manage a GitHub pull request outside this skill.
 argument-hint: "[instructions describing the change, or empty to use the current changeset]"
-allowed-tools: Read, {{! tool('use_skill') !}}, {{! tool('ask_user') !}}, Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(git branch:*), Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git rev-parse:*), Bash(gh repo view:*), Bash(gh pr view:*), Bash(head:*), Bash(echo:*)
+allowed-tools: Read, {{! tool('use_skill') !}}, {{! tool('ask_user') !}}, Bash(spx worktree status), Bash(git branch --show-current), Bash(git status --porcelain), Bash(git diff --name-status), Bash(git diff --cached --name-status), Bash(git log --oneline:*), Bash(git rev-parse --is-inside-work-tree), Bash(git rev-parse --verify --quiet origin/HEAD), Bash(gh repo view --json defaultBranchRef:*), Bash(gh pr view --json:*), Bash(head -100), Bash(head -10), Bash(head -3), Bash(echo:*)
 ---
 
 <objective>
