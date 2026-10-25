@@ -23,6 +23,7 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     init_repo_with_branch,
     make_finding_dict,
     open_scoped_review_run,
+    read_fake_journal,
     run_script,
     runner_env,
 )
@@ -54,6 +55,6 @@ def test_finish_stdout_is_exactly_the_journal_run_token(
     )
     assert finished.returncode == 0, finished.stderr
 
-    issued_token = json.loads(journal_path.read_text(encoding="utf-8"))["runToken"]
+    issued_token = read_fake_journal(journal_path).run_token
     assert finished.stdout == f"{issued_token}\n"
     assert finished.stderr == ""

@@ -20,9 +20,9 @@ from outcomeeng_testing.generators.reviewing_changes_runs import (
     region_output_cases,
 )
 from outcomeeng_testing.harnesses.reviewing_changes_runs import (
-    MANIFEST_SECTIONS_KEY,
     build_changeset_repo,
     completed_unread,
+    compute_diff,
     finish_changeset_review,
     jp,
     nodes_mentioning,
@@ -49,7 +49,7 @@ def test_region_bounded_output_stays_an_ordinary_changed_file(
 
     started = start_changeset_review(tmp_path / "unscoped-run", repo, base_ref)
     listing = run_state_listing(started)
-    manifest = without_keys(started.manifest, MANIFEST_SECTIONS_KEY)
+    manifest = without_keys(started.manifest, compute_diff.MANIFEST_SECTIONS)
     assert nodes_mentioning(listing, case.control_extent, case.control.regenerate)
     assert not nodes_mentioning(listing, case.region_path)
     assert not nodes_mentioning(manifest, case.region_path)
@@ -68,4 +68,6 @@ def test_region_bounded_output_stays_an_ordinary_changed_file(
     assert marked.finished.returncode == 0, marked.finished.stderr
     completed = run_completed_event(marked.events)
     assert completed_unread(completed) == [case.region_path]
-    assert completed["data"]["status"] == str(jp.JournalRunStatus.FAILED)
+    assert completed[jp.EVENT_DATA_FIELD][jp.RUN_STATE_STATUS] == str(
+        jp.JournalRunStatus.FAILED
+    )

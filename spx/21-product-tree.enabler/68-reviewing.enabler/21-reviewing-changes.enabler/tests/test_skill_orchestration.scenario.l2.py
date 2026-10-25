@@ -37,12 +37,14 @@ from outcomeeng_testing.harnesses.changeset_scope import (
 from outcomeeng_testing.generators.reviewing_changes_runs import pure_rename_case
 from outcomeeng_testing.harnesses.reviewing_changes import (
     COMPUTE_DIFF_SCRIPT,
+    FAKE_RUN_TOKEN,
     JOURNAL_EMIT_SCRIPT,
     REVIEW_RUN_SCRIPT,
     init_repo_with_branch,
     isolated_git_env,
     make_finding_dict,
     make_review_result_dict,
+    read_fake_journal,
     review_run_journal_env_key,
     review_run_journal_env_keys,
     run_compute_diff_in_process,
@@ -54,7 +56,10 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
 
 from outcomeeng_testing.harnesses.reviewing_changes_runs import (
     build_changeset_repo,
+    compute_diff,
     finish_changeset_review,
+    jp,
+    review_run,
     scope_advanced_units,
     start_changeset_review,
 )
@@ -142,7 +147,7 @@ class TestSkillOrchestrationChain:
         # 2. compute_diff.py reads the explicit base ref, runs git diff against
         #    that base, and emits the diff to stdout.
         env = isolated_git_env(repo)
-        env["SPX_VERIFY_BASE_REF"] = base_ref
+        env[compute_diff.ENV_BASE_REF] = base_ref
         diff_result = run_compute_diff_in_process(repo=repo, env=env)
         assert diff_result.returncode == 0, diff_result.stderr
         # The diff must reference the modified file. A truly empty diff
@@ -191,7 +196,7 @@ class TestSkillOrchestrationChain:
         repo.mkdir()
         base_ref = init_repo_with_branch(repo)
         env = isolated_git_env(repo)
-        env["SPX_VERIFY_BASE_REF"] = base_ref
+        env[compute_diff.ENV_BASE_REF] = base_ref
 
         metadata_result = run_journal_emit_in_process(
             "metadata", "--started-at", "2026-06-23T00:00:00Z", repo=repo, env=env
@@ -263,7 +268,7 @@ class TestReviewRunnerBoundary:
             REVIEW_RUN_SCRIPT,
             "append-scope",
             "--state",
-            start_payload["statePath"],
+            start_payload[review_run.START_STATE_PATH],
             "README.md",
             env=later_env,
             cwd=repo,
@@ -275,7 +280,7 @@ class TestReviewRunnerBoundary:
             REVIEW_RUN_SCRIPT,
             "append-finding",
             "--state",
-            start_payload["statePath"],
+            start_payload[review_run.START_STATE_PATH],
             stdin=json.dumps(finding),
             env=later_env,
             cwd=repo,
@@ -286,48 +291,55 @@ class TestReviewRunnerBoundary:
             REVIEW_RUN_SCRIPT,
             "finish",
             "--state",
-            start_payload["statePath"],
+            start_payload[review_run.START_STATE_PATH],
             env=later_env,
             cwd=repo,
         )
         assert finished.returncode == 0, finished.stderr
 
-        assert finished.stdout == "run-001\n"
-        assert pathlib.Path(start_payload["statePath"]).exists() is False
-        assert pathlib.Path(start_payload["diffPath"]).parent.exists() is False
+        assert finished.stdout == f"{FAKE_RUN_TOKEN}\n"
+        assert (
+            pathlib.Path(start_payload[review_run.START_STATE_PATH]).exists() is False
+        )
+        assert (
+            pathlib.Path(start_payload[review_run.START_DIFF_PATH]).parent.exists()
+            is False
+        )
 
-        journal = json.loads(journal_path.read_text(encoding="utf-8"))
-        assert journal["sealed"] is True
-        assert journal["commands"] == [
-            "open",
-            "append",
-            "append",
-            "append",
-            "read",
-            "append",
-            "seal",
+        journal = read_fake_journal(journal_path)
+        assert journal.sealed is True
+        assert journal.commands == [
+            review_run.JOURNAL_OPEN,
+            review_run.JOURNAL_APPEND,
+            review_run.JOURNAL_APPEND,
+            review_run.JOURNAL_APPEND,
+            review_run.JOURNAL_READ,
+            review_run.JOURNAL_APPEND,
+            review_run.JOURNAL_SEAL,
         ]
-        event_types = [event["type"] for event in journal["events"]]
+        event_types = [event[jp.EVENT_TYPE_FIELD] for event in journal.events]
         assert event_types == [
-            "verification.scope.entered",
-            "verification.scope.advanced",
-            "verification.finding.reported",
-            "com.outcomeeng.spx.journal.run.completed",
+            jp.SCOPE_ENTERED,
+            jp.SCOPE_ADVANCED,
+            jp.FINDING_REPORTED,
+            jp.RUN_COMPLETED,
         ]
-        assert journal["events"][2]["data"]["id"] == finding["id"]
+        assert journal.events[2][jp.EVENT_DATA_FIELD]["id"] == finding["id"]
         expected_namespace = {
             ENV_BACKEND: journal_selector.get(ENV_BACKEND, ""),
             ENV_BRANCH: journal_selector.get(ENV_BRANCH, "feature/x"),
             ENV_TARGET_KIND: journal_selector.get(ENV_TARGET_KIND, "branch"),
             ENV_PULL_REQUEST_NUMBER: journal_selector.get(ENV_PULL_REQUEST_NUMBER, ""),
         }
-        assert journal["namespace"] == expected_namespace
-        terminal_event = journal["events"][-1]
-        assert terminal_event["data"]["status"] == "approved"
-        assert terminal_event["data"]["review"] == {
-            "blocking": 0,
-            "debt": 1,
-            "overall": "approved",
+        assert journal.namespace == expected_namespace
+        terminal_event = journal.events[-1]
+        assert terminal_event[jp.EVENT_DATA_FIELD][jp.RUN_STATE_STATUS] == str(
+            jp.JournalRunStatus.APPROVED
+        )
+        assert terminal_event[jp.EVENT_DATA_FIELD][review_run.REVIEW_KEY] == {
+            review_run.REVIEW_BLOCKING: 0,
+            review_run.REVIEW_DEBT: 1,
+            review_run.REVIEW_OVERALL: str(jp.Outcome.APPROVED),
         }
 
     def test_runner_rejects_finish_before_scope_coverage(
@@ -346,19 +358,24 @@ class TestReviewRunnerBoundary:
             REVIEW_RUN_SCRIPT,
             "finish",
             "--state",
-            start_payload["statePath"],
+            start_payload[review_run.START_STATE_PATH],
             env=env,
             cwd=repo,
         )
         assert finished.returncode == 1
         assert "missing scope-advanced events for: README.md" in finished.stderr
 
-        journal = json.loads(journal_path.read_text(encoding="utf-8"))
-        event_types = [event["type"] for event in journal["events"]]
-        assert event_types == ["verification.scope.entered"]
-        assert journal["sealed"] is False
-        assert pathlib.Path(start_payload["statePath"]).exists() is False
-        assert pathlib.Path(start_payload["diffPath"]).parent.exists() is False
+        journal = read_fake_journal(journal_path)
+        event_types = [event[jp.EVENT_TYPE_FIELD] for event in journal.events]
+        assert event_types == [jp.SCOPE_ENTERED]
+        assert journal.sealed is False
+        assert (
+            pathlib.Path(start_payload[review_run.START_STATE_PATH]).exists() is False
+        )
+        assert (
+            pathlib.Path(start_payload[review_run.START_DIFF_PATH]).parent.exists()
+            is False
+        )
 
     def test_runner_removes_scratch_when_append_finding_fails(
         self, tmp_path: pathlib.Path
@@ -371,20 +388,25 @@ class TestReviewRunnerBoundary:
         started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
         assert started.returncode == 0, started.stderr
         start_payload = json.loads(started.stdout)
-        assert pathlib.Path(start_payload["statePath"]).exists() is True
+        assert pathlib.Path(start_payload[review_run.START_STATE_PATH]).exists() is True
 
         appended = run_script(
             REVIEW_RUN_SCRIPT,
             "append-finding",
             "--state",
-            start_payload["statePath"],
+            start_payload[review_run.START_STATE_PATH],
             stdin="not json",
             env=env,
             cwd=repo,
         )
         assert appended.returncode == 1
-        assert pathlib.Path(start_payload["statePath"]).exists() is False
-        assert pathlib.Path(start_payload["diffPath"]).parent.exists() is False
+        assert (
+            pathlib.Path(start_payload[review_run.START_STATE_PATH]).exists() is False
+        )
+        assert (
+            pathlib.Path(start_payload[review_run.START_DIFF_PATH]).parent.exists()
+            is False
+        )
 
     def test_runner_rejects_finish_naming_only_unexamined_non_rename_files(
         self, tmp_path: pathlib.Path
@@ -404,7 +426,10 @@ class TestReviewRunnerBoundary:
         assert case.old_path not in finished.finished.stderr
         assert finished.sealed is False
         assert scope_advanced_units(finished.events) == []
-        assert pathlib.Path(started.start_payload["statePath"]).exists() is False
+        assert (
+            pathlib.Path(started.start_payload[review_run.START_STATE_PATH]).exists()
+            is False
+        )
 
 
 def _set_origin_head(repo: pathlib.Path, branch: str) -> None:
@@ -443,7 +468,7 @@ class TestComputeDiffBaseRefDerivation:
     def test_env_base_ref_works(self, tmp_path: pathlib.Path) -> None:
         repo, base_ref = self._setup_repo(tmp_path)
         env = isolated_git_env(repo)
-        env["SPX_VERIFY_BASE_REF"] = base_ref
+        env[compute_diff.ENV_BASE_REF] = base_ref
         result = self._run_compute_diff(repo, env)
         assert result.returncode == 0, result.stderr
         assert "README.md" in result.stdout
@@ -453,7 +478,7 @@ class TestComputeDiffBaseRefDerivation:
     ) -> None:
         repo, base_ref = self._setup_repo(tmp_path)
         env = isolated_git_env(repo)
-        env["SPX_VERIFY_BASE_REF"] = base_ref
+        env[compute_diff.ENV_BASE_REF] = base_ref
 
         (repo / "STAGED.md").write_text("staged\n", encoding="utf-8")
         run_git("add", "STAGED.md", cwd=repo)
@@ -477,7 +502,7 @@ class TestComputeDiffBaseRefDerivation:
     ) -> None:
         repo, base_ref = self._setup_repo(tmp_path)
         env = isolated_git_env(repo)
-        env["SPX_VERIFY_BASE_REF"] = base_ref
+        env[compute_diff.ENV_BASE_REF] = base_ref
         bundle_dir = tmp_path / "review-input"
 
         (repo / "STAGED.md").write_text("staged\n", encoding="utf-8")
@@ -492,46 +517,63 @@ class TestComputeDiffBaseRefDerivation:
         )
         assert result.returncode == 0, result.stderr
         summary = json.loads(result.stdout)
-        diff_path = pathlib.Path(summary["diff_path"])
-        manifest_path = pathlib.Path(summary["manifest_path"])
-        assert diff_path == bundle_dir / "diff.md"
-        assert manifest_path == bundle_dir / "manifest.json"
+        diff_path = pathlib.Path(summary[compute_diff.SUMMARY_DIFF_PATH])
+        manifest_path = pathlib.Path(summary[compute_diff.SUMMARY_MANIFEST_PATH])
+        assert diff_path == bundle_dir / compute_diff.BUNDLE_DIFF_FILENAME
+        assert manifest_path == bundle_dir / compute_diff.BUNDLE_MANIFEST_FILENAME
         assert diff_path.is_file()
         assert manifest_path.is_file()
 
         diff_text = diff_path.read_text(encoding="utf-8")
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         diff_bytes = diff_text.encode("utf-8")
-        assert summary["diff_bytes"] == len(diff_bytes)
-        assert summary["section_count"] == 4
-        assert manifest["schema_version"] == 1
-        assert manifest["base_ref"] == base_ref
-        assert manifest["head_ref"] == "HEAD"
-        assert manifest["diff_path"] == "diff.md"
-        assert manifest["diff_sha256"] == hashlib.sha256(diff_bytes).hexdigest()
-        section_titles = [section["title"] for section in manifest["sections"]]
+        assert summary[compute_diff.SUMMARY_DIFF_BYTES] == len(diff_bytes)
+        assert summary[compute_diff.SUMMARY_SECTION_COUNT] == 4
+        assert (
+            manifest[compute_diff.MANIFEST_SCHEMA_VERSION_KEY]
+            == compute_diff.MANIFEST_SCHEMA_VERSION
+        )
+        assert manifest[compute_diff.MANIFEST_BASE_REF] == base_ref
+        assert manifest[compute_diff.MANIFEST_HEAD_REF] == compute_diff.DEFAULT_HEAD_REF
+        assert (
+            manifest[compute_diff.MANIFEST_DIFF_PATH]
+            == compute_diff.BUNDLE_DIFF_FILENAME
+        )
+        assert (
+            manifest[compute_diff.MANIFEST_DIFF_SHA256]
+            == hashlib.sha256(diff_bytes).hexdigest()
+        )
+        section_titles = [
+            section[compute_diff.MANIFEST_SECTION_TITLE]
+            for section in manifest[compute_diff.MANIFEST_SECTIONS]
+        ]
         assert section_titles == [
-            "Committed diff",
-            "Staged diff",
-            "Unstaged diff",
-            "Untracked files",
+            compute_diff.DIFF_SECTION_COMMITTED,
+            compute_diff.DIFF_SECTION_STAGED,
+            compute_diff.DIFF_SECTION_UNSTAGED,
+            compute_diff.DIFF_SECTION_UNTRACKED,
         ]
         files_by_section = {
-            section["title"]: section["files"] for section in manifest["sections"]
+            section[compute_diff.MANIFEST_SECTION_TITLE]: section[
+                compute_diff.MANIFEST_SECTION_FILES
+            ]
+            for section in manifest[compute_diff.MANIFEST_SECTIONS]
         }
-        assert files_by_section["Committed diff"] == ["README.md"]
-        assert files_by_section["Staged diff"] == ["STAGED.md"]
-        assert files_by_section["Unstaged diff"] == ["README.md"]
-        assert files_by_section["Untracked files"] == ["UNTRACKED.md"]
-        for section in manifest["sections"]:
-            section_text = diff_bytes[
-                section["byte_start"] : section["byte_start"] + section["byte_length"]
-            ].decode("utf-8")
+        assert files_by_section[compute_diff.DIFF_SECTION_COMMITTED] == ["README.md"]
+        assert files_by_section[compute_diff.DIFF_SECTION_STAGED] == ["STAGED.md"]
+        assert files_by_section[compute_diff.DIFF_SECTION_UNSTAGED] == ["README.md"]
+        assert files_by_section[compute_diff.DIFF_SECTION_UNTRACKED] == ["UNTRACKED.md"]
+        for section in manifest[compute_diff.MANIFEST_SECTIONS]:
+            byte_start = section[compute_diff.MANIFEST_SECTION_BYTE_START]
+            byte_length = section[compute_diff.MANIFEST_SECTION_BYTE_LENGTH]
+            start_line = section[compute_diff.MANIFEST_SECTION_START_LINE]
+            line_count = section[compute_diff.MANIFEST_SECTION_LINE_COUNT]
+            section_text = diff_bytes[byte_start : byte_start + byte_length].decode(
+                "utf-8"
+            )
             section_lines = section_text.splitlines()
             manifest_line_slice = diff_text.splitlines()[
-                section["start_line"] - 1 : section["start_line"]
-                - 1
-                + section["line_count"]
+                start_line - 1 : start_line - 1 + line_count
             ]
             assert (
                 section["start_line"]
@@ -544,7 +586,7 @@ class TestComputeDiffBaseRefDerivation:
     def test_bundle_dir_rejects_existing_file(self, tmp_path: pathlib.Path) -> None:
         repo, base_ref = self._setup_repo(tmp_path)
         env = isolated_git_env(repo)
-        env["SPX_VERIFY_BASE_REF"] = base_ref
+        env[compute_diff.ENV_BASE_REF] = base_ref
         bundle_file = tmp_path / "review-input"
         bundle_file.write_text("not a directory\n", encoding="utf-8")
 
@@ -562,7 +604,7 @@ class TestComputeDiffBaseRefDerivation:
     ) -> None:
         repo, base_ref = self._setup_repo(tmp_path)
         env = isolated_git_env(repo)
-        env["SPX_VERIFY_BASE_REF"] = base_ref
+        env[compute_diff.ENV_BASE_REF] = base_ref
 
         result = run_compute_diff_in_process(
             repo=repo,
@@ -651,7 +693,7 @@ class TestComputeDiffHeadRefDerivation:
     def test_env_head_ref_selects_alternate_head(self, tmp_path: pathlib.Path) -> None:
         repo, base_ref, secondary = self._setup_repo_with_secondary(tmp_path)
         env = isolated_git_env(repo)
-        env["SPX_VERIFY_BASE_REF"] = base_ref
+        env[compute_diff.ENV_BASE_REF] = base_ref
         env["SPX_VERIFY_HEAD_REF"] = secondary
         result = self._run_compute_diff(repo, env)
         assert result.returncode == 0, result.stderr
@@ -666,7 +708,7 @@ class TestComputeDiffHeadRefDerivation:
     ) -> None:
         repo, base_ref, _secondary = self._setup_repo_with_secondary(tmp_path)
         env = isolated_git_env(repo)
-        env["SPX_VERIFY_BASE_REF"] = base_ref
+        env[compute_diff.ENV_BASE_REF] = base_ref
         env.pop("SPX_VERIFY_HEAD_REF", None)
         # No SPX_VERIFY_HEAD_REF; HEAD is feature/x, so the diff must surface
         # feature/x's payload, not secondary's SECONDARY.md.

@@ -71,6 +71,42 @@ JOURNAL_ENV_KEYS = (
     ENV_PULL_REQUEST_NUMBER,
 )
 
+# The verbs the runner issues to ``spx journal --type review``.
+JOURNAL_OPEN = "open"
+JOURNAL_APPEND = "append"
+JOURNAL_READ = "read"
+JOURNAL_SEAL = "seal"
+
+# Keys of the run-scope record inside the run metadata. ``CHANGED_FILES_KEY`` also
+# names the changed-file list in the ``start`` payload.
+SCOPE_BASE_REF = "baseRef"
+SCOPE_HEAD_REF = "headRef"
+CHANGED_FILES_KEY = "changedFiles"
+SCOPE_REVIEW_INPUT_SHA256 = "reviewInputSha256"
+
+# Keys of the ``start`` payload. The runner state file shares every key but
+# ``START_STATE_PATH`` and ``CHANGED_FILES_KEY``; ``START_RUN_TOKEN`` is also the key
+# under which ``spx journal open`` prints the token the payload relays.
+START_RUN_TOKEN = "runToken"
+START_STATE_PATH = "statePath"
+START_DIFF_PATH = "diffPath"
+START_MANIFEST_PATH = "manifestPath"
+START_GENERATED_EXTENTS = "generatedExtents"
+START_RENAMES = "renames"
+# Whether the generated-sources declaration changed: a boolean in the ``start``
+# payload and the runner state, the declaration's path in the review record.
+DECLARATION_CHANGED_KEY = "generatedDeclarationChanged"
+STATE_METADATA = "metadata"
+
+# Keys of the review record the run-completed event's data carries.
+REVIEW_KEY = "review"
+REVIEW_BLOCKING = "blocking"
+REVIEW_DEBT = "debt"
+REVIEW_OVERALL = "overall"
+REVIEW_UNREAD = "unread"
+REVIEW_SKIPPED_GENERATED = "skippedGenerated"
+REVIEW_RENAMED_UNCHANGED = "renamedUnchanged"
+
 
 def _load_module(name: str, path: pathlib.Path) -> ModuleType:
     cached = sys.modules.get(name)
@@ -173,7 +209,7 @@ def _read_json_file(path: pathlib.Path, *, name: str) -> dict[str, Any]:
 def _manifest_changed_files(
     manifest: dict[str, Any], *, path: pathlib.Path
 ) -> list[str]:
-    sections = manifest.get("sections")
+    sections = manifest.get(compute_diff.MANIFEST_SECTIONS)
     if not isinstance(sections, list):
         raise ValueError(
             f"review manifest {path} key 'sections' must be a JSON array, got "
@@ -189,7 +225,7 @@ def _manifest_changed_files(
                 f"JSON object, got {type(section).__name__}. Start a new run "
                 "with `review_run.py start` to regenerate the manifest."
             )
-        files = section.get("files")
+        files = section.get(compute_diff.MANIFEST_SECTION_FILES)
         if not isinstance(files, list):
             raise ValueError(
                 f"review manifest {path} sections[{section_index}] key 'files' "
@@ -367,14 +403,18 @@ def _metadata_from_manifest(
 ) -> dict[str, Any]:
     repo = pathlib.Path.cwd()
     manifest = _read_json_file(manifest_path, name=_MANIFEST_NAME)
-    base_ref = _require_manifest_str(manifest, "base_ref", path=manifest_path)
-    head_ref = _require_manifest_str(manifest, "head_ref", path=manifest_path)
+    base_ref = _require_manifest_str(
+        manifest, compute_diff.MANIFEST_BASE_REF, path=manifest_path
+    )
+    head_ref = _require_manifest_str(
+        manifest, compute_diff.MANIFEST_HEAD_REF, path=manifest_path
+    )
     scope = {
-        "baseRef": base_ref,
-        "headRef": head_ref,
-        "changedFiles": _manifest_changed_files(manifest, path=manifest_path),
-        "reviewInputSha256": _require_manifest_str(
-            manifest, "diff_sha256", path=manifest_path
+        SCOPE_BASE_REF: base_ref,
+        SCOPE_HEAD_REF: head_ref,
+        CHANGED_FILES_KEY: _manifest_changed_files(manifest, path=manifest_path),
+        SCOPE_REVIEW_INPUT_SHA256: _require_manifest_str(
+            manifest, compute_diff.MANIFEST_DIFF_SHA256, path=manifest_path
         ),
     }
     branch_name = _branch_identity(repo)
@@ -457,7 +497,7 @@ def _append_event(
     run_token: str, event: dict[str, object], *, journal_env: dict[str, str]
 ) -> int:
     result = _run_journal(
-        "append",
+        JOURNAL_APPEND,
         "--type",
         _REVIEW_TYPE,
         "--run",
@@ -472,25 +512,38 @@ def _append_event(
 
 
 def _state_path(scratch_dir: pathlib.Path) -> pathlib.Path:
-    return scratch_dir / _STATE_FILENAME
+    """The state file inside `scratch_dir`, confined to the temporary-file root.
+
+    The scratch directory is one `start` created under the temporary-file
+    root. The path is normalized and checked against that root before any
+    write, so neither a value read out of a file nor a crafted directory name
+    chooses a destination outside it.
+    """
+    temp_root = os.path.realpath(tempfile.gettempdir())
+    candidate = os.path.normpath(
+        os.path.join(os.path.realpath(scratch_dir), _STATE_FILENAME)
+    )
+    if not candidate.startswith(temp_root + os.sep):
+        raise ValueError(
+            f"review runner state path {candidate} lies outside the temporary "
+            f"root {temp_root}. Start a new run with `review_run.py start`, "
+            "which creates its scratch directory under that root."
+        )
+    return pathlib.Path(candidate)
 
 
 def _write_state(state: dict[str, object], scratch_dir: pathlib.Path) -> pathlib.Path:
-    """Write the run state into the scratch directory `start` created.
-
-    The destination comes from the directory the runner itself created, never
-    from a value read out of a file, so no file content chooses the write path.
-    """
+    """Write the run state into the scratch directory `start` created."""
     path = _state_path(scratch_dir)
-    path.write_text(
-        json.dumps(state, sort_keys=True, indent=2) + "\n", encoding="utf-8"
-    )
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(state, handle, sort_keys=True, indent=2)
+        handle.write("\n")
     return path
 
 
 def _read_state(path: pathlib.Path) -> dict[str, Any]:
     state = _read_json_file(path, name=_STATE_NAME)
-    run_token = state.get("runToken")
+    run_token = state.get(START_RUN_TOKEN)
     if not isinstance(run_token, str) or run_token == "":
         raise ValueError(
             f"review runner state {path} key 'runToken' must be a non-empty "
@@ -498,7 +551,7 @@ def _read_state(path: pathlib.Path) -> dict[str, Any]:
             f"{', '.join(sorted(state))}. Pass the statePath that "
             "`review_run.py start` printed, or start a new run."
         )
-    metadata = state.get("metadata")
+    metadata = state.get(STATE_METADATA)
     if not isinstance(metadata, dict):
         raise ValueError(
             f"review runner state {path} key 'metadata' must be a JSON "
@@ -587,21 +640,21 @@ def _completed_event(
     event = jp.run_completed_event(run, status=status, now=completed_at)
     data = event.get("data")
     if isinstance(data, dict):
-        data["review"] = {
-            "blocking": _finding_counts(prefix)["blocking"],
-            "debt": _finding_counts(prefix)["debt"],
-            "overall": str(overall),
+        counts = _finding_counts(prefix)
+        review: dict[str, object] = {
+            REVIEW_BLOCKING: counts[REVIEW_BLOCKING],
+            REVIEW_DEBT: counts[REVIEW_DEBT],
+            REVIEW_OVERALL: str(overall),
         }
         if unread:
-            data["review"]["unread"] = list(unread)
+            review[REVIEW_UNREAD] = list(unread)
         if declaration_changed:
-            data["review"]["generatedDeclarationChanged"] = str(
-                compute_diff.GENERATED_SOURCES_PATH
-            )
+            review[DECLARATION_CHANGED_KEY] = str(compute_diff.GENERATED_SOURCES_PATH)
         if skipped_generated:
-            data["review"]["skippedGenerated"] = skipped_generated
+            review[REVIEW_SKIPPED_GENERATED] = skipped_generated
         if renamed_unchanged:
-            data["review"]["renamedUnchanged"] = renamed_unchanged
+            review[REVIEW_RENAMED_UNCHANGED] = renamed_unchanged
+        data[REVIEW_KEY] = review
     return event
 
 
@@ -613,7 +666,9 @@ def _generated_file_entries(
     A relation flagged for a changed declaration exempts no file.
     """
     entries: list[dict[str, object]] = []
-    for extent in _record_list(state, "generatedExtents", path=path, name=_STATE_NAME):
+    for extent in _record_list(
+        state, START_GENERATED_EXTENTS, path=path, name=_STATE_NAME
+    ):
         if extent.get("flagged_reason"):
             continue
         files = extent.get("files")
@@ -645,7 +700,7 @@ def _unchanged_rename_entries(
 ) -> list[dict[str, object]]:
     """One entry per rename whose content is unchanged, in path order."""
     entries: list[dict[str, object]] = []
-    for record in _record_list(state, "renames", path=path, name=_STATE_NAME):
+    for record in _record_list(state, START_RENAMES, path=path, name=_STATE_NAME):
         renamed = record.get("path")
         former = record.get("former_path")
         if not isinstance(renamed, str) or not renamed or not isinstance(former, str):
@@ -711,7 +766,7 @@ def _expected_scope_units(metadata: dict[str, Any]) -> set[str] | str:
             f"{', '.join(sorted(metadata))}. The state file is damaged; "
             "start a new run with `review_run.py start`."
         )
-    changed_files = scope.get("changedFiles")
+    changed_files = scope.get(CHANGED_FILES_KEY)
     if not isinstance(changed_files, list) or not all(
         isinstance(item, str) and item for item in changed_files
     ):
@@ -762,7 +817,7 @@ def _scope_unit_delta_message(
 
 
 def _finding_counts(events: list[dict[str, object]]) -> dict[str, int]:
-    counts = {"blocking": 0, "debt": 0}
+    counts = {REVIEW_BLOCKING: 0, REVIEW_DEBT: 0}
     for event in events:
         if event.get("type") != jp.FINDING_REPORTED:
             continue
@@ -770,9 +825,9 @@ def _finding_counts(events: list[dict[str, object]]) -> dict[str, int]:
         if not isinstance(data, dict):
             continue
         if data.get("severity") == jp.Severity.REJECT:
-            counts["blocking"] += 1
+            counts[REVIEW_BLOCKING] += 1
         if data.get("severity") == jp.Severity.WARNING:
-            counts["debt"] += 1
+            counts[REVIEW_DEBT] += 1
     return counts
 
 
@@ -828,7 +883,7 @@ def _start(args: argparse.Namespace) -> int:
             head_ref=head_ref,
             bundle_dir=scratch_dir,
         )
-        manifest_path = pathlib.Path(str(summary["manifest_path"]))
+        manifest_path = pathlib.Path(str(summary[compute_diff.SUMMARY_MANIFEST_PATH]))
         metadata = _metadata_from_manifest(
             manifest_path=manifest_path,
             started_at=started_at,
@@ -836,11 +891,13 @@ def _start(args: argparse.Namespace) -> int:
         )
         journal_env = _journal_env_from_metadata(metadata)
         code, opened, _raw = _journal_json(
-            "open", "--type", _REVIEW_TYPE, journal_env=journal_env
+            JOURNAL_OPEN, "--type", _REVIEW_TYPE, journal_env=journal_env
         )
         if code != 0:
             return code
-        if not isinstance(opened, dict) or not isinstance(opened.get("runToken"), str):
+        if not isinstance(opened, dict) or not isinstance(
+            opened.get(START_RUN_TOKEN), str
+        ):
             sys.stderr.write(
                 "`spx journal open --type review` must print a JSON object "
                 "with a string 'runToken', got "
@@ -848,7 +905,7 @@ def _start(args: argparse.Namespace) -> int:
                 "journal open` and rerun `review_run.py start`.\n"
             )
             return 1
-        run_token = str(opened["runToken"])
+        run_token = str(opened[START_RUN_TOKEN])
         event = jp.scope_entered_event(
             jp.run_from_metadata(jp.run_metadata_from_json(json.dumps(metadata))),
             now=started_at,
@@ -858,34 +915,43 @@ def _start(args: argparse.Namespace) -> int:
             return code
         manifest = _read_json_file(manifest_path, name=_MANIFEST_NAME)
         generated_extents = _record_list(
-            manifest, "generated_extents", path=manifest_path, name=_MANIFEST_NAME
+            manifest,
+            compute_diff.MANIFEST_GENERATED_EXTENTS,
+            path=manifest_path,
+            name=_MANIFEST_NAME,
         )
         renames = _record_list(
-            manifest, "renames", path=manifest_path, name=_MANIFEST_NAME
+            manifest,
+            compute_diff.MANIFEST_RENAMES,
+            path=manifest_path,
+            name=_MANIFEST_NAME,
         )
-        declaration_changed = manifest.get("generated_declaration_changed") is True
+        declaration_changed = (
+            manifest.get(compute_diff.MANIFEST_GENERATED_DECLARATION_CHANGED) is True
+        )
+        diff_path = str(summary[compute_diff.SUMMARY_DIFF_PATH])
         state: dict[str, object] = {
-            "runToken": run_token,
+            START_RUN_TOKEN: run_token,
             "startedAt": started_at,
             "scratchDir": str(scratch_dir),
-            "diffPath": str(summary["diff_path"]),
-            "manifestPath": str(manifest_path),
-            "metadata": metadata,
+            START_DIFF_PATH: diff_path,
+            START_MANIFEST_PATH: str(manifest_path),
+            STATE_METADATA: metadata,
             "journalEnv": journal_env,
-            "generatedExtents": generated_extents,
-            "generatedDeclarationChanged": declaration_changed,
-            "renames": renames,
+            START_GENERATED_EXTENTS: generated_extents,
+            DECLARATION_CHANGED_KEY: declaration_changed,
+            START_RENAMES: renames,
         }
         state_path = _write_state(state, scratch_dir)
         output = {
-            "runToken": run_token,
-            "statePath": str(state_path),
-            "diffPath": str(summary["diff_path"]),
-            "manifestPath": str(manifest_path),
-            "changedFiles": _manifest_changed_files(manifest, path=manifest_path),
-            "generatedExtents": generated_extents,
-            "generatedDeclarationChanged": declaration_changed,
-            "renames": renames,
+            START_RUN_TOKEN: run_token,
+            START_STATE_PATH: str(state_path),
+            START_DIFF_PATH: diff_path,
+            START_MANIFEST_PATH: str(manifest_path),
+            CHANGED_FILES_KEY: _manifest_changed_files(manifest, path=manifest_path),
+            START_GENERATED_EXTENTS: generated_extents,
+            DECLARATION_CHANGED_KEY: declaration_changed,
+            START_RENAMES: renames,
         }
         json.dump(output, sys.stdout, sort_keys=True)
         sys.stdout.write("\n")
@@ -921,7 +987,7 @@ def _append_scope(args: argparse.Namespace) -> int:
             "one with `review_run.py start`.\n"
         )
         return 1
-    code = _append_event(str(state["runToken"]), event, journal_env=journal_env)
+    code = _append_event(str(state[START_RUN_TOKEN]), event, journal_env=journal_env)
     if code != 0:
         return code
     json.dump({"appended": "scope", "unit": args.unit}, sys.stdout, sort_keys=True)
@@ -941,7 +1007,7 @@ def _append_finding(args: argparse.Namespace) -> int:
             "one with `review_run.py start`.\n"
         )
         return 1
-    code = _append_event(str(state["runToken"]), event, journal_env=journal_env)
+    code = _append_event(str(state[START_RUN_TOKEN]), event, journal_env=journal_env)
     if code != 0:
         return code
     json.dump({"appended": "finding"}, sys.stdout, sort_keys=True)
@@ -970,9 +1036,9 @@ def _finish(args: argparse.Namespace) -> int:
     try:
         state = _read_state(args.state)
         journal_env = _journal_env_from_state(state, path=args.state)
-        run_token = str(state["runToken"])
+        run_token = str(state[START_RUN_TOKEN])
         code, prefix_value, _raw = _journal_json(
-            "read",
+            JOURNAL_READ,
             "--type",
             _REVIEW_TYPE,
             "--run",
@@ -1003,26 +1069,31 @@ def _finish(args: argparse.Namespace) -> int:
         ]
         exempt = skipped_files | {str(entry["file"]) for entry in renamed_unchanged}
         coverage_error = _scope_coverage_error(
-            metadata=state["metadata"], prefix=prefix, unread=unread, exempt=exempt
+            metadata=state[STATE_METADATA], prefix=prefix, unread=unread, exempt=exempt
         )
         if coverage_error is not None:
             sys.stderr.write(f"{coverage_error}\n")
             return 1
         completed_at = _utc_now()
         event = _completed_event(
-            metadata=state["metadata"],
+            metadata=state[STATE_METADATA],
             prefix=prefix,
             completed_at=completed_at,
             unread=unread,
             skipped_generated=skipped_generated,
             renamed_unchanged=renamed_unchanged,
-            declaration_changed=state.get("generatedDeclarationChanged") is True,
+            declaration_changed=state.get(DECLARATION_CHANGED_KEY) is True,
         )
         code = _append_event(run_token, event, journal_env=journal_env)
         if code != 0:
             return code
         sealed = _run_journal(
-            "seal", "--type", _REVIEW_TYPE, "--run", run_token, journal_env=journal_env
+            JOURNAL_SEAL,
+            "--type",
+            _REVIEW_TYPE,
+            "--run",
+            run_token,
+            journal_env=journal_env,
         )
         failed = _propagate_failure(sealed)
         if failed is not None:

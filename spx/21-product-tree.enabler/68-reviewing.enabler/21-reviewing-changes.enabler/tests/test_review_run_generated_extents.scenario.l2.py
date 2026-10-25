@@ -31,6 +31,7 @@ from outcomeeng_testing.harnesses.reviewing_changes_runs import (
     jp,
     nodes_mentioning,
     render_generated_sources,
+    review_run,
     run_completed_event,
     run_state_listing,
     scope_advanced_units,
@@ -67,7 +68,9 @@ class TestGeneratedExtentScenarios:
         for path in extent_paths:
             assert nodes_mentioning(run_state_listing(declared), path)
             assert not nodes_mentioning(run_state_listing(undeclared), path)
-        assert sorted(undeclared.start_payload["changedFiles"]) == sorted(changed)
+        assert sorted(undeclared.start_payload[review_run.CHANGED_FILES_KEY]) == sorted(
+            changed
+        )
 
         finished = finish_changeset_review(undeclared, scope=case.ordinary)
         assert finished.finished.returncode != 0
@@ -93,7 +96,9 @@ class TestGeneratedExtentScenarios:
         assert finished.finished.returncode == 0, finished.finished.stderr
         assert finished.sealed is True
         completed = run_completed_event(finished.events)
-        assert completed["data"]["status"] == str(jp.JournalRunStatus.APPROVED)
+        assert completed[jp.EVENT_DATA_FIELD][jp.RUN_STATE_STATUS] == str(
+            jp.JournalRunStatus.APPROVED
+        )
         advanced = scope_advanced_units(finished.events)
         for path in extent_paths:
             assert path not in advanced

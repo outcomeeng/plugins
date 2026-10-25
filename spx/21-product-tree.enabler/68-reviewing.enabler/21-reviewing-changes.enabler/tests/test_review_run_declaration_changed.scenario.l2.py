@@ -24,21 +24,20 @@ from outcomeeng_testing.generators.reviewing_changes_runs import (
     single_relation_case,
 )
 from outcomeeng_testing.harnesses.reviewing_changes_runs import (
-    COMPLETED_REVIEW_KEY,
-    DECLARATION_CHANGED_KEY,
-    GENERATED_SOURCES_PATH,
-    SKIPPED_GENERATED_KEY,
     build_changeset_repo,
+    compute_diff,
     edited_declaration,
     finish_changeset_review,
+    jp,
     nodes_mentioning,
     render_generated_sources,
+    review_run,
     run_completed_event,
     run_state_listing,
     start_changeset_review,
 )
 
-DECLARATION = str(GENERATED_SOURCES_PATH)
+DECLARATION = str(compute_diff.GENERATED_SOURCES_PATH)
 
 
 class TestChangedDeclarationScenarios:
@@ -69,8 +68,8 @@ class TestChangedDeclarationScenarios:
         )
 
         assert DECLARATION in changed_run.start_payload["changedFiles"]
-        assert changed_run.start_payload[DECLARATION_CHANGED_KEY] is True
-        assert control_run.start_payload[DECLARATION_CHANGED_KEY] is False
+        assert changed_run.start_payload[review_run.DECLARATION_CHANGED_KEY] is True
+        assert control_run.start_payload[review_run.DECLARATION_CHANGED_KEY] is False
         for relation in case.relations:
             assert nodes_mentioning(
                 run_state_listing(changed_run), relation.regenerate, DECLARATION
@@ -108,9 +107,11 @@ class TestChangedDeclarationScenarios:
         )
 
         assert examined.finished.returncode == 0, examined.finished.stderr
-        review = run_completed_event(examined.events)["data"][COMPLETED_REVIEW_KEY]
-        assert review[DECLARATION_CHANGED_KEY] == DECLARATION
-        assert not review.get(SKIPPED_GENERATED_KEY)
+        review = run_completed_event(examined.events)[jp.EVENT_DATA_FIELD][
+            review_run.REVIEW_KEY
+        ]
+        assert review[review_run.DECLARATION_CHANGED_KEY] == DECLARATION
+        assert not review.get(review_run.REVIEW_SKIPPED_GENERATED)
 
         control_repo = tmp_path / "control-repo"
         control_base = build_changeset_repo(
@@ -124,8 +125,8 @@ class TestChangedDeclarationScenarios:
         control = finish_changeset_review(control_run, scope=case.ordinary)
 
         assert control.finished.returncode == 0, control.finished.stderr
-        control_review = run_completed_event(control.events)["data"][
-            COMPLETED_REVIEW_KEY
+        control_review = run_completed_event(control.events)[jp.EVENT_DATA_FIELD][
+            review_run.REVIEW_KEY
         ]
-        assert not control_review.get(DECLARATION_CHANGED_KEY)
-        assert control_review[SKIPPED_GENERATED_KEY]
+        assert not control_review.get(review_run.DECLARATION_CHANGED_KEY)
+        assert control_review[review_run.REVIEW_SKIPPED_GENERATED]

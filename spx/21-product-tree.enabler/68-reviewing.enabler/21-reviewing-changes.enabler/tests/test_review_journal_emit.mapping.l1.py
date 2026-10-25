@@ -22,8 +22,10 @@ from outcomeeng_testing.harnesses.journal_projection import (
     load_journal_projection_module,
 )
 from outcomeeng_testing.harnesses.reviewing_changes import (
+    load_compute_diff_module,
     load_journal_emit_module,
     load_review_result_module,
+    load_review_run_module,
     make_finding_dict,
     run_journal_emit_in_process,
 )
@@ -31,6 +33,8 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
 je = load_journal_emit_module()
 jp = load_journal_projection_module()
 review_result = load_review_result_module()
+review_run = load_review_run_module()
+compute_diff = load_compute_diff_module()
 
 NOW = "2026-06-23T00:00:06Z"
 COMPLETED_AT = "2026-06-23T00:00:05Z"
@@ -101,9 +105,9 @@ def test_adapter_maps_review_severity_to_projection(
         _finding(severity=severity, identifier="F-001"), now=NOW, attempt=1
     )
 
-    assert event["type"] == jp.FINDING_REPORTED
-    assert event["data"]["id"] == "F-001"
-    assert event["data"]["severity"] == expected_severity
+    assert event[jp.EVENT_TYPE_FIELD] == jp.FINDING_REPORTED
+    assert event[jp.EVENT_DATA_FIELD]["id"] == "F-001"
+    assert event[jp.EVENT_DATA_FIELD]["severity"] == expected_severity
     assert jp.compute_overall([event]) == expected_overall
 
 
@@ -112,9 +116,9 @@ def test_adapter_terminal_event_carries_core_run_state_identity() -> None:
     event = je.run_completed_event(
         metadata, [], completed_at=COMPLETED_AT, now=NOW, attempt=1
     )
-    data = event["data"]
+    data = event[jp.EVENT_DATA_FIELD]
 
-    assert event["type"] == jp.RUN_COMPLETED
+    assert event[jp.EVENT_TYPE_FIELD] == jp.RUN_COMPLETED
     assert data[jp.RUN_STATE_BRANCH_NAME] == metadata.branch_name
     assert data[jp.RUN_STATE_BRANCH_SLUG] == metadata.branch_slug
     assert data[jp.RUN_STATE_TARGET_KIND] == jp.JournalTargetKind.BRANCH
@@ -151,7 +155,7 @@ def test_adapter_terminal_event_carries_pull_request_identity() -> None:
     event = je.run_completed_event(
         metadata, [], completed_at=COMPLETED_AT, now=NOW, attempt=1
     )
-    data = event["data"]
+    data = event[jp.EVENT_DATA_FIELD]
 
     assert data[jp.RUN_STATE_TARGET_KIND] == jp.JournalTargetKind.PULL_REQUEST
     assert data[jp.RUN_STATE_PULL_REQUEST_NUMBER] == 123
@@ -209,24 +213,24 @@ def _write_review_manifest(
     diff_sha256: str = "a" * 64,
 ) -> pathlib.Path:
     manifest = {
-        "schema_version": je.MANIFEST_SCHEMA_VERSION,
-        "base_ref": base_ref,
-        "head_ref": head_ref,
-        "diff_path": "diff.md",
-        "diff_sha256": diff_sha256,
-        "diff_bytes": 1,
-        "sections": [
+        compute_diff.MANIFEST_SCHEMA_VERSION_KEY: je.MANIFEST_SCHEMA_VERSION,
+        compute_diff.MANIFEST_BASE_REF: base_ref,
+        compute_diff.MANIFEST_HEAD_REF: head_ref,
+        compute_diff.MANIFEST_DIFF_PATH: compute_diff.BUNDLE_DIFF_FILENAME,
+        compute_diff.MANIFEST_DIFF_SHA256: diff_sha256,
+        compute_diff.MANIFEST_DIFF_BYTES: 1,
+        compute_diff.MANIFEST_SECTIONS: [
             {
-                "title": "Committed diff",
-                "files": files or ["README.md"],
-                "start_line": 1,
-                "line_count": 1,
-                "byte_start": 0,
-                "byte_length": 1,
+                compute_diff.MANIFEST_SECTION_TITLE: compute_diff.DIFF_SECTION_COMMITTED,
+                compute_diff.MANIFEST_SECTION_FILES: files or ["README.md"],
+                compute_diff.MANIFEST_SECTION_START_LINE: 1,
+                compute_diff.MANIFEST_SECTION_LINE_COUNT: 1,
+                compute_diff.MANIFEST_SECTION_BYTE_START: 0,
+                compute_diff.MANIFEST_SECTION_BYTE_LENGTH: 1,
             }
         ],
     }
-    path = root / "manifest.json"
+    path = root / compute_diff.BUNDLE_MANIFEST_FILENAME
     path.write_text(json.dumps(manifest), encoding="utf-8")
     return path
 
@@ -344,8 +348,8 @@ def test_metadata_scope_hash_includes_changed_file_set(
         completed_at="2026-06-23T00:00:05Z",
     )
 
-    assert first[jp.RUN_STATE_SCOPE]["changedFiles"] == ["README.md"]
-    assert second[jp.RUN_STATE_SCOPE]["changedFiles"] == [
+    assert first[jp.RUN_STATE_SCOPE][review_run.CHANGED_FILES_KEY] == ["README.md"]
+    assert second[jp.RUN_STATE_SCOPE][review_run.CHANGED_FILES_KEY] == [
         "README.md",
         "src/plugins/product-tree/skills/review-changes/SKILL.md",
     ]
@@ -373,11 +377,13 @@ def test_metadata_scope_uses_computed_review_manifest(
         review_manifest_path=manifest_path,
     )
 
-    assert metadata[jp.RUN_STATE_SCOPE]["changedFiles"] == [
+    assert metadata[jp.RUN_STATE_SCOPE][review_run.CHANGED_FILES_KEY] == [
         "src/plugins/product-tree/skills/review-changes/SKILL.md",
         "README.md",
     ]
-    assert metadata[jp.RUN_STATE_SCOPE]["reviewInputSha256"] == "b" * 64
+    assert (
+        metadata[jp.RUN_STATE_SCOPE][review_run.SCOPE_REVIEW_INPUT_SHA256] == "b" * 64
+    )
     assert metadata[jp.RUN_STATE_BASE_REF] == "origin/main"
     assert metadata[jp.RUN_STATE_HEAD_SHA] == "HEAD:sha"
 
@@ -449,10 +455,10 @@ def test_metadata_scope_hash_includes_full_review_input(
         completed_at="2026-06-23T00:00:05Z",
     )
 
-    assert first[jp.RUN_STATE_SCOPE]["changedFiles"] == ["README.md"]
+    assert first[jp.RUN_STATE_SCOPE][review_run.CHANGED_FILES_KEY] == ["README.md"]
     assert (
-        first[jp.RUN_STATE_SCOPE]["reviewInputSha256"]
-        != second[jp.RUN_STATE_SCOPE]["reviewInputSha256"]
+        first[jp.RUN_STATE_SCOPE][review_run.SCOPE_REVIEW_INPUT_SHA256]
+        != second[jp.RUN_STATE_SCOPE][review_run.SCOPE_REVIEW_INPUT_SHA256]
     )
     assert first[jp.RUN_STATE_SCOPE_HASH] != second[jp.RUN_STATE_SCOPE_HASH]
 
@@ -492,9 +498,9 @@ def test_metadata_cli_emits_env_derived_run_identity(
     assert metadata[jp.RUN_STATE_BASE_REF] == "origin/main"
     assert metadata[jp.RUN_STATE_BASE_SHA] == "origin/main:sha"
     assert metadata[jp.RUN_STATE_CONFIG_DIGEST] == "cfg-abc123"
-    assert metadata[jp.RUN_STATE_SCOPE]["baseRef"] == "origin/main"
-    assert metadata[jp.RUN_STATE_SCOPE]["headRef"] == "feature/head"
-    assert metadata[jp.RUN_STATE_SCOPE]["changedFiles"] == ["README.md"]
+    assert metadata[jp.RUN_STATE_SCOPE][review_run.SCOPE_BASE_REF] == "origin/main"
+    assert metadata[jp.RUN_STATE_SCOPE][review_run.SCOPE_HEAD_REF] == "feature/head"
+    assert metadata[jp.RUN_STATE_SCOPE][review_run.CHANGED_FILES_KEY] == ["README.md"]
     assert metadata[jp.RUN_STATE_STARTED_AT] == "2026-06-23T00:00:00Z"
     assert metadata[jp.RUN_STATE_COMPLETED_AT] == "2026-06-23T00:00:05Z"
 
@@ -570,9 +576,9 @@ def test_scope_entered_cli_emits_identity_event() -> None:
     )
     assert result.returncode == 0, result.stderr
     event = json.loads(result.stdout)
-    assert event["type"] == jp.SCOPE_ENTERED
-    assert event["data"]["target"] == "working-diff"
-    assert event["data"][jp.RUN_STATE_HEAD_SHA] == "1" * 40
+    assert event[jp.EVENT_TYPE_FIELD] == jp.SCOPE_ENTERED
+    assert event[jp.EVENT_DATA_FIELD]["target"] == "working-diff"
+    assert event[jp.EVENT_DATA_FIELD][jp.RUN_STATE_HEAD_SHA] == "1" * 40
 
 
 def test_scope_advanced_cli_names_the_unit() -> None:
@@ -581,8 +587,8 @@ def test_scope_advanced_cli_names_the_unit() -> None:
     )
     assert result.returncode == 0, result.stderr
     event = json.loads(result.stdout)
-    assert event["type"] == jp.SCOPE_ADVANCED
-    assert event["data"]["unit"] == "README.md"
+    assert event[jp.EVENT_TYPE_FIELD] == jp.SCOPE_ADVANCED
+    assert event[jp.EVENT_DATA_FIELD]["unit"] == "README.md"
 
 
 # finding-reported is the per-finding validity gate: a conforming finding maps
@@ -596,7 +602,7 @@ def test_finding_reported_cli_maps_conforming_finding_to_event() -> None:
     )
     assert result.returncode == 0, result.stderr
     event = json.loads(result.stdout)
-    assert event["type"] == jp.FINDING_REPORTED
+    assert event[jp.EVENT_TYPE_FIELD] == jp.FINDING_REPORTED
 
 
 def test_finding_reported_cli_maps_malformed_finding_to_error_with_no_event() -> None:
@@ -636,8 +642,13 @@ def test_run_completed_cli_reads_prefix_and_sets_completion_time() -> None:
     )
     assert result.returncode == 0, result.stderr
     event = json.loads(result.stdout)
-    assert event["type"] == jp.RUN_COMPLETED
-    assert event["data"][jp.RUN_STATE_STARTED_AT] == metadata[jp.RUN_STATE_STARTED_AT]
-    assert event["data"][jp.RUN_STATE_COMPLETED_AT] == COMPLETED_AT
+    assert event[jp.EVENT_TYPE_FIELD] == jp.RUN_COMPLETED
+    assert (
+        event[jp.EVENT_DATA_FIELD][jp.RUN_STATE_STARTED_AT]
+        == metadata[jp.RUN_STATE_STARTED_AT]
+    )
+    assert event[jp.EVENT_DATA_FIELD][jp.RUN_STATE_COMPLETED_AT] == COMPLETED_AT
     # A blocking finding in the streamed prefix rolls up to a rejected run.
-    assert event["data"][jp.RUN_STATE_STATUS] == jp.JournalRunStatus.REJECTED
+    assert (
+        event[jp.EVENT_DATA_FIELD][jp.RUN_STATE_STATUS] == jp.JournalRunStatus.REJECTED
+    )

@@ -26,6 +26,7 @@ from outcomeeng_testing.harnesses.reviewing_changes_runs import (
     finish_changeset_review,
     jp,
     nodes_mentioning,
+    review_run,
     run_completed_event,
     run_state_listing,
     scope_advanced_units,
@@ -44,7 +45,7 @@ class TestRenameScenarios:
         )
         started = start_changeset_review(tmp_path / "run", repo, base_ref)
 
-        changed = started.start_payload["changedFiles"]
+        changed = started.start_payload[review_run.CHANGED_FILES_KEY]
         assert sorted(changed) == sorted([case.new_path, case.companion_path])
         assert changed.count(case.new_path) == 1
         assert nodes_mentioning(
@@ -62,7 +63,9 @@ class TestRenameScenarios:
             assert path not in advanced
             assert path not in completed_unread(completed)
         assert nodes_mentioning(completed, case.new_path)
-        assert completed["data"]["status"] == str(jp.JournalRunStatus.APPROVED)
+        assert completed[jp.EVENT_DATA_FIELD][jp.RUN_STATE_STATUS] == str(
+            jp.JournalRunStatus.APPROVED
+        )
 
     def test_rename_with_content_changes_needs_scope_or_unread_mark(
         self, tmp_path: pathlib.Path

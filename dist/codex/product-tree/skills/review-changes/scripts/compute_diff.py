@@ -67,6 +67,29 @@ COPY_STATUS_PREFIX = "C"
 UNCHANGED_SIMILARITY = 100
 GENERATED_SOURCES_PATH = pathlib.PurePosixPath("spx/local/generated-sources.toml")
 
+# Keys of the bundle manifest ``write_bundle`` writes.
+MANIFEST_SCHEMA_VERSION_KEY = "schema_version"
+MANIFEST_BASE_REF = "base_ref"
+MANIFEST_HEAD_REF = "head_ref"
+MANIFEST_DIFF_PATH = "diff_path"
+MANIFEST_DIFF_SHA256 = "diff_sha256"
+MANIFEST_DIFF_BYTES = "diff_bytes"
+MANIFEST_SECTIONS = "sections"
+MANIFEST_SECTION_TITLE = "title"
+MANIFEST_SECTION_FILES = "files"
+MANIFEST_SECTION_START_LINE = "start_line"
+MANIFEST_SECTION_LINE_COUNT = "line_count"
+MANIFEST_SECTION_BYTE_START = "byte_start"
+MANIFEST_SECTION_BYTE_LENGTH = "byte_length"
+MANIFEST_RENAMES = "renames"
+MANIFEST_GENERATED_EXTENTS = "generated_extents"
+MANIFEST_GENERATED_DECLARATION_CHANGED = "generated_declaration_changed"
+# Keys of the summary ``write_bundle`` returns and ``main`` prints.
+SUMMARY_DIFF_PATH = "diff_path"
+SUMMARY_MANIFEST_PATH = "manifest_path"
+SUMMARY_DIFF_BYTES = "diff_bytes"
+SUMMARY_SECTION_COUNT = "section_count"
+
 
 @dataclass(frozen=True)
 class ChangedEntry:
@@ -374,26 +397,26 @@ def _manifest_dict(
 ) -> dict[str, object]:
     diff_bytes = diff_text.encode("utf-8")
     return {
-        "schema_version": MANIFEST_SCHEMA_VERSION,
-        "base_ref": base_ref,
-        "head_ref": head_ref,
-        "diff_path": BUNDLE_DIFF_FILENAME,
-        "diff_sha256": hashlib.sha256(diff_bytes).hexdigest(),
-        "diff_bytes": len(diff_bytes),
-        "sections": [
+        MANIFEST_SCHEMA_VERSION_KEY: MANIFEST_SCHEMA_VERSION,
+        MANIFEST_BASE_REF: base_ref,
+        MANIFEST_HEAD_REF: head_ref,
+        MANIFEST_DIFF_PATH: BUNDLE_DIFF_FILENAME,
+        MANIFEST_DIFF_SHA256: hashlib.sha256(diff_bytes).hexdigest(),
+        MANIFEST_DIFF_BYTES: len(diff_bytes),
+        MANIFEST_SECTIONS: [
             {
-                "title": section.title,
-                "files": list(section.files),
-                "start_line": section.start_line,
-                "line_count": section.line_count,
-                "byte_start": section.byte_start,
-                "byte_length": section.byte_length,
+                MANIFEST_SECTION_TITLE: section.title,
+                MANIFEST_SECTION_FILES: list(section.files),
+                MANIFEST_SECTION_START_LINE: section.start_line,
+                MANIFEST_SECTION_LINE_COUNT: section.line_count,
+                MANIFEST_SECTION_BYTE_START: section.byte_start,
+                MANIFEST_SECTION_BYTE_LENGTH: section.byte_length,
             }
             for section in _section_manifests(sections)
         ],
-        "renames": renames,
-        "generated_extents": generated_extents,
-        "generated_declaration_changed": generated_declaration_changed,
+        MANIFEST_RENAMES: renames,
+        MANIFEST_GENERATED_EXTENTS: generated_extents,
+        MANIFEST_GENERATED_DECLARATION_CHANGED: generated_declaration_changed,
     }
 
 
@@ -678,10 +701,10 @@ def write_bundle(
         encoding="utf-8",
     )
     return {
-        "diff_path": str(diff_path),
-        "manifest_path": str(manifest_path),
-        "diff_bytes": manifest["diff_bytes"],
-        "section_count": len(sections),
+        SUMMARY_DIFF_PATH: str(diff_path),
+        SUMMARY_MANIFEST_PATH: str(manifest_path),
+        SUMMARY_DIFF_BYTES: manifest[MANIFEST_DIFF_BYTES],
+        SUMMARY_SECTION_COUNT: len(sections),
     }
 
 

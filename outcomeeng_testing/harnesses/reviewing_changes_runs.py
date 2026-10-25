@@ -31,28 +31,27 @@ from outcomeeng_testing.harnesses.journal_projection import (
 )
 from outcomeeng_testing.harnesses.reviewing_changes import (
     REVIEW_RUN_SCRIPT,
+    load_compute_diff_module,
+    load_review_run_module,
+    read_fake_journal,
     run_git,
     run_script,
     runner_env,
 )
 
-GENERATED_SOURCES_PATH = pathlib.PurePosixPath("spx/local/generated-sources.toml")
+jp = load_journal_projection_module()
+review_run = load_review_run_module()
+compute_diff = load_compute_diff_module()
 # The start payload's keys that name this run's own paths and tokens, which differ between
 # any two runs; the remaining keys carry the run state under comparison.
 START_PAYLOAD_RUN_KEYS = (
-    "runToken",
-    "statePath",
-    "diffPath",
-    "manifestPath",
-    "changedFiles",
+    review_run.START_RUN_TOKEN,
+    review_run.START_STATE_PATH,
+    review_run.START_DIFF_PATH,
+    review_run.START_MANIFEST_PATH,
+    review_run.CHANGED_FILES_KEY,
 )
-MANIFEST_SECTIONS_KEY = "sections"
-COMPLETED_REVIEW_KEY = "review"
-COMPLETED_UNREAD_KEY = "unread"
-DECLARATION_CHANGED_KEY = "generatedDeclarationChanged"
-SKIPPED_GENERATED_KEY = "skippedGenerated"
 EDIT_MARKER_COMMENT = "# declaration edited"
-jp = load_journal_projection_module()
 BASE_BRANCH = "main"
 FEATURE_BRANCH = "feature/x"
 CONTENT_LINE_COUNT = 24
@@ -124,7 +123,7 @@ def build_changeset_repo(
     run_git("init", "-q", "-b", BASE_BRANCH, str(repo), cwd=pathlib.Path.cwd())
     run_git("config", "commit.gpgsign", "false", cwd=repo)
     if declaration is not None:
-        _write(repo, str(GENERATED_SOURCES_PATH), declaration)
+        _write(repo, str(compute_diff.GENERATED_SOURCES_PATH), declaration)
     for path in unchanged_paths:
         _write(repo, path, file_content(path))
     if rename is not None:
@@ -141,11 +140,11 @@ def build_changeset_repo(
     for path in changed_paths:
         _write(repo, path, file_content(path))
     if head_declaration is not None:
-        _write(repo, str(GENERATED_SOURCES_PATH), head_declaration)
+        _write(repo, str(compute_diff.GENERATED_SOURCES_PATH), head_declaration)
     run_git("add", "-A", cwd=repo)
     run_git("commit", "-q", "-m", "branch", cwd=repo)
     if working_tree_declaration is not None:
-        _write(repo, str(GENERATED_SOURCES_PATH), working_tree_declaration)
+        _write(repo, str(compute_diff.GENERATED_SOURCES_PATH), working_tree_declaration)
     return BASE_BRANCH
 
 
@@ -194,8 +193,12 @@ def start_changeset_review(
     if started.returncode != 0:
         raise RuntimeError(f"review_run.py start failed: {started.stderr}")
     payload = json.loads(started.stdout)
-    manifest = json.loads(pathlib.Path(payload["manifestPath"]).read_text("utf-8"))
-    run_state = json.loads(pathlib.Path(payload["statePath"]).read_text("utf-8"))
+    manifest = json.loads(
+        pathlib.Path(payload[review_run.START_MANIFEST_PATH]).read_text("utf-8")
+    )
+    run_state = json.loads(
+        pathlib.Path(payload[review_run.START_STATE_PATH]).read_text("utf-8")
+    )
     return StartedRun(payload, manifest, run_state, env, journal_path, repo, scratch)
 
 
@@ -207,7 +210,7 @@ def finish_changeset_review(
     channel: UnreadChannel = UnreadChannel.ARGUMENTS,
 ) -> FinishedRun:
     """Append scope for ``scope``, then run ``finish`` with ``unread`` over ``channel``."""
-    state_path = started.start_payload["statePath"]
+    state_path = started.start_payload[review_run.START_STATE_PATH]
     for unit in scope:
         scoped = run_script(
             REVIEW_RUN_SCRIPT,
@@ -237,15 +240,15 @@ def finish_changeset_review(
         env=started.env,
         cwd=started.repo,
     )
-    journal = json.loads(started.journal_path.read_text(encoding="utf-8"))
-    return FinishedRun(started, finished, journal["events"], bool(journal["sealed"]))
+    journal = read_fake_journal(started.journal_path)
+    return FinishedRun(started, finished, journal.events, journal.sealed)
 
 
 def events_of_type(
     events: Iterable[Mapping[str, Any]], event_type: str
 ) -> list[Mapping[str, Any]]:
     """Return the events whose ``type`` is ``event_type``, in order."""
-    return [event for event in events if event.get("type") == event_type]
+    return [event for event in events if event.get(jp.EVENT_TYPE_FIELD) == event_type]
 
 
 def without_keys(document: Mapping[str, Any], *keys: str) -> dict[str, Any]:
@@ -265,14 +268,15 @@ def run_completed_event(events: Iterable[Mapping[str, Any]]) -> Mapping[str, Any
 
 def completed_unread(completed: Mapping[str, Any]) -> list[str]:
     """Return the files a run-completed event records as unread."""
-    review = completed["data"][COMPLETED_REVIEW_KEY]
-    return list(review.get(COMPLETED_UNREAD_KEY, []))
+    review = completed[jp.EVENT_DATA_FIELD][review_run.REVIEW_KEY]
+    return list(review.get(review_run.REVIEW_UNREAD, []))
 
 
 def scope_advanced_units(events: Iterable[Mapping[str, Any]]) -> list[str]:
     """Return the unit of each scope-advanced event, in order."""
     return [
-        event["data"]["unit"] for event in events_of_type(events, jp.SCOPE_ADVANCED)
+        event[jp.EVENT_DATA_FIELD]["unit"]
+        for event in events_of_type(events, jp.SCOPE_ADVANCED)
     ]
 
 

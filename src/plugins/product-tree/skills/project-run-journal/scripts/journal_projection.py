@@ -61,7 +61,18 @@ RUN_STATE_FIELDS: tuple[str, ...] = (
 # The channel append-input string fields the producer must supply with
 # non-empty values (the channel itself assigns ``specversion``, ``streamid``,
 # ``seq``, and ``runid``). Named here so the contract has one source.
-EVENT_INPUT_STRING_FIELDS: tuple[str, ...] = ("id", "source", "type", "time")
+EVENT_ID_FIELD = "id"
+EVENT_SOURCE_FIELD = "source"
+EVENT_TYPE_FIELD = "type"
+EVENT_TIME_FIELD = "time"
+EVENT_ATTEMPT_FIELD = "attempt"
+EVENT_DATA_FIELD = "data"
+EVENT_INPUT_STRING_FIELDS: tuple[str, ...] = (
+    EVENT_ID_FIELD,
+    EVENT_SOURCE_FIELD,
+    EVENT_TYPE_FIELD,
+    EVENT_TIME_FIELD,
+)
 
 
 class Severity(StrEnum):
@@ -349,12 +360,12 @@ def _event(event_type: str, data: dict, *, now: str, attempt: int) -> dict:
     attributes.
     """
     return {
-        "id": event_type,
-        "source": EVENT_SOURCE,
-        "type": event_type,
-        "time": now,
-        "attempt": attempt,
-        "data": data,
+        EVENT_ID_FIELD: event_type,
+        EVENT_SOURCE_FIELD: EVENT_SOURCE,
+        EVENT_TYPE_FIELD: event_type,
+        EVENT_TIME_FIELD: now,
+        EVENT_ATTEMPT_FIELD: attempt,
+        EVENT_DATA_FIELD: data,
     }
 
 
@@ -527,9 +538,9 @@ def compute_overall(events: list[dict]) -> Outcome:
     other event kinds the prefix carries.
     """
     severities = [
-        event.get("data", {}).get("severity")
+        event.get(EVENT_DATA_FIELD, {}).get("severity")
         for event in events
-        if event.get("type") == FINDING_REPORTED
+        if event.get(EVENT_TYPE_FIELD) == FINDING_REPORTED
     ]
     if any(severity == Severity.REJECT.value for severity in severities):
         return Outcome.REJECTED
@@ -546,8 +557,8 @@ def render_surface(events: list[dict]) -> str:
     """
     lines: list[str] = []
     for event in events:
-        data = event.get("data", {})
-        event_type = event.get("type")
+        data = event.get(EVENT_DATA_FIELD, {})
+        event_type = event.get(EVENT_TYPE_FIELD)
         if event_type == SCOPE_ENTERED:
             lines.append(f"# Verification run: {data.get('target', '')}")
         elif event_type == SCOPE_ADVANCED:

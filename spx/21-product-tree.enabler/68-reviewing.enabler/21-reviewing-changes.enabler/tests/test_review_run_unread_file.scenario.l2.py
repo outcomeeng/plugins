@@ -18,6 +18,7 @@ from outcomeeng_testing.harnesses.reviewing_changes_runs import (
     completed_unread,
     finish_changeset_review,
     jp,
+    review_run,
     run_completed_event,
     scope_advanced_units,
     start_changeset_review,
@@ -52,6 +53,11 @@ def test_unread_file_marks_each_listed_path_exactly_as_unread_arguments_do(
     file_completed = run_completed_event(by_file.events)
     assert completed_unread(file_completed) == sorted(case.unread)
     assert completed_unread(file_completed) == completed_unread(arguments_completed)
-    assert file_completed["data"]["review"] == arguments_completed["data"]["review"]
-    assert file_completed["data"]["status"] == str(jp.JournalRunStatus.FAILED)
+    assert (
+        file_completed[jp.EVENT_DATA_FIELD][review_run.REVIEW_KEY]
+        == arguments_completed[jp.EVENT_DATA_FIELD][review_run.REVIEW_KEY]
+    )
+    assert file_completed[jp.EVENT_DATA_FIELD][jp.RUN_STATE_STATUS] == str(
+        jp.JournalRunStatus.FAILED
+    )
     assert scope_advanced_units(by_file.events) == [case.read]

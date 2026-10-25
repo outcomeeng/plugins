@@ -25,20 +25,19 @@ from outcomeeng_testing.generators.reviewing_changes_runs import (
     declaration_edit_cases,
 )
 from outcomeeng_testing.harnesses.reviewing_changes_runs import (
-    COMPLETED_REVIEW_KEY,
-    DECLARATION_CHANGED_KEY,
-    GENERATED_SOURCES_PATH,
-    SKIPPED_GENERATED_KEY,
     build_changeset_repo,
+    compute_diff,
     finish_changeset_review,
+    jp,
     nodes_mentioning,
     render_generated_sources,
+    review_run,
     run_completed_event,
     run_state_listing,
     start_changeset_review,
 )
 
-DECLARATION = str(GENERATED_SOURCES_PATH)
+DECLARATION = str(compute_diff.GENERATED_SOURCES_PATH)
 
 
 class TestDeclarationBaseScenarios:
@@ -88,7 +87,9 @@ class TestDeclarationBaseScenarios:
             listing = run_state_listing(started)
 
             assert DECLARATION in started.start_payload["changedFiles"], case.site
-            assert started.start_payload[DECLARATION_CHANGED_KEY] is True, case.site
+            assert started.start_payload[review_run.DECLARATION_CHANGED_KEY] is True, (
+                case.site
+            )
             assert nodes_mentioning(
                 listing, case.base_relation.regenerate, DECLARATION
             ), case.site
@@ -110,6 +111,8 @@ class TestDeclarationBaseScenarios:
             )
 
             assert examined.finished.returncode == 0, examined.finished.stderr
-            review = run_completed_event(examined.events)["data"][COMPLETED_REVIEW_KEY]
-            assert review[DECLARATION_CHANGED_KEY] == DECLARATION, case.site
-            assert not review.get(SKIPPED_GENERATED_KEY), case.site
+            review = run_completed_event(examined.events)[jp.EVENT_DATA_FIELD][
+                review_run.REVIEW_KEY
+            ]
+            assert review[review_run.DECLARATION_CHANGED_KEY] == DECLARATION, case.site
+            assert not review.get(review_run.REVIEW_SKIPPED_GENERATED), case.site

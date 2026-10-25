@@ -268,10 +268,12 @@ def _review_scope(
     changed_files = changeset_scope.expand_diff_range(range_spec, repo=repo)
     review_input = compute_diff.combined_diff(base_ref, head_ref)
     return {
-        "baseRef": base_ref,
-        "headRef": head_ref,
-        "changedFiles": changed_files,
-        "reviewInputSha256": hashlib.sha256(review_input.encode("utf-8")).hexdigest(),
+        review_run.SCOPE_BASE_REF: base_ref,
+        review_run.SCOPE_HEAD_REF: head_ref,
+        review_run.CHANGED_FILES_KEY: changed_files,
+        review_run.SCOPE_REVIEW_INPUT_SHA256: hashlib.sha256(
+            review_input.encode("utf-8")
+        ).hexdigest(),
     }
 
 
@@ -323,7 +325,7 @@ def _require_manifest_str(
 def _manifest_changed_files(
     manifest: dict[str, object], *, path: pathlib.Path
 ) -> list[str]:
-    sections = manifest.get("sections")
+    sections = manifest.get(compute_diff.MANIFEST_SECTIONS)
     if not isinstance(sections, list):
         raise ValueError(
             f"review manifest {path} key 'sections' must be a JSON array, got "
@@ -339,7 +341,7 @@ def _manifest_changed_files(
                 f"JSON object, got {type(section).__name__}. Regenerate the "
                 "manifest with `compute_diff.py --bundle-dir <dir>`."
             )
-        files = section.get("files")
+        files = section.get(compute_diff.MANIFEST_SECTION_FILES)
         if not isinstance(files, list):
             raise ValueError(
                 f"review manifest {path} sections[{section_index}] key 'files' "
@@ -364,11 +366,17 @@ def _manifest_changed_files(
 def _review_scope_from_manifest(manifest_path: pathlib.Path) -> dict[str, object]:
     manifest = _read_review_manifest(manifest_path)
     return {
-        "baseRef": _require_manifest_str(manifest, "base_ref", path=manifest_path),
-        "headRef": _require_manifest_str(manifest, "head_ref", path=manifest_path),
-        "changedFiles": _manifest_changed_files(manifest, path=manifest_path),
-        "reviewInputSha256": _require_manifest_str(
-            manifest, "diff_sha256", path=manifest_path
+        review_run.SCOPE_BASE_REF: _require_manifest_str(
+            manifest, compute_diff.MANIFEST_BASE_REF, path=manifest_path
+        ),
+        review_run.SCOPE_HEAD_REF: _require_manifest_str(
+            manifest, compute_diff.MANIFEST_HEAD_REF, path=manifest_path
+        ),
+        review_run.CHANGED_FILES_KEY: _manifest_changed_files(
+            manifest, path=manifest_path
+        ),
+        review_run.SCOPE_REVIEW_INPUT_SHA256: _require_manifest_str(
+            manifest, compute_diff.MANIFEST_DIFF_SHA256, path=manifest_path
         ),
     }
 
@@ -417,8 +425,8 @@ def metadata_for_worktree(
         scope = _review_scope(base_ref=base_ref, head_ref=head_ref, repo=repo)
     else:
         scope = _review_scope_from_manifest(review_manifest_path)
-        base_ref = str(scope["baseRef"])
-        head_ref = str(scope["headRef"])
+        base_ref = str(scope[review_run.SCOPE_BASE_REF])
+        head_ref = str(scope[review_run.SCOPE_HEAD_REF])
     branch_name = _resolve_branch_name()
     target_kind = _resolve_target_kind()
     pull_request_number = _resolve_pull_request_number(target_kind)

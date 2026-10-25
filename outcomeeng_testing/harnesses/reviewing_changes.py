@@ -43,6 +43,7 @@ import json
 import os
 import pathlib
 import shutil
+import string
 import subprocess
 import sys
 import traceback
@@ -98,6 +99,15 @@ TOKENS_PROVIDER_SCRIPTS_DIR = (
 COMPUTE_DIFF_SCRIPT = SCRIPTS_DIR / "compute_diff.py"
 JOURNAL_EMIT_SCRIPT = SCRIPTS_DIR / "journal_emit.py"
 REVIEW_RUN_SCRIPT = SCRIPTS_DIR / "review_run.py"
+
+# The fake ``spx`` journal: the token it issues at ``open`` and the keys of the file in
+# which it records what the runner asked of it.
+FAKE_RUN_TOKEN = "run-001"
+FAKE_JOURNAL_COMMANDS = "commands"
+FAKE_JOURNAL_EVENTS = "events"
+FAKE_JOURNAL_SEALED = "sealed"
+FAKE_JOURNAL_NAMESPACE = "namespace"
+FAKE_JOURNAL_RUN_TOKEN = "runToken"
 
 WRAPPER_AGENT_PATH = (
     REPO_ROOT / "src" / "plugins" / "product-tree" / "agents" / "changes-reviewer.md"
@@ -374,7 +384,9 @@ def open_scoped_review_run(
     started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
     if started.returncode != 0:
         raise RuntimeError(f"review_run.py start failed: {started.stderr}")
-    state_path = str(json.loads(started.stdout)["statePath"])
+    state_path = str(
+        json.loads(started.stdout)[load_review_run_module().START_STATE_PATH]
+    )
     scoped = run_script(
         REVIEW_RUN_SCRIPT,
         "append-scope",
@@ -437,8 +449,11 @@ def start_review_run_exporting(
     started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
     if started.returncode != 0:
         raise RuntimeError(f"review_run.py start failed: {started.stderr}")
-    state_path = pathlib.Path(json.loads(started.stdout)["statePath"])
-    metadata = json.loads(state_path.read_text(encoding="utf-8"))["metadata"]
+    review_run = load_review_run_module()
+    state_path = pathlib.Path(json.loads(started.stdout)[review_run.START_STATE_PATH])
+    metadata = json.loads(state_path.read_text(encoding="utf-8"))[
+        review_run.STATE_METADATA
+    ]
     return StartedReviewRun(metadata, checked_out_branch, head_commit, exported)
 
 
@@ -467,6 +482,28 @@ def run_script(
     )
 
 
+class FakeJournal(NamedTuple):
+    """What the fake ``spx`` recorded: the verbs issued, the events appended, the run."""
+
+    commands: list[str]
+    events: list[dict[str, Any]]
+    sealed: bool
+    namespace: dict[str, str] | None
+    run_token: str | None
+
+
+def read_fake_journal(journal_path: pathlib.Path) -> FakeJournal:
+    """Return the fake ``spx`` journal file as an observation; it judges nothing."""
+    journal = json.loads(journal_path.read_text(encoding="utf-8"))
+    return FakeJournal(
+        commands=list(journal[FAKE_JOURNAL_COMMANDS]),
+        events=list(journal[FAKE_JOURNAL_EVENTS]),
+        sealed=bool(journal[FAKE_JOURNAL_SEALED]),
+        namespace=journal.get(FAKE_JOURNAL_NAMESPACE),
+        run_token=journal.get(FAKE_JOURNAL_RUN_TOKEN),
+    )
+
+
 def write_fake_spx(bin_dir: pathlib.Path, journal_path: pathlib.Path) -> pathlib.Path:
     """Write a fake ``spx`` executable that enforces journal namespace continuity.
 
@@ -479,7 +516,8 @@ def write_fake_spx(bin_dir: pathlib.Path, journal_path: pathlib.Path) -> pathlib
 
     script = bin_dir / "spx"
     script.write_text(
-        """#!/usr/bin/env python3
+        string.Template(
+            """#!/usr/bin/env python3
 import json
 import os
 import pathlib
@@ -506,7 +544,7 @@ path = pathlib.Path(os.environ["SPX_FAKE_JOURNAL_PATH"])
 if path.is_file():
     state = json.loads(path.read_text(encoding="utf-8"))
 else:
-    state = {"commands": [], "events": [], "sealed": False}
+    state = {$commands: [], $events: [], $sealed: False}
 
 args = sys.argv[1:]
 if len(args) < 2 or args[0] != "journal":
@@ -515,41 +553,49 @@ if len(args) < 2 or args[0] != "journal":
 
 command = args[1]
 current_namespace = namespace()
-state["commands"].append(command)
+state[$commands].append(command)
 if command == "open":
-    state["namespace"] = current_namespace
-    state["runToken"] = "run-001"
+    state[$namespace] = current_namespace
+    state[$run_token_key] = $run_token
     path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps({"runToken": "run-001"}))
-elif option_value(args, "--run") != state.get("runToken"):
+    print(json.dumps({$run_token_key: $run_token}))
+elif option_value(args, "--run") != state.get($run_token_key):
     path.write_text(json.dumps(state), encoding="utf-8")
     sys.stderr.write("journal run not found; open the run before operating on it\\n")
     raise SystemExit(4)
-elif current_namespace != state.get("namespace"):
+elif current_namespace != state.get($namespace):
     path.write_text(json.dumps(state), encoding="utf-8")
     sys.stderr.write("journal run not found; open the run before operating on it\\n")
     raise SystemExit(4)
 elif command == "append":
-    if state["sealed"]:
+    if state[$sealed]:
         sys.stderr.write("run is sealed\\n")
         raise SystemExit(3)
-    state["events"].append(json.load(sys.stdin))
+    state[$events].append(json.load(sys.stdin))
     path.write_text(json.dumps(state), encoding="utf-8")
     print(json.dumps({"ok": True}))
 elif command == "read":
     path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps(state["events"]))
+    print(json.dumps(state[$events]))
 elif command == "seal":
-    state["sealed"] = True
+    state[$sealed] = True
     path.write_text(json.dumps(state), encoding="utf-8")
     print(json.dumps({"ok": True}))
 elif command == "render":
     path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps(state["events"]))
+    print(json.dumps(state[$events]))
 else:
     sys.stderr.write(f"unknown command {command}\\n")
     raise SystemExit(2)
-""",
+"""
+        ).substitute(
+            commands=json.dumps(FAKE_JOURNAL_COMMANDS),
+            events=json.dumps(FAKE_JOURNAL_EVENTS),
+            sealed=json.dumps(FAKE_JOURNAL_SEALED),
+            namespace=json.dumps(FAKE_JOURNAL_NAMESPACE),
+            run_token_key=json.dumps(FAKE_JOURNAL_RUN_TOKEN),
+            run_token=json.dumps(FAKE_RUN_TOKEN),
+        ),
         encoding="utf-8",
     )
     script.chmod(0o755)

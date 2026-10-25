@@ -27,13 +27,16 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     REVIEW_RUN_SCRIPT,
     init_repo_with_branch,
     load_review_result_module,
+    load_review_run_module,
     make_finding_dict,
     open_scoped_review_run,
+    read_fake_journal,
     run_script,
     runner_env,
 )
 
 review_result = load_review_result_module()
+review_run = load_review_run_module()
 jp = load_journal_projection_module()
 
 
@@ -65,8 +68,8 @@ def test_finish_counts_one_finding_under_the_count_named_by_its_severity(
     )
     assert finished.returncode == 0, finished.stderr
 
-    journal = json.loads(journal_path.read_text(encoding="utf-8"))
-    counts = journal["events"][-1]["data"]["review"]
+    journal = read_fake_journal(journal_path)
+    counts = journal.events[-1][jp.EVENT_DATA_FIELD][review_run.REVIEW_KEY]
     expected = {member.value: 0 for member in review_result.Severity}
     expected[severity.value] = 1
     assert {name: counts[name] for name in expected} == expected
@@ -119,14 +122,14 @@ def test_append_finding_maps_unit_and_tracked_onto_event_and_finish_counts_debt(
     )
     assert finished.returncode == 0, finished.stderr
 
-    events = json.loads(journal_path.read_text(encoding="utf-8"))["events"]
-    reported = [e for e in events if e["type"] == jp.FINDING_REPORTED]
+    events = read_fake_journal(journal_path).events
+    reported = [e for e in events if e[jp.EVENT_TYPE_FIELD] == jp.FINDING_REPORTED]
     assert len(reported) == 1
-    data = reported[0]["data"]
+    data = reported[0][jp.EVENT_DATA_FIELD]
     for field in ("unit", "tracked"):
         assert (field in data) is (field in optional_fields)
         if field in optional_fields:
             assert data[field] == optional_fields[field]
-    counts = events[-1]["data"]["review"]
+    counts = events[-1][jp.EVENT_DATA_FIELD][review_run.REVIEW_KEY]
     assert counts[review_result.Severity.DEBT.value] == 1
     assert counts[review_result.Severity.BLOCKING.value] == 0

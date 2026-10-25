@@ -20,8 +20,8 @@ from outcomeeng_testing.generators.reviewing_changes_runs import (
     extent_mapping_cases,
 )
 from outcomeeng_testing.harnesses.reviewing_changes_runs import (
-    MANIFEST_SECTIONS_KEY,
     build_changeset_repo,
+    compute_diff,
     nodes_mentioning,
     render_generated_sources,
     run_state_listing,
@@ -46,7 +46,7 @@ def test_changed_files_map_to_extents_under_their_relation(
 
     documents = (
         run_state_listing(started),
-        without_keys(started.manifest, MANIFEST_SECTIONS_KEY),
+        without_keys(started.manifest, compute_diff.MANIFEST_SECTIONS),
     )
     for path, relation_index in case.extents:
         relation = case.relations[relation_index]
@@ -71,5 +71,5 @@ def test_changed_files_map_to_extents_under_their_relation(
     for path in case.ordinary:
         assert not nodes_mentioning(run_state_listing(started), path), path
         assert not nodes_mentioning(
-            without_keys(started.manifest, MANIFEST_SECTIONS_KEY), path
+            without_keys(started.manifest, compute_diff.MANIFEST_SECTIONS), path
         ), path
