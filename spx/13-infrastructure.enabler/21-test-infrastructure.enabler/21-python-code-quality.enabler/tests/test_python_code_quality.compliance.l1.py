@@ -2,22 +2,21 @@
 
 from __future__ import annotations
 
-from pathlib import PurePosixPath
-
 import outcomeeng.validation.__main__ as validation_entry
 from outcomeeng.validation import (
     MYPY_ARGV,
+    MYPY_STRICT_FLAG,
     PYRIGHT_ARGV,
     RUFF_CHECK_ARGV,
 )
 from outcomeeng.validation.selected_gate import RECIPE_CHECK_FULL, build_full_gate_plan
 from outcomeeng_testing.harnesses.l3_collection import (
-    full_gate_recipe_fixture_path,
+    full_gate_skipping_recipe_fixture_path,
     justfile_recipe_command,
 )
 from outcomeeng_testing.harnesses.spec_tree import (
     marketplace_root_for_spec_tree_root_test,
-    marketplace_tracked_files,
+    marketplace_top_level_packages,
 )
 
 
@@ -43,26 +42,20 @@ def test_static_analysis_steps_are_named_steps_of_the_full_gate() -> None:
 def test_a_check_full_recipe_that_skips_the_full_gate_is_detected() -> None:
     command = justfile_recipe_command(
         RECIPE_CHECK_FULL,
-        justfile=full_gate_recipe_fixture_path(
-            "check_full_dispatches_the_test_recipe.just"
-        ),
+        justfile=full_gate_skipping_recipe_fixture_path(),
     )
 
     assert _dispatched_recipe(command) != (RECIPE_CHECK_FULL,)
 
 
 def test_mypy_gate_step_runs_strict_mode() -> None:
-    assert "--strict" in MYPY_ARGV
+    assert MYPY_STRICT_FLAG in MYPY_ARGV
 
 
 def test_type_checking_steps_target_product_packages() -> None:
-    root = marketplace_root_for_spec_tree_root_test(__file__)
-    packages = {
-        PurePosixPath(path).parts[0]
-        for path in marketplace_tracked_files(root)
-        if len(PurePosixPath(path).parts) == 2
-        and PurePosixPath(path).name == "__init__.py"
-    }
+    packages = marketplace_top_level_packages(
+        marketplace_root_for_spec_tree_root_test(__file__)
+    )
 
     assert packages
     for package_path in packages:

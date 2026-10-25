@@ -61,7 +61,8 @@ SHELLCHECK_ARGV: Final = (
 FMT_CHECK_ARGV: Final = ("dprint", "check")
 RUFF_FORMAT_ARGV: Final = ("uv", "run", "ruff", "format", "--check", ".")
 RUFF_CHECK_ARGV: Final = ("uv", "run", "ruff", "check", ".")
-MYPY_ARGV: Final = ("uv", "run", "mypy", "--strict", *PYTHON_SOURCE_PATHS)
+MYPY_STRICT_FLAG: Final = "--strict"
+MYPY_ARGV: Final = ("uv", "run", "mypy", MYPY_STRICT_FLAG, *PYTHON_SOURCE_PATHS)
 PYRIGHT_ARGV: Final = ("uv", "run", "pyright", *PYTHON_SOURCE_PATHS)
 SPX_MARKDOWN_ARGV: Final = ("uv", "run", "spx", "validation", "markdown")
 # Every `[test]` and `[eval]` link in spec markdown resolves to its evidence

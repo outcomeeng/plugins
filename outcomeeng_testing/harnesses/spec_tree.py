@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import subprocess
 from collections.abc import Sequence
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from outcomeeng.spec_tree_structure import (
     SPEC_TREE_ROOT_DIRECTORY,
@@ -13,6 +13,7 @@ from outcomeeng.spec_tree_structure import (
 
 MARKETPLACE_ROOT_SENTINEL_FILE = "pyproject.toml"
 MARKETPLACE_ROOT_REQUIRED_DIRECTORY = Path("src/plugins/spec-tree")
+PACKAGE_INIT_FILENAME = "__init__.py"
 
 
 class MarketplaceRootNotFoundError(RuntimeError):
@@ -43,6 +44,16 @@ def marketplace_tracked_files(product_root: Path) -> list[str]:
         text=True,
     )
     return [line for line in result.stdout.splitlines() if line]
+
+
+def marketplace_top_level_packages(product_root: Path) -> frozenset[str]:
+    """Return every top-level directory whose tracked `__init__.py` makes it a package."""
+    return frozenset(
+        PurePosixPath(path).parts[0]
+        for path in marketplace_tracked_files(product_root)
+        if len(PurePosixPath(path).parts) == 2
+        and PurePosixPath(path).name == PACKAGE_INIT_FILENAME
+    )
 
 
 def marketplace_tracked_texts(product_root: Path) -> dict[str, str]:

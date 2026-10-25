@@ -198,10 +198,10 @@ def recipe_dispatch_spawns(
     return tuple(spawner.spawn_calls)
 
 
-def full_gate_recipe_fixture_path(name: str) -> Path:
-    """Return the path to an inert `justfile` fixture for the full-gate recipe."""
+def full_gate_skipping_recipe_fixture_path() -> Path:
+    """Return the inert `justfile` whose `check-full` recipe skips the full gate."""
 
-    return FULL_GATE_RECIPE_FIXTURES / name
+    return FULL_GATE_RECIPE_FIXTURES / "check_full_dispatches_the_test_recipe.just"
 
 
 def justfile_recipe_command(
