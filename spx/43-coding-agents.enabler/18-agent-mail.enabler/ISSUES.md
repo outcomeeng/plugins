@@ -2,7 +2,7 @@
 
 ## DEBT: captured oracle artifacts lack source provenance
 
-The captured usage and public-response artifacts under `outcomeeng_testing/fixtures/agent_mail/` carry no tool name or source version. The adapter ADR declares the native `am` build identified by its Agent Mail source commit and binary SHA-256 for store grammar and responses, together with the pin-change and live-drift recapture conditions, while the fixture family has no artifact-owned representation of that pin yet.
+The captured usage and public-response artifacts under `outcomeeng_testing/fixtures/agent_mail/` carry no tool name or source version. The adapter ADR declares the native `am` build pinned by what the attested installed-store probe run records, for store grammar and responses, together with the pin-change and live-drift recapture conditions, while the fixture family has no artifact-owned representation of that pin yet.
 
 **Impact**: a reader cannot determine from a captured artifact or its fixture family which source-tool release produced it, so stale-oracle detection depends on the ADR rather than inspectable fixture provenance. The ADR declaration leads the fixtures until the evidence layer catches up.
 
@@ -199,13 +199,3 @@ The adapter exposes no events operation, and the probe's limitations state that 
 **Settlement condition**: the decision's rationale, invariant, and mapping assertion name only the surfaces an adapter operation reaches, and the unused events response fixture is removed or consumed by a test that a declared events operation requires — or an events operation is declared and evidenced, and the claims stand on it.
 
 **Evidence**: `product-tree:changes-reviewer` run `2026-10-09_19-42-27-272-9b7af3f2fe83` on head `568924292d60b6a5d51d15075eb6e83c12d72de0`, an `evidence` finding at `probes/position-labels/probe.md` line 20; run `2026-10-09_21-16-21-663-cb5623784a49` on head `f2e86d4c4637f466795d15c787f442fb1b79205c`, an `evidence` finding at `21-agent-mail-adapter.adr.md` lines 16 and 34.
-
-## DEBT: the probe precondition pins the build by its version text
-
-The probe's precondition states that `am --version` reports the version the adapter decision pins. The decision pins the build by its Agent Mail source commit and the binary's SHA-256, and states that `am --version` reports 0.3.36 for builds with and without the label fields, so the version text identifies no build.
-
-**Impact**: a run that checks only the precondition as written accepts a build without the label fields, so the precondition admits the build the probe exists to tell apart. The attested run recorded the commit and the SHA-256 itself, so its observations stand.
-
-**Settlement condition**: the precondition names the source commit and the binary SHA-256 the decision pins and checks the installed binary against the SHA-256.
-
-**Evidence**: `spec-tree:changes-reviewer` run `2026-10-09_19-42-27-272-9b7af3f2fe83` on head `568924292d60b6a5d51d15075eb6e83c12d72de0`, a `consistency` finding at `probes/position-labels/probe.md` line 12; run `2026-10-09_21-16-21-663-cb5623784a49` on head `f2e86d4c4637f466795d15c787f442fb1b79205c`, the same finding at line 11.
