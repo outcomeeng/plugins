@@ -283,3 +283,11 @@ The second opening paragraph of [`spx/21-product-tree.enabler/68-reviewing.enabl
 **Impact.** An Author repairing a review finding that cites a decision learns the cited clause only from prose, so the repair bound the verification decision defines has no structured clause to read.
 
 **Settlement condition.** The `Finding.rule` grammar admits a clause component for an ADR or PDR, the assertions, the parser and their tests state it, `review-prompt.md` names it in `<rule_citation>` and `<finding_validity>`, and one typed skill audit approves the amended skill. The change shares the extraction in entry 9, because `review_result.py` leaves the plugin with it.
+
+## An abandoned review run leaves its scratch directory behind
+
+**Evidence.** `src/plugins/product-tree/skills/review-changes/scripts/review_run.py` removes its scratch directory on every `finish` exit and on every failing `append-scope` or `append-finding`. A run that its caller abandons after a successful `start` or a successful append, with no further verb, reaches none of those exits, and the runner holds no other exit path for it. The scratch directory remains until the operating system clears its temporary directory. The skill text of `src/plugins/product-tree/skills/review-changes/SKILL.md` does not document the case.
+
+**Impact.** Each abandoned run leaves its scratch directory, with the run's recorded scope and findings, on the host for an unbounded time.
+
+**Settlement condition.** The runner gains a bounded-lifetime or caller-driven cleanup for an abandoned run, or the governing decision in [`spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md`](spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md) admits the abandoned-run case explicitly.
