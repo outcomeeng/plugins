@@ -14,9 +14,7 @@ The gap has a concrete cost: content that only the product-tree plugin ships is 
 
 **Evidence**: raised as a blocking `consistency` finding by the changeset reviewer against the marketplace-changelog relocation, on the grounds that no `plugin.json` declares a dependency on the product-tree plugin and nothing in that changeset added one. The finding's premise was refuted by the operator, who confirmed the plugin is mandatory; the absence of any artifact expressing it is what the finding actually exposed.
 
-## DEBT [evidence]: harness entry points own the pass/fail predicates (f-001) `outcomeeng_testing/harnesses/plugin_manifest.py` `marketplace_is_validated through invocation_exit_is_not_blocked_by_descendant (the scenario entry points)` `assertion-seam`
-
-Entry key `outcomeeng_testing/harnesses/plugin_manifest.py` `marketplace_is_validated through invocation_exit_is_not_blocked_by_descendant (the scenario entry points)` `assertion-seam`: The harness entry points own exit codes, stderr substrings, command equality, and elapsed time; the scenario tests contain only `assert helper()`.
+## DEBT [evidence]: harness entry points own the pass/fail predicates (f-001)
 
 Finding f-001 (REJECT) at `outcomeeng_testing/harnesses/plugin_manifest.py:91`, covering every entry point from `marketplace_is_validated` through `invocation_exit_is_not_blocked_by_descendant` (lines 91-330): each evaluates the full pass/fail predicate (exit codes, stderr substrings, command equality, elapsed time) and returns a boolean, and the linked scenario tests contain only `assert helper()`.
 
@@ -30,9 +28,7 @@ The audit is a `product-tree:test-evidence-auditor` verdict on this node at head
 
 **Settlement condition**: every linked test asserts the predicate over observations the harness returns, and no harness entry point returns a verdict.
 
-## DEBT [evidence]: symmetric-parity invariant asserted inside the harness (f-002) `spx/15-validation.enabler/32-plugin-manifest.enabler/tests/test_plugin_manifest.property.l1.py` `test_manifest_version_parity_is_symmetric` `assertion-seam`
-
-Entry key `spx/15-validation.enabler/32-plugin-manifest.enabler/tests/test_plugin_manifest.property.l1.py` `test_manifest_version_parity_is_symmetric` `assertion-seam`: The symmetric-parity invariant (`len(...) == 1` for both orders) is asserted inside `_generated_manifest_version_parity_is_symmetric` in the harness; the test asserts a returned True.
+## DEBT [evidence]: symmetric-parity invariant asserted inside the harness (f-002)
 
 Finding f-002 (REJECT) at `spx/15-validation.enabler/32-plugin-manifest.enabler/tests/test_plugin_manifest.property.l1.py:11`: the symmetric-parity invariant (`len(errors) == 1` for both orders) is asserted inside the harness function `_generated_manifest_version_parity_is_symmetric`, and the test runs `assert manifest_version_parity_is_symmetric()`.
 
@@ -46,9 +42,7 @@ The audit is the verdict named in the entry above, at head `6ef55dd4d93b24b8fa70
 
 **Settlement condition**: the property test itself asserts that both orders yield exactly one error.
 
-## DEBT [evidence]: universal no-drift assertion linked to scenario evidence (f-003) `spx/15-validation.enabler/32-plugin-manifest.enabler/tests/test_plugin_manifest.scenario.l1.py` `the [test] link of the assertion "NEVER: allow plugin manifest version drift between .claude-plugin/plugin.json and .codex-plugin/plugin.json"` `misaligned`
-
-Entry key `spx/15-validation.enabler/32-plugin-manifest.enabler/tests/test_plugin_manifest.scenario.l1.py` `the [test] link of the assertion "NEVER: allow plugin manifest version drift between .claude-plugin/plugin.json and .codex-plugin/plugin.json"` `misaligned`: A universal NEVER assertion is linked to scenario evidence; no compliance-typed file exercises a generated drifted manifest.
+## DEBT [evidence]: universal no-drift assertion linked to scenario evidence (f-003)
 
 Finding f-003 (REJECT) at `spx/15-validation.enabler/32-plugin-manifest.enabler/tests/test_plugin_manifest.scenario.l1.py:1`: a universal NEVER assertion (no manifest version drift) is linked to a scenario-typed file. Universal assertions take compliance evidence in a `.compliance.l1.py` file that asserts the violating drift case itself.
 

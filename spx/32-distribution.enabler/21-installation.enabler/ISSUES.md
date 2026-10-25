@@ -10,9 +10,7 @@ Product-level decisions carry per-agent facts inline, so adding an agent harness
 
 **Revisit condition.** Resolve before a third agent harness ships, since that is the change the coupling taxes. The agent-harness terminology sweep in `spx/18-plugin-build.enabler/ISSUES.md` can share the decomposition.
 
-## DEBT [evidence]: installation mapping and compliance tests leave inputs unvaried (f-003, f-004) `spx/32-distribution.enabler/21-installation.enabler/tests/test_installation.compliance.l1.py` `test_persistent_commands_use_project_scope_and_selected_codex_home, test_every_command_uses_the_explicit_checkout_and_agent_homes` `oracle-independence`
-
-Entry key `spx/32-distribution.enabler/21-installation.enabler/tests/test_installation.compliance.l1.py` `test_persistent_commands_use_project_scope_and_selected_codex_home, test_every_command_uses_the_explicit_checkout_and_agent_homes` `oracle-independence`: The selected homes are compared with values production computes (`plan.roots.codex_home`, `plan.roots.state`).
+## DEBT [evidence]: installation mapping and compliance tests leave inputs unvaried (f-003, f-004)
 
 Two filed findings (severity FILED) on tests under
 `spx/32-distribution.enabler/21-installation.enabler/tests/`, numbered as in the

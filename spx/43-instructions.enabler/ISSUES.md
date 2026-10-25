@@ -104,17 +104,3 @@ Evidence:
 Impact: a rule that the command passes the path the `Write` reported makes the command match the `Write`, but a drifted `Write` still breaks assertion 4 of `spx/43-instructions.enabler/instructions.md` (payload files only from the session scratch directory).
 
 Settlement condition: audits write payloads to a location they never retype.
-
-## 12. Concurrent audit runs collide on payload file names in the shared scratch directory
-
-`/audit-skill` and `/audit-subagent` name their payload files by a fixed, role-derived name, so two auditor sessions sharing one session scratch directory write the same path. The later write replaces the earlier payload before the earlier run records its digest, and the earlier run cannot establish the integrity of its input. The governing rule in [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) and the router requires a payload file name unique to the agent; neither audit skill's prompt nor its scripts make the name unique per run.
-
-**Evidence.**
-
-- `instructions:subagent-auditor` run `2026-10-25_04-03-09-581-194531057307` on `src/plugins/product-tree/agents/change-auditor.md` wrote its start payload to the session scratchpad as `ca-start.json`. A concurrent `subagent-auditor` run on `changes-reviewer.md` overwrote that file with its own start payload before the first run recorded its digest. The first run could not establish its input's integrity and was abandoned unsealed.
-- `instructions:skill-auditor` run `2026-10-25_03-58-12-685-48a4ffe440ff`, auditing `project-run-journal`, was abandoned for the same reason and restarted with a uniquely named file.
-- Both runs were observed on branch `work/change-767` and are independent of its content.
-
-**Impact.** Concurrent audits, which an Executor dispatches in parallel across changed surfaces, abandon runs unsealed and spend gate rounds. A run that completes after an overwrite would judge another subject's input, a silent wrong verdict that the digest check is the only guard against.
-
-**Settlement condition.** Every payload file name an audit skill's prompt or script produces carries a component unique to the run, so two concurrent audits in one scratch directory never write the same path; a concurrent `/audit-skill` and `/audit-subagent` pair then both seal.

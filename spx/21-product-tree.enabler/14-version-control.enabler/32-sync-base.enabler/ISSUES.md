@@ -71,11 +71,3 @@ capability publishes.
 **Impact.** The primitive's contract that every run yields a structured status holds for this case only by implementation; a change that turns it back into a traceback or another exit code passes every linked test.
 
 **Settlement condition.** `spx/21-product-tree.enabler/14-version-control.enabler/32-sync-base.enabler/sync-base.md` carries an assertion for the missing-provider-script case with a linked test.
-
-## The base-derivation identity test depends on pytest module-import order
-
-**Evidence.** `spx/21-product-tree.enabler/14-version-control.enabler/32-sync-base.enabler/tests/test_sync_base.compliance.l1.py::test_base_derivation_primitives_are_identity_equal_to_canonical` fails when the tests of `spx/21-product-tree.enabler/68-reviewing.enabler` or `spx/21-product-tree.enabler/76-merge.enabler` run before the tests of `spx/21-product-tree.enabler/14-version-control.enabler` in one pytest process. The `changeset_scope` module is then imported through a different path, and the identity comparison sees two module objects for one canonical module. The test passes alone and in the alphabetical full-suite order `just check` uses. Observed on head `9ec6210e0a10518aa43228697da04119fd7c96a9` with a combined run of the node tests of `spx/21-product-tree.enabler/68-reviewing.enabler`, `spx/21-product-tree.enabler/76-merge.enabler`, and `spx/21-product-tree.enabler/14-version-control.enabler`.
-
-**Impact.** A pytest invocation that selects several nodes in an order other than the alphabetical one reports a failure for an unchanged, correct primitive, so a failing result of this test does not by itself establish a defect in the base derivation.
-
-**Settlement condition.** The identity assertion compares the canonical module by a path-independent identity, or the test imports both sides through one loader.

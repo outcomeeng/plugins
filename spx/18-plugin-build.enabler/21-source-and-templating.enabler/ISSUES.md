@@ -30,9 +30,7 @@ The `<changelogs>` section of `src/templates/plugin/SKILL.md` needs both at once
 
 **Evidence**: raised as `worth-improving` by the skill auditor, which judged the conflict genuine and the descriptive form the correct practical answer.
 
-## Most compliance evidence keeps its predicate in the harness `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_source_and_templating.compliance.l1.py` `the layout, delimiter, require_skill, conditional, and escape tests (test_build_accepts_well_formed_src_tree through test_skill_dir_escape_survives_jinja_pass)` `assertion-seam`
-
-Entry key `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_source_and_templating.compliance.l1.py` `the layout, delimiter, require_skill, conditional, and escape tests (test_build_accepts_well_formed_src_tree through test_skill_dir_escape_survives_jinja_pass)` `assertion-seam`: These compliance tests keep their predicates in the harness.
+## Most compliance evidence keeps its predicate in the harness
 
 `tests/test_source_and_templating.compliance.l1.py` states most of its assertions as `assert <harness_call>()`, where the harness function in `outcomeeng_testing/harnesses/source_and_templating.py` embeds the comparison and returns a bare `bool`. `well_formed_source_tree_builds`, `malformed_source_tree_is_rejected`, `ordinary_plugin_root_file_is_accepted`, `unrecognized_plugin_subdirectories_are_rejected`, `shared_topic_without_fragment_is_rejected`, `shared_topic_references_travel_with_fragment`, `include_uses_fragment_file_contract`, `jinja_environment_uses_custom_delimiters`, the five `require_skill_*` predicates, `bare_conditional_renders_per_target`, and `skill_dir_escape_survives_jinja_pass` each decide the verdict inside the harness. A reader of the linked test cannot see which condition failed, and the harness owns evidence the test file is supposed to own.
 
@@ -42,9 +40,7 @@ These back the assertions at `source-and-templating.md` lines 21 and 24 through 
 
 **Evidence**: raised as ten `REJECT` findings by the test-evidence auditor against the path-boundary changeset. That changeset is purely additive here — it added the line-30 assertion, its test, and `observe_build_comment_outputs`, and modified no existing test or harness function — so the defect predates it and spans eight assertions it does not govern. Recorded rather than carried because converting another node's evidence architecture is its own slice with its own audit gate. An earlier run of the same auditor over the same content returned `APPROVED`, so treat the verdict as a prompt to inspect the predicate seam rather than as a settled count.
 
-## The no-single-plugin rule is proved only against conforming bodies `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_source_and_templating.compliance.l1.py` `test_per_plugin_template_body_names_no_single_plugin` `prose-coupling`
-
-Entry key `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_source_and_templating.compliance.l1.py` `test_per_plugin_template_body_names_no_single_plugin` `prose-coupling`: The rule is proved only against conforming bodies.
+## The no-single-plugin rule is proved only against conforming bodies
 
 `test_per_plugin_template_body_names_no_single_plugin` scans the real committed template bodies under `CANONICAL_SOURCE_ROOT` and asserts its forbidden-identity regex matches none of them. No case constructs a body that does hardcode a plugin slug, so the regex's detection capability is never exercised: a pattern that matched nothing would pass the same way. A compliance assertion earns its evidence from a violating case.
 
@@ -52,9 +48,7 @@ Entry key `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/te
 
 **Evidence**: raised as a `REJECT` finding by the test-evidence auditor against the path-boundary changeset, which neither authored this assertion nor edited this test.
 
-## Linked tests delegate their predicates to boolean-returning harnesses `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_parse_directives.scenario.l1.py` `test_unknown_directive_name_raises, test_directive_missing_argument_raises, test_jinja_control_blocks_return_no_directives` `assertion-seam`
-
-Entry key `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_parse_directives.scenario.l1.py` `test_unknown_directive_name_raises, test_directive_missing_argument_raises, test_jinja_control_blocks_return_no_directives` `assertion-seam`: The tests only assert the boolean a harness function returns.
+## Linked tests delegate their predicates to boolean-returning harnesses
 
 Twenty-three test-evidence findings on this node's seven linked test files, its
 harness, and one generator share one class with the entry "Property predicates
@@ -88,9 +82,7 @@ passing test-evidence audit of this node.
 `a65659114b99767b90b4d920550fff5dc0824794` during Change #76; the one finding that changeset caused (`f-018`, a
 restated spec literal in the `require_skill` test) was fixed in the changeset.
 
-## Seven further evidence defects beside the boolean-harness seam `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_source_and_templating.compliance.l1.py` `test_module_is_implemented` `unfalsifiable`
-
-Entry key `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_source_and_templating.compliance.l1.py` `test_module_is_implemented` `unfalsifiable`: The test asserts only that the module is implemented and falsifies no behavior.
+## Seven further evidence defects beside the boolean-harness seam
 
 Later test-evidence audits of this node found seven defects the entry above does not name. Each sits in evidence that the seam rewrite also touches:
 
@@ -130,9 +122,7 @@ The root harness guides name that artifact class together with the Python cache 
 
 **Evidence**: found by the same-class scan over both governed nodes' specs during Change #119 round 3, prompted by the implementation audit's blocking finding on the clean node's parallel assertion in run `2026-09-21_16-03-52-930-bb909cac6a0a`.
 
-## DEBT [evidence]: predicates owned by the harness in the directive, render, and compliance tests (f-001 through f-006) `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_render_text.scenario.l1.py` `nested_include_expands(), nested_require_skill_expands(), cyclic_includes_raise(), bound_target_variable_renders_each_target(), raw_directive_ships_literally() call sites` `assertion-seam`
-
-Entry key `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_render_text.scenario.l1.py` `nested_include_expands(), nested_require_skill_expands(), cyclic_includes_raise(), bound_target_variable_renders_each_target(), raw_directive_ships_literally() call sites` `assertion-seam`: The scenario tests delegate their predicates to the harness at these call sites.
+## DEBT [evidence]: predicates owned by the harness in the directive, render, and compliance tests (f-001 through f-006)
 
 Six findings (REJECT, predicate ownership) share one class with the entry "Linked tests delegate their predicates to boolean-returning harnesses" above, which carries the resolution; this entry cites it and adds no second resolution. In each, the harness in `outcomeeng_testing/harnesses/source_and_templating.py` owns the predicate and returns a boolean, or asserts inside a private function and returns a constant `True`, while the linked test only runs `assert <bool>`:
 
@@ -170,9 +160,7 @@ Four findings (REJECT, falsifiability and oracle independence) at the same audit
 
 **Settlement condition**: every cited test fails under a mutation of the behavior it governs, and no expectation derives from the function under test.
 
-## DEBT [evidence]: alignment, coupling, and source ownership in the template evidence (f-010, f-011, f-012, f-014, f-015, f-016) `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_parse_directives.property.l1.py` `test_property_failures_report_seed_and_replay_path` `misaligned`
-
-Entry key `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_parse_directives.property.l1.py` `test_property_failures_report_seed_and_replay_path` `misaligned`: The test backs no assertion of this node.
+## DEBT [evidence]: alignment, coupling, and source ownership in the template evidence (f-010, f-011, f-012, f-014, f-015, f-016)
 
 Six findings at the same audit and head as the two entries above. Class C (REJECT, alignment and coupling), partly recorded in "Seven further evidence defects beside the boolean-harness seam", which carries that resolution:
 
@@ -194,9 +182,7 @@ Class D (REJECT, source ownership and declarations); f-014 and f-015 overlap the
 
 **Settlement condition**: the source exports a directive-name contract that the harness imports, the generator imports the delimiters from `outcomeeng/distribution/contracts.py`, the tree cases are test-owned, and a passing test-evidence audit of this node.
 
-## DEBT [evidence]: two harnesses build the same single-skill source tree `outcomeeng_testing/harnesses/source_absence.py` `_source_tree, _skill_body (duplicated with source_and_templating.py)` `duplicated-source-tree-construction`
-
-Entry key `outcomeeng_testing/harnesses/source_absence.py` `_source_tree, _skill_body (duplicated with source_and_templating.py)` `duplicated-source-tree-construction`: `source_absence.py` and `source_and_templating.py` build the same single-skill source tree.
+## DEBT [evidence]: two harnesses build the same single-skill source tree
 
 Defect class: `architectural-duplication`, rule `duplicated-source-tree-construction`.
 
@@ -205,49 +191,3 @@ Finding: `outcomeeng_testing/harnesses/source_absence.py` (around line 139) and 
 Remediation target: the harness. The helpers move into one shared source-tree harness, `outcomeeng_testing/harnesses/src_tree.py`, which both modules import.
 
 Settlement condition: `_source_tree` and `_skill_body` are defined once, in the shared harness, and neither `source_absence.py` nor `source_and_templating.py` defines its own copy.
-
-## DEBT [evidence]: predicates owned by the harness in the directive, render, and compliance tests (f-001 through f-006) `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_expand_include.property.l1.py` `test_body_returned_verbatim` `assertion-seam`
-
-The property predicate is owned by the harness.
-
-**Settlement condition**: The test owns the invariant.
-
-## DEBT [evidence]: predicates owned by the harness in the directive, render, and compliance tests (f-001 through f-006) `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_parse_directives.property.l1.py` `test_parse_of_format_yields_original_directive, test_standard_jinja_syntax_passes_through_rendering` `assertion-seam`
-
-The property predicates are owned by the harness.
-
-**Settlement condition**: The tests own the invariants.
-
-## DEBT [evidence]: predicates owned by the harness in the directive, render, and compliance tests (f-001 through f-006) `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_render_text.property.l1.py` `test_chain_of_n_includes_resolves_to_innermost_body` `assertion-seam`
-
-The property predicate is owned by the harness.
-
-**Settlement condition**: The test owns the invariant.
-
-## DEBT [evidence]: alignment, coupling, and source ownership in the template evidence (f-010, f-011, f-012, f-014, f-015, f-016) `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_source_and_templating.compliance.l1.py` `test_neutral_guidance_oracle_rejects_runtime_specific_wording, test_require_skill_locality_oracle_rejects_inlined_content, test_per_plugin_template_renders_once_into_every_plugin` `misaligned`
-
-These tests are misaligned with the assertions they link.
-
-## Seven further evidence defects beside the boolean-harness seam `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_expand_include.scenario.l1.py` `test_module_is_implemented` `unfalsifiable`
-
-The test asserts only that the module is implemented and falsifies no behavior.
-
-## Seven further evidence defects beside the boolean-harness seam `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_parse_directives.scenario.l1.py` `test_module_is_implemented` `unfalsifiable`
-
-The test asserts only that the module is implemented and falsifies no behavior.
-
-## Seven further evidence defects beside the boolean-harness seam `spx/18-plugin-build.enabler/21-source-and-templating.enabler/tests/test_render_text.scenario.l1.py` `test_module_is_implemented` `unfalsifiable`
-
-The test asserts only that the module is implemented and falsifies no behavior.
-
-## Seven further evidence defects beside the boolean-harness seam `outcomeeng_testing/harnesses/source_and_templating.py` `_nested_require_expands, jinja_environment_uses_custom_delimiters` `oracle-independence`
-
-The expectation shares its source with the production behavior it judges.
-
-## DEBT [evidence]: alignment, coupling, and source ownership in the template evidence (f-010, f-011, f-012, f-014, f-015, f-016) `outcomeeng_testing/harnesses/source_and_templating.py` `_include_text, _bare_conditional_renders, bound_target_variable_renders_each_target, the well-formed/malformed/ordinary source trees` `source-ownership`
-
-The harness hand-writes source content that no source module owns.
-
-## DEBT [evidence]: alignment, coupling, and source ownership in the template evidence (f-010, f-011, f-012, f-014, f-015, f-016) `outcomeeng_testing/generators/fragments.py` `_DELIMITER_TOKENS` `source-ownership`
-
-The tokens restate the standard Jinja delimiters `contracts.py` owns as `STANDARD_JINJA_*`.

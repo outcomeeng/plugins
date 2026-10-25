@@ -19,13 +19,3 @@ Category consistency, severity debt, finding F-001 of local review run 2026-10-1
 **Impact**: a blocking finding's deferral is not checkable against the finding it defers, so an unrelated entry can release the merge-readiness predicate.
 
 **Settlement condition**: a blocking deferral entry is matched to its finding by the same entry key a debt ruling uses.
-
-## The shipped Change standards trail the methodology's refinement chapter and admit no form for a mechanical rename
-
-Rules `spec-mutations`, `store-independence`, and criterion `framed-spec-mutations` of the `product-tree:change-standards` skill at plugin version 0.107.1, raised by the `product-tree:change-auditor` run 2026-10-24_15-17-02-291-b49d5f0cea67 on the record of Change [#767](https://github.com/outcomeeng/changes/issues/767).
-
-**Evidence**: the skill names the chapter at `versions/4.0/methodology/change/changes.md`, requires a Framed Spec mutations block to list the Node's assertions as bare bullets, caps the Intent at 60 words, and calls the fourth Maturity Executable. The chapter of `outcomeeng/methodology` at `versions/4.0/methodology/refinement/changes.md`, where it has lived since 2026-10-17, requires each assertion the Change adds, replaces, or removes as an `added:`, `replaced:`, or `removed:` bullet with the exact old and new text, caps the Intent at 120 words, and calls the fourth Maturity Applicable. Neither admits a block that states one substitution mapping for a rename whose per-assertion text a committed file carries: for Change #767 that text runs past 280,000 characters against a store body of 65,536, so the record names the Nodes and the mapping and [`spx/knowledge/product-tree-rename.md`](knowledge/product-tree-rename.md) carries the assertions.
-
-**Impact**: a tree-wide rename cannot reach Framed under the shipped standards in any shape the store holds, and a consumer following the skill reads a chapter path that does not exist.
-
-**Settlement condition**: the shipped `change-standards`, `author-change`, and `audit-change` skills state the chapter's path, Intent limit, Maturity names, and `added:`, `replaced:`, `removed:` form, and the chapter and the skills admit a Framed block that states one substitution mapping and names the committed file carrying the replaced text.

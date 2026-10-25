@@ -95,84 +95,10 @@ The eval-harness redesign re-homes this concern: eval-verification governance mo
 No fork-per-case implementation happens in this node. The caching decision re-derives under the agentic-verification node, whose `ISSUES.md` records the open realization paths.
 **Settlement condition.** The relocated subtree absorbs the prototype or retires it, per the prove-then-migrate-or-remove lifecycle in [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md).
 
-## The eval harness raises AssertionError for lifecycle failures `outcomeeng_testing/evals/cli.py` `every other assert_* helper called from tests/test_cli.mapping.l1.py` `assertion-seam`
-
-Entry key `outcomeeng_testing/evals/cli.py` `every other assert_* helper called from tests/test_cli.mapping.l1.py` `assertion-seam`: The module's `assert_*` helpers own the pass/fail predicates, and the linked tests only call them.
+## The eval harness raises AssertionError for lifecycle failures
 
 `outcomeeng_testing/evals/factories.py` and `outcomeeng_testing/harnesses/evals.py` raise `AssertionError` when a resource fails to start or a generated value has the wrong shape. The predicate-seam rule in `/test-evidence-standards` reserves assertion failures for the linked test; infrastructure raises only setup, dependency, lifecycle or execution errors, so raising `AssertionError` from infrastructure reports a failure away from every `assert` site and can read as a verdict the harness owns.
 
 **Evidence.** The isolated test-evidence audit of `spx/13-infrastructure.enabler/13-host-readiness.enabler` on head `e3bf060ce4dd29ff34984b5d66f8302d9ca22e95` rejected the same shape in that node's harness (finding `f-001`), fixed there by raising a `RuntimeError` subclass from a harness-owned horizon.
 
 **Settlement condition.** Each infrastructure `AssertionError` in these modules becomes a lifecycle or dependency error type the harness owns, with every behavioral predicate left in the linked tests, and the node passes its test-evidence audit.
-
-## The CI-execution evidence helpers own the predicates their linked tests should own `outcomeeng_testing/evals/factories.py` `assert_empty_plan_exits_successfully_without_commands, assert_failing_suite_fails_aggregate_after_attempting_every_suite, assert_changed_paths_file_reads_git_name_status_rows, assert_main_group_exposes_ci_subcommand, assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings` `assertion-seam`
-
-The linked tests in `test_ci_execution.mapping.l1.py` and `test_ci_execution.compliance.l1.py` (node `21-ci-execution.enabler`) call the listed `assert_*` helpers, and each listed helper owns the predicate its test should own; the root-instruction selection test owns its own predicate over `root_instruction_plan_workspace()` and is outside this entry.
-
-**Settlement condition**: The linked tests own the predicates over observations the helpers return.
-
-## The CI-execution mapping predicates sit in the evals harness `outcomeeng_testing/harnesses/evals.py` `assert_plan_items_map_to_run_commands_with_settings_and_case_selectors, _consume_ci_command, _consume_flag_value, assert_multi_case_plan_item_preserves_case_selector_order` `assertion-seam`
-
-The mapping predicates of the CI-execution evidence (node `21-ci-execution.enabler`) sit in the harness; the linked tests delegate to them.
-
-**Settlement condition**: The linked tests own the mapping predicates.
-
-## The CI argv oracle reuses the production argv tables `outcomeeng_testing/harnesses/evals.py` `_consume_ci_command` `oracle-independence`
-
-The expected argv shape comes from `UV_RUN_EVALS_ARGV_PREFIX`, `PLUGIN_DIR_FLAG`, `CASE_ID_FLAG`, and `CI_RUN_SETTING_OPTIONS`, the same tables `command_for_plan_item` in `outcomeeng_evals/ci_execution.py` iterates (node `21-ci-execution.enabler`).
-
-**Settlement condition**: The expected argv shape is derived independently of the production tables.
-
-## The eval harness raises AssertionError for lifecycle failures `outcomeeng_testing/evals/factories.py` `every other assert_definition_* helper, assert_owned_path_alphabet_excludes_every_glob_magic_character, the AssertionError lifecycle raises` `assertion-seam`
-
-The module's `assert_*` helpers own the pass/fail predicates, and the linked tests only call them.
-
-**Settlement condition**: The linked tests own the predicates over observations the helpers return.
-
-## The eval harness raises AssertionError for lifecycle failures `outcomeeng_testing/evals/just_recipes.py` `assert_eval_recipe_runs_suite_with_toml_plugin_dir, assert_eval_case_recipe_runs_selected_case_with_toml_plugin_dir, assert_eval_recipe_uses_plugin_dir_env_override, assert_eval_recipe_uses_model_env_override, assert_eval_case_recipe_uses_model_env_override, assert_eval_node_recipe_runs_all_node_evals_serially, assert_eval_materialize_prompts_check_recipe_accepts_current_prompt` `assertion-seam`
-
-The module's `assert_*` helpers own the pass/fail predicates, and the linked tests only call them.
-
-**Settlement condition**: The linked tests own the predicates over observations the helpers return.
-
-## The eval harness raises AssertionError for lifecycle failures `outcomeeng_testing/harnesses/ci_triggers.py` `assert_check_passes_when_workflow_is_current, assert_eval_workflow_uses_global_budget_default, assert_check_fails_when_a_trigger_path_is_removed, assert_check_fails_when_an_unowned_trigger_path_is_added, assert_every_trigger_block_receives_the_same_paths, assert_ci_policy_controls_trigger_contribution, assert_universal_paths_always_contribute, assert_minimization_preserves_coverage, assert_minimization_is_a_subset_of_its_input` `assertion-seam`
-
-The module's `assert_*` helpers own the pass/fail predicates, and the linked tests only call them.
-
-**Settlement condition**: The linked tests own the predicates over observations the helpers return.
-
-## The eval harness raises AssertionError for lifecycle failures `outcomeeng_testing/harnesses/evals.py` `assert_owned_path_outside_the_alphabet_is_rejected` `assertion-seam`
-
-The module's `assert_*` helpers own the pass/fail predicates, and the linked tests only call them.
-
-**Settlement condition**: The linked tests own the predicates over observations the helpers return.
-
-## The eval harness raises AssertionError for lifecycle failures `outcomeeng_testing/harnesses/eval_harness.py` `the assert_case_loader_*, assert_verdict_parser_*, assert_subset_matching_*, assert_grader_*, assert_suite_*, assert_prompt_renderer_* helpers` `assertion-seam`
-
-The module's `assert_*` helpers own the pass/fail predicates, and the linked tests only call them.
-
-**Settlement condition**: The linked tests own the predicates over observations the helpers return.
-
-## The eval harness raises AssertionError for lifecycle failures `outcomeeng_testing/harnesses/eval_history.py` `assert_history_compliance and its _assert_* helpers` `assertion-seam`
-
-The module's `assert_*` helpers own the pass/fail predicates, and the linked tests only call them.
-
-**Settlement condition**: The linked tests own the predicates over observations the helpers return.
-
-## The eval harness raises AssertionError for lifecycle failures `outcomeeng_testing/harnesses/eval_report.py` `the assert_report_* and assert_run_command_* helpers` `assertion-seam`
-
-The module's `assert_*` helpers own the pass/fail predicates, and the linked tests only call them.
-
-**Settlement condition**: The linked tests own the predicates over observations the helpers return.
-
-## The eval harness raises AssertionError for lifecycle failures `outcomeeng_testing/harnesses/eval_run_exit.py` `assert_run_command_exit_follows_definition_threshold` `assertion-seam`
-
-The module's `assert_*` helpers own the pass/fail predicates, and the linked tests only call them.
-
-**Settlement condition**: The linked tests own the predicates over observations the helpers return.
-
-## The eval harness raises AssertionError for lifecycle failures `outcomeeng_testing/harnesses/eval_runner.py` `the assert_claude_runner_*, assert_metadata_*, assert_stub_runner_*, assert_subprocess_environment_* helpers` `assertion-seam`
-
-The module's `assert_*` helpers own the pass/fail predicates, and the linked tests only call them.
-
-**Settlement condition**: The linked tests own the predicates over observations the helpers return.

@@ -2,9 +2,7 @@
 
 Known defects in the repository-installation evidence. Each entry names the artifact, the observed failure, and the smallest unit of work that resolves it.
 
-## The profile isolation filter strips an ambient marker no module declares `outcomeeng_testing/harnesses/native_profile_execution.py` `NATIVE_PROFILE_SESSION_MARKER_ENVIRONMENT_VARIABLE = "CLAUDECODE"` `source-ownership`
-
-Entry key `outcomeeng_testing/harnesses/native_profile_execution.py` `NATIVE_PROFILE_SESSION_MARKER_ENVIRONMENT_VARIABLE = "CLAUDECODE"` `source-ownership`: The marker name is declared by no module that owns it.
+## The profile isolation filter strips an ambient marker no module declares
 
 `_isolated_environment` in `outcomeeng_testing/harnesses/native_profile_execution.py`
 removes the ambient overrides a profile probe must not inherit. Two of the three
@@ -58,9 +56,7 @@ The `<plugin>-plugin` skill's Claude Code rendering carries `scripts/place_agent
 
 **Evidence**: skill audit warnings `f-007` and `f-008` against `06b86db6b31704c58203929603bb2f2ceea237cb`, and `f-006` and `f-007` against `3e1ba91c9ec059d96dcd2007a2fe371681599df2`.
 
-## Lifecycle evidence cases are hand-authored in the harness `outcomeeng_testing/harnesses/installation.py` `PluginLifecycleHarness` `test-owned-data`
-
-Entry key `outcomeeng_testing/harnesses/installation.py` `PluginLifecycleHarness` `test-owned-data`: The harness hand-authors the lifecycle evidence cases.
+## Lifecycle evidence cases are hand-authored in the harness
 
 The lifecycle tests in `tests/test_repository_installation.compliance.l1.py` take their agent-definition bytes, filenames, and slugs from `PluginLifecycleHarness` in `outcomeeng_testing/harnesses/installation.py`, and the foreign, external, concurrent-edit, malformed-digest, and malformed-settings payloads from constants the same module declares; every token the tests assert against is imported from the shipped placement script. Two verifier readings of that arrangement stand side by side. The isolated test-evidence audit on `f689b9b25cdd37f5e57545d313f30d29ad9cbd35`, finding `f-009`, names the payloads incidental harness-handle values, because the script treats definition bytes opaquely by digest and every asserted token is source-owned. Changeset review `2026-09-16_02-49-48-063-4c9876671778` holds that relocating hand-authored bytes into the harness settles no case provenance and asks for a generator under `outcomeeng_testing/generators/`; the audits on `ef8b057ab649bc3da5c642cc4a18fc6745023718` (`f-012`, INFO), `841e864a9759eae04c8988c2931aa44b1ca21c74` (`f-011`, INFO), `f011edcdd33c0fdec41d8ccfbcdfe1393fc6b35a` (`f-008`, INFO), and `9ab0fc92c2f5c673edbfb2c73eea42502cef68e5` and `c2f6d8e1c3bc87f24d775fcbc62451b9c2ff6322` (`f-009`, INFO) record the same split. The round against `05a7165277750d69c88bc8abbece2c4f6a96bb7c` records it again as `f-017` (INFO), citing the definition bytes, slugs, and foreign, external, concurrent-edit and malformed payloads the harness declares.
 
@@ -316,9 +312,7 @@ while the 2026-09-22T12:40:10Z conversation comment carried three unaddressed
 DEBT findings. Both were found by reading the surfaces against what they
 claimed, not by any gate.
 
-## A failed persistent run restores the committed selection, which the decisions forbid `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/tests/test_repository_installation.compliance.l1.py` `test_failed_persistent_run_restores_the_committed_selection` `misaligned`
-
-Entry key `spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/tests/test_repository_installation.compliance.l1.py` `test_failed_persistent_run_restores_the_committed_selection` `misaligned`: The test evidences a restore that the governing decision forbids; settlement is a decision change.
+## A failed persistent run restores the committed selection, which the decisions forbid
 
 `execute_persistent_installation` in `outcomeeng/distribution/installation.py`
 re-applies the checkout's declared plugin selection in a `finally` block through

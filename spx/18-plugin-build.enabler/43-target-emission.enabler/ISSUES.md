@@ -1,8 +1,6 @@
 # ISSUES — target emission
 
-## The registry-resolution assertion has no observable seam `outcomeeng/distribution/build.py` `agent_capability, _agent_aware_destination, _emit_converted_agent` `untestable-source`
-
-Entry key `outcomeeng/distribution/build.py` `agent_capability, _agent_aware_destination, _emit_converted_agent` `untestable-source`: No seam lets a test supply a changed registry entry to emission.
+## The registry-resolution assertion has no observable seam
 
 The assertion that a target's native agent format, filename shape, and namespace resolve from the per-target agent-capability registry has no evidence that can fail. `project_emissions`, `_agent_aware_destination`, and `agent_capability` in `outcomeeng/distribution/build.py` read the module-global `AGENT_CAPABILITY_REGISTRY` and accept no registry, and `_emit_converted_agent` always calls the Codex TOML converter without consulting the registry. The linked test checks each registry suffix and `agent_slug` with a capability it is handed, so replacing `capability.suffix` with a literal suffix in `_agent_aware_destination`, or hardcoding a target branch for the slug prefix, leaves every test passing.
 
@@ -14,9 +12,7 @@ The assertion that a target's native agent format, filename shape, and namespace
 
 **Evidence**: `product-tree:test-evidence-auditor` findings f-001 and f-002, severity `REJECT`, on `spx/18-plugin-build.enabler/43-target-emission.enabler` at head `133caf1aba9244c9f6f0706eecb2c0ccf3587b6f`, raised again as f-001 and f-002 at heads `bcf9b3d56a4c6ac629167b31d9daf4c5ac855f09` and `7ca471d52f9b82779c3cf5ea454eea545b0c2e20`; `product-tree:implementation-auditor` run `2026-09-30_13-32-44-300-3a68e92d2980` raises the same gap as debt `registry-resolution-unfalsifiable`.
 
-## Three linked tests back no assertion of this node `spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_target_emission.compliance.l1.py` `test_unescaped_path_rewrite_is_idempotent, test_frontmatter_strip_is_idempotent, test_repeated_include_emits_shared_source_once_per_target` `misaligned`
-
-Entry key `spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_target_emission.compliance.l1.py` `test_unescaped_path_rewrite_is_idempotent, test_frontmatter_strip_is_idempotent, test_repeated_include_emits_shared_source_once_per_target` `misaligned`: Two idempotence checks are property claims in a compliance file and the once-per-target check backs no declared assertion.
+## Three linked tests back no assertion of this node
 
 **Evidence**: `test_unescaped_path_rewrite_is_idempotent`, `test_frontmatter_strip_is_idempotent`, and `test_repeated_include_emits_shared_source_once_per_target` in `tests/test_target_emission.compliance.l1.py` assert behavior no assertion in `target-emission.md` declares. The two idempotence checks are property claims inside a file whose name declares compliance evidence. `product-tree:test-evidence-auditor` finding f-005, severity `WARNING`, at head `c2d6ad239f6e60a90a2c172eafb80d0cba83477b` during Change #200; the three tests predate that Change.
 
@@ -32,9 +28,7 @@ Entry key `spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_tar
 
 **Settlement condition.** A real Codex-only field exists, and `strip_frontmatter_fields` generalizes to a per-target frontmatter schema that strips every field the target's schema does not carry, in either direction.
 
-## DEBT [evidence]: seam-dependent registry findings repeat at the latest audit (f-001, f-002) `spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_target_emission.compliance.l1.py` `test_agent_capabilities_resolve_from_the_source_owned_registry` `unfalsifiable`
-
-Entry key `spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_target_emission.compliance.l1.py` `test_agent_capabilities_resolve_from_the_source_owned_registry` `unfalsifiable`: The test passes the registry's own capability into `agent_slug` and never drives emission.
+## DEBT [evidence]: seam-dependent registry findings repeat at the latest audit (f-001, f-002)
 
 Two findings (both REJECT) on
 `spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_target_emission.compliance.l1.py`:
@@ -76,9 +70,7 @@ not change.
 test at line 337 drives emission over a changed and an added registry entry; a
 hardcoded suffix or prefix then fails it.
 
-## DEBT [evidence]: portable frontmatter expectation shares the output render path (f-003) `spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_target_emission.compliance.l1.py` `test_codex_skill_frontmatter_strips_claude_only_fields` `oracle-independence`
-
-Entry key `spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_target_emission.compliance.l1.py` `test_codex_skill_frontmatter_strips_claude_only_fields` `oracle-independence`: The expected portable-field set derives from the rendered source that passed through the same render path.
+## DEBT [evidence]: portable frontmatter expectation shares the output render path (f-003)
 
 Finding f-003 (REJECT, oracle independence) at
 `spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_target_emission.compliance.l1.py:247`:
@@ -111,9 +103,7 @@ not change.
 independent law, so a render-path defect that drops or adds a field fails the
 test.
 
-## DEBT [evidence]: required emission actions are hand-picked (f-005) `spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_target_emission.compliance.l1.py` `test_every_source_file_emits_to_both_target_trees (required_actions = {EmissionAction.FAN_OUT, EmissionAction.CONVERT_AGENT})` `test-owned-data`
-
-Entry key `spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_target_emission.compliance.l1.py` `test_every_source_file_emits_to_both_target_trees (required_actions = {EmissionAction.FAN_OUT, EmissionAction.CONVERT_AGENT})` `test-owned-data`: The required emission-action set is hand-picked instead of derived from the `EmissionAction` domain.
+## DEBT [evidence]: required emission actions are hand-picked (f-005)
 
 Finding f-005 (WARNING) at
 `spx/18-plugin-build.enabler/43-target-emission.enabler/tests/test_target_emission.compliance.l1.py:116`:

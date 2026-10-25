@@ -1,8 +1,6 @@
 # Issues
 
-## Scenario predicates are hidden in boolean-returning harnesses `spx/18-plugin-build.enabler/65-build-orchestration.enabler/tests/test_build_orchestration.scenario.l1.py` `every scenario test (dist_drift_with_source_edit_matches_contract(), dist_drift_without_source_edit_matches_contract(), missing_formatter_matches_contract(), failing_formatter_matches_contract(), failing_formatter_version_probe_matches_contract() call sites)` `assertion-seam`
-
-Entry key `spx/18-plugin-build.enabler/65-build-orchestration.enabler/tests/test_build_orchestration.scenario.l1.py` `every scenario test (dist_drift_with_source_edit_matches_contract(), dist_drift_without_source_edit_matches_contract(), missing_formatter_matches_contract(), failing_formatter_matches_contract(), failing_formatter_version_probe_matches_contract() call sites)` `assertion-seam`: Every scenario test delegates its predicate to a boolean-returning harness function.
+## Scenario predicates are hidden in boolean-returning harnesses
 
 Implementation audit `2026-09-14_11-26-09-644-eb39d2a3b433` rejected
 `tests/test_build_orchestration.scenario.l1.py:36`: the formatter-version-probe
@@ -26,9 +24,7 @@ Revisit before relying on this node's evidence-audit approval or changing these 
 
 **Settlement condition.** Each infrastructure `AssertionError` in the harness becomes a lifecycle or dependency error type the harness owns, with every behavioral predicate left in the linked tests, and the node passes its test-evidence audit.
 
-## DEBT [evidence]: build-orchestration verdicts, violating cases, and case literals live in the harness (f-001, f-002, f-003, f-005, f-007) `spx/18-plugin-build.enabler/65-build-orchestration.enabler/tests/test_build_orchestration.compliance.l1.py` `all eleven compliance tests` `assertion-seam`
-
-Entry key `spx/18-plugin-build.enabler/65-build-orchestration.enabler/tests/test_build_orchestration.compliance.l1.py` `all eleven compliance tests` `assertion-seam`: The eleven compliance tests delegate their verdicts and violating cases to the harness.
+## DEBT [evidence]: build-orchestration verdicts, violating cases, and case literals live in the harness (f-001, f-002, f-003, f-005, f-007)
 
 Findings (REJECT unless noted) of a `product-tree:test-evidence-auditor` verdict on
 this node at head `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict
@@ -76,9 +72,7 @@ product exception that yields a boolean, and no case literal; each linked test
 asserts its own predicate over a harness observation, and the node passes its
 test-evidence audit.
 
-## DEBT [evidence]: compliance verdicts share the production contracts they judge (f-006) `outcomeeng_testing/harnesses/build_orchestration.py` `source_justfile_matches_build_contract, lefthook_config_matches_build_contract, source_dist_diff_surfaces_match_contract, path_is_under_runtime_root uses` `oracle-independence`
-
-Entry key `outcomeeng_testing/harnesses/build_orchestration.py` `source_justfile_matches_build_contract, lefthook_config_matches_build_contract, source_dist_diff_surfaces_match_contract, path_is_under_runtime_root uses` `oracle-independence`: Compliance expectations come from the production predicates and constants in `outcomeeng/distribution/orchestration.py` being judged.
+## DEBT [evidence]: compliance verdicts share the production contracts they judge (f-006)
 
 Finding f-006 (REJECT, oracle independence) at harness line 257 of
 `outcomeeng_testing/harnesses/build_orchestration.py`: compliance verdicts come
@@ -128,9 +122,7 @@ orchestration contracts named above apply.
 concern, inspects every listed harness, generator, and production module, and
 evaluates Gate 2.
 
-## DEBT [evidence]: the three formatter-boundary scenarios repeat their stub setup `outcomeeng_testing/harnesses/build_orchestration.py` `missing_formatter_matches_contract, failing_formatter_matches_contract, failing_formatter_version_probe_matches_contract` `repeated-formatter-stub-setup`
-
-Entry key `outcomeeng_testing/harnesses/build_orchestration.py` `missing_formatter_matches_contract, failing_formatter_matches_contract, failing_formatter_version_probe_matches_contract` `repeated-formatter-stub-setup`: The three scenarios repeat the same formatter stub setup.
+## DEBT [evidence]: the three formatter-boundary scenarios repeat their stub setup
 
 Defect class: `architectural-duplication`, rule `repeated-formatter-stub-setup`.
 
@@ -139,15 +131,3 @@ Finding: `outcomeeng_testing/harnesses/build_orchestration.py` around line 110 b
 Remediation target: the harness. A shared formatter-boundary harness in `outcomeeng_testing/harnesses`, beside the existing `build_orchestration` harness, returns the observation (recorded runner calls and the captured build error) so each scenario states only its own case.
 
 Settlement condition: the three scenarios consume one formatter-boundary harness, and no formatter-probe stub or call-recording runner setup repeats across them.
-
-## DEBT [evidence]: build-orchestration verdicts, violating cases, and case literals live in the harness (f-001, f-002, f-003, f-005, f-007) `outcomeeng_testing/harnesses/build_orchestration.py` `the *_matches_contract and *_is_rejected verdict functions, and the unavailable_formatter / formatter_probe stubs raising AssertionError` `assertion-seam`
-
-The harness owns the verdict functions and its stubs raise AssertionError.
-
-**Settlement condition**: The linked tests own the predicates over observations the harness returns.
-
-## DEBT [evidence]: build-orchestration verdicts, violating cases, and case literals live in the harness (f-001, f-002, f-003, f-005, f-007) `outcomeeng_testing/harnesses/build_orchestration.py` `FORMATTER_FAILURE_DIAGNOSTIC, FORMATTER_VERSION_FAILURE_DIAGNOSTIC, FORMATTER_TEST_PATH, INVALID_PATH_SEGMENT, INVALID_PATH_SUFFIX, the violating-justfile construction` `test-owned-data`
-
-The harness hand-picks the case literals and constructs the violating justfile.
-
-**Settlement condition**: Case data is drawn from a source-owned domain or whole-payload violating fixtures.

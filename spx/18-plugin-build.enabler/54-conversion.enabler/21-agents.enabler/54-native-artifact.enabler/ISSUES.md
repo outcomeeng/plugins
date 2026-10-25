@@ -27,9 +27,7 @@ Further instance: `instructions:subagent-auditor` finding `f-001` (rule `capabil
 
 Proposed Change: `.spx/worktree/change-drafts/d000b94a-99d8-4527-82f4-64fea4fd477d.md` (`d000b94a-99d8-4527-82f4-64fea4fd477d`).
 
-## DEBT [source-ownership]: scenario source vocabulary at line 45 `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-native-artifact.enabler/tests/test_native_artifact.scenario.l1.py` `test_agent_frontmatter_and_body_convert_to_codex_toml, test_rendered_codex_agent_tree_converts_to_codex_toml` `source-ownership`
-
-Entry key `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-native-artifact.enabler/tests/test_native_artifact.scenario.l1.py` `test_agent_frontmatter_and_body_convert_to_codex_toml, test_rendered_codex_agent_tree_converts_to_codex_toml` `source-ownership`: Conversion-owned field vocabulary ("name", "description", "profile", "skills", "tools", "web_search", "sandbox_mode", "shell_environment_policy", "set", "developer_instructions", "nickname_candidates", "mcp_servers", "docs", "command", "args") is copied as string literals instead of imported from `outcomeeng.distribution.agents`.
+## DEBT [source-ownership]: scenario source vocabulary at line 45
 
 Defect class: `source-ownership`.
 
@@ -53,9 +51,7 @@ Successor: [outcomeeng/changes#85](https://github.com/outcomeeng/changes/issues/
 
 Revisit and settlement condition: Change #85 establishes production-owned conversion vocabulary and source-payload contracts, migrates every affected native-artifact test and imported harness use, and passes the applicable test-evidence audit.
 
-## DEBT [source-ownership]: mapping vocabulary at line 44 `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-native-artifact.enabler/tests/test_native_artifact.mapping.l1.py` `test_skills_are_preserved_as_codex_config_and_guidance` `source-ownership`
-
-Entry key `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-native-artifact.enabler/tests/test_native_artifact.mapping.l1.py` `test_skills_are_preserved_as_codex_config_and_guidance` `source-ownership`: The skills table key has no exported constant next to `AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD`, so the test copies it.
+## DEBT [source-ownership]: mapping vocabulary at line 44
 
 Defect class: `source-ownership`.
 
@@ -67,9 +63,7 @@ Successor: [outcomeeng/changes#85](https://github.com/outcomeeng/changes/issues/
 
 Revisit and settlement condition: Change #85 establishes production-owned conversion vocabulary and source-payload contracts, migrates every affected native-artifact test and imported harness use, and passes the applicable test-evidence audit.
 
-## DEBT [source-ownership]: harness-owned source payload at line 177 `outcomeeng_testing/harnesses/agent_conversion.py` `source_agent() (defaults REVIEWER_SOURCE_PATH, "reviewer", REVIEWER_DESCRIPTION, REVIEWER_BODY)` `source-ownership`
-
-Entry key `outcomeeng_testing/harnesses/agent_conversion.py` `source_agent() (defaults REVIEWER_SOURCE_PATH, "reviewer", REVIEWER_DESCRIPTION, REVIEWER_BODY)` `source-ownership`: Harness-owned source-agent payload defaults lack provenance.
+## DEBT [source-ownership]: harness-owned source payload at line 177
 
 Defect class: `source-ownership`.
 
