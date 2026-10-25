@@ -33,6 +33,9 @@ from outcomeeng_testing.harnesses.gate import RecordingSpawner
 from outcomeeng_testing.harnesses.real_agent_selection import REPOSITORY_ROOT
 
 PYTEST_MODULE_TOKEN: Final = "pytest"
+# The collection runs outside the repository, so the repository root is put on the
+# import path for the exclusion plugin the argument tail names.
+PYTHONPATH_VARIABLE: Final = "PYTHONPATH"
 COLLECTION_TIMEOUT_SECONDS: Final = 120
 JUST_TIMEOUT_SECONDS: Final = 30
 FIXTURE_TEST_SOURCE: Final = "def test_case() -> None:\n    pass\n"
@@ -97,6 +100,7 @@ def fixture_collection(
         completed = subprocess.run(
             (*COLLECTION_ARGV, *pytest_arguments),
             cwd=root,
+            env={**os.environ, PYTHONPATH_VARIABLE: str(REPOSITORY_ROOT)},
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,

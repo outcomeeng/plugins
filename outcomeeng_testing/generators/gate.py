@@ -41,11 +41,20 @@ MAX_TEST_FILES: Final = 12
 ON_DEMAND_FIXTURE_DIRECTORIES: Final = (
     f"{SPEC_TREE_ROOT}/21-first.enabler",
     f"{SPEC_TREE_ROOT}/32-second.enabler/21-nested.enabler",
+    f"{SPEC_TREE_ROOT}/43-dotted.{ON_DEMAND_LEVEL}.enabler",
     TESTS_DIRECTORY_NAME,
 )
 ON_DEMAND_FIXTURE_SUBJECT: Final = "case"
 ON_DEMAND_DECOY_SUBJECT: Final = "helper"
-ON_DEMAND_FIXTURE_VARIANTS: Final = (("scenario", None), ("property", "runner"))
+# Evidence and runner tokens that equal the on-demand level sit at every level, so
+# a file carries the level in a segment other than the third at the levels
+# outside the suite.
+ON_DEMAND_FIXTURE_VARIANTS: Final = (
+    ("scenario", None),
+    ("property", "runner"),
+    (ON_DEMAND_LEVEL, None),
+    ("scenario", ON_DEMAND_LEVEL),
+)
 
 
 def argvs() -> SearchStrategy[tuple[str, ...]]:

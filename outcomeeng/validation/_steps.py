@@ -109,17 +109,13 @@ TEST_FILE_NAME_SEPARATOR: Final = "."
 # dot-separated segment of the file name.
 TEST_FILE_LEVEL_INDEX: Final = 2
 PYTEST_NODE_ID_SEPARATOR: Final = "::"
-# pytest drops an ignored file from every directory it collects and still runs
-# a file the command line names, so one exclusion keeps the on-demand suite out
-# of each directory target while a target that names an on-demand file keeps it.
-PYTEST_IGNORE_GLOB_OPTION: Final = "--ignore-glob"
-ON_DEMAND_EXCLUSION_ARGV: Final = tuple(
-    f"{PYTEST_IGNORE_GLOB_OPTION}=*{TEST_FILE_NAME_SEPARATOR}{ON_DEMAND_LEVEL}{tail}"
-    for tail in (
-        PYTHON_SUFFIX,
-        f"{TEST_FILE_NAME_SEPARATOR}*{PYTHON_SUFFIX}",
-    )
-)
+# One pytest plugin excludes the on-demand suite from every directory pytest
+# collects, by the same file-name classifier the on-demand command selects with.
+# pytest never consults the plugin for a file the command line names, so a
+# target that names an on-demand file keeps it.
+PYTEST_PLUGIN_OPTION: Final = "-p"
+ON_DEMAND_PLUGIN_MODULE: Final = "outcomeeng.validation.on_demand_plugin"
+ON_DEMAND_EXCLUSION_ARGV: Final = (PYTEST_PLUGIN_OPTION, ON_DEMAND_PLUGIN_MODULE)
 PYTEST_ARGV: Final = (
     "uv",
     "run",
