@@ -59,7 +59,7 @@ EXPECTED_REPORT_FILE: Final = FIXTURE_ROOT / "expected-report.tsv"
 UNTOUCHED_FILES_FILE: Final = FIXTURE_ROOT / "untouched-forms.txt"
 OUTSIDE_PRODUCT_TREE_FIXTURE: Final = INPUT_TREE / "docs"
 CONVERTIBLE_ONLY_TREE: Final = FIXTURE_ROOT / "convertible-only"
-# A fixture tree models a product tree whose nodes carry a `tests/` directory, but the
+# A fixture tree models a Product Tree whose nodes carry a `tests/` directory, but the
 # placement rule bans a `tests/` directory under the test-infrastructure home, so the
 # stored tree names it `test-files` and each copy restores the name the script sees.
 STORED_TESTS_DIRECTORY: Final = "test-files"

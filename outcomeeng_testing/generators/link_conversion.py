@@ -1,4 +1,4 @@
-"""Variable product trees for the link-conversion evidence.
+"""Variable Product Trees for the link-conversion evidence.
 
 Each generated tree holds a root decision record, one to three top-level nodes,
 and an optional child node under each. Every spec file carries a drawn mix of

@@ -78,7 +78,7 @@ class AuditContract(StrEnum):
 GLOB_ANY_SEGMENTS: Final = "**"
 MARKDOWN_EXTENSION: Final = MARKDOWN_FILE_SUFFIX.lstrip(".")
 # Every test file the methodology governs sits under a node's ``tests/``
-# directory below the product tree root.
+# directory below the Product Tree root.
 SPEC_TESTS_PATH_GLOB: Final = f"spx/{GLOB_ANY_SEGMENTS}/tests/{GLOB_ANY_SEGMENTS}"
 PRODUCT_TREE_ROOT_GLOB: Final = f"spx/{GLOB_ANY_SEGMENTS}"
 ADR_PATH_GLOB: Final = f"{PRODUCT_TREE_ROOT_GLOB}/*.adr.md"

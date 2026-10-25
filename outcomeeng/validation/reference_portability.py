@@ -3,7 +3,7 @@
 A plugin installs into a consumer repository that holds this marketplace's
 plugins but none of its internal directories.  A reference in shipped content
 under ``src/plugins/`` resolves in a consumer checkout only when it names the
-consumer's own product tree generically or the plugin's own files; a concrete
+consumer's own Product Tree generically or the plugin's own files; a concrete
 reference into this marketplace's own files dangles there.
 
 A reference is non-portable when it is either:

@@ -1,6 +1,6 @@
-"""Map the SPX CLI's spec-tree projection into the prototype tree shape.
+"""Map the SPX CLI's Product Tree projection into the prototype tree shape.
 
-The browser interface sources spec-tree structure and derived state from the
+The browser interface sources Product Tree structure and derived state from the
 SPX CLI's JSON projection (`spx spec status --format json`) rather than
 re-parsing directory suffixes or deriving node state itself. This module is the
 pure, transport-free adapter between that projection and the tree shape the
@@ -36,7 +36,7 @@ def spx_projection_to_tree(projection: dict) -> list[dict]:
 
     Reads the projection's ``nodes`` list and maps each node recursively. A
     projection without ``nodes`` yields an empty forest rather than raising, so
-    a product with an empty product tree seeds an empty browser.
+    a product with an empty Product Tree seeds an empty browser.
     """
     return [_node(n) for n in projection.get("nodes", [])]
 

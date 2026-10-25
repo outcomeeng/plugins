@@ -1,7 +1,7 @@
 """Generated grant categories for grant-locality evidence.
 
 The skill-directory variable names come from the validator, because they are the
-values the product tree declares and the validator complies with. What each grant
+values the Product Tree declares and the validator complies with. What each grant
 line is composed into — the field declaration, the surrounding tool list, the
 body mention — is this module's own construction.
 """
