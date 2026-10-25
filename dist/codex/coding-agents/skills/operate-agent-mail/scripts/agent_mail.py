@@ -315,7 +315,14 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
         (
             RequestShape(
                 frozenset({AGENT_FIELD}),
-                frozenset({ALL_RECORDS_FIELD, INCLUDE_BODIES_FIELD, LIMIT_FIELD, REPOSITORY_FIELD}),
+                frozenset(
+                    {
+                        ALL_RECORDS_FIELD,
+                        INCLUDE_BODIES_FIELD,
+                        LIMIT_FIELD,
+                        REPOSITORY_FIELD,
+                    }
+                ),
             ),
         )
     ),

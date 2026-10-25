@@ -1156,9 +1156,7 @@ def mail_request(request: object) -> dict[str, object]:
         RECORD_FIELD: record,
         CAPABILITY_FIELD: mail_send_request(
             record,
-            _optional_text(
-                value.get(REPOSITORY_FIELD), f"request.{REPOSITORY_FIELD}"
-            ),
+            _optional_text(value.get(REPOSITORY_FIELD), f"request.{REPOSITORY_FIELD}"),
         ),
     }
 
