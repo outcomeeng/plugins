@@ -842,7 +842,7 @@ def root_instruction_plan_workspace() -> Iterator[RootInstructionPlanWorkspace]:
     with TemporaryDirectory() as tmp:
         eval_toml = make_eval_dir(
             Path(tmp) / "evals" / "rule",
-            plugin_dir="dist/claude/product-tree",
+            plugin_dir=str(_DEFAULT_PLUGIN_DIR),
             owned_paths=(DEFAULT_CI_OWNED_PATH,),
             smoke_case_ids=DEFAULT_PLAN_CASE_IDS,
         )
@@ -884,7 +884,7 @@ def make_default_ci_command_harness(tmp_path: Path) -> DefaultCiCommandHarness:
     eval_root = tmp_path / "evals"
     eval_toml = make_eval_dir(
         eval_root / "rule",
-        plugin_dir="dist/claude/product-tree",
+        plugin_dir=str(_DEFAULT_PLUGIN_DIR),
         owned_paths=(DEFAULT_CI_OWNED_PATH,),
         smoke_case_ids=DEFAULT_PLAN_CASE_IDS,
     )

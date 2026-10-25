@@ -115,7 +115,9 @@ def test_main_reports_location_and_exits_non_zero(
     err = capsys.readouterr().err
 
     assert code == 1
-    assert HOOK_PLUGIN_NAME in err and "hooks.json" in err and event in err
+    assert HOOK_PLUGIN_NAME in err  # plugin
+    assert "hooks.json" in err  # file
+    assert event in err  # event
 
 
 def test_main_exits_zero_for_a_clean_tree(tmp_path: Path) -> None:

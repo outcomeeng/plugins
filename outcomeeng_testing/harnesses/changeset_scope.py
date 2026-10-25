@@ -204,14 +204,14 @@ def _git(repo: pathlib.Path, *args: str, cwd: pathlib.Path | None = None) -> str
     """
     env = {
         **os.environ,
-        "GIT_CONFIG_GLOBAL": "/dev/null",
-        "GIT_CONFIG_SYSTEM": "/dev/null",
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_SYSTEM": os.devnull,
         "GIT_AUTHOR_NAME": "test",
         "GIT_AUTHOR_EMAIL": "test@example.invalid",
         "GIT_COMMITTER_NAME": "test",
         "GIT_COMMITTER_EMAIL": "test@example.invalid",
     }
-    result = subprocess.run(  # noqa: S603 — fixed argv, no shell, args from the harness
+    result = subprocess.run(  # noqa: S603  # fixed argv, no shell, args from the harness
         ["git", *args],
         cwd=cwd if cwd is not None else repo,
         env=env,
@@ -739,13 +739,13 @@ def git_failure_stderr(directory: pathlib.Path, *args: str) -> str:
     The observation is the independent oracle for a diagnostic the shipped code
     relays from git.
     """
-    result = subprocess.run(  # noqa: S603 — fixed argv, no shell, args from the harness
-        ["git", *args],  # noqa: S607 — git via PATH, as the shipped code runs it
+    result = subprocess.run(  # noqa: S603  # fixed argv, no shell, args from the harness
+        ["git", *args],  # noqa: S607  # git via PATH, as the shipped code runs it
         cwd=directory,
         env={
             **os.environ,
-            "GIT_CONFIG_GLOBAL": "/dev/null",
-            "GIT_CONFIG_SYSTEM": "/dev/null",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_SYSTEM": os.devnull,
         },
         capture_output=True,
         text=True,
