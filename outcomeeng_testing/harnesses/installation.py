@@ -3701,9 +3701,6 @@ def observe_migrating_inventory(
         mirror_installation_inputs(checkout, mirror)
         _write_project_marketplace(mirror, DECLARED_CLAUDE_SOURCE)
         environment = _persistent_environment(temporary_root)
-        catalog = _catalogs_from_documents(mirror)[Target.CLAUDE]
-        target_version = served_version(1)
-        _serve_clone_versions(mirror, catalog, target_version)
         settings_path = mirror / CLAUDE_PROJECT_SETTINGS_PATH
         selection_before: dict[str, bool] | None = None
         if declare_selection:
@@ -3729,6 +3726,10 @@ def observe_migrating_inventory(
             ListedRecord(
                 RETIRED_PLUGIN, case.scope, _ACTIVATION_DECLARATION[case.activation]
             ),
+        )
+        target_version = served_version(len(before))
+        _serve_clone_versions(
+            mirror, _catalogs_from_documents(mirror)[Target.CLAUDE], target_version
         )
         other = next(agent for agent in Target if agent is not case.agent)
         runner = _MigrationRunner(
