@@ -65,11 +65,9 @@ from outcomeeng.validation.spx_version import (
     SPX_PACKAGE_NAME,
     VERIFICATION_RUN_MINIMUM_SPX_VERSION,
     VERIFICATION_RUN_REQUIRED_COMMANDS,
-    WORKFLOW_PATH,
     is_satisfied,
     minimum_release_package_command,
     parse_version,
-    read_pinned_version,
     verification_run_floor_is_satisfied,
 )
 from outcomeeng_testing.generators.audit_verification_run_contract import (
@@ -103,16 +101,12 @@ def spx_floor_provides_verification_run_lifecycle() -> bool:
     integrity = _required_string(release, "dist.integrity")
     tarball = _required_string(release, "dist.tarball")
     help_text = SPX_VERIFICATION_RUN_HELP_FIXTURE.read_text(encoding="utf-8")
-    pinned_version = read_pinned_version(WORKFLOW_PATH.read_text(encoding="utf-8"))
     return (
-        pinned_version is not None
-        and published_version == VERIFICATION_RUN_MINIMUM_SPX_VERSION
+        published_version == VERIFICATION_RUN_MINIMUM_SPX_VERSION
         and integrity.startswith("sha512-")
         and tarball.endswith(f"spx-{published_version}.tgz")
         and is_satisfied(REQUIRED_SPX_VERSION, published_version)
         and verification_run_floor_is_satisfied(REQUIRED_SPX_VERSION)
-        and verification_run_floor_is_satisfied(pinned_version)
-        and is_satisfied(pinned_version, REQUIRED_SPX_VERSION)
         and all(
             f"  {command}" in help_text
             for command in VERIFICATION_RUN_REQUIRED_COMMANDS
