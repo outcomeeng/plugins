@@ -23,7 +23,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 ### Fixed
 
 - **A record sent with an acknowledgement required reads back with `ackRequired` true before it is read.** The installed store reports the acknowledgement status `required` for such a record until it is read (`pending`) or acknowledged (`acked`); the adapter now treats all three as an acknowledgement requirement.
-- **Errors that relayed a raw exception now name the command, the cause, and the fix.** A Git or `am` invocation that cannot run, an `am` response the adapter cannot parse, a working directory that is no repository, and stdin that is not JSON each say what to check or supply. A store's own nonzero-exit message still reaches `detail` verbatim.
+- **Every failure detail names the failing command, the cause, and what to check.** One constructor builds each failure text, so no failure path emits a message without a cause and a fix. A Git or `am` invocation that cannot run or times out, an `am` response the adapter cannot parse, a working directory that is no repository, stdin that is not JSON, and every validation error report the exception class and message or the received value, then the fix. A store's own nonzero-exit message still reaches `detail` verbatim; only a store that exits nonzero with no output receives a constructed detail.
 
 ## 0.16.5
 
