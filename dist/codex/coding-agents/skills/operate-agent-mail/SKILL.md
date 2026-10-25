@@ -7,7 +7,7 @@ allowed-tools: Write, Bash(python3 "${SKILL_DIR}/scripts/agent_mail.py":*)
 ---
 
 <objective>
-A versioned JSON agent-mail operation result — a registered identity, a delivered record with its store-assigned id, the recipient's listed records, the message a read or an acknowledgement judged, or the first later record or a named timeout or unreachable outcome of a bounded wait — under the project key the repository names, or that key alone as an unversioned `projectKey` answer, with every store identity preserved verbatim.
+A versioned JSON agent-mail operation result — a registered identity, a delivered record with its store-assigned id, the recipient's listed records, the message a read or an acknowledgement judged, or the first later record or a named timeout or unreachable outcome of a bounded wait — under the project key of the store the operation acted on, or that key alone as an unversioned `projectKey` answer, with every store identity preserved verbatim.
 </objective>
 
 <operation_surface>
@@ -31,6 +31,8 @@ One further form answers outside the request shape, so it takes no JSON request 
 
 The record and its delivery rules:
 
+- **Repository.** Every operation accepts an optional `repository` in its `arguments`, an absolute path string. The operation then acts on the store under the project key of that repository, so one orchestration running in several repositories reaches each repository's own store; a request naming none acts on the store of the adapter's own working directory. A value that is no string or no absolute path is rejected as `invalid-schema` before any command runs, and a path that resolves to no repository answers `repository-unresolved`, never the key of the adapter's own working directory. The adapter reads no overlay or configuration to select a repository, so a workflow that selects one from its own configuration passes the path it selected. The result's `projectKey` reports the store the operation acted on, so the caller sees which project received its call.
+- **No registration on behalf.** The adapter registers no identity for a caller: a send from a name the named store does not hold returns the store's failure as `command-failed`, and `register` against that repository creates the identity.
 - **Fields.** A `record` carries exactly `schema` (`1`), `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`; the store assigns `id` on delivery.
 - **Kinds a sender writes.** `order`, `fact`, `question`, `answer`, `delegation-request`, and the four terminal handbacks `delegation-completed`, `delegation-failed`, `delegation-rejected`, and `delegation-unavailable`. On read-back the adapter reports each record's kind as one of those or as `unclassified`, and `subject` carries the text to use in either case. Never derive a kind from a subject: the adapter owns the prefix it writes and the conditions a row meets to classify, and a row missing any of them reads as `unclassified` with its subject verbatim.
 - **Mapping.** The adapter maps `correlation` onto the store's thread, `kind` onto a subject prefix, and `ackRequired` onto the store's acknowledgement requirement, and reads each back; a store limit never shapes the record. A correlation the store's thread alphabet rejects — one with a character outside letters, digits, `.`, `_`, and `-`, a non-alphanumeric first character, or the prefix `xc-` — travels as an `xc-` escape the adapter writes and reads back to the original correlation, so any correlation round-trips. A correlation whose written thread id would exceed 128 characters is rejected as `invalid-schema` before any command runs, and so is any text argument carrying a NUL byte.
@@ -43,7 +45,7 @@ The record and its delivery rules:
 - **Liveness.** No operation reports liveness, staleness, or session state, because the store's per-agent activity timestamp moves for reasons unrelated to a session being alive.
 - **Credential.** A registration leaves the credential the store keeps for that name, and the next send from that name authenticates through it. The store offers no separate credential command, so the adapter makes none and no step of this skill refreshes it.
 
-The project key is the repository's own common Git directory, so every worktree of one pool, the pool's bare repository, and the pool's main checkout resolve one mail project, and no checkout's deletion removes it. The adapter reads that directory for its own working directory before every operation and reads no working directory, environment variable, or parent path in its place. The lookup drops every variable that could make Git answer from something other than that directory — one naming a repository and one bounding where Git may look are known cases, not the only ones — and carries every other through, so a repository reachable only across a mount boundary still resolves. A working directory that is no repository yields `repository-unresolved`.
+The project key is the repository's own common Git directory, so every worktree of one pool, the pool's bare repository, and the pool's main checkout resolve one mail project, and no checkout's deletion removes it. The adapter reads that directory for the repository a request names, or for its own working directory when the request names none, before every operation and reads no other working directory, environment variable, or parent path in its place. The lookup drops every variable that could make Git answer from something other than that directory — one naming a repository and one bounding where Git may look are known cases, not the only ones — and carries every other through, so a repository reachable only across a mount boundary still resolves. A working directory that is no repository yields `repository-unresolved`.
 
 </operation_surface>
 
@@ -71,8 +73,10 @@ The project key is the repository's own common Git directory, so every worktree 
    }
    ```
 
+   An operation that acts on another repository's store carries `"repository": "<absolute path>"` beside its other `arguments`; omit it to act on the store of the adapter's own working directory.
+
 3. Write the request with the file-write tool to a file in the scratch directory the harness names for this session, under a file name unique to the agent and the request, and submit it through the input redirect in `<invocation_forms>`. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner.
-4. For a `run` request, accept only `status: "succeeded"`, which exits zero and carries exactly seven fields, every one of them preserved: `schemaVersion`, `operation`, `status`, `commandExitCode`, `projectKey`, the store's `response`, and `data`. A delivered message is the `record` in `data` carrying its store-assigned `id`. A request the adapter read and rejected answers instead with `schemaVersion`, `operation` — the requested operation, or `unknown` where the request named none — `status` (`command-failed`, `invalid-schema`, `store-unavailable`, `repository-unresolved`, or `operation-unavailable`), `detail`, and `commandExitCode` where a store command returned an exit code, and exits 1. Stdin the adapter cannot read as a JSON object is rejected before any operation is read, so that answer carries `schemaVersion`, `operation` as `unknown`, `status: "invalid-schema"`, and `detail`, with no `commandExitCode`, and exits 2. A failure of the store command itself, of any class, answers `store-unavailable` or `command-failed` in the same versioned shape. Stop on the exact `status` and `detail` of every failing form; none of them admits a fallback command, key, or store. The `project-key` operation answers in its own shape, stated with its form below.
+4. For a `run` request, accept only `status: "succeeded"`, which exits zero and carries exactly seven fields, every one of them preserved: `schemaVersion`, `operation`, `status`, `commandExitCode`, `projectKey` (the key of the store the operation acted on), the store's `response`, and `data`. A delivered message is the `record` in `data` carrying its store-assigned `id`. A request the adapter read and rejected answers instead with `schemaVersion`, `operation` — the requested operation, or `unknown` where the request named none — `status` (`command-failed`, `invalid-schema`, `store-unavailable`, `repository-unresolved`, or `operation-unavailable`), `detail`, and `commandExitCode` where a store command returned an exit code, and exits 1. Stdin the adapter cannot read as a JSON object is rejected before any operation is read, so that answer carries `schemaVersion`, `operation` as `unknown`, `status: "invalid-schema"`, and `detail`, with no `commandExitCode`, and exits 2. A failure of the store command itself, of any class, answers `store-unavailable` or `command-failed` in the same versioned shape. Stop on the exact `status` and `detail` of every failing form; none of them admits a fallback command, key, or store. The `project-key` operation answers in its own shape, stated with its form below.
 
 </workflow>
 
@@ -84,10 +88,16 @@ To submit a request, with `<request-file>` the file written in step 3:
 python3 "${SKILL_DIR}/scripts/agent_mail.py" run < <request-file>
 ```
 
-To read the project key alone:
+To read the project key alone, for the adapter's own working directory:
 
 ```bash
 python3 "${SKILL_DIR}/scripts/agent_mail.py" project-key
+```
+
+To read the key of another repository, add the option `--repository <absolute-path>`; the form then answers that repository's key, or `repository-unresolved` when the path resolves to no repository, and never the key of its own working directory.
+
+```bash
+python3 "${SKILL_DIR}/scripts/agent_mail.py" project-key --repository <absolute-path>
 ```
 
 This form answers `{"projectKey": "<absolute path>"}` and exits zero, or `{"status": "repository-unresolved", "detail": "<reason>"}` and exits non-zero. It carries no `schemaVersion`, `status` on success, `commandExitCode`, `response`, or `data`, because it runs no store command.
@@ -106,7 +116,7 @@ This form answers `{"projectKey": "<absolute path>"}` and exits zero, or `{"stat
 - NEVER select, route, or address by a label; the stable name or the store id selects every target, and a label may be shared by two agents and changes with its owner.
 - NEVER pass a request through a heredoc, a pipe, or an inline argument, and NEVER remove the request file — a request carries code spans, quotes, and JSON that the dangerous-command guard refuses in those forms, and the harness clears its scratch directory.
 - NEVER invoke raw `am` commands, `am` command help, or read the store's database.
-- NEVER derive the project key outside the adapter; it reads the key from the repository, and no working directory, environment variable, or parent path stands in for it.
+- NEVER derive the project key outside the adapter; it reads the key from the repository a request names, or from its own working directory when none is named, and no other working directory, environment variable, or parent path stands in for it.
 - NEVER treat a read or an acknowledgement as agreement, ownership, authorization, or acceptance of a proposal; it records only that the recipient judged one message, and says nothing about its content.
 - NEVER read or acknowledge a record on another recipient's behalf, and NEVER acknowledge when a private `read` suffices.
 - NEVER report or relay the registration token the store returns; the adapter removes it from every result.
@@ -117,6 +127,8 @@ This form answers `{"projectKey": "<absolute path>"}` and exits zero, or `{"stat
 
 The bundled adapter is covered over generated request, record, and repository-lookup domains, with controlled `CommandRunner` implementations at the command boundary and real repositories behind the repository lookup:
 
+- every operation accepts an optional `repository`, maps to the same store command under that repository's key, and reports that key as the result's `projectKey`, and the project-key form given `--repository` answers that repository's key;
+- a `repository` that is no absolute path string runs no store command, and a named path that resolves to no repository answers `repository-unresolved` rather than the key of the adapter's working directory;
 - every registry operation's argument vector is read against the store CLI's captured usage text under the resolved project key;
 - a real pool's linked worktree, bare repository, main checkout, and a symlinked route to one of them each resolve one key, while the pool's parent directory resolves none;
 - every environment variable Git's own behaviour confirms moves the answer off the working directory — by answering with another repository, or with none — leaves the key unchanged, each alone and all together, read from the pool shape whose lookup Git confirmed it moves, while the parent directory still resolves none;
@@ -150,6 +162,7 @@ The bundled adapter is covered over generated request, record, and repository-lo
 
 - A successful `run` operation is established only when the bundled script exits zero and emits exactly the seven fields of the versioned success result — `schemaVersion: 1`, `operation`, `status: "succeeded"`, `commandExitCode: 0`, `projectKey`, `response`, and `data` — without exposing `am` command grammar; a successful `project-key` operation is established only when it exits zero and emits `projectKey`.
 - Every record sent and read back carries the same `schema`, `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`, plus the store-assigned `id` on read.
+- A request naming a `repository` acts on that repository's store, and its result's `projectKey` is that repository's key.
 - An absent store or an unresolvable repository yields its named unavailable result and no fallback.
 - No registration result carries the store's registration token.
 - A wait ends with exactly one of the named outcomes `received`, `timeout`, or `unreachable`, never with a record at or below its `afterId`.
