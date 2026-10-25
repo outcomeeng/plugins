@@ -954,10 +954,12 @@ class RecordingRunner:
         )
 
 
-BASE_REF_BRANCH = "main"
-BASE_REF = "origin/main"
 LISTED_VERSION = recorded_version(0)
 """The one version every entry of a catalog-wide controlled listing carries."""
+PUBLISHED_SOURCE_NAME = "published-source"
+"""The directory the harness-published marketplace source lives in."""
+PUBLISHED_SOURCE_URL = "https://marketplace.invalid/published-source.git"
+"""The address a harness-published source answers to; no host serves it."""
 SEEDED_OLDER_COMMIT_DISTANCE = 1
 """How many first-parent commits behind the checkout head the seeded record is placed.
 
@@ -3885,10 +3887,16 @@ def observe_real_first_install() -> RealFirstInstallObservation:
         mirror = temporary_root / "checkout"
         selected_root = temporary_root / "selected-agent-state"
         mirror_installation_inputs(checkout, mirror)
+        published_source = _publish_marketplace_source(
+            checkout, temporary_root / PUBLISHED_SOURCE_NAME
+        )
         _copy_committed_project_settings(
-            checkout, mirror / CLAUDE_PROJECT_SETTINGS_PATH
+            checkout,
+            mirror / CLAUDE_PROJECT_SETTINGS_PATH,
+            published_source=published_source,
         )
         environment = _persistent_environment(selected_root)
+        published_source.redirect(environment)
         _prepare_agent_state(environment)
         initial_state = _state_snapshot(environment)
         project_settings = mirror / CLAUDE_PROJECT_SETTINGS_PATH
@@ -3985,12 +3993,20 @@ def observe_real_record_refresh() -> RealRecordRefreshObservation:
         mirror_installation_inputs(checkout, invocation)
         mirror_installation_inputs(checkout, other)
         mirror_installation_inputs(checkout, gone)
+        published_source = _publish_marketplace_source(
+            checkout, temporary_root / PUBLISHED_SOURCE_NAME
+        )
         environment = _persistent_environment(temporary_root / "agent-state")
+        published_source.redirect(environment)
         _prepare_agent_state(environment)
-        _register_persistent_claude_marketplace(invocation, environment)
-        _register_persistent_codex_marketplace(invocation, environment)
-        _write_project_marketplace(other, DECLARED_CLAUDE_SOURCE, local=True)
-        _write_project_marketplace(gone, DECLARED_CLAUDE_SOURCE)
+        _register_persistent_claude_marketplace(
+            invocation, environment, published_source
+        )
+        _register_persistent_codex_marketplace(
+            invocation, environment, published_source
+        )
+        _write_project_marketplace(other, published_source.url, local=True)
+        _write_project_marketplace(gone, published_source.url)
         _install_claude_plugin(invocation, environment, CLAUDE_PROJECT_SCOPE)
         _install_claude_plugin(other, environment, CLAUDE_LOCAL_SCOPE)
         _install_claude_plugin(gone, environment, CLAUDE_PROJECT_SCOPE)
@@ -4123,11 +4139,19 @@ def observe_real_uncached_fetch() -> RealUncachedFetchObservation:
         other = temporary_root / "other-checkout"
         mirror_installation_inputs(checkout, invocation)
         mirror_installation_inputs(checkout, other)
+        published_source = _publish_marketplace_source(
+            checkout, temporary_root / PUBLISHED_SOURCE_NAME
+        )
         environment = _persistent_environment(temporary_root / "agent-state")
+        published_source.redirect(environment)
         _prepare_agent_state(environment)
-        _register_persistent_claude_marketplace(invocation, environment)
-        _register_persistent_codex_marketplace(invocation, environment)
-        _write_project_marketplace(other, DECLARED_CLAUDE_SOURCE)
+        _register_persistent_claude_marketplace(
+            invocation, environment, published_source
+        )
+        _register_persistent_codex_marketplace(
+            invocation, environment, published_source
+        )
+        _write_project_marketplace(other, published_source.url)
         _install_claude_plugin(invocation, environment, CLAUDE_PROJECT_SCOPE)
         _install_claude_plugin(other, environment, CLAUDE_PROJECT_SCOPE, plugin)
         current_cache = _recorded_install_path(environment, plugin, other)
@@ -4281,38 +4305,42 @@ def observe_real_installation() -> RealInstallationObservation:
         temporary_root = Path(temporary_directory)
         persistent_mirror = temporary_root / "persistent-checkout"
         mirror_installation_inputs(checkout, persistent_mirror)
+        published_source = _publish_marketplace_source(
+            checkout, temporary_root / PUBLISHED_SOURCE_NAME
+        )
         selected_environment = _persistent_environment(
             temporary_root / "selected-agent-state"
         )
+        published_source.redirect(selected_environment)
         _prepare_agent_state(selected_environment)
         _register_persistent_claude_marketplace(
             persistent_mirror,
             selected_environment,
+            published_source,
         )
         _register_persistent_codex_marketplace(
             persistent_mirror,
             selected_environment,
+            published_source,
         )
-        # The seed installs from the registered marketplace source, so it can
-        # seed only the plugins that source publishes. A checkout plugin the
-        # source has not published can never be installed state, so the
-        # persistent run never selects it; the pending-publication carve-out is
-        # exercised by the l1 scenario evidence with simulated agent output.
-        published = published_catalog_plugin_names()
-        persistent_subsets = {
-            agent: subset & published
-            for agent, subset in generated_agent_subsets(
-                persistent_mirror,
-                include_product_tree=True,
-            ).items()
-        }
+        # The seed installs from the registered marketplace source, which is
+        # the harness-published copy of this checkout's catalog, so every
+        # cataloged plugin is installable state. The pending-publication
+        # carve-out is exercised by the l1 scenario evidence with simulated
+        # agent output.
+        persistent_subsets = generated_agent_subsets(
+            persistent_mirror,
+            include_product_tree=True,
+        )
         _seed_persistent_plugins(
             persistent_mirror,
             selected_environment,
             persistent_subsets,
         )
         persistent_settings = persistent_mirror / CLAUDE_PROJECT_SETTINGS_PATH
-        _copy_committed_project_settings(checkout, persistent_settings)
+        _copy_committed_project_settings(
+            checkout, persistent_settings, published_source=published_source
+        )
         persistent_selection = _declared_selection(persistent_settings)
         persistent_settings_before = persistent_settings.read_bytes()
         persistent_codex_marketplaces = _run_codex_marketplace_listing(
@@ -4711,15 +4739,100 @@ def _write_catalog_selection(path: Path, selected: frozenset[str]) -> None:
     path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
 
 
-def _copy_committed_project_settings(checkout: Path, destination: Path) -> None:
+def _copy_committed_project_settings(
+    checkout: Path,
+    destination: Path,
+    *,
+    published_source: PublishedSource | None = None,
+) -> None:
     """Copy the checkout's committed Claude project settings into a mirror.
 
     The committed document carries this repository's real plugin selection,
     the whole-payload artifact the persistent-installation scenario is about.
+    A real-agent run passes the harness-published source, which replaces the
+    committed marketplace source in the copy and leaves the selection as
+    committed, so the run registers a source that carries this checkout's
+    catalog.
     """
     source = checkout / CLAUDE_PROJECT_SETTINGS_PATH
     destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(source, destination)
+    if published_source is None:
+        shutil.copyfile(source, destination)
+        return
+    document = _settings_json(source)
+    extra = cast("dict[str, object]", document[EXTRA_MARKETPLACES_FIELD])
+    extra[MARKETPLACE] = claude_marketplace_settings(published_source.url, MARKETPLACE)[
+        EXTRA_MARKETPLACES_FIELD
+    ][MARKETPLACE]
+    destination.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+
+
+@dataclass(frozen=True)
+class PublishedSource:
+    """A marketplace source the harness serves from a local git repository.
+
+    `url` is the address the run declares and both agents register; the
+    repository at `location` answers it through git's own URL rewriting,
+    which the harness installs in the environment of every agent process of
+    the run. The agents then clone, fetch, and read heads exactly as they do
+    for a remote source, over a source that carries this checkout's catalog.
+    """
+
+    url: str
+    location: Path
+
+    def redirect(self, environment: dict[str, str]) -> None:
+        """Route git's reads of `url` to the repository at `location`."""
+        environment.update(
+            {
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": f"url.{self.location.as_uri()}.insteadOf",
+                "GIT_CONFIG_VALUE_0": self.url,
+            }
+        )
+
+
+def _publish_marketplace_source(checkout: Path, destination: Path) -> PublishedSource:
+    """Publish this checkout's installation inputs as a local git marketplace source.
+
+    A real-agent run registers and installs from a source the harness owns,
+    so its evidence depends on the checkout's own catalog and generated trees
+    rather than on what a remote default branch carries at that moment. The
+    source is a git working tree with one commit, which gives the run the head
+    it reads its target from.
+    """
+    mirror_installation_inputs(checkout, destination)
+    isolated_git = {
+        **os.environ,
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_SYSTEM": os.devnull,
+    }
+    for argv in (
+        ("git", "init", "--quiet"),
+        ("git", "add", "--all"),
+        (
+            "git",
+            "-c",
+            "user.name=published-source",
+            "-c",
+            "user.email=published-source@invalid",
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "--quiet",
+            "--message",
+            "published source",
+        ),
+    ):
+        subprocess.run(
+            argv,
+            cwd=destination,
+            capture_output=True,
+            text=True,
+            check=True,
+            env=isolated_git,
+        )
+    return PublishedSource(url=PUBLISHED_SOURCE_URL, location=destination.resolve())
 
 
 def _declared_selection(settings: Path) -> frozenset[str]:
@@ -4955,6 +5068,7 @@ def _run_persistent_recipe(
 def _register_persistent_claude_marketplace(
     checkout: Path,
     environment: Mapping[str, str],
+    source: PublishedSource,
 ) -> None:
     result = _run_agent_process(
         (
@@ -4962,7 +5076,7 @@ def _register_persistent_claude_marketplace(
             "plugin",
             "marketplace",
             "add",
-            DECLARED_CLAUDE_SOURCE,
+            source.url,
             CLAUDE_SCOPE_FLAG,
             CLAUDE_PROJECT_SCOPE,
         ),
@@ -4979,6 +5093,7 @@ def _register_persistent_claude_marketplace(
 def _register_persistent_codex_marketplace(
     checkout: Path,
     environment: Mapping[str, str],
+    source: PublishedSource,
 ) -> None:
     result = _run_agent_process(
         (
@@ -4986,7 +5101,7 @@ def _register_persistent_codex_marketplace(
             "plugin",
             "marketplace",
             "add",
-            DECLARED_CODEX_SOURCE,
+            source.url,
             "--json",
         ),
         cwd=checkout,
@@ -5247,7 +5362,6 @@ __all__ = [
     "UnpublishedPluginObservation",
     "UnpublishedPluginRunner",
     "VerificationRecipeObservation",
-    "published_catalog_plugin_names",
     "committed_catalog_plugin_names",
     "observe_agent_home_collision",
     "observe_interrupted_reconciliation",
@@ -5592,61 +5706,6 @@ def observe_designated_failure(
         DesignatedFailureRunner(operation=operation, stderr=stderr, plugin=plugin),
         isolated=isolated,
         source=source,
-    )
-
-
-def published_catalog_plugin_names() -> frozenset[str]:
-    """Plugins the registered marketplace source publishes, read from the base ref.
-
-    An independent oracle: the published branch's own committed catalogs, read
-    through git rather than through the installation run whose classification is
-    under test. A missing base ref raises rather than reporting an empty set,
-    because an empty oracle would make every pending claim vacuously true.
-    """
-    root = repository_root()
-    names: set[str] = set()
-    for path in (CLAUDE_CATALOG_PATH, CODEX_CATALOG_PATH):
-        names.update(_base_ref_catalog_names(root, path))
-    return frozenset(names)
-
-
-def _base_ref_catalog_names(root: Path, path: Path) -> set[str]:
-    """Read one catalog at the base ref, fetching that ref when absent.
-
-    A shallow checkout has no `origin/main`, which is how the governing CI job
-    checks out. Fetching the ref keeps the oracle available there rather than
-    turning an absent ref into an unrelated failure of every assertion this
-    test carries.
-    """
-    for fetch_first in (False, True):
-        if fetch_first:
-            fetched = subprocess.run(
-                ("git", "fetch", "--depth=1", "origin", BASE_REF_BRANCH),
-                cwd=root,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if fetched.returncode != 0:
-                raise RuntimeError(
-                    f"cannot read the canonical catalog: fetching "
-                    f"{BASE_REF_BRANCH} failed with {fetched.stderr.strip()}"
-                )
-        shown = subprocess.run(
-            ("git", "show", f"{BASE_REF}:{path.as_posix()}"),
-            cwd=root,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if shown.returncode == 0:
-            document = json.loads(shown.stdout)
-            return {
-                entry[CATALOG_PLUGIN_NAME_FIELD]
-                for entry in document[CATALOG_PLUGINS_FIELD]
-            }
-    raise RuntimeError(
-        f"cannot read {path.as_posix()} at {BASE_REF}: {shown.stderr.strip()}"
     )
 
 
