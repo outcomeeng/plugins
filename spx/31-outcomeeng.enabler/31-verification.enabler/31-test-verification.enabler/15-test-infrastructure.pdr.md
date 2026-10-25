@@ -1,6 +1,6 @@
 # Test Infrastructure
 
-Every product tree governed by the Product Tree methodology governs harnesses, generators, and inert fixtures as infrastructure that is crucial to delivering value; places their implementations at predictable per-language homes outside `spx/` and outside any `tests/` directory; and audits the full evidence chain from a spec assertion through every imported test-infrastructure artifact. Methodology users rely on this as a product-surface guarantee: predictable implementation homes per language, consistent category semantics, and every test-infrastructure artifact governed as production code by a naturally placed spec node.
+Every Product Tree governed by the Product Tree methodology governs harnesses, generators, and inert fixtures as infrastructure that is crucial to delivering value; places their implementations at predictable per-language homes outside `spx/` and outside any `tests/` directory; and audits the full evidence chain from a spec assertion through every imported test-infrastructure artifact. Methodology users rely on this as a product-surface guarantee: predictable implementation homes per language, consistent category semantics, and every test-infrastructure artifact governed as production code by a naturally placed spec node.
 
 Methodology users observe and rely on this governance shape:
 
@@ -95,7 +95,7 @@ Before evidence is authored or repaired, its assertion design names the exact as
 
 ## Spec Traceability
 
-A test-infrastructure artifact is traceable to the product tree through the same declaration path as any other infrastructure artifact. Category names are semantics, not required node slugs. A test-infrastructure artifact is traceable in one of two ways:
+A test-infrastructure artifact is traceable to the Product Tree through the same declaration path as any other infrastructure artifact. Category names are semantics, not required node slugs. A test-infrastructure artifact is traceable in one of two ways:
 
 - The artifact is covered by a naturally placed spec node's assertions because it only participates in that category's standard contract.
 - The artifact exposes behavior, policy, lifecycle, or reusable semantics that materially affect evidence; it has its own natural child spec or is named by an assertion in the governing node.
@@ -147,7 +147,7 @@ The decision accepts these trade-offs:
 - ALWAYS: language test, standards, and audit skills teach the path, ownership, generator, fixture, harness, and full-chain audit rules from this decision for their language surface ([audit])
 - ALWAYS: the methodology — across skills, references, templates, examples, and audit findings — uses the term "infrastructure" for this category and never "support" as the category name ([audit])
 - NEVER: require or fabricate a top-level `infrastructure → testing → {generators, fixtures, harnesses}` subtree solely to govern test infrastructure — nodes with those slugs exist only when normal Product Tree composition selects them for a real product concern ([audit])
-- NEVER: a `tests/` directory at any level of any product tree contains a test harness, generator, fixture, or any non-test-assertion code — `tests/` contains only typed assertion files per [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) ([audit])
+- NEVER: a `tests/` directory at any level of any Product Tree contains a test harness, generator, fixture, or any non-test-assertion code — `tests/` contains only typed assertion files per [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) ([audit])
 - NEVER: the terms "test support", "test helpers", "test utilities", or "test tools" appear in the methodology, language standards, examples, paths, or audit skills as governing categories for harnesses, generators, or fixtures ([audit])
 - NEVER: a test-infrastructure module is imported into a product module — the dependency direction is `tests → infrastructure`, never `product → infrastructure` ([audit])
 - NEVER: a property, mapping, scenario, or compliance assertion relies on test infrastructure that weakens the assertion type it names; framework syntax or directory placement cannot upgrade example evidence into property, mapping, or compliance evidence ([audit])

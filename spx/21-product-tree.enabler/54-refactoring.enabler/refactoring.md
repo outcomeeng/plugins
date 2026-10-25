@@ -7,7 +7,7 @@ malleability: spec
 
 PROVIDES safe tree restructuring operations that apply composition decisions from `/decompose`
 SO THAT all spec authors
-CAN reorganize the product tree without losing context, breaking references, or duplicating composition logic
+CAN reorganize the Product Tree without losing context, breaking references, or duplicating composition logic
 
 ## Assertions
 

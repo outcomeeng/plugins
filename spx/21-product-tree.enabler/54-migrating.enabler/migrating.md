@@ -5,7 +5,7 @@ malleability: spec
 
 # Migrating
 
-PROVIDES conversion of every citation in a product tree to the tree-absolute link form the 4.0 methodology declares
+PROVIDES conversion of every citation in a Product Tree to the tree-absolute link form the 4.0 methodology declares
 SO THAT repositories whose trees carry the 3.x citation forms
 CAN adopt the 4.0 methodology without hand-editing each citation
 

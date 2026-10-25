@@ -22,7 +22,7 @@ The operator intends `/merge` to dispatch an evidence Auditor or the local revie
    - Fixture 2, one node whose spec declares no `malleability` field beside a `spec`-malleable node: `test-evidence-auditor` once, for `spx/30-ledger.capability` alone, then `changes-reviewer`; no evidence audit for the `spec`-malleable `spx/20-billing.capability`, and no `eval-evidence-auditor`, because no eval artifact changes.
    - Fixture 3, no `spx/` directory: no Verifier; the repository's declared verify command `make verify`.
    - Fixture 4, one `verification`-malleable node with a changed linked test: `changes-reviewer` alone; no evidence Auditor, because no touched node is `implementation`-malleable.
-   - Fixture 5, the root product spec changes beside a `spec`-malleable node: `changes-reviewer`, which a product-spec change requires whatever the nodes select; no evidence Auditor.
+   - Fixture 5, the root product document changes beside a `spec`-malleable node: `changes-reviewer`, which a product-document change requires whatever the nodes select; no evidence Auditor.
    - Fixture 6, an outcome record of a `spec`-malleable node changes: `changes-reviewer`, which an outcome-record change requires; no evidence Auditor.
 4. Copy the transcript into this directory as `transcript.jsonl` and record the run below.
 
@@ -36,7 +36,7 @@ The operator intends `/merge` to dispatch an evidence Auditor or the local revie
   - Fixture 4: `changes-reviewer` alone, with no evidence Auditor.
   - Fixture 5: `changes-reviewer` alone, with no evidence Auditor.
   - Fixture 6: `changes-reviewer` alone, with no evidence Auditor.
-- An earlier working run selected `changes-reviewer` for fixture 1, reading the billing node's spec as a product spec, and audited the `spec`-malleable billing node in fixture 2. The skill text was repaired to define a product spec as the spec of a `.product` node and to audit only `implementation`-malleable nodes' evidence. Later runs on heads `243b164336e0ce8bfa15b3c57d8509e167bb4216` and `2642503aa3ea4c0f1a892f7d5d8b974638934064` passed fixtures 1 to 3; fixtures 4 to 6 were added to cover the `verification`, product-spec and outcome-record rows.
+- An earlier working run selected `changes-reviewer` for fixture 1, reading the billing node's spec as a product document, and audited the `spec`-malleable billing node in fixture 2. The skill text was repaired to define a product document as the spec of a `.product` node and to audit only `implementation`-malleable nodes' evidence. Later runs on heads `243b164336e0ce8bfa15b3c57d8509e167bb4216` and `2642503aa3ea4c0f1a892f7d5d8b974638934064` passed fixtures 1 to 3; fixtures 4 to 6 were added to cover the `verification`, product-document and outcome-record rows.
 - Artifacts: [transcript](transcript.jsonl), [fixtures](fixtures.md), [prompt](prompt.md)
 
 ## Verdict

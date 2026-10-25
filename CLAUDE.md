@@ -265,7 +265,7 @@ Work is coordinated through Changes in the store `spx/local/coordination.md` dec
 
 # Outcome Engineering Plugin Marketplace
 
-This product is a combined Codex and Claude Code marketplace (`outcomeeng/plugins`) delivering the Product Tree methodology for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where human-written specifications are the authoritative source of truth.
+This product is a combined Codex and Claude Code marketplace (`outcomeeng/plugins`) delivering the Product Tree methodology for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where the human-written Product Tree, the product document with its decisions and specs, is the authoritative source of truth.
 
 `AGENTS.md` and `CLAUDE.md` share product-owned instructions, while each file carries its own harness-specific managed Product Tree instruction block.
 
@@ -273,9 +273,9 @@ This product is a combined Codex and Claude Code marketplace (`outcomeeng/plugin
 
 This repo is two things at once.
 
-It is a **product**, with its own product tree under `spx/`, its own decision records, its own implementation under `outcomeeng/`, and authored plugin sources under `src/plugins/`. The reader of work in those directories is this product's own developers and agents. You may name this repo's nodes, languages, and conventions directly.
+It is a **product**, with its own Product Tree under `spx/`, its own decision records, its own implementation under `outcomeeng/`, and authored plugin sources under `src/plugins/`. The reader of work in those directories is this product's own developers and agents. You may name this repo's nodes, languages, and conventions directly.
 
-It is also a **methodology shipped as plugins** from generated runtime trees under `dist/claude/` and `dist/codex/`. Those plugins install into hundreds of consumer repositories whose product trees, languages, layouts, and conventions are unknown at design time. The reader of shipped plugin content is a consumer agent in some other repository. Any design that assumes this repo's tree, this repo's languages, this repo's overlay declarations, or this repo's specific node addresses is wrong for that audience. Authored skill content under `src/plugins/` must render into language-neutral, portable plugin output; never a product-internal node path, never a single-language test filename pattern, never a PDR or ADR specific to this product.
+It is also a **methodology shipped as plugins** from generated runtime trees under `dist/claude/` and `dist/codex/`. Those plugins install into hundreds of consumer repositories whose Product Trees, languages, layouts, and conventions are unknown at design time. The reader of shipped plugin content is a consumer agent in some other repository. Any design that assumes this repo's tree, this repo's languages, this repo's overlay declarations, or this repo's specific node addresses is wrong for that audience. Authored skill content under `src/plugins/` must render into language-neutral, portable plugin output; never a product-internal node path, never a single-language test filename pattern, never a PDR or ADR specific to this product.
 
 Carrying assumptions from one surface to the other is the most common source of wrong design here. Designing a shipped plugin change as if every consumer were this repo, or naming this repo's PDR in a shipped skill body, breaks the change for every consumer that is not this repo. The Plugin Portability Constraints section below deepens the consumer-audience rules; references to specific nodes, languages, and overlays elsewhere in this file apply only when the audience is this repo's own developers.
 
@@ -428,7 +428,7 @@ If multiple implementation files in the diff resolve to multiple nodes, take the
 
 An implementation file in the diff that no test imports has no governing spec assertion — a coverage gap the PR is shipping. Specs declare; tests verify; code complies. Surface the gap; do not invent a node to load.
 
-Per-language test conventions live in `spx/15-test-language.adr.md` (this product uses pytest with `test_<subject>.<evidence>.<level>.py`) and in each language plugin's `{language}-test-standards` skill. In a consumer repo, the consumer's product tree and language plugin determine the conventions; the inverse-navigation procedure is the same.
+Per-language test conventions live in `spx/15-test-language.adr.md` (this product uses pytest with `test_<subject>.<evidence>.<level>.py`) and in each language plugin's `{language}-test-standards` skill. In a consumer repo, the consumer's Product Tree and language plugin determine the conventions; the inverse-navigation procedure is the same.
 
 ## Before Making Changes
 
@@ -457,7 +457,7 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 
 - `src/plugins/` — authored skills, thin agents, manifests, and templates. One subdirectory per plugin.
 - `dist/claude/`, `dist/codex/` — generated runtime plugin trees (rebuilt from `src/plugins/` by `just build-skills`) shipped to consumer repos. The plugin catalog in [`README.md`](README.md#plugins) is authoritative for what each plugin contains; this file does not duplicate it.
-- `spx/` — this product's product tree (durable map). The managed Product Tree instruction block in this root file is the skill router. `spx/local/` holds the product-specific skill overlays and carries the generated-source declaration `generated-sources.toml`, a verification-scope input distinct from the `*.md` skill overlays.
+- `spx/` — this product's Product Tree (durable map). The managed Product Tree instruction block in this root file is the skill router. `spx/local/` holds the product-specific skill overlays and carries the generated-source declaration `generated-sources.toml`, a verification-scope input distinct from the `*.md` skill overlays.
 - `outcomeeng/`, `outcomeeng_testing/`, `outcomeeng_evals/` — this product's Python toolchain (validation, distribution, eval harness) and its test infrastructure. Not portable to consumer projects; do not import from inside any plugin.
 - `.claude-plugin/marketplace.json` — Claude Code marketplace catalog (one entry per shipped plugin).
 - `.agents/plugins/marketplace.json` — Codex marketplace catalog (mirror of the above).

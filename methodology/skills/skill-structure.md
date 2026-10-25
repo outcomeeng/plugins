@@ -144,7 +144,7 @@ When a behavior spans multiple nodes, the assertion lives in the lowest common a
 #### 2. Bootstrap a new Product Tree
 
 2a. Interview user for product identity, hypothesis, and scope.
-2b. Scaffold `spx/` with product spec, CLAUDE.md, and top-level node stubs.
+2b. Scaffold `spx/` with product document, CLAUDE.md, and top-level node stubs.
 
 #### 3. Author Product Tree artifacts
 
@@ -220,7 +220,7 @@ Action skills do the work. Before starting, they check conversation history for 
 
 | Skill       | Use case | Scope                                                           | Status      |
 | ----------- | -------- | --------------------------------------------------------------- | ----------- |
-| `bootstrap` | 2        | Interview user, scaffold new product tree                       | Implemented |
+| `bootstrap` | 2        | Interview user, scaffold new Product Tree                       | Implemented |
 | `author`    | 3        | Create/extend product/ADR/PDR/enabler/outcome from conversation | Implemented |
 | `decompose` | 4        | Systematically decompose higher-level nodes to lower levels     | Implemented |
 | `refactor`  | 5        | Structural moves, re-scoping, factoring shared enablers         | Implemented |
@@ -394,21 +394,21 @@ Each flow documents only what is unique to that mode. All declare action skills 
 3. Walk from the product root to the target, collecting every ancestor spec and lower-index sibling spec at each level.
 4. Include every applicable ADR, PDR, explicitly cited methodology-governance decision, guide file, and local lifecycle overlay without heuristic filtering.
 5. List linked tests and the applicable test-directory state without reading test bodies.
-6. If the exact product-root target has a product spec and no nodes, emit `bootstrap=true`; reject missing node targets.
+6. If the exact product-root target has a product document and no nodes, emit `bootstrap=true`; reject missing node targets.
 7. Emit `<PRODUCT_TREE_CONTEXT target="full/path">` with the complete manifest, sync-base status, and lifecycle continuation state.
 
 #### `bootstrap`
 
-1. Check for existing product spec — redirect to `author` if tree already exists.
+1. Check for existing product document — redirect to `author` if tree already exists.
 2. Interview user for product identity, hypothesis, and scope.
 3. Identify top-level nodes (3–7 concerns), classify as enabler or outcome.
 4. Present scaffold plan and wait for confirmation.
-5. Create `spx/` with product spec, CLAUDE.md, and top-level node stubs.
+5. Create `spx/` with product document, CLAUDE.md, and top-level node stubs.
 6. Recommend next steps (fill assertions with `author`, decompose with `decompose`).
 
 #### `author`
 
-1. Detect empty tree → invoke `bootstrap` if no product spec exists.
+1. Detect empty tree → invoke `bootstrap` if no product document exists.
 2. Intake node type (enabler or outcome), intended location, and path.
 3. Clarify user intent and unresolved product decisions.
 4. Draft artifact using templates from `understand` and Product Tree rules.

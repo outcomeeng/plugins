@@ -48,7 +48,7 @@ python3 -m unittest discover -s tests -v
 The integration tests bind an ephemeral localhost port and stop the server before
 the test exits.
 
-## Seed the real product tree
+## Seed the real Product Tree
 
 ```bash
 cd prototypes/interview-live

@@ -114,7 +114,7 @@ The root harness guides name that artifact class together with the Python cache 
 
 ## The custom-delimiter assertion's evidence compares the source to itself
 
-`source-and-templating.md` declares the Jinja2 environment's custom delimiters as literals and links `tests/test_source_and_templating.compliance.l1.py` for them. The linked evidence compares the environment's configured delimiters against the same constants `outcomeeng/distribution/build.py` declares, so mutating those constants leaves the test passing. A value the product tree declares and a source complies with is audit evidence, because every oracle for that agreement is a second declaration.
+`source-and-templating.md` declares the Jinja2 environment's custom delimiters as literals and links `tests/test_source_and_templating.compliance.l1.py` for them. The linked evidence compares the environment's configured delimiters against the same constants `outcomeeng/distribution/build.py` declares, so mutating those constants leaves the test passing. A value the Product Tree declares and a source complies with is audit evidence, because every oracle for that agreement is a second declaration.
 
 **Resolution shape**: split the declared delimiter literals onto an `[audit]` assertion and leave the behavior the delimiters govern — a body carrying standard Jinja syntax passing through unchanged, a custom block rendering per target — on its test links. The clean node's spec carries the same split as its worked example.
 

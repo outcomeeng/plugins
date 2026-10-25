@@ -19,7 +19,7 @@ Evidence requires five properties checked in order:
 2. **Property quality** — product properties are user-observable and falsifiable
 3. **Declaration form and tag validity** — specific untagged rules directly under `## Verification` are valid authoring declarations; each rule in a routed subsection carries a valid tag — a `### Audit` rule carries `[audit:{rule-slug}]` with a slug unique within the PDR, or the pathless `[audit]` that the foundation admits for a toolchain without slug support — and a `### Testing` rule's assertion type fits the claim's quantifier
 4. **Atemporal voice** — the PDR states product truth, not history
-5. **Consistency** — the PDR does not contradict the product spec or ancestor PDRs
+5. **Consistency** — the PDR does not contradict the product document or ancestor PDRs
 
 A PDR that fails any property is not a well-formed product decision.
 
@@ -54,19 +54,19 @@ The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sess
 - Given a PDR with temporal language in any section, when audited, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `temporal-language` ([eval](evals/voice/eval.toml))
 - Given a PDR whose `### Testing` rule carries a bare mechanism tag, a tag disagreeing with its subsection, no tag, or more than one tag, when audited, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `invalid-tag` ([eval](evals/tag-validity/eval.toml))
 - Given a PDR whose `### Testing` rule tags a universal claim (ALWAYS/NEVER) as `scenario`, when audited, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `assertion-type-mismatch` ([eval](evals/tag-validity/eval.toml))
-- Given a PDR that contradicts the product spec or an ancestor PDR, when audited, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `consistency-violation` ([eval](evals/structure/eval.toml))
+- Given a PDR that contradicts the product document or an ancestor PDR, when audited, then the sealed audit run's terminal status is `rejected` with a finding whose rule is `consistency-violation` ([eval](evals/structure/eval.toml))
 - Given a PDR where all five properties hold, when audited, then the sealed audit run's terminal status is `approved` ([eval](evals/structure/eval.toml))
 
 ### Compliance
 
 - ALWAYS: classify every PDR statement into at least the six content types defined in the Content Classification Model — product behavior, observable non-functional property, technology choice, implementation approach, data structure, performance implementation ([audit])
 - ALWAYS: ground "observable" in the product document's declared audience and interaction surfaces rather than a fixed end-user-application assumption — a statement is product behavior when that audience observes or operates it, so an audience that operates the product through a command-line, filesystem, or version-control surface makes those mechanics product behavior, while the internal algorithm, in-memory data structure, persisted schema, and library choices that audience never operates remain architecture ([audit])
-- ALWAYS: load the PDR's context read-only before any audit phase — the product spec, then each spec and every decision record on the path from `spx/` to the directory containing the PDR, then every decision a loaded spec or decision cites by full `spx/` path, excluding the PDR under audit — never invoking `/contextualize` or `/sync-base`, so the audit changes no checkout state ([audit])
+- ALWAYS: load the PDR's context read-only before any audit phase — the product document, then each spec and every decision record on the path from `spx/` to the directory containing the PDR, then every decision a loaded spec or decision cites by full `spx/` path, excluding the PDR under audit — never invoking `/contextualize` or `/sync-base`, so the audit changes no checkout state ([audit])
 - ALWAYS: check content classification as the first audit phase — a PDR full of architecture content fails regardless of other properties ([audit])
 - ALWAYS: verify product properties are observable from the user's perspective, not from the implementation's perspective ([audit])
 - ALWAYS: verify each `### Testing` rule's assertion type fits the claim's quantifier per the `/test` router — a universal is never `scenario`; reject a type the router would not produce, without relitigating a choice the router leaves open ([audit])
 - ALWAYS: accept an `### Audit` rule tagged `[audit:{rule-slug}]` whose slug is unique within the PDR, or tagged with the pathless `[audit]` that the foundation admits for a toolchain without slug support, and reject a slug that repeats within the PDR as `invalid-tag` ([audit])
-- ALWAYS: compare the PDR against the product spec and ancestor PDRs; a contradiction with either is a consistency violation ([audit])
+- ALWAYS: compare the PDR against the product document and ancestor PDRs; a contradiction with either is a consistency violation ([audit])
 - NEVER: approve temporal language in any section — Decision, Rationale, Product properties, Verification all state product truth ([audit])
 - ALWAYS: the PDR auditor rejects only on touched text under [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md), returns each other finding as `filed`, and approves when no touched finding exists ([audit])
 - ALWAYS: `/audit-pdr` records its audit through `spx verification run` on a file scope anchored on the PDR path: one root unit with `auditKind` `pdr`, one child per evidence-model property, and every finding. It returns the run token, the run file, and the rendered projection, or a blocked diagnostic when spx refuses a recorded payload or the finish, and the `pdr-auditor` wrapper passes the raw target and its run-driver identity and relays them unchanged ([audit])

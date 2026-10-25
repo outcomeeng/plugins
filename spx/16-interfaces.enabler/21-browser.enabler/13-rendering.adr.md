@@ -1,6 +1,6 @@
 # Browser Interface Rendering
 
-The browser interface renders from the SPX CLI's JSON projection of the product tree, applies the product's own vendored design system, and produces interactive HTML — drag-drop restructuring, inline commenting, expand/collapse — rather than static read-only output.
+The browser interface renders from the SPX CLI's JSON projection of the Product Tree, applies the product's own vendored design system, and produces interactive HTML — drag-drop restructuring, inline commenting, expand/collapse — rather than static read-only output.
 
 ## Rationale
 

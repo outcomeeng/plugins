@@ -70,13 +70,13 @@ names the definition, and a declaration as an assertion in that node's spec or a
 on the path from the root that reaches it by index — uses vocabulary the `instructions`
 plugin neither defines nor loads.
 
-**Impact:** a repository that installs `instructions` without a product tree resolves no
+**Impact:** a repository that installs `instructions` without a Product Tree resolves no
 governing context, so `/audit-subagent` reports every inheriting definition as declaring
 nothing. That is the standard's stated result for an undeclared boundary, so the verdict is
 not spurious, but the rule names no methodology and states no non-applicability.
 
 **Settlement condition:** the standard names the methodology its resolution rule assumes,
-or states how a definition with no governing product tree is judged, and one typed skill audit
+or states how a definition with no governing Product Tree is judged, and one typed skill audit
 approves the wording. Deferred as a product-design question outside the changeset that
 amended the rule: the Change that amended it settled where a declaration lives, not how a
 tree-less consumer reads the rule.

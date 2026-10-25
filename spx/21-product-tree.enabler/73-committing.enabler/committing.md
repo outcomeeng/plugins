@@ -7,7 +7,7 @@ malleability: spec
 
 PROVIDES a commit workflow enforcing Conventional Commits with selective staging for local verification checkpoints and publication-ready changes
 SO THAT all developers
-CAN produce atomic, well-described commits that map cleanly to product tree changes
+CAN produce atomic, well-described commits that map cleanly to Product Tree changes
 
 ## Assertions
 

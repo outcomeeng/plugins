@@ -9,16 +9,16 @@ This repository publishes two plugin surfaces from the same source tree:
 
 `AGENTS.md` and [`CLAUDE.md`](CLAUDE.md) are separate root instruction files that share the product-owned repository guidance and carry harness-specific managed Product Tree sections.
 
-> `/bootstrap` interviews you about your product, then scaffolds a product tree — the durable map that drives all implementation.
+> `/bootstrap` interviews you about your product, then scaffolds a Product Tree — the durable map that drives all implementation.
 
-![Bootstrapping a product tree — Claude interviews you about your product's scope](assets/tutorial/bootstrap/60-boostrap-02-questionnaire-02.png)
+![Bootstrapping a Product Tree — Claude interviews you about your product's scope](assets/tutorial/bootstrap/60-boostrap-02-questionnaire-02.png)
 
 ## Philosophy
 
 1. **RTFM:** Follow state-of-the-art (SOTA) model prompting guidance, such as [structured prompts based on XML tags](https://docs.prompts.ag/guidelines)
 2. **KILO:** *Keep It Local and Observable* — the golden source for all specifications lives locally within the product's Git repository
-3. **ABC:** *Always Be Converging* — the product tree is the desired state; all activities are driven by it, not the other way around
-4. **DCI:** *Deterministic Context Injection* — the product tree constructs a deterministic context injection plan for the model
+3. **ABC:** *Always Be Converging* — the Product Tree is the desired state; all activities are driven by it, not the other way around
+4. **DCI:** *Deterministic Context Injection* — the Product Tree constructs a deterministic context injection plan for the model
 
 ## Quick Start
 
@@ -98,13 +98,13 @@ enabled = true
 enabled = true
 ```
 
-### 4. Bootstrap your product tree
+### 4. Bootstrap your Product Tree
 
 ```text
-> /bootstrap                       # set up a new product tree
+> /bootstrap                       # set up a new Product Tree
 ```
 
-![Scaffold result — product spec, guides, and nodes created](assets/tutorial/bootstrap/90-boostrap-02-questionnaire-05.png)
+![Scaffold result — product document, guides, and nodes created](assets/tutorial/bootstrap/90-boostrap-02-questionnaire-05.png)
 
 ### 5. Author, implement, commit
 
@@ -236,7 +236,7 @@ Skills are available in both Claude Code and Codex, with generated plugin surfac
 | **Scope** — what are the major concerns?                               | ![Scope question](assets/tutorial/bootstrap/60-boostrap-02-questionnaire-02.png)        |
 | **Shared infrastructure** — should anything be an enabler?             | ![Shared infrastructure](assets/tutorial/bootstrap/70-boostrap-02-questionnaire-03.png) |
 | **Confirm** — review the scaffold before creating files                | ![Confirm scaffold](assets/tutorial/bootstrap/80-boostrap-02-questionnaire-04.png)      |
-| **Result** — scaffold created with product spec, guides, and nodes     | ![Scaffold result](assets/tutorial/bootstrap/90-boostrap-02-questionnaire-05.png)       |
+| **Result** — scaffold created with product document, guides, and nodes | ![Scaffold result](assets/tutorial/bootstrap/90-boostrap-02-questionnaire-05.png)       |
 
 </details>
 
@@ -343,14 +343,14 @@ Product Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /ref
 | Skill | `/audit-tests`                | Test-evidence audit methodology                                                                                                                                                                                                                                                    |
 | Skill | `/author`                     | Adding, defining, or creating specs, decisions, or nodes                                                                                                                                                                                                                           |
 | Skill | `/author-change`              | Creating, refining, or revising an Outcome Engineering Change record, or when turning a request into one                                                                                                                                                                           |
-| Skill | `/bootstrap`                  | Setting up a new product tree in an empty or absent spx/ directory                                                                                                                                                                                                                 |
+| Skill | `/bootstrap`                  | Setting up a new Product Tree in an empty or absent spx/ directory                                                                                                                                                                                                                 |
 | Skill | `/change-standards`           | Change record standards for Intent, maturity, lifecycle, authority, refinement, and continuation                                                                                                                                                                                   |
 | Skill | `/claim-change`               | Claiming an Available Change from the declared Change store to hold it for refinement or execution                                                                                                                                                                                 |
 | Skill | `/close-change`               | A held Change reaches a terminal Lifecycle — Applied or Abandoned — to write the terminal record, remove the holder, and close it in the declared store                                                                                                                            |
 | Skill | `/commit-changes`             | Committing changes or when user says "commit"                                                                                                                                                                                                                                      |
 | Skill | `/confirm-change`             | The Product's Maintainer confirms a Submitted Change — it moves the Change from Submitted to Available and posts no comment                                                                                                                                                        |
-| Skill | `/contextualize`              | Asking about status, progress, or what exists in the product tree                                                                                                                                                                                                                  |
-| Skill | `/decompose`                  | Breaking down, splitting, scoping, composing, or structuring product tree nodes                                                                                                                                                                                                    |
+| Skill | `/contextualize`              | Asking about status, progress, or what exists in the Product Tree                                                                                                                                                                                                                  |
+| Skill | `/decompose`                  | Breaking down, splitting, scoping, composing, or structuring Product Tree nodes                                                                                                                                                                                                    |
 | Skill | `/diagnose`                   | Diagnosing the health of a product-tree or spx environment, when checking whether the SessionStart hook fired for the current session, or when troubleshooting a missing session identity, worktree claim, or unreachable spx CLI                                                  |
 | Skill | `/execute-change`             | A session executes one claimed Executable Change as its Executor                                                                                                                                                                                                                   |
 | Skill | `/implement-change`           | Language-implementation workflow for one product-tree node: the target language's installed architect, code, and simplify skills run in one session, invoked with a canonical node path                                                                                            |

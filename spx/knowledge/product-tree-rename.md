@@ -10,16 +10,15 @@ Base commit: `708f150169f21a58087e73e0f61382ea0b7e7dba`
 
 ## Spelling mapping
 
-| Old         | New            | Where                                                                                              |
-| ----------- | -------------- | -------------------------------------------------------------------------------------------------- |
-| `Spec Tree` | `Product Tree` | prose, as a proper noun                                                                            |
-| `spec tree` | `product tree` | prose, as a common noun                                                                            |
-| `spec-tree` | `product-tree` | paths, identifiers, the plugin id, skill namespaces                                                |
-| `SPEC_TREE` | `PRODUCT_TREE` | constants, markers                                                                                 |
-| `SPEC-TREE` | `PRODUCT-TREE` | the instruction-block markers                                                                      |
-| `SPECTREE`  | `PRODUCT_TREE` | the hook kill switch `SPECTREE_SESSION_HOOK_DISABLED` becomes `PRODUCT_TREE_SESSION_HOOK_DISABLED` |
-| `spec_tree` | `product_tree` | Python modules and identifiers                                                                     |
-| `SpecTree`  | `ProductTree`  | Python classes                                                                                     |
+| Old                      | New            | Where                                                                                              |
+| ------------------------ | -------------- | -------------------------------------------------------------------------------------------------- |
+| `Spec Tree`, `spec tree` | `Product Tree` | prose, always capitalized as a proper noun                                                         |
+| `spec-tree`              | `product-tree` | paths, identifiers, the plugin id, skill namespaces                                                |
+| `SPEC_TREE`              | `PRODUCT_TREE` | constants, markers                                                                                 |
+| `SPEC-TREE`              | `PRODUCT-TREE` | the instruction-block markers                                                                      |
+| `SPECTREE`               | `PRODUCT_TREE` | the hook kill switch `SPECTREE_SESSION_HOOK_DISABLED` becomes `PRODUCT_TREE_SESSION_HOOK_DISABLED` |
+| `spec_tree`              | `product_tree` | Python modules and identifiers                                                                     |
+| `SpecTree`               | `ProductTree`  | Python classes                                                                                     |
 
 The literal `BEGIN MANAGED SPEC TREE INSTRUCTIONS` / `END MANAGED SPEC TREE INSTRUCTIONS` is the alternate marker pair the instruction-block updater recognizes in a consumer's older root file; it stays. Changelog history stays as written. The `@spec-tree` trigger phrase, the `SPEC_TREE_REVIEW_*` repository variables, and the caller workflows `.github/workflows/spec-tree.yml` and `.github/workflows/spec-tree-review.yml` belong to [outcomeeng/changes#770](https://github.com/outcomeeng/changes/issues/770).
 
@@ -153,21 +152,21 @@ Each line below is a line of the record that carries the term, as old -> new. Th
 
   ```text
   old: Scripting functionality shipped in a plugin — skill scripts and hooks — is a standalone Python script that runs on the two most recent Python feature releases. The older of the two is the floor, and the linter and type-checker that govern shipped scripts are pinned to that floor so a script never uses a feature the floor lacks. Shipped scripts assume a managed interpreter (Homebrew or equivalent), never the system macOS Python, which trails the language by years. A generic shipped script beyond fifty lines carries debt: once it proves its value its logic moves into the agent-neutral SPX CLI, and a script that never proves its value is removed rather than extracted. Agent-specific adapter logic remains plugin-local only when moving it into SPX would couple SPX to one coding agent and the adapter is deterministic, bounded, standard-library-only, and independently tested. A value the spec tree declares and a source complies with is verified by audit, because every oracle for that agreement is a second declaration. This complements the packaging and execution rules in [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md).
-  new: Scripting functionality shipped in a plugin — skill scripts and hooks — is a standalone Python script that runs on the two most recent Python feature releases. The older of the two is the floor, and the linter and type-checker that govern shipped scripts are pinned to that floor so a script never uses a feature the floor lacks. Shipped scripts assume a managed interpreter (Homebrew or equivalent), never the system macOS Python, which trails the language by years. A generic shipped script beyond fifty lines carries debt: once it proves its value its logic moves into the agent-neutral SPX CLI, and a script that never proves its value is removed rather than extracted. Agent-specific adapter logic remains plugin-local only when moving it into SPX would couple SPX to one coding agent and the adapter is deterministic, bounded, standard-library-only, and independently tested. A value the product tree declares and a source complies with is verified by audit, because every oracle for that agreement is a second declaration. This complements the packaging and execution rules in [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md).
+  new: Scripting functionality shipped in a plugin — skill scripts and hooks — is a standalone Python script that runs on the two most recent Python feature releases. The older of the two is the floor, and the linter and type-checker that govern shipped scripts are pinned to that floor so a script never uses a feature the floor lacks. Shipped scripts assume a managed interpreter (Homebrew or equivalent), never the system macOS Python, which trails the language by years. A generic shipped script beyond fifty lines carries debt: once it proves its value its logic moves into the agent-neutral SPX CLI, and a script that never proves its value is removed rather than extracted. Agent-specific adapter logic remains plugin-local only when moving it into SPX would couple SPX to one coding agent and the adapter is deterministic, bounded, standard-library-only, and independently tested. A value the Product Tree declares and a source complies with is verified by audit, because every oracle for that agreement is a second declaration. This complements the packaging and execution rules in [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md).
   ```
 
 - [x] line 11
 
   ```text
   old: A value the spec tree declares and a source complies with admits no test of their agreement. Any oracle for it is a third statement of the value — after the spec tree's declaration and the source's compliance — and the second of those three to declare rather than comply: read from the source under test it compares that source to itself and holds for whatever the source contains, and transcribed into a test or a harness it creates a declaration in an artifact with no authority to make one. Behavior that depends on such a value is tested by importing the value from its complying source and exercising what it changes; the agreement between the declaration and that source is audit evidence. A value with no behavior to exercise — a process exit code, a protocol token — therefore reaches only audit.
-  new: A value the product tree declares and a source complies with admits no test of their agreement. Any oracle for it is a third statement of the value — after the product tree's declaration and the source's compliance — and the second of those three to declare rather than comply: read from the source under test it compares that source to itself and holds for whatever the source contains, and transcribed into a test or a harness it creates a declaration in an artifact with no authority to make one. Behavior that depends on such a value is tested by importing the value from its complying source and exercising what it changes; the agreement between the declaration and that source is audit evidence. A value with no behavior to exercise — a process exit code, a protocol token — therefore reaches only audit.
+  new: A value the Product Tree declares and a source complies with admits no test of their agreement. Any oracle for it is a third statement of the value — after the Product Tree's declaration and the source's compliance — and the second of those three to declare rather than comply: read from the source under test it compares that source to itself and holds for whatever the source contains, and transcribed into a test or a harness it creates a declaration in an artifact with no authority to make one. Behavior that depends on such a value is tested by importing the value from its complying source and exercising what it changes; the agreement between the declaration and that source is audit evidence. A value with no behavior to exercise — a process exit code, a protocol token — therefore reaches only audit.
   ```
 
 - [x] line 28
 
   ```text
   old: - ALWAYS: a test that depends on a value the spec tree declares imports that value from the source complying with the declaration, and exercises the behavior the value governs ([audit])
-  new: - ALWAYS: a test that depends on a value the product tree declares imports that value from the source complying with the declaration, and exercises the behavior the value governs ([audit])
+  new: - ALWAYS: a test that depends on a value the Product Tree declares imports that value from the source complying with the declaration, and exercises the behavior the value governs ([audit])
   ```
 
 ### [`spx/14-skill-naming.pdr.md`](spx/14-skill-naming.pdr.md)
@@ -176,7 +175,7 @@ Each line below is a line of the record that carries the term, as old -> new. Th
 
   ```text
   old: - ALWAYS: a skill that acts on a changeset or across the spec tree, such as `commit-changes`, `review-changes`, `audit-tests`, `audit-specs`, or `test`, and a standards skill that governs a class of artifacts, such as `agent-prompt-standards`, take their names under the rules for a workflow skill outside the `{role}-{type}` form and for a reference skill outside the `{type}-standards` form ([audit])
-  new: - ALWAYS: a skill that acts on a changeset or across the product tree, such as `commit-changes`, `review-changes`, `audit-tests`, `audit-specs`, or `test`, and a standards skill that governs a class of artifacts, such as `agent-prompt-standards`, take their names under the rules for a workflow skill outside the `{role}-{type}` form and for a reference skill outside the `{type}-standards` form ([audit])
+  new: - ALWAYS: a skill that acts on a changeset or across the Product Tree, such as `commit-changes`, `review-changes`, `audit-tests`, `audit-specs`, or `test`, and a standards skill that governs a class of artifacts, such as `agent-prompt-standards`, take their names under the rules for a workflow skill outside the `{role}-{type}` form and for a reference skill outside the `{type}-standards` form ([audit])
   ```
 
 ### [`spx/15-spec-coverage.adr.md`](spx/15-spec-coverage.adr.md)
@@ -185,14 +184,14 @@ Each line below is a line of the record that carries the term, as old -> new. Th
 
   ```text
   old: Every checked-in marketplace plugin has at least one enabler node in the spec tree. Plugins with implementation code carry `[test]` evidence on assertions about executable behavior. Plugins whose deliverable is LLM-driven behavior — audit skills, classifiers, content producers — carry `[eval]` evidence scored against curated cases through the eval harness governed by `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md`. Assertions whose subject is the design or intent of a skill rather than its runtime behavior carry `[audit]` evidence.
-  new: Every checked-in marketplace plugin has at least one enabler node in the product tree. Plugins with implementation code carry `[test]` evidence on assertions about executable behavior. Plugins whose deliverable is LLM-driven behavior — audit skills, classifiers, content producers — carry `[eval]` evidence scored against curated cases through the eval harness governed by `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md`. Assertions whose subject is the design or intent of a skill rather than its runtime behavior carry `[audit]` evidence.
+  new: Every checked-in marketplace plugin has at least one enabler node in the Product Tree. Plugins with implementation code carry `[test]` evidence on assertions about executable behavior. Plugins whose deliverable is LLM-driven behavior — audit skills, classifiers, content producers — carry `[eval]` evidence scored against curated cases through the eval harness governed by `spx/13-infrastructure.enabler/25-eval-harness.enabler/eval-harness.md`. Assertions whose subject is the design or intent of a skill rather than its runtime behavior carry `[audit]` evidence.
   ```
 
 - [x] line 7
 
   ```text
   old: The spec tree's value derives from the truth hierarchy — specs declare, evidence verifies, code complies — and three evidence mechanisms cover the three subject categories: `[test]` for deterministic code paths verified by a test runner; `[eval]` for LLM-driven behavior that emits a structurally validatable verdict, where the per-eval verdict schema makes the grader deterministic and the case set bounds the claim; `[audit]` for semantic constraints about design or intent that no structural grader can falsify. Tautological tests over markdown structure prove formatting, not behavior, so they are excluded — eval evidence avoids that failure mode because the case set drives the skill end-to-end and the grader inspects the verdict the skill produces. Excluding LLM-driven plugins from `[test]`-class evidence entirely would conflate two failure modes — prose-interpreting tests, which are genuinely brittle, and structural-verdict evals over curated cases, which are deterministic at the grader and bounded at the runner.
-  new: The product tree's value derives from the truth hierarchy — specs declare, evidence verifies, code complies — and three evidence mechanisms cover the three subject categories: `[test]` for deterministic code paths verified by a test runner; `[eval]` for LLM-driven behavior that emits a structurally validatable verdict, where the per-eval verdict schema makes the grader deterministic and the case set bounds the claim; `[audit]` for semantic constraints about design or intent that no structural grader can falsify. Tautological tests over markdown structure prove formatting, not behavior, so they are excluded — eval evidence avoids that failure mode because the case set drives the skill end-to-end and the grader inspects the verdict the skill produces. Excluding LLM-driven plugins from `[test]`-class evidence entirely would conflate two failure modes — prose-interpreting tests, which are genuinely brittle, and structural-verdict evals over curated cases, which are deterministic at the grader and bounded at the runner.
+  new: The Product Tree's value derives from the truth hierarchy — specs declare, evidence verifies, code complies — and three evidence mechanisms cover the three subject categories: `[test]` for deterministic code paths verified by a test runner; `[eval]` for LLM-driven behavior that emits a structurally validatable verdict, where the per-eval verdict schema makes the grader deterministic and the case set bounds the claim; `[audit]` for semantic constraints about design or intent that no structural grader can falsify. Tautological tests over markdown structure prove formatting, not behavior, so they are excluded — eval evidence avoids that failure mode because the case set drives the skill end-to-end and the grader inspects the verdict the skill produces. Excluding LLM-driven plugins from `[test]`-class evidence entirely would conflate two failure modes — prose-interpreting tests, which are genuinely brittle, and structural-verdict evals over curated cases, which are deterministic at the grader and bounded at the runner.
   ```
 
 ### [`spx/15-test-language.adr.md`](spx/15-test-language.adr.md)
@@ -201,7 +200,7 @@ Each line below is a line of the record that carries the term, as old -> new. Th
 
   ```text
   old: Python (pytest) is the language and runner for all `[test]` evidence in the spec tree. Test files follow `test_{subject}.{evidence}.{level}[.{runner}].py` and live under each node's `tests/` directory. The `[test]` lane is one of the evidence-execution lanes declared in [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md); this decision selects its language and runner. `[eval]` evidence lives in a separate lane this decision does not govern.
-  new: Python (pytest) is the language and runner for all `[test]` evidence in the product tree. Test files follow `test_{subject}.{evidence}.{level}[.{runner}].py` and live under each node's `tests/` directory. The `[test]` lane is one of the evidence-execution lanes declared in [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md); this decision selects its language and runner. `[eval]` evidence lives in a separate lane this decision does not govern.
+  new: Python (pytest) is the language and runner for all `[test]` evidence in the Product Tree. Test files follow `test_{subject}.{evidence}.{level}[.{runner}].py` and live under each node's `tests/` directory. The `[test]` lane is one of the evidence-execution lanes declared in [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md); this decision selects its language and runner. `[eval]` evidence lives in a separate lane this decision does not govern.
   ```
 
 - [x] line 7
@@ -215,14 +214,14 @@ Each line below is a line of the record that carries the term, as old -> new. Th
 
   ```text
   old: - ALWAYS: use Python (pytest) for all `[test]` evidence in the spec tree — the quality gate runs a single runner for this lane ([audit])
-  new: - ALWAYS: use Python (pytest) for all `[test]` evidence in the product tree — the quality gate runs a single runner for this lane ([audit])
+  new: - ALWAYS: use Python (pytest) for all `[test]` evidence in the Product Tree — the quality gate runs a single runner for this lane ([audit])
   ```
 
 - [x] line 16
 
   ```text
   old: - NEVER: use a non-pytest runner for `[test]` evidence in the spec tree — the lane is single-runner by decision ([audit])
-  new: - NEVER: use a non-pytest runner for `[test]` evidence in the product tree — the lane is single-runner by decision ([audit])
+  new: - NEVER: use a non-pytest runner for `[test]` evidence in the Product Tree — the lane is single-runner by decision ([audit])
   ```
 
 ### [`spx/16-interfaces.enabler/21-browser.enabler/13-rendering.adr.md`](spx/16-interfaces.enabler/21-browser.enabler/13-rendering.adr.md)
@@ -231,7 +230,7 @@ Each line below is a line of the record that carries the term, as old -> new. Th
 
   ```text
   old: The browser interface renders from the SPX CLI's JSON projection of the spec tree, applies the product's own vendored design system, and produces interactive HTML — drag-drop restructuring, inline commenting, expand/collapse — rather than static read-only output.
-  new: The browser interface renders from the SPX CLI's JSON projection of the product tree, applies the product's own vendored design system, and produces interactive HTML — drag-drop restructuring, inline commenting, expand/collapse — rather than static read-only output.
+  new: The browser interface renders from the SPX CLI's JSON projection of the Product Tree, applies the product's own vendored design system, and produces interactive HTML — drag-drop restructuring, inline commenting, expand/collapse — rather than static read-only output.
   ```
 
 - [x] line 7
@@ -534,7 +533,7 @@ Each line below is a line of the record that carries the term, as old -> new. Th
 
   ```text
   old: This product adopts the marketplace verification taxonomy rather than defining its own, so every node's evidence reads the same way across the spec tree and the two agentic types — audit and review — are themselves verified by graded eval cases. The Attested mode exists for the claim only observation settles: a probe records the Author's verdict together with the inspectable artifacts of an executed protocol, so a prototype's fidelity to its spec is evidence rather than an opinion, and the mode names how the verdict is produced, never who produced the subject. An audit verdict is produced in a Verifier's agent session isolated from the Author's agent session that produced the work under audit, so the judgment stays free of the bias an agent session accumulates while producing the work it would otherwise grade. The isolation separates Author from Verifier, never one Verifier from another: the Author's agent session dispatches the audit to a separate Verifier's agent session rather than grading its own work in place, and a Verifier already free of Author bias may compose further verification without reintroducing it.
-  new: This product adopts the marketplace verification taxonomy rather than defining its own, so every node's evidence reads the same way across the product tree and the two agentic types — audit and review — are themselves verified by graded eval cases. The Attested mode exists for the claim only observation settles: a probe records the Author's verdict together with the inspectable artifacts of an executed protocol, so a prototype's fidelity to its spec is evidence rather than an opinion, and the mode names how the verdict is produced, never who produced the subject. An audit verdict is produced in a Verifier's agent session isolated from the Author's agent session that produced the work under audit, so the judgment stays free of the bias an agent session accumulates while producing the work it would otherwise grade. The isolation separates Author from Verifier, never one Verifier from another: the Author's agent session dispatches the audit to a separate Verifier's agent session rather than grading its own work in place, and a Verifier already free of Author bias may compose further verification without reintroducing it.
+  new: This product adopts the marketplace verification taxonomy rather than defining its own, so every node's evidence reads the same way across the Product Tree and the two agentic types — audit and review — are themselves verified by graded eval cases. The Attested mode exists for the claim only observation settles: a probe records the Author's verdict together with the inspectable artifacts of an executed protocol, so a prototype's fidelity to its spec is evidence rather than an opinion, and the mode names how the verdict is produced, never who produced the subject. An audit verdict is produced in a Verifier's agent session isolated from the Author's agent session that produced the work under audit, so the judgment stays free of the bias an agent session accumulates while producing the work it would otherwise grade. The isolation separates Author from Verifier, never one Verifier from another: the Author's agent session dispatches the audit to a separate Verifier's agent session rather than grading its own work in place, and a Verifier already free of Author bias may compose further verification without reintroducing it.
   ```
 
 - [x] line 13
@@ -550,7 +549,7 @@ Each line below is a line of the record that carries the term, as old -> new. Th
 
   ```text
   old: The verification toolchain's runtime machinery — the trace event schema implementation, contract schema, conformance checker, contract inference, run aggregation, eval-harness runners, and coding-agent runtime adapters — is implemented in a separately versioned component outside this repository, released independently and consumed as a pinned third-party dependency. The spec tree under `spx/31-outcomeeng.enabler/31-verification.enabler/` stays authoritative for the semantics; the component complies. The one in-consumer exception is the trace emitter shipped inside plugins, which is standard-library-only Python rendered into the plugin trees because shipped plugin scripts import no third-party package.
-  new: The verification toolchain's runtime machinery — the trace event schema implementation, contract schema, conformance checker, contract inference, run aggregation, eval-harness runners, and coding-agent runtime adapters — is implemented in a separately versioned component outside this repository, released independently and consumed as a pinned third-party dependency. The product tree under `spx/31-outcomeeng.enabler/31-verification.enabler/` stays authoritative for the semantics; the component complies. The one in-consumer exception is the trace emitter shipped inside plugins, which is standard-library-only Python rendered into the plugin trees because shipped plugin scripts import no third-party package.
+  new: The verification toolchain's runtime machinery — the trace event schema implementation, contract schema, conformance checker, contract inference, run aggregation, eval-harness runners, and coding-agent runtime adapters — is implemented in a separately versioned component outside this repository, released independently and consumed as a pinned third-party dependency. The Product Tree under `spx/31-outcomeeng.enabler/31-verification.enabler/` stays authoritative for the semantics; the component complies. The one in-consumer exception is the trace emitter shipped inside plugins, which is standard-library-only Python rendered into the plugin trees because shipped plugin scripts import no third-party package.
   ```
 
 ### [`spx/31-outcomeeng.enabler/31-verification.enabler/31-eval-verification.enabler/15-adapter-derived-evals.adr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-eval-verification.enabler/15-adapter-derived-evals.adr.md)
@@ -568,7 +567,7 @@ Each line below is a line of the record that carries the term, as old -> new. Th
 
   ```text
   old: Every spec tree governed by the Spec Tree methodology governs harnesses, generators, and inert fixtures as infrastructure that is crucial to delivering value; places their implementations at predictable per-language homes outside `spx/` and outside any `tests/` directory; and audits the full evidence chain from a spec assertion through every imported test-infrastructure artifact. Methodology users rely on this as a product-surface guarantee: predictable implementation homes per language, consistent category semantics, and every test-infrastructure artifact governed as production code by a naturally placed spec node.
-  new: Every product tree governed by the Product Tree methodology governs harnesses, generators, and inert fixtures as infrastructure that is crucial to delivering value; places their implementations at predictable per-language homes outside `spx/` and outside any `tests/` directory; and audits the full evidence chain from a spec assertion through every imported test-infrastructure artifact. Methodology users rely on this as a product-surface guarantee: predictable implementation homes per language, consistent category semantics, and every test-infrastructure artifact governed as production code by a naturally placed spec node.
+  new: Every Product Tree governed by the Product Tree methodology governs harnesses, generators, and inert fixtures as infrastructure that is crucial to delivering value; places their implementations at predictable per-language homes outside `spx/` and outside any `tests/` directory; and audits the full evidence chain from a spec assertion through every imported test-infrastructure artifact. Methodology users rely on this as a product-surface guarantee: predictable implementation homes per language, consistent category semantics, and every test-infrastructure artifact governed as production code by a naturally placed spec node.
   ```
 
 - [x] line 8
@@ -582,7 +581,7 @@ Each line below is a line of the record that carries the term, as old -> new. Th
 
   ```text
   old: A test-infrastructure artifact is traceable to the spec tree through the same declaration path as any other infrastructure artifact. Category names are semantics, not required node slugs. A test-infrastructure artifact is traceable in one of two ways:
-  new: A test-infrastructure artifact is traceable to the product tree through the same declaration path as any other infrastructure artifact. Category names are semantics, not required node slugs. A test-infrastructure artifact is traceable in one of two ways:
+  new: A test-infrastructure artifact is traceable to the Product Tree through the same declaration path as any other infrastructure artifact. Category names are semantics, not required node slugs. A test-infrastructure artifact is traceable in one of two ways:
   ```
 
 - [x] line 107
@@ -603,7 +602,7 @@ Each line below is a line of the record that carries the term, as old -> new. Th
 
   ```text
   old: - NEVER: a `tests/` directory at any level of any spec tree contains a test harness, generator, fixture, or any non-test-assertion code — `tests/` contains only typed assertion files per [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) ([audit])
-  new: - NEVER: a `tests/` directory at any level of any product tree contains a test harness, generator, fixture, or any non-test-assertion code — `tests/` contains only typed assertion files per [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) ([audit])
+  new: - NEVER: a `tests/` directory at any level of any Product Tree contains a test harness, generator, fixture, or any non-test-assertion code — `tests/` contains only typed assertion files per [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) ([audit])
   ```
 
 ### [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md)
@@ -651,7 +650,7 @@ Each line below is a line of the record that carries the term, as old -> new. Th
 
   ```text
   old: The record is the unit of meaning and the store is the unit of delivery, so the node that owns communication semantics declares the record and the capability that owns the store maps it. The declaration lives in this node's script as named constants because the field names and kinds are values the spec tree declares; the adapter's mapping table carries the same names as its compliance with that declaration, and their agreement is audit evidence under [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md), never a second declaration a test could restate. A `__file__`-relative import of the adapter is rejected: [`spx/43-coding-agents.enabler/18-agent-mail.enabler/21-agent-mail-adapter.adr.md`](spx/43-coding-agents.enabler/18-agent-mail.enabler/21-agent-mail-adapter.adr.md) makes `/operate-agent-mail` the owner of all bundled-script access, and a script that reaches across skill directories manufactures the cross-skill path that decision forbids. The script validates the agent-mail `send` result and the Prowl `send` result by the same means, its own field constants over each capability's public result, so both routes are checked the same way and neither route needs a subprocess, a store handle, or a mock.
-  new: The record is the unit of meaning and the store is the unit of delivery, so the node that owns communication semantics declares the record and the capability that owns the store maps it. The declaration lives in this node's script as named constants because the field names and kinds are values the product tree declares; the adapter's mapping table carries the same names as its compliance with that declaration, and their agreement is audit evidence under [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md), never a second declaration a test could restate. A `__file__`-relative import of the adapter is rejected: [`spx/43-coding-agents.enabler/18-agent-mail.enabler/21-agent-mail-adapter.adr.md`](spx/43-coding-agents.enabler/18-agent-mail.enabler/21-agent-mail-adapter.adr.md) makes `/operate-agent-mail` the owner of all bundled-script access, and a script that reaches across skill directories manufactures the cross-skill path that decision forbids. The script validates the agent-mail `send` result and the Prowl `send` result by the same means, its own field constants over each capability's public result, so both routes are checked the same way and neither route needs a subprocess, a store handle, or a mock.
+  new: The record is the unit of meaning and the store is the unit of delivery, so the node that owns communication semantics declares the record and the capability that owns the store maps it. The declaration lives in this node's script as named constants because the field names and kinds are values the Product Tree declares; the adapter's mapping table carries the same names as its compliance with that declaration, and their agreement is audit evidence under [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md), never a second declaration a test could restate. A `__file__`-relative import of the adapter is rejected: [`spx/43-coding-agents.enabler/18-agent-mail.enabler/21-agent-mail-adapter.adr.md`](spx/43-coding-agents.enabler/18-agent-mail.enabler/21-agent-mail-adapter.adr.md) makes `/operate-agent-mail` the owner of all bundled-script access, and a script that reaches across skill directories manufactures the cross-skill path that decision forbids. The script validates the agent-mail `send` result and the Prowl `send` result by the same means, its own field constants over each capability's public result, so both routes are checked the same way and neither route needs a subprocess, a store handle, or a mock.
   ```
 
 ## Nodes
@@ -1109,7 +1108,7 @@ Evidence files carrying the term:
 
   ```text
   old: The `SessionStart` hook records the running session's worktree-occupancy claim by delegating to `spx hook run session-start`; `claim-change` then brings a Handoff's work branch into that assigned, hook-claimed worktree, reading occupancy through `spx worktree status` only as a read-only check and recording no claim of its own, and `release-change` preserves the live runtime claim while freeing the Git branch by stepping the checkout off it after the push. These surfaces reach occupancy entirely through the `spx` CLI and never read or write the `.spx/worktrees/` claim store directly. How `spx` records a claim and decides whether a worktree is held by a live agent is `spx`'s concern, specified in the `spx` CLI's own spec tree; this node specifies only the plugins' use of that capability. The assigned-worktree discipline the Lifecycle skills follow — each agent conducts its git work in the assigned, hook-claimed worktree, never entering or creating another — is governed by [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md), and the hook's claim delegation by `spx/21-spec-tree.enabler/13-agent-environment.enabler/` and [`spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md`](spx/21-spec-tree.enabler/15-hook-state-delegation.adr.md). The bare-repository pool these skills operate within is governed by [`spx/21-spec-tree.enabler/11-repository-layout.pdr.md`](spx/21-spec-tree.enabler/11-repository-layout.pdr.md) and provisioned by `spx/21-spec-tree.enabler/12-worktree-provisioning.enabler`.
-  new: The `SessionStart` hook records the running session's worktree-occupancy claim by delegating to `spx hook run session-start`; `claim-change` then brings a Handoff's work branch into that assigned, hook-claimed worktree, reading occupancy through `spx worktree status` only as a read-only check and recording no claim of its own, and `release-change` preserves the live runtime claim while freeing the Git branch by stepping the checkout off it after the push. These surfaces reach occupancy entirely through the `spx` CLI and never read or write the `.spx/worktrees/` claim store directly. How `spx` records a claim and decides whether a worktree is held by a live agent is `spx`'s concern, specified in the `spx` CLI's own product tree; this node specifies only the plugins' use of that capability. The assigned-worktree discipline the Lifecycle skills follow — each agent conducts its git work in the assigned, hook-claimed worktree, never entering or creating another — is governed by [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md), and the hook's claim delegation by `spx/21-product-tree.enabler/13-agent-environment.enabler/` and [`spx/21-product-tree.enabler/15-hook-state-delegation.adr.md`](spx/21-product-tree.enabler/15-hook-state-delegation.adr.md). The bare-repository pool these skills operate within is governed by [`spx/21-product-tree.enabler/11-repository-layout.pdr.md`](spx/21-product-tree.enabler/11-repository-layout.pdr.md) and provisioned by `spx/21-product-tree.enabler/12-worktree-provisioning.enabler`.
+  new: The `SessionStart` hook records the running session's worktree-occupancy claim by delegating to `spx hook run session-start`; `claim-change` then brings a Handoff's work branch into that assigned, hook-claimed worktree, reading occupancy through `spx worktree status` only as a read-only check and recording no claim of its own, and `release-change` preserves the live runtime claim while freeing the Git branch by stepping the checkout off it after the push. These surfaces reach occupancy entirely through the `spx` CLI and never read or write the `.spx/worktrees/` claim store directly. How `spx` records a claim and decides whether a worktree is held by a live agent is `spx`'s concern, specified in the `spx` CLI's own Product Tree; this node specifies only the plugins' use of that capability. The assigned-worktree discipline the Lifecycle skills follow — each agent conducts its git work in the assigned, hook-claimed worktree, never entering or creating another — is governed by [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md), and the hook's claim delegation by `spx/21-product-tree.enabler/13-agent-environment.enabler/` and [`spx/21-product-tree.enabler/15-hook-state-delegation.adr.md`](spx/21-product-tree.enabler/15-hook-state-delegation.adr.md). The bare-repository pool these skills operate within is governed by [`spx/21-product-tree.enabler/11-repository-layout.pdr.md`](spx/21-product-tree.enabler/11-repository-layout.pdr.md) and provisioned by `spx/21-product-tree.enabler/12-worktree-provisioning.enabler`.
   ```
 
 ### `spx/21-spec-tree.enabler/21-templates.enabler` -> `spx/21-product-tree.enabler/21-templates.enabler`
@@ -1340,7 +1339,7 @@ Evidence files carrying the term:
 
   ```text
   old: PROVIDES systematic consistency checking across the spec tree — structural conformance, atemporal voice, and content placement
-  new: PROVIDES systematic consistency checking across the product tree — structural conformance, atemporal voice, and content placement
+  new: PROVIDES systematic consistency checking across the Product Tree — structural conformance, atemporal voice, and content placement
   ```
 
 ### `spx/21-spec-tree.enabler/54-authoring.enabler/39-artifact-authoring.enabler` -> `spx/21-product-tree.enabler/54-authoring.enabler/39-artifact-authoring.enabler`
@@ -1394,7 +1393,7 @@ Evidence files carrying the term:
 
   ```text
   old: - NEVER: create a spec tree without a product spec — the product spec is the root of all context ([audit])
-  new: - NEVER: create a product tree without a product spec — the product spec is the root of all context ([audit])
+  new: - NEVER: create a Product Tree without a product spec — the product spec is the root of all context ([audit])
   ```
 
 `bootstrapping.md` other lines replaced:
@@ -1403,7 +1402,7 @@ Evidence files carrying the term:
 
   ```text
   old: PROVIDES an interactive bootstrapping flow that scaffolds a product-root spec tree from user interviews
-  new: PROVIDES an interactive bootstrapping flow that scaffolds a product-root product tree from user interviews
+  new: PROVIDES an interactive bootstrapping flow that scaffolds a product-root Product Tree from user interviews
   ```
 
 - [x] line 10
@@ -1432,7 +1431,7 @@ Evidence files carrying the term:
 
   ```text
   old: PROVIDES conversion of every citation in a spec tree to the tree-absolute link form the 4.0 methodology declares
-  new: PROVIDES conversion of every citation in a product tree to the tree-absolute link form the 4.0 methodology declares
+  new: PROVIDES conversion of every citation in a Product Tree to the tree-absolute link form the 4.0 methodology declares
   ```
 
 Evidence files carrying the term:
@@ -1448,7 +1447,7 @@ Evidence files carrying the term:
 
   ```text
   old: CAN reorganize the spec tree without losing context, breaking references, or duplicating composition logic
-  new: CAN reorganize the product tree without losing context, breaking references, or duplicating composition logic
+  new: CAN reorganize the Product Tree without losing context, breaking references, or duplicating composition logic
   ```
 
 ### `spx/21-spec-tree.enabler/65-apply.enabler` -> `spx/21-product-tree.enabler/65-apply.enabler`
@@ -1792,7 +1791,7 @@ Evidence files carrying the term:
 
   ```text
   old: CAN produce atomic, well-described commits that map cleanly to spec tree changes
-  new: CAN produce atomic, well-described commits that map cleanly to product tree changes
+  new: CAN produce atomic, well-described commits that map cleanly to Product Tree changes
   ```
 
 ### `spx/21-spec-tree.enabler/76-merge.enabler` -> `spx/21-product-tree.enabler/76-merge.enabler`
@@ -1953,7 +1952,7 @@ Evidence files carrying the term:
 
   ```text
   old: PROVIDES a validator that flags a reference in plugin content under `src/plugins/` pointing into this marketplace's own files — which a consumer checkout does not hold — while passing references to the consumer's own spec tree or to the plugin's own files
-  new: PROVIDES a validator that flags a reference in plugin content under `src/plugins/` pointing into this marketplace's own files — which a consumer checkout does not hold — while passing references to the consumer's own product tree or to the plugin's own files
+  new: PROVIDES a validator that flags a reference in plugin content under `src/plugins/` pointing into this marketplace's own files — which a consumer checkout does not hold — while passing references to the consumer's own Product Tree or to the plugin's own files
   ```
 
 ### `spx/15-validation.enabler/65-gate.enabler`
@@ -2188,7 +2187,7 @@ Evidence files carrying the term:
 
   ```text
   old: The prose plugin exposes three workflow skills. `/author-prose-architecture` writes prose ADRs: structural decisions for the prose artifacts a spec node governs, driven by that node and located in the spec tree. `/author-prose` is the prose artifact's sole writer: it takes the kind, composes that kind's standards layers, and writes text that complies with the governing ADR. `/audit-prose` is the audit methodology: it takes the kind and judges the artifact, and the `prose-auditor` thin agent fronts it so a verdict is produced in a separate Verifier's agent session. No workflow skill dispatches another agent session; dispatch is the calling flow's. Chat responses to the user route to none of these — the plugin's rendered output style governs them. Operational prose — a code comment, a commit message, an agent-facing instruction — likewise stays outside the prose surface, with the workflow that owns it.
-  new: The prose plugin exposes three workflow skills. `/author-prose-architecture` writes prose ADRs: structural decisions for the prose artifacts a spec node governs, driven by that node and located in the product tree. `/author-prose` is the prose artifact's sole writer: it takes the kind, composes that kind's standards layers, and writes text that complies with the governing ADR. `/audit-prose` is the audit methodology: it takes the kind and judges the artifact, and the `prose-auditor` thin agent fronts it so a verdict is produced in a separate Verifier's agent session. No workflow skill dispatches another agent session; dispatch is the calling flow's. Chat responses to the user route to none of these — the plugin's rendered output style governs them. Operational prose — a code comment, a commit message, an agent-facing instruction — likewise stays outside the prose surface, with the workflow that owns it.
+  new: The prose plugin exposes three workflow skills. `/author-prose-architecture` writes prose ADRs: structural decisions for the prose artifacts a spec node governs, driven by that node and located in the Product Tree. `/author-prose` is the prose artifact's sole writer: it takes the kind, composes that kind's standards layers, and writes text that complies with the governing ADR. `/audit-prose` is the audit methodology: it takes the kind and judges the artifact, and the `prose-auditor` thin agent fronts it so a verdict is produced in a separate Verifier's agent session. No workflow skill dispatches another agent session; dispatch is the calling flow's. Chat responses to the user route to none of these — the plugin's rendered output style governs them. Operational prose — a code comment, a commit message, an agent-facing instruction — likewise stays outside the prose surface, with the workflow that owns it.
   ```
 
 ### `spx/43-python.enabler`
@@ -2471,12 +2470,12 @@ Files outside `spx/`, `src/plugins/spec-tree/`, and `dist/` that carry the term,
 - [x] `prototypes/eval-cache-amortization/investigation.md` (2 lines)
 - [x] `prototypes/interview-live/README.md` (3 lines)
 - [x] `prototypes/interview-live/boot.py` (1 lines)
-- [x] `prototypes/interview-live/mcp_server.py` (7 lines) keeps its spec-tree prose: prototype code outside the product tree's governance and outside the rename's scope
-- [x] `prototypes/interview-live/projection.py` (3 lines) keeps its spec-tree prose: prototype code outside the product tree's governance and outside the rename's scope
-- [x] `prototypes/interview-live/seed.json` (2 lines) keeps its spec-tree prose: prototype data outside the product tree's governance and outside the rename's scope
+- [x] `prototypes/interview-live/mcp_server.py` (7 lines) keeps its spec-tree prose: prototype code outside the Product Tree's governance and outside the rename's scope
+- [x] `prototypes/interview-live/projection.py` (3 lines) keeps its spec-tree prose: prototype code outside the Product Tree's governance and outside the rename's scope
+- [x] `prototypes/interview-live/seed.json` (2 lines) keeps its spec-tree prose: prototype data outside the Product Tree's governance and outside the rename's scope
 - [x] `prototypes/interview-live/shell.html` (5 lines)
-- [x] `prototypes/interview-live/spx_seed.py` (2 lines) keeps its spec-tree prose: prototype code outside the product tree's governance and outside the rename's scope
-- [x] `prototypes/interview-live/state.py` (2 lines) keeps its spec-tree prose: prototype code outside the product tree's governance and outside the rename's scope
+- [x] `prototypes/interview-live/spx_seed.py` (2 lines) keeps its spec-tree prose: prototype code outside the Product Tree's governance and outside the rename's scope
+- [x] `prototypes/interview-live/state.py` (2 lines) keeps its spec-tree prose: prototype code outside the Product Tree's governance and outside the rename's scope
 - [x] `renovate.json` (3 lines)
 - [x] `scripts/distribution.yml` (5 lines)
 - [x] `spx/local/generated-sources.toml` (9 lines)

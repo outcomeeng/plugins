@@ -17,8 +17,8 @@ Coding agent plugins to be used by consumers of the Outcome Engineering methodol
 ## Surfaces
 
 - Coding agent plugins: product engineers invoke skills and configured agents through agent-native plugin artifacts.
-- SPX CLI — product engineers and automation inspect and operate on product tree structure and verification state.
-- Local browser — product engineers inspect and restructure the SPX CLI's product tree projection interactively.
+- SPX CLI — product engineers and automation inspect and operate on Product Tree structure and verification state.
+- Local browser — product engineers inspect and restructure the SPX CLI's Product Tree projection interactively.
 
 ## Actors and sidedness
 
@@ -31,7 +31,7 @@ The marketplace serves plugin producers and plugin consumers.
 ## Product hypothesis
 
 WE BELIEVE THAT a plugin marketplace delivering the Outcome Engineering methodology through coding agent plugins
-WILL reduce implementation rework by capturing and encoding product truth in the product tree and enforcing deterministic context and evidence-driven verification
+WILL reduce implementation rework by capturing and encoding product truth in the Product Tree and enforcing deterministic context and evidence-driven verification
 CONTRIBUTING TO faster product iteration at the level of malleability chosen by the operator.
 
 ### Evidence of success
@@ -50,4 +50,4 @@ CONTRIBUTING TO faster product iteration at the level of malleability chosen by 
 - Change coordination (claim, release with a Handoff, close) for work continuity across agent sessions
 - Pre-commit validation infrastructure for plugin and skill quality
 - Persistent marketplace installation and isolated end-to-end install verification
-- Interface surfaces (browser) that render the product tree from the SPX CLI projection and support interactive review and restructuring
+- Interface surfaces (browser) that render the Product Tree from the SPX CLI projection and support interactive review and restructuring

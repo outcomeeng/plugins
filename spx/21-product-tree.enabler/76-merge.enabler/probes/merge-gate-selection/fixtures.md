@@ -4,7 +4,7 @@ Each fixture describes one consumer repository and one committed changeset that 
 
 ## Fixture 1
 
-The repository has a product tree under `spx/`, rooted at `spx/shop.spec.md`, which declares `kind: product`. The changeset changes these paths:
+The repository has a Product Tree under `spx/`, rooted at `spx/shop.spec.md`, which declares `kind: product`. The changeset changes these paths:
 
 - `spx/20-billing.capability/billing.spec.md`
 - `spx/20-billing.capability/tests/test_invoice.scenario.l1.py` (a `[test]` file linked from `billing.spec.md`)
@@ -18,7 +18,7 @@ Front matter of each touched node's spec:
 
 ## Fixture 2
 
-The repository has a product tree under `spx/`, rooted at `spx/shop.spec.md`, which declares `kind: product`. The changeset changes these paths:
+The repository has a Product Tree under `spx/`, rooted at `spx/shop.spec.md`, which declares `kind: product`. The changeset changes these paths:
 
 - `spx/20-billing.capability/tests/test_invoice.scenario.l1.py` (a `[test]` file linked from `billing.spec.md`)
 - `src/billing/invoice.py` (imported by that linked test)
@@ -40,7 +40,7 @@ The repository has no `spx/` directory. Its root agent guide declares `make veri
 
 ## Fixture 4
 
-The repository has a product tree under `spx/`, rooted at `spx/shop.spec.md`, which declares `kind: product`. The changeset changes these paths:
+The repository has a Product Tree under `spx/`, rooted at `spx/shop.spec.md`, which declares `kind: product`. The changeset changes these paths:
 
 - `spx/40-pricing.capability/tests/test_discount.mapping.l1.py` (a `[test]` file linked from `spx/40-pricing.capability/pricing.spec.md`)
 - `src/pricing/discount.py` (imported by that linked test)
@@ -51,7 +51,7 @@ Front matter of the touched node's spec:
 
 ## Fixture 5
 
-The repository has a product tree under `spx/`, rooted at `spx/shop.spec.md`, which declares `kind: product`. The changeset changes these paths:
+The repository has a Product Tree under `spx/`, rooted at `spx/shop.spec.md`, which declares `kind: product`. The changeset changes these paths:
 
 - `spx/shop.spec.md` (the root spec)
 - `spx/20-billing.capability/billing.spec.md`
@@ -63,7 +63,7 @@ Front matter of each changed spec:
 
 ## Fixture 6
 
-The repository has a product tree under `spx/`, rooted at `spx/shop.spec.md`, which declares `kind: product`. The changeset changes this path:
+The repository has a Product Tree under `spx/`, rooted at `spx/shop.spec.md`, which declares `kind: product`. The changeset changes this path:
 
 - `spx/20-billing.capability/billing.outcome.md` (the outcome record of `spx/20-billing.capability`)
 
