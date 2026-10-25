@@ -530,12 +530,12 @@ Claude Code state is every project- or local-scope install record on the machine
 
 `spx/local/generated-sources.toml` is the committed declaration of every generated extent in this repository — whole generated files by path pattern and generated regions of authored files by marker pair — with each relation's authored sources, generator, and regeneration command. It is governed by `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md` and is the single source of generated-source attribution: never infer generated status from path names.
 
-- Agentic verification (review, audit) excludes declared generated extents from judgment and names the skipped extents in its verdict — unless the changeset touches the relation's sources or generator, or the source-to-output contract is the declared verification subject, in which case the generated extents are evidence. Journal-recorded skip evidence arrives with the `spx` verification scope projection; until then the exclusion binds through this instruction alone.
+- Agentic verification (review, audit) excludes declared generated extents from judgment and names the skipped extents in its verdict — unless the changeset touches the relation's sources or generator, or the source-to-output contract is the declared verification subject, in which case the generated extents are evidence. The review runner applies the exclusion for review (see below).
 - Findings about generated content resolve to the relation's sources; never hand-edit a generated extent.
 - Deterministic verification covers the complete changeset; each relation's regeneration command backs regeneration parity — rerunning it leaves the committed generated extents byte-identical.
 - Generation inputs and generator implementations are authored files judged in their generation role — template directives are template syntax, never defective final output.
 
-This section is the interim consumer of the declaration; the `spx` verification scope projection supersedes it when that capability ships.
+The review runner `review_run.py` of the `review-changes` skill is the declaration's consumer for agentic review: `start` lists each declared generated extent under its relation, flags a relation whose sources or generator the changeset also changes, and `finish` records each extent as skipped by declaration with its regeneration command, so every Reviewer receives the exclusion without instruction. The `spx` verification scope projection becomes the consumer for the other agentic verification when that capability ships.
 
 <!-- /PRODUCT-TREE:shared generated-sources -->
 
