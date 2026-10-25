@@ -20,6 +20,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/wait-for-load` keeps the waiter as its off branch.** With the switch off or the overlay absent, the skill chains the command behind `wait_for_load.py` with `&&` and re-runs the line on a lost result, as before; a repository that installs this release keeps that behavior until it adds the overlay line. A lightweight command runs with neither the lock nor the waiter, whatever the switch.
 
+- **The generated instruction block's `/wait-for-load` stop trigger names both line forms.** The router template that `/update-instruction-block` renders into `AGENTS.md` and `CLAUDE.md` now directs a resource-intensive command to run on one shell line in the form the repository's lock switch selects: as the argument vector of `spx orchestration lock --run-id <id> -- <command>` where `spx/local/wait-for-load.md` holds `orchestration-lock: on`, and chained behind the waiter with `&&` where that overlay is absent or leaves the switch off. A lost lock record recovers the existing invocation and its matching terminal record, starts no new invocation while that invocation's state is unresolved, and reports the outcome unknown when its terminal exit is known but the record is gone; a lost waiter result still re-runs the waiter line. A lightweight command runs with neither the lock nor the waiter, and the Codex router keeps either line in one `functions.exec` call. Regenerate the instruction block with `/update-instruction-block` to receive the rule.
+
 ### Requires
 
 - **The `spx` CLI with the `orchestration lock` command**, for a repository that turns the switch on. On a platform the guard does not support, the skill reports the guard's status and leaves the command unstarted.

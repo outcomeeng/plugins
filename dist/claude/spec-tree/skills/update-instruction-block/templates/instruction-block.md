@@ -130,14 +130,16 @@ Review, audit, or quality check specs. Find contradictions or gaps.
 
 ### Before a resource-intensive command -> `/wait-for-load`
 
-🛑 **STOP TRIGGER — Before any resource-intensive command, ALWAYS invoke `/wait-for-load` and run its waiter chained ahead of that command on the same shell line.**
-A resource-intensive command is a test suite, an eval, a full gate, a compiling build, or an install verification; a lightweight command — formatting, a single-file lint, a markdown or link validation, an instruction-block render, a status read — runs without the waiter.
-**ALWAYS** let the waiter's zero exit start the selected command unchanged; a lost or truncated result re-runs the same line.
+🛑 **STOP TRIGGER — Before any resource-intensive command, ALWAYS invoke `/wait-for-load` and run that command on one shell line in the form its lock switch selects.**
+A resource-intensive command is a test suite, an eval, a full gate, a compiling build, or an install verification; a lightweight command — formatting, a single-file lint, a markdown or link validation, an instruction-block render, a status read — runs with neither the lock nor the waiter.
+**ALWAYS** read the lock switch from `spx/local/wait-for-load.md`: where that overlay holds the line `orchestration-lock: on`, run the command as the argument vector of `spx orchestration lock --run-id <id> -- <command>`, so it starts only when the host-wide slot admits it; where the overlay is absent or leaves the switch off, chain the command behind the waiter with `&&`.
+**ALWAYS** let the waiter's zero exit start the selected command unchanged; a lost or truncated waiter result re-runs the same line.
+**ALWAYS** recover the existing invocation and its matching terminal record after a lock record is lost from view; start no new invocation while that invocation's state is unresolved, and report the outcome unknown when its terminal exit is known but the record is gone.
 **NEVER** use host load to reduce scope, workers, limits, deadlines, or verification.
 
 <!-- harness:codex -->
 
-**Codex process lifecycle.** The chained line is one `functions.exec` call. Every nested `exec_command` that returns a `session_id` creates an owned process handle. Record it immediately, collect it with `write_stdin` until an `exit_code` is observed, and reconcile every known handle before another process sequence, an operator question, merge or publication, or turn end. If the work is abandoned, interrupt that process and collect its terminal result. Error output or sufficient-looking partial output never closes the handle and never permits leaving its background terminal dangling.
+**Codex process lifecycle.** The lock line or the chained line is one `functions.exec` call. Every nested `exec_command` that returns a `session_id` creates an owned process handle. Record it immediately, collect it with `write_stdin` until an `exit_code` is observed, and reconcile every known handle before another process sequence, an operator question, merge or publication, or turn end. If the work is abandoned, interrupt that process and collect its terminal result. Error output or sufficient-looking partial output never closes the handle and never permits leaving its background terminal dangling.
 
 <!-- /harness:codex -->
 
