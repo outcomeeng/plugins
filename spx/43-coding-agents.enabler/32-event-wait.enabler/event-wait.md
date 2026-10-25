@@ -28,7 +28,7 @@ CAN wake on the first event any named source yields without a standing watcher, 
 ### Compliance
 
 - A request without a timeout, or with a timeout that is not positive, prints one invalid-request line and exits before reading any source ([test](tests/test_event_wait.compliance.l1.py))
-- NEVER: a run keeps a cursor, state file, or lock, sends mail, marks mail read, records a receipt, or prompts or keys a pane ([test](tests/test_event_wait.compliance.l1.py))
+- NEVER: a run keeps a cursor, state file, or lock, sends mail, reads or acknowledges a record, or prompts or keys a pane ([test](tests/test_event_wait.compliance.l1.py))
 - NEVER: a run outlives its timeout, starts a background process, or loops after printing its line ([test](tests/test_event_wait.compliance.l1.py))
 - ALWAYS: `wait_event` reads mail through the agent-mail capability, agent session states through the herdr environment capability, and alerts through the consumption-control read, each by a `__file__`-relative import inside the plugin, and constructs no raw mail, herdr, or consumption-control command ([audit])
 - ALWAYS: `/wait-for-event` documents the request, which the caller writes to a payload file in its scratch directory and supplies through an input redirect, its required timeout, the id, states, and instants the caller passes from the last event it handled, the four line forms, and the arming rule `bounded-background-wait` of [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) ([audit])
