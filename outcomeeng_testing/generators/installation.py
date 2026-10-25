@@ -738,6 +738,48 @@ def generated_marketplace_registry_entries(
     )
 
 
+def generated_out_of_scope_claude_listing_entries(
+    plugins: Sequence[str],
+    checkout: Path,
+    marketplace: str,
+) -> tuple[dict[str, str], ...]:
+    """Cycle the Claude listing entries the inventory rejects across `plugins`.
+
+    Entries rotate through a foreign project path, user scope, and managed
+    scope, so each rejection rule has a member for every window of plugins.
+    """
+    entries: list[dict[str, str]] = []
+    for index, plugin in enumerate(plugins):
+        entry = {
+            CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin, marketplace),
+            CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+            CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout.parent),
+            CLAUDE_PLUGIN_VERSION_FIELD: recorded_version(index),
+        }
+        case = index % 3
+        if case == 1:
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD] = CLAUDE_USER_SCOPE
+            del entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        elif case == 2:
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD] = CLAUDE_MANAGED_SCOPE
+        entries.append(entry)
+    return tuple(entries)
+
+
+def generated_out_of_scope_codex_listing_entries(
+    plugins: Sequence[str],
+    marketplace: str,
+) -> tuple[dict[str, str], ...]:
+    """List each of `plugins` under a marketplace the inventory rejects."""
+    return tuple(
+        {
+            CODEX_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin, marketplace),
+            CODEX_PLUGIN_MARKETPLACE_FIELD: foreign_marketplace_name(marketplace),
+        }
+        for plugin in plugins
+    )
+
+
 def generated_codex_listing_entries(
     catalog: Sequence[str],
     marketplace: str,
@@ -1091,6 +1133,8 @@ __all__ = [
     "RegistryShape",
     "UNCATALOGED_PLUGIN",
     "generated_codex_listing_entries",
+    "generated_out_of_scope_claude_listing_entries",
+    "generated_out_of_scope_codex_listing_entries",
     "CONCURRENT_SESSION_CHECKOUT",
     "generated_concurrent_record_entry",
     "generated_failure_classification_cases",

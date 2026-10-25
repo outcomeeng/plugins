@@ -179,6 +179,8 @@ from outcomeeng_testing.generators.installation import (
     generated_listing_defect_records,
     generated_unresolved_target_records,
     generated_invalid_catalog_subsets,
+    generated_out_of_scope_claude_listing_entries,
+    generated_out_of_scope_codex_listing_entries,
     generated_persistent_catalog_selections,
     generated_agent_definition,
     generated_agent_file,
@@ -997,8 +999,12 @@ def _plugin_listing_payload(
     agent: Target,
     checkout: Path,
     plugins: frozenset[str],
+    rejected: Sequence[dict[str, str]] = (),
 ) -> str:
     """One agent's installed listing for `plugins` at the invocation checkout.
+
+    `rejected` entries are appended after the listed plugins; they carry
+    records the inventory must skip.
 
     Every second entry is listed disabled, so a selection that must include
     disabled plugins has a disabled member to lose whenever an enabled-state
@@ -1008,29 +1014,35 @@ def _plugin_listing_payload(
     if agent is Target.CLAUDE:
         return json.dumps(
             [
-                {
-                    CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
-                        plugin, MARKETPLACE
-                    ),
-                    CLAUDE_PLUGIN_ENABLED_FIELD: index % 2 == 0,
-                    CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
-                    CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout.resolve()),
-                    CLAUDE_PLUGIN_VERSION_FIELD: LISTED_VERSION,
-                }
-                for index, plugin in enumerate(identifiers)
+                *(
+                    {
+                        CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
+                            plugin, MARKETPLACE
+                        ),
+                        CLAUDE_PLUGIN_ENABLED_FIELD: index % 2 == 0,
+                        CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+                        CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout.resolve()),
+                        CLAUDE_PLUGIN_VERSION_FIELD: LISTED_VERSION,
+                    }
+                    for index, plugin in enumerate(identifiers)
+                ),
+                *rejected,
             ]
         )
     return json.dumps(
         {
             CODEX_PLUGIN_ENTRIES_FIELD: [
-                {
-                    CODEX_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
-                        plugin, MARKETPLACE
-                    ),
-                    CODEX_PLUGIN_ENABLED_FIELD: index % 2 == 0,
-                    CODEX_PLUGIN_MARKETPLACE_FIELD: MARKETPLACE,
-                }
-                for index, plugin in enumerate(identifiers)
+                *(
+                    {
+                        CODEX_PLUGIN_ID_FIELD: marketplace_plugin_identifier(
+                            plugin, MARKETPLACE
+                        ),
+                        CODEX_PLUGIN_ENABLED_FIELD: index % 2 == 0,
+                        CODEX_PLUGIN_MARKETPLACE_FIELD: MARKETPLACE,
+                    }
+                    for index, plugin in enumerate(identifiers)
+                ),
+                *rejected,
             ]
         }
     )
@@ -2983,8 +2995,11 @@ def observe_persistent_catalog_subset_plans() -> tuple[
 
     Each nonempty listing carries one plugin the committed catalog does not
     name beside the selected subset, so a plan that admits a reported plugin
-    from outside the catalog has a member to be caught on; the empty listing
-    stays empty so the bootstrap case keeps its shape.
+    from outside the catalog has a member to be caught on. Every listing also
+    carries each unselected catalog member as a record the inventory rejects
+    (foreign project path, user scope, managed scope, or foreign marketplace),
+    so a plan that stops filtering on scope, project path, or marketplace
+    selects a member outside the installed subset.
     """
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
@@ -3005,6 +3020,22 @@ def observe_persistent_catalog_subset_plans() -> tuple[
                 installed[agent] = (
                     selected | {UNCATALOGED_PLUGIN} if selected else selected
                 )
+                unselected = tuple(
+                    plugin for plugin in catalogs[agent] if plugin not in selected
+                )
+                rejected: dict[Target, tuple[dict[str, str], ...]] = {
+                    Target.CLAUDE: (),
+                    Target.CODEX: (),
+                }
+                rejected[agent] = (
+                    generated_out_of_scope_claude_listing_entries(
+                        unselected, mirror.resolve(), MARKETPLACE
+                    )
+                    if agent is Target.CLAUDE
+                    else generated_out_of_scope_codex_listing_entries(
+                        unselected, MARKETPLACE
+                    )
+                )
                 plan = build_persistent_installation_plan(
                     preflight,
                     claude_marketplace_payload=claude_marketplace_listing_payload(
@@ -3014,6 +3045,7 @@ def observe_persistent_catalog_subset_plans() -> tuple[
                         Target.CLAUDE,
                         mirror,
                         installed[Target.CLAUDE],
+                        rejected[Target.CLAUDE],
                     ),
                     codex_marketplace_payload=codex_marketplace_listing_payload(
                         DECLARED_CODEX_SOURCE, MARKETPLACE
@@ -3022,6 +3054,7 @@ def observe_persistent_catalog_subset_plans() -> tuple[
                         Target.CODEX,
                         mirror,
                         installed[Target.CODEX],
+                        rejected[Target.CODEX],
                     ),
                 )
                 planned = (
