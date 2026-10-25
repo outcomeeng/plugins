@@ -21,10 +21,15 @@ Tested with:
   scratch directory and reports the bundle paths.
 - A renamed file -> listed once under its new path; the manifest's ``renames``
   records its former path and whether its content is unchanged.
-- ``spx/local/generated-sources.toml`` at the repository root -> the manifest's
-  ``generated_extents`` lists each changed file that a relation's whole-file
-  output pattern matches, grouped by relation; a region-bounded output leaves
-  its file ordinary, and an absent declaration lists no extent.
+- ``spx/local/generated-sources.toml`` read at the scope's base ref -> the
+  manifest's ``generated_extents`` lists each changed file that a relation's
+  whole-file output pattern matches, grouped by relation; a region-bounded
+  output leaves its file ordinary, and a base without the declaration lists no
+  extent.
+- A changeset that changes ``spx/local/generated-sources.toml`` -> the manifest's
+  ``generated_declaration_changed`` is true and every listed relation is flagged
+  with the changed declaration as its ``flagged_reason``, so no changed file is
+  exempt by declaration.
 - Missing base-ref sources -> exits non-zero and names env and git sources.
 
 Stdlib-only.
@@ -365,6 +370,7 @@ def _manifest_dict(
     sections: tuple[DiffSection, ...],
     renames: list[dict[str, object]],
     generated_extents: list[dict[str, object]],
+    generated_declaration_changed: bool,
 ) -> dict[str, object]:
     diff_bytes = diff_text.encode("utf-8")
     return {
@@ -387,6 +393,7 @@ def _manifest_dict(
         ],
         "renames": renames,
         "generated_extents": generated_extents,
+        "generated_declaration_changed": generated_declaration_changed,
     }
 
 
@@ -451,7 +458,7 @@ def _matches_any(path: str, patterns: list[str]) -> bool:
 
 
 def _pattern_list(
-    relation: dict[str, object], key: str, *, ordinal: int, source: pathlib.Path
+    relation: dict[str, object], key: str, *, ordinal: int, source: str
 ) -> list[str]:
     value = relation.get(key, [])
     if not isinstance(value, list):
@@ -462,20 +469,37 @@ def _pattern_list(
     return [item for item in value if isinstance(item, str)]
 
 
-def load_generated_relations(repo_root: pathlib.Path) -> list[dict[str, object]]:
-    """Read the generated-source declaration at the repository root.
+def _declaration_at_base(base_ref: str) -> tuple[str, str] | None:
+    """Return the declaration text committed at ``base_ref`` with its label.
 
-    Each returned relation carries its 1-based ``relation`` ordinal and the
-    whole-file ``outputs`` patterns only: a region-bounded output (an inline
-    table naming ``file``, ``begin``, and ``end``) bounds no whole-file extent.
-    An absent declaration yields no relation.
+    The label names the committed blob, ``<base_ref>:<path>``. A base without
+    the declaration yields ``None``.
     """
-    source = repo_root / GENERATED_SOURCES_PATH
-    if not source.is_file():
+    path = str(GENERATED_SOURCES_PATH)
+    if not _git_stdout(["ls-tree", "--name-only", base_ref, "--", path]).strip():
+        return None
+    label = f"{base_ref}:{path}"
+    return _git_stdout(["show", label]), label
+
+
+def load_generated_relations(base_ref: str) -> list[dict[str, object]]:
+    """Read the generated-source declaration committed at ``base_ref``.
+
+    The declaration comes from ``git show <base_ref>:spx/local/generated-sources.toml``,
+    never from the working tree, so a changeset cannot widen its own exemption
+    and a reviewed head that is not the checked-out tree reads the same
+    declaration. Each returned relation carries its 1-based ``relation`` ordinal
+    and the whole-file ``outputs`` patterns only: a region-bounded output (an
+    inline table naming ``file``, ``begin``, and ``end``) bounds no whole-file
+    extent. A base without the declaration yields no relation.
+    """
+    declaration = _declaration_at_base(base_ref)
+    if declaration is None:
         return []
+    text, source = declaration
     try:
-        document = tomllib.loads(source.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
+        document = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as exc:
         raise RuntimeError(
             f"cannot read the generated-source declaration {source}: "
             f"{str(exc) or type(exc).__name__}. Fix the declaration and rerun."
@@ -512,6 +536,19 @@ def load_generated_relations(repo_root: pathlib.Path) -> list[dict[str, object]]
     return relations
 
 
+def generated_declaration_changed(
+    changed_files: list[str], renames: list[dict[str, object]]
+) -> bool:
+    """Report whether the changeset changes the generated-source declaration.
+
+    A rename's former path counts as changed.
+    """
+    declaration = str(GENERATED_SOURCES_PATH)
+    return declaration in changed_files or any(
+        record.get("former_path") == declaration for record in renames
+    )
+
+
 def generated_extents(
     relations: list[dict[str, object]],
     changed_files: list[str],
@@ -519,11 +556,16 @@ def generated_extents(
 ) -> list[dict[str, object]]:
     """Group the changed files that whole-file output patterns match by relation.
 
+    A changeset that changes the declaration itself exempts nothing: every
+    listed relation is flagged and carries the changed declaration as its
+    ``flagged_reason``, so the runner treats every changed file as ordinary.
+
     A relation is flagged when the changeset also changes one of its declared
     sources or generator paths (a rename's former path counts as changed), so
     the extents are evidence the reviewer may read. A relation's own extents
     never count as its changed inputs.
     """
+    declaration_changed = generated_declaration_changed(changed_files, renames)
     touched = set(changed_files)
     touched.update(
         str(record["former_path"])
@@ -551,7 +593,11 @@ def generated_extents(
                 "generator": generator,
                 "regenerate": relation["regenerate"],
                 "files": files,
-                "flagged": bool(changed_sources or changed_generator),
+                "flagged": declaration_changed
+                or bool(changed_sources or changed_generator),
+                "flagged_reason": str(GENERATED_SOURCES_PATH)
+                if declaration_changed
+                else "",
                 "changed_sources": changed_sources,
                 "changed_generator": changed_generator,
             }
@@ -610,9 +656,6 @@ def write_bundle(
         dict.fromkeys(path for section in sections for path in section.files)
     )
     renames = rename_records(sections)
-    repo_root = pathlib.Path(
-        _git_stdout(["rev-parse", "--show-toplevel"]).strip()
-    ).resolve(strict=True)
     manifest = _manifest_dict(
         base_ref=base_ref,
         head_ref=head_ref,
@@ -620,7 +663,10 @@ def write_bundle(
         sections=sections,
         renames=renames,
         generated_extents=generated_extents(
-            load_generated_relations(repo_root), changed_files, renames
+            load_generated_relations(base_ref), changed_files, renames
+        ),
+        generated_declaration_changed=generated_declaration_changed(
+            changed_files, renames
         ),
     )
     safe_bundle_dir.mkdir(parents=True, exist_ok=True)

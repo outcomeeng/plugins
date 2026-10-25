@@ -10,11 +10,14 @@ provider skill owns and several consumers execute.
 Tested with: the stale-base refusal before any journal opens, an unfetchable
 base reported as a diagnostic line rather than a traceback, the
 start/append-scope/append-finding/finish round trip, a finish before every
-changed file has a scope-advanced event, a rename's source and destination
-scope, a declared generated extent and a content-unchanged rename listed at
-`start`, skipped by `finish` without a scope-advanced event or an unread mark
-and recorded on the run-completed event, a relation flagged when the changeset
-also changes its sources or generator, `finish --unread-file` reading one
+changed file has a scope-advanced event, a content-changed rename required at
+its new path only and never at its former path, a declared generated extent
+and a content-unchanged rename listed at `start`, skipped by `finish` without
+a scope-advanced event or an unread mark and recorded on the run-completed
+event, the declaration read at the scope's base ref, a relation flagged when
+the changeset also changes its sources or generator, a changeset that changes
+the declaration exempting no extent, flagging every relation with the changed
+declaration as its reason at `start`, and carrying the changed declaration's path on the run-completed event, `finish --unread-file` reading one
 unread path per line, a finding's optional `unit` and `tracked` fields carried onto the
 finding-reported event and a tracked `debt` finding counted toward `debt`, a
 nonzero `spx journal` exit propagated with its stderr, a finish that marks
@@ -568,6 +571,7 @@ def _completed_event(
     unread: list[str],
     skipped_generated: list[dict[str, object]],
     renamed_unchanged: list[dict[str, object]],
+    declaration_changed: bool,
 ) -> dict[str, object]:
     parsed = jp.run_metadata_from_json(json.dumps(metadata))
     run = replace(jp.run_from_metadata(parsed), completed_at=completed_at)
@@ -584,6 +588,10 @@ def _completed_event(
         }
         if unread:
             data["review"]["unread"] = list(unread)
+        if declaration_changed:
+            data["review"]["generatedDeclarationChanged"] = str(
+                compute_diff.GENERATED_SOURCES_PATH
+            )
         if skipped_generated:
             data["review"]["skippedGenerated"] = skipped_generated
         if renamed_unchanged:
@@ -594,11 +602,16 @@ def _completed_event(
 def _generated_file_entries(
     state: dict[str, Any], *, path: pathlib.Path
 ) -> list[dict[str, object]]:
-    """One entry per declared generated extent file and relation, in file order."""
+    """One entry per exempt generated extent file and relation, in file order.
+
+    A relation flagged for a changed declaration exempts no file.
+    """
     entries: list[dict[str, object]] = []
     for extent in _record_list(
         state, "generatedExtents", path=path, name="review runner state"
     ):
+        if extent.get("flagged_reason"):
+            continue
         files = extent.get("files")
         relation = extent.get("relation")
         regenerate = extent.get("regenerate", "")
@@ -846,6 +859,7 @@ def _start(args: argparse.Namespace) -> int:
         renames = _record_list(
             manifest, "renames", path=manifest_path, name="review manifest"
         )
+        declaration_changed = manifest.get("generated_declaration_changed") is True
         state: dict[str, object] = {
             "runToken": run_token,
             "startedAt": started_at,
@@ -855,6 +869,7 @@ def _start(args: argparse.Namespace) -> int:
             "metadata": metadata,
             "journalEnv": journal_env,
             "generatedExtents": generated_extents,
+            "generatedDeclarationChanged": declaration_changed,
             "renames": renames,
         }
         state_path = _write_state(state)
@@ -865,6 +880,7 @@ def _start(args: argparse.Namespace) -> int:
             "manifestPath": str(manifest_path),
             "changedFiles": _manifest_changed_files(manifest, path=manifest_path),
             "generatedExtents": generated_extents,
+            "generatedDeclarationChanged": declaration_changed,
             "renames": renames,
         }
         json.dump(output, sys.stdout, sort_keys=True)
@@ -996,6 +1012,7 @@ def _finish(args: argparse.Namespace) -> int:
             unread=unread,
             skipped_generated=skipped_generated,
             renamed_unchanged=renamed_unchanged,
+            declaration_changed=state.get("generatedDeclarationChanged") is True,
         )
         code = _append_event(run_token, event, journal_env=journal_env)
         if code != 0:

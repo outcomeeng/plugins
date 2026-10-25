@@ -160,7 +160,7 @@ The `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `R
 }
 ```
 
-Each finding is keyed `<node-spec-file-path>:<rule-id>` and carries `rule` (the `<rule-id>`), `severity`, `locations` (every section or assertion of the node spec where that rule is violated), `message`, `observed`, and `expected`; a `filed` finding additionally carries `baseRefEvidence` and `issuesEntry` (`path`, `heading`). Every `<rule-id>` comes from `${CLAUDE_SKILL_DIR}/references/rule-catalog.md`, and a finding names no identifier outside it.
+Each finding is keyed `<node-spec-file-path>:<rule-id>` and carries `rule` (the `<rule-id>`), `severity`, `locations` (every section or assertion of the node spec where that rule is violated), `message`, `observed`, and `expected`; a `filed` finding additionally carries `key`, `baseRefEvidence`, and `issuesEntry` (`path`, `heading`). Every `<rule-id>` comes from `${CLAUDE_SKILL_DIR}/references/rule-catalog.md`, and a finding names no identifier outside it.
 
 </verdict_format>
 

@@ -168,7 +168,7 @@ The `overall` is `APPROVED` iff every native and composed row is `PASS` or `NOT_
 }
 ```
 
-Each finding is keyed `<adr-file-path>:<rule-id>` and carries `rule` (the `<rule-id>`), `severity: "blocking | filed"`, `locations` (every location in the ADR where that rule is violated), `message`, `observed`, and `expected`; a `filed` finding additionally carries `baseRefEvidence`, and `issuesEntry` (`path`, `heading`). Every `<rule-id>` comes from `${SKILL_DIR}/references/rule-catalog.md`; a validated composed finding retains the rule identifier of the invoked skill's own catalog. A finding names no identifier outside those catalogs.
+Each finding is keyed `<adr-file-path>:<rule-id>` and carries `rule` (the `<rule-id>`), `severity: "blocking | filed"`, `locations` (every location in the ADR where that rule is violated), `message`, `observed`, and `expected`; a `filed` finding additionally carries `key`, `baseRefEvidence`, and `issuesEntry` (`path`, `heading`). Every `<rule-id>` comes from `${SKILL_DIR}/references/rule-catalog.md`; a validated composed finding retains the rule identifier of the invoked skill's own catalog. A finding names no identifier outside those catalogs.
 
 </verdict_format>
 

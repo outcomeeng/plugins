@@ -12,14 +12,9 @@ A changeset reaches the default branch on origin through exactly one merge trans
 </objective>
 
 <context>
-Live repository state for transport selection, read at invocation.
-
 **Arguments:** `$ARGUMENTS`
 
-**Transport overlay (selector; no output means no explicit `transport:` selector, so the default applies):**
-!`grep -siE '^transport:' spx/local/merging.md`
-
-The changeset classification is computed in Step 2 by the classification script, not in this block.
+The transport overlay selector is read in Step 1, and the changeset classification is computed in Step 2 by the classification script, not in this block.
 
 </context>
 
@@ -37,7 +32,7 @@ The transport binds the gate predicates (which verification establishes `VERIFIC
 
 <workflow>
 
-**Step 1 — Load vocabulary and occupancy.** Immediately before the first product content this pass reads or modifies — a finding fix, base-sync conflict reconciliation, `/commit-changes` of edited product content, a coordination-note edit — or the first node this pass discusses, and at no earlier step, load the foundation and that node's context: {!% require_skill 'product-tree:understand' %!} {!% require_skill 'product-tree:contextualize' %!} PR inspection, check wait, merge, deploy, and release touch no product content and proceed without either reload. {!% require_skill 'product-tree:merging-standards' %!} It supplies the shared gate vocabulary, the repo-local overlay topics, and the action tokens. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 2; invoking the compact loader alone does not load the tagged policy sections used below. Run `spx worktree status` from the assigned root and require a fresh passing `<occupancy_preflight>` before any checkout-sensitive mutation; every delegated transport repeats it at its own mutation boundary. Read `spx/local/merging.md` for the transport selector and per-transport configuration **when that file is present** — it is a conditional read of an optional overlay. Its absence is normal and not a blocker: apply the default lifecycle (default transport precedence, default merge command, autonomous drive). NEVER reconstruct the transport or any merge behavior from incidental repository docs when the overlay is absent, and NEVER edit a generated guide (`{{! file('root_guide') !}}`) to change it — this skill and `/merging-standards` govern the lifecycle, and `spx/local/merging.md` is the one place repository-specific merge behavior belongs.
+**Step 1 — Load vocabulary and occupancy.** Immediately before the first product content this pass reads or modifies — a finding fix, base-sync conflict reconciliation, `/commit-changes` of edited product content, a coordination-note edit — or the first node this pass discusses, and at no earlier step, load the foundation and that node's context: {!% require_skill 'product-tree:understand' %!} {!% require_skill 'product-tree:contextualize' %!} PR inspection, check wait, merge, deploy, and release touch no product content and proceed without either reload. {!% require_skill 'product-tree:merging-standards' %!} It supplies the shared gate vocabulary, the repo-local overlay topics, and the action tokens. Follow /merging-standards `<reference_index>` and directly read its `merge-policy.md` reference before Step 2; invoking the compact loader alone does not load the tagged policy sections used below. Run `spx worktree status` from the assigned root and require a fresh passing `<occupancy_preflight>` before any checkout-sensitive mutation; every delegated transport repeats it at its own mutation boundary. Read `spx/local/merging.md` for the transport selector (an explicit `transport:` line; none means the default applies) and per-transport configuration **when that file is present** — it is a conditional read of an optional overlay. Its absence is normal and not a blocker: apply the default lifecycle (default transport precedence, default merge command, autonomous drive). NEVER reconstruct the transport or any merge behavior from incidental repository docs when the overlay is absent, and NEVER edit a generated guide (`{{! file('root_guide') !}}`) to change it — this skill and `/merging-standards` govern the lifecycle, and `spx/local/merging.md` is the one place repository-specific merge behavior belongs.
 
 **Step 2 — Select the transport.** Compute the changeset classification by running the classification script `<transport_selection>` describes:
 
@@ -45,7 +40,7 @@ The transport binds the gate predicates (which verification establishes `VERIFIC
 python3 "${CLAUDE_SKILL_DIR}/scripts/classify_changeset.py"
 ```
 
-It prints the total and non-coordination-note counts over the full changed-file set (committed branch scope plus working tree) and a bounded file preview. Apply `<transport_selection>` against those counts and the overlay selector from `<context>`. Name the selected transport and the policy reason: overlay selector, coordination-note-only, or default GitHub PR. Do not expose raw file counts unless the count is itself the decision boundary the operator needs to inspect.
+It prints the total and non-coordination-note counts over the full changed-file set (committed branch scope plus working tree) and a bounded file preview. Apply `<transport_selection>` against those counts and the overlay selector read in Step 1. Name the selected transport and the policy reason: overlay selector, coordination-note-only, or default GitHub PR. Do not expose raw file counts unless the count is itself the decision boundary the operator needs to inspect.
 
 **Step 3 — Dispatch.**
 

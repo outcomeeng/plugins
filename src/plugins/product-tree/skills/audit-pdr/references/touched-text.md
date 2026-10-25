@@ -53,6 +53,6 @@ A finding keeps the severity and disposition recorded for its key in the governi
 
 <filed_finding>
 
-A `filed` finding carries the usual finding fields plus `baseRefEvidence`, the `<base>..<head>` diff range showing every location lies outside the change, and `issuesEntry`, an object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and whose `heading` is the heading of the entry that records the finding. The finding sits in the row of the property it concerns without failing that row.
+A `filed` finding carries the usual finding fields plus `key`, the `<path>:<rule-id>` the verdict keys every finding by, `baseRefEvidence`, the `<base>..<head>` diff range showing every location lies outside the change, and `issuesEntry`, an object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and whose `heading` is the heading of the entry that records the finding. The finding sits in the row of the property it concerns without failing that row.
 
 </filed_finding>
