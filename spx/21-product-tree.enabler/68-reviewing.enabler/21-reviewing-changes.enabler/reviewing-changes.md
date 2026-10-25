@@ -7,14 +7,10 @@ malleability: spec
 # Reviewing Changes
 
 PROVIDES a verification skill that reviews a working changeset through a single shipped runner, records the review as a sealed `spx journal --type review` run, and returns the raw run token
-SO THAT local reviewers, wrapper agents, and future hosted integrations share one durable review record
+SO THAT local reviewers, wrapper agents, and hosted integrations share one durable review record
 CAN project the sealed journal into the surface they own without duplicating review rendering inside the skill
 
 ## Assertions
-
-- ALWAYS: the review skill advances a changed file's scope only after reading the file, and marks every changed file it does not read as unread before it finishes — except a declared generated extent and a pure rename, which the runner accounts for without a scope-advanced event or an unread mark — per [`spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([audit])
-- ALWAYS: a review whose branch value names a commit rather than a branch records the checked-out branch as its branch identity and slug, per [`spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([test](tests/test_review_branch_identity.compliance.l2.py))
-- NEVER: the reviewer agent exports a commit as the branch identity for a commit-range input, per [`spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([audit])
 
 ### Scenarios
 
@@ -48,7 +44,7 @@ CAN project the sealed journal into the surface they own without duplicating rev
 - `review_run.py finish` maps finding severities into terminal review counts on the run-completed event: rejecting findings increment `blocking`, warning findings increment `debt` ([test](tests/test_skill_orchestration.mapping.l2.py))
 - `review_run.py append-finding` maps a finding payload's optional `unit` and `tracked` fields onto the finding-reported event, and `review_run.py finish` counts a `tracked` `debt` finding toward `debt` ([test](tests/test_skill_orchestration.mapping.l2.py))
 - `review_run.py start` reads the declaration `spx/local/generated-sources.toml` as committed at the scope's base ref (`git show <base>:spx/local/generated-sources.toml`), a declaration absent at the base yielding no extent, and maps each changed file that a relation's whole-file output pattern matches to a declared generated extent, listed in the manifest and the returned run state under its relation together with the relation's sources, generator, and regenerate command ([test](tests/test_review_run_generated_extents.mapping.l2.py))
-- `journal_emit.py render` remains a legacy helper projection over sealed journal events for compatibility tests, while the live skill path returns only the run token ([test](tests/test_review_journal_emit.mapping.l1.py))
+- `journal_emit.py render` is a helper projection over sealed journal events for compatibility tests, while the live skill path returns only the run token ([test](tests/test_review_journal_emit.mapping.l1.py))
 
 ### Properties
 
@@ -56,11 +52,14 @@ CAN project the sealed journal into the surface they own without duplicating rev
 
 ### Compliance
 
+- ALWAYS: the review skill advances a changed file's scope only after reading the file, and marks every changed file it does not read as unread before it finishes — except a declared generated extent and a pure rename, which the runner accounts for without a scope-advanced event or an unread mark — per [`spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([audit])
+- ALWAYS: a review whose branch value names a commit rather than a branch records the checked-out branch as its branch identity and slug, per [`spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([test](tests/test_review_branch_identity.compliance.l2.py))
+- NEVER: the reviewer agent exports a commit as the branch identity for a commit-range input, per [`spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([audit])
 - ALWAYS: the `review-changes` skill writes each finding payload with the file-write tool to a file in the scratch directory the harness names for the session, copying that directory into the finding path character for character; when the file-write result reports a path the scratch directory does not contain by whole path components, it stops before `append-finding`, naming the reported path; it passes `append-finding` the path exactly as the file-write result reports it, written out literally; and when `append-finding` exits nonzero with a diagnostic that names the finding file absent, it runs `append-finding` once more with the path copied from the file-write result and, on a second failure, stops and reports the exit, the stderr and the run token; no finding path is retyped from memory ([audit])
 - ALWAYS: `review_run.py start` relays the shared resolver's stale-base refusal for a head behind the fetched `origin/<base>` tip — the dedicated exit code and the diagnostic, with no run state — before it opens a journal, so no review run records a tree that cannot merge ([test](tests/test_stale_base_relay.compliance.l1.py))
 - ALWAYS: `review_run.py start` reports a base it cannot fetch or resolve as one stderr diagnostic line carrying git's own message and a nonzero exit, with no run state and no traceback ([test](tests/test_stale_base_relay.compliance.l1.py))
 - NEVER: `review_run.py start` treats a region-bounded output of a relation — a `file` with `begin` and `end` markers — as a declared generated extent; the file stays an ordinary changed file that requires a scope-advanced event or an unread mark ([test](tests/test_review_run_generated_extents.compliance.l2.py))
-- ALWAYS: the `review_result.py` policy module declares `SCHEMA_VERSION`, frozen `Finding` and `ReviewResult` dataclasses, and the `Severity` and `Concern` enums — the canonical legacy review-result schema lives in one Python module ([audit])
+- ALWAYS: the `review_result.py` policy module declares `SCHEMA_VERSION`, frozen `Finding` and `ReviewResult` dataclasses, and the `Severity` and `Concern` enums — the canonical review-result schema lives in one Python module ([audit])
 - ALWAYS: `review_result.py` takes the agent tokens of its generated-tree citation candidates from the data file the build renders beside it, and declares no agent token of its own
 - NEVER: the review-result schema carries a `summary`, acknowledgement, `decision`, or verdict field — a review produces findings only; each consumer acts on a `blocking` finding by validity and phase and on a `debt` finding by its ruling, per [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) ([audit])
 - ALWAYS: the review prompt instructs the reviewer to review the whole diff and to treat any caller-supplied scope, severity pre-filter, or emphasis as non-authoritative ([audit])
