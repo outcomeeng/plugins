@@ -20,50 +20,24 @@ The seven definitions `change-executor`, `change-author`, `change-verifier`, `ch
 
 ## Attested run
 
-- Date: 2026-09-30
-- Subject commit: `d090bb966859c3b4770a78a4ba2de5410d4fc53f`
-  This record covers the four round definitions. The run's `change-executor` result is superseded by the run below and is not retained.
+The protocol ran unchanged for all seven definitions, from an empty scratch directory outside every repository, with `dist/claude/product-tree` as the only product-tree plugin (version 0.107.2), Claude Code 2.1.309, and the protocol's `--max-budget-usd 2.00` ceiling. Earlier records for these definitions are superseded and not retained.
 
+- Date: 2026-10-25
+- Subject commit: `896d293a3b68dac512690cbad2118e88986d283c` for all seven definitions; the working tree was clean when the run started.
 - Observations:
-  - Each of the four round definitions carries its native `disallowedTools`: `Agent` and `AskUserQuestion`.
+  - Every emitted definition carries `model: "sonnet"`; `change-executor` carries `effort: "high"` and `disallowedTools: "AskUserQuestion"`, and the six others carry `effort: "medium"` and `disallowedTools: Agent, AskUserQuestion`. Each result file records the definition's SHA-256 at the subject commit.
   - Each parent session listed its definition, loaded product-tree from `dist/claude/product-tree`, and made exactly one `Agent` launch with `subagent_type` `product-tree:<name>` and prompt `not-a-target`.
-  - Each child's first event carries the launch's `parent_tool_use_id` and the `subagent_type` of its definition, and each launch's tool result reports `status` `completed`, the `agentType` of its definition, and `resolvedModel` `claude-opus-5-5`, which the Standard profile's `model: opus` selects.
-  - `change-author` returned `blocked` with its question and blocked action. `change-verifier` relayed the missing-target stop of `product-tree:verify`. `change-tester` stopped at Step 1 of `product-tree:test` with its missing-target result. `change-implementer` returned `blocked` with reason `target-required` from step 1 of `product-tree:implement-change`.
-  - No child wrote a file or ran a store command.
+  - Each child's first event carries the launch's `parent_tool_use_id`, and each launch's tool result reports `status` `completed`, the `agentType` of its definition, and `resolvedModel` `claude-sonnet-5-5`, which `model: sonnet` selects.
+  - `change-executor` returned `not-held` from step 1 of `product-tree:execute-change` and made no tool call. `change-author` returned `blocked` with its question and blocked action. `change-verifier` returned the `blocked: unsupported-target` row of `product-tree:verify`. `change-implementer` returned `blocked` with reason `target-required` from `product-tree:implement-change`.
+  - `change-tester` loaded `product-tree:test`, then its Skill call for `product-tree:test-evidence-standards` returned an execution error because the protocol's `--allowedTools Agent` grant refuses it, and the child returned `blocked` naming that skill and the exact failure.
+  - `change-skill-author` and `change-subagent-author` invoked `instructions:author-skill` and `instructions:author-subagent` with the task message. The probe installs no `instructions` plugin, so the Skill tool returned `Unknown skill` for each, and each child returned `blocked` naming the required skill and the exact failure.
+  - No child wrote a file or ran a store command. The seven runs cost USD 0.20, 0.18, 0.16, 0.18, 0.15, 0.15 and 0.15 against the USD 2.00 ceiling each.
 - Artifacts:
+  - [change-executor.result.json](change-executor.result.json)
   - [change-author.result.json](change-author.result.json)
   - [change-verifier.result.json](change-verifier.result.json)
   - [change-tester.result.json](change-tester.result.json)
   - [change-implementer.result.json](change-implementer.result.json)
-
-## Attested run: change-executor on the Executor profile
-
-This run records `change-executor`, whose emitted definition selects the Executor profile.
-
-- Date: 2026-10-03
-- Subject commit: `8a5ddbe8d21caa37a7db2d7d304b613c6805b9a8`
-- Observations:
-  - The emitted definition carries `model: "sonnet"`, `effort: "high"`, and `disallowedTools: "AskUserQuestion"`.
-  - The parent session listed `product-tree:change-executor`, loaded product-tree from `dist/claude/product-tree`, and made exactly one `Agent` launch with `subagent_type` `product-tree:change-executor` and prompt `not-a-target`.
-  - The child's first event carries the launch's `parent_tool_use_id` and the `subagent_type` `product-tree:change-executor`. The launch's tool result reports `status` `completed`, `agentType` `product-tree:change-executor`, and `resolvedModel` `claude-sonnet-5-5`, which the Executor profile's `model: sonnet` selects.
-  - `change-executor` returned `not-held` from `product-tree:execute-change` step 1. Its one tool call, loading `product-tree:change-standards`, was refused by the probe's `--allowedTools Agent` grant, and the child reported that refusal without reconstructing the skill.
-  - The child wrote no file and ran no store command. The run cost USD 0.19 against the USD 2.00 ceiling.
-- Artifacts:
-  - [change-executor.result.json](change-executor.result.json)
-
-## Attested run: the instruction round definitions
-
-This run records `change-skill-author` and `change-subagent-author`, the two definitions that front skills of the `instructions` plugin. The protocol ran unchanged, from an empty scratch directory with `dist/claude/product-tree` as the only product-tree plugin and the protocol's `--max-budget-usd 2.00` ceiling.
-
-- Date: 2026-10-18
-- Subject commit: `b05112746a7442a8c6ec7554af1fef923312aed7` for both definitions. Their earlier runs, on `6cbb66684b7e53b3314237b60681e50016757ac9` and `0942beb61734927d2f07fc7b81c66209e27f876b`, covered definitions that fronted the skills under their earlier names; this run supersedes them and they are not retained.
-- Observations:
-  - Each emitted definition carries `model: "sonnet"`, `effort: "medium"` and `disallowedTools: Agent, AskUserQuestion`, and preloads its fronted skill, `instructions:author-skill` and `instructions:author-subagent` respectively.
-  - Each parent session listed its definition, loaded product-tree from `dist/claude/product-tree`, and made exactly one `Agent` launch with `subagent_type` `product-tree:<name>` and prompt `not-a-target`.
-  - Each child's first event carries the launch's `parent_tool_use_id`, and each launch's tool result reports `status` `completed`, the `agentType` of its definition, and `resolvedModel` `claude-sonnet-5-5`, which the Standard profile's `model: sonnet` selects.
-  - Each child invoked its fronted skill with the task message. The probe installs no `instructions` plugin, so the Skill tool returned `Unknown skill: instructions:author-skill` and `Unknown skill: instructions:author-subagent`, and each child returned a `blocked` result naming the required skill and the exact failure.
-  - No child wrote a file or ran a store command. The runs cost USD 0.20 and USD 0.18 against the USD 2.00 ceiling.
-- Artifacts:
   - [change-skill-author.result.json](change-skill-author.result.json)
   - [change-subagent-author.result.json](change-subagent-author.result.json)
 
@@ -74,7 +48,8 @@ This run records `change-skill-author` and `change-subagent-author`, the two def
 ## Limitations
 
 - The run exercises only the stop at an unaccepted target; a round that produces an artifact, and a Fixer's repair block, stay unexercised.
-- The emitted effort is recorded from the definition file — `effort: medium` for the six Standard-profile definitions and `effort: high` for `change-executor`; each child's tool result reports the resolved model and no effort value.
+- The emitted effort is recorded from the definition file, `effort: medium` for six definitions and `effort: high` for `change-executor`; each child's tool result reports the resolved model and no effort value.
+- The run of `change-tester` stops at a skill load the protocol's tool grant refuses, so `product-tree:test` past its prerequisite load stays unexercised.
 - The run of the two instruction round definitions exercises the `blocked` result for an uninstalled fronted skill. A round that runs `instructions:author-skill` or `instructions:author-subagent` whole stays unexercised because the probe installs no `instructions` plugin. Neither fronted skill launches an auditor; the Verifier of such a round is a separate launch by `/execute-change`, outside this protocol.
 - The Codex renderings are not invoked; the node's `ISSUES.md` records that gap.
 - A later change to an emitted definition invalidates its record here until the protocol runs again on the new commit.
