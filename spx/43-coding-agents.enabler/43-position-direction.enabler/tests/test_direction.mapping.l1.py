@@ -195,6 +195,34 @@ def test_act_names_the_missing_argument_and_its_valid_options(
     assert named in result["detail"]
 
 
+def test_act_operation_outside_the_accepted_set_is_refused_by_argument_parsing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    out = StringIO()
+
+    with pytest.raises(SystemExit) as refusal:
+        direction.main(
+            [
+                "act",
+                "--position",
+                "Lead Director",
+                "--authority",
+                "grant",
+                "--target",
+                "x",
+                "--operation",
+                "restart",
+            ],
+            stdout=out,
+            runtime=(_Mail(tmp_path), None),  # type: ignore[arg-type]
+            checkout=tmp_path / "checkout",
+        )
+
+    assert refusal.value.code == 2
+    assert out.getvalue() == ""
+    assert "invalid choice: 'restart'" in capsys.readouterr().err
+
+
 def test_send_names_every_missing_argument(tmp_path: Path) -> None:
     out = StringIO()
 
