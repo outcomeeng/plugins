@@ -100,7 +100,7 @@ def coordination_references() -> st.SearchStrategy[str]:
 # bytes of three characters each plus the three-character prefix, so its
 # written form stays inside the store's 128-character thread limit.
 FITTING_CORRELATION_MAXIMUM_CHARACTERS = 10
-SURROGATE_CATEGORY = "Cs"
+SURROGATE_CATEGORY: Literal["Cs"] = "Cs"
 NUL_CHARACTER = "\x00"
 ESCAPE_PREFIX_SUFFIX_PATTERN = r"[A-Za-z0-9._-]{0,20}"
 
