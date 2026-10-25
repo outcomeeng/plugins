@@ -33,6 +33,9 @@ import sys
 
 SCHEMA_VERSION = 1
 SUBPROCESS_TIMEOUT_SECONDS = 30
+# The command a next action names carries this script's absolute path, so the action
+# runs as written from any working directory.
+SELF_COMMAND = f'python3 "{pathlib.Path(__file__).resolve()}"'
 
 GATED_PATTERNS: tuple[tuple[tuple[str, ...], str], ...] = (
     (("gh", "auth", "login"), "gh auth login"),
@@ -112,10 +115,10 @@ def main(argv: list[str]) -> int:
                 {
                     "schema_version": SCHEMA_VERSION,
                     "error": (
-                        "no command provided after 'check'. Usage: python3 "
-                        "mutation_gate.py check [--user-instructed] <command...>. "
+                        f"no command provided after 'check'. Usage: {SELF_COMMAND} "
+                        "check [--user-instructed] <command...>. "
                         "Next action: pass the gh or git command tokens after check, "
-                        "for example: python3 mutation_gate.py check gh pr merge 123"
+                        f"for example: {SELF_COMMAND} check gh pr merge 123"
                     ),
                 }
             )

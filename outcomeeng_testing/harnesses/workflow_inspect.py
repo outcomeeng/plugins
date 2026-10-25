@@ -83,6 +83,8 @@ class WorkflowInspectModule(Protocol):
     """The surface of the loaded script that the harness reads and replaces."""
 
     SUBPROCESS_TIMEOUT_SECONDS: float
+    GH_ACCESS_COMMAND: str
+    RUNS_SOURCE: str
     _run: Callable[[list[str]], tuple[int, str, str]]
 
     def main(self, argv: list[str]) -> int: ...

@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import pathlib
 import re
 import subprocess
 import sys
@@ -39,6 +40,9 @@ from typing import Any
 
 SCHEMA_VERSION = 1
 SUBPROCESS_TIMEOUT_SECONDS = 30
+# The command a next action names carries this script's absolute path, so the action
+# runs as written from any working directory.
+SELF_COMMAND = f'python3 "{pathlib.Path(__file__).resolve()}"'
 
 # Two URL forms cover every remote shape:
 #   - `git@host:owner/repo[.git][/]` — the SCP-style form, no scheme, no port
@@ -175,7 +179,7 @@ def main(argv: list[str]) -> int:
                 "no git remote 'origin' found and no OWNER/REPO argument provided. "
                 "Next action: run from inside a checkout that has an origin remote "
                 "(git remote add origin <url>), or pass the repository explicitly: "
-                "python3 gh_access.py owner/repo"
+                f"{SELF_COMMAND} owner/repo"
             )
         else:
             parsed = parse_remote(remote)
@@ -185,7 +189,7 @@ def main(argv: list[str]) -> int:
                     "Accepted forms: git@HOST:owner/repo[.git], "
                     "https://HOST/owner/repo[.git], ssh://git@HOST[:port]/owner/repo[.git]. "
                     "Next action: fix the origin URL (git remote set-url origin <url>), "
-                    "or pass the repository explicitly: python3 gh_access.py owner/repo"
+                    f"or pass the repository explicitly: {SELF_COMMAND} owner/repo"
                 )
             else:
                 host, owner_repo = parsed
@@ -193,7 +197,7 @@ def main(argv: list[str]) -> int:
         error = (
             f"invalid OWNER/REPO argument {owner_repo!r}: expected one slash-separated "
             "pair such as outcomeeng/plugins. "
-            "Next action: rerun as python3 gh_access.py owner/repo, "
+            f"Next action: rerun as {SELF_COMMAND} owner/repo, "
             "or omit the argument to detect it from the origin remote"
         )
         owner_repo = None

@@ -11,10 +11,14 @@ from outcomeeng_testing.harnesses.workflow_inspect import (
     GhReply,
     fixture_json,
     fixture_text,
+    load_module,
     run_cli,
     run_real_runner,
     run_script_process,
 )
+
+RUNS_SOURCE = load_module().RUNS_SOURCE
+GH_ACCESS_COMMAND = load_module().GH_ACCESS_COMMAND
 
 SUBCOMMANDS = (
     "runs",
@@ -232,7 +236,7 @@ def test_gh_failure_without_diagnostics_reports_no_output() -> None:
     assert payload["workflows"] == []
     assert payload["error"] == (
         "workflow-files: gh workflow list exited 1: no output. "
-        "Next: run python3 gh_access.py to check gh authentication and repository access, then retry."
+        f"Next: run {GH_ACCESS_COMMAND} to check gh authentication and repository access, then retry."
     )
 
 
@@ -245,7 +249,7 @@ def test_log_gh_failure_names_the_log_flag_in_the_gh_subcommand() -> None:
     assert payload["truncated"] is False
     assert payload["error"] == (
         "log 9001: gh run view --log-failed exited 1: run not found. "
-        "Next: run python3 gh_access.py to check gh authentication and repository access, then retry."
+        f"Next: run {GH_ACCESS_COMMAND} to check gh authentication and repository access, then retry."
     )
 
 
@@ -259,7 +263,7 @@ def test_gh_output_that_is_not_json_reports_the_decoder_message() -> None:
         "jobs 9001: gh run view returned output that is not JSON ("
     )
     assert payload["error"].endswith(
-        "). Next: run python3 gh_access.py to check the gh version and authentication, then retry."
+        f"). Next: run {GH_ACCESS_COMMAND} to check the gh version and authentication, then retry."
     )
 
 
@@ -270,7 +274,7 @@ def test_run_wrong_shape_names_the_run_and_the_next_action() -> None:
     assert observed.exit_code == 1
     assert payload["error"] == (
         "run 9001: gh run view returned no run object. "
-        "Next: confirm the run id with `workflow_inspect.py runs`."
+        f"Next: confirm the run id with {RUNS_SOURCE}."
     )
 
 

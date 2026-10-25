@@ -18,11 +18,13 @@ from outcomeeng_testing.generators.workflow_inspect import (
 )
 from outcomeeng_testing.harnesses.workflow_inspect import (
     GhReply,
+    load_module,
     run_cli,
     workflow_inspect_property,
 )
 
-RUN_ID_SOURCE = "`workflow_inspect.py runs`"
+RUN_ID_SOURCE = load_module().RUNS_SOURCE
+GH_ACCESS_COMMAND = load_module().GH_ACCESS_COMMAND
 PR_NUMBER_SOURCE = "`gh pr list` or the PR URL"
 
 
@@ -113,7 +115,7 @@ def _gh_failures_report_code_and_stderr(case: tuple[int, str]) -> None:
     assert observed.exit_code == 1
     assert payload["error"] == (
         f"workflow-files: gh workflow list exited {code}: {stderr}. "
-        "Next: run python3 gh_access.py to check gh authentication and repository access, then retry."
+        f"Next: run {GH_ACCESS_COMMAND} to check gh authentication and repository access, then retry."
     )
 
 

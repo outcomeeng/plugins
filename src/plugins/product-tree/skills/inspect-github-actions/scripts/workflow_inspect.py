@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import pathlib
 import subprocess
 import sys
 from typing import Any
@@ -35,6 +36,11 @@ from typing import Any
 SCHEMA_VERSION = 1
 DEFAULT_LOG_MAX_BYTES = 100_000
 SUBPROCESS_TIMEOUT_SECONDS = 60
+_SCRIPTS_DIR = pathlib.Path(__file__).resolve().parent
+# The commands a next action names carry the absolute path of the script, so the
+# action runs as written from any working directory.
+GH_ACCESS_COMMAND = f'python3 "{_SCRIPTS_DIR / "gh_access.py"}"'
+SELF_COMMAND = f'python3 "{pathlib.Path(__file__).resolve()}"'
 POSITIONAL_PLACEHOLDER = "0"
 # Subcommands that take one positional number, with the long options each
 # accepts and the subset of those that consume the following token as a value.
@@ -47,7 +53,7 @@ POSITIONAL_LONG_OPTIONS: dict[str, tuple[str, ...]] = {
 }
 VALUE_OPTIONS = ("--max-bytes",)
 RUN_ID_LABEL = "run id"
-RUNS_SOURCE = "`workflow_inspect.py runs`"
+RUNS_SOURCE = f"`{SELF_COMMAND} runs`"
 CONFIRM_RUN_ID_ACTION = f"confirm the run id with {RUNS_SOURCE}"
 
 
@@ -82,7 +88,7 @@ def _gh_failure(
         action = "retry once; if it times out again, narrow the request or check network access"
     else:
         action = (
-            "run python3 gh_access.py to check gh authentication and repository "
+            f"run {GH_ACCESS_COMMAND} to check gh authentication and repository "
             "access, then retry"
         )
     cause = f"gh {gh_name} exited {code}: {detail or 'no output'}"
@@ -157,7 +163,7 @@ def _gh_json(
             subcommand,
             argument,
             f"gh {gh_name} returned output that is not JSON ({exc})",
-            "run python3 gh_access.py to check the gh version and authentication, then retry",
+            f"run {GH_ACCESS_COMMAND} to check the gh version and authentication, then retry",
         )
 
 
@@ -194,8 +200,8 @@ def cmd_runs(branch: str | None, limit: int) -> dict[str, Any]:
                 "runs",
                 None,
                 f"gh run list returned {type(data).__name__}, not a list",
-                "run python3 gh_access.py to check the gh version and "
-                "authentication, then rerun `workflow_inspect.py runs`",
+                f"run {GH_ACCESS_COMMAND} to check the gh version and "
+                f"authentication, then rerun {RUNS_SOURCE}",
             ),
         }
     return {"schema_version": SCHEMA_VERSION, "runs": data, "error": None}
@@ -435,7 +441,7 @@ def cmd_workflow_files() -> dict[str, Any]:
                 "workflow-files",
                 None,
                 "gh workflow list returned no list",
-                "run python3 gh_access.py to check repository access",
+                f"run {GH_ACCESS_COMMAND} to check repository access",
             ),
         }
     return {"schema_version": SCHEMA_VERSION, "workflows": data, "error": None}
