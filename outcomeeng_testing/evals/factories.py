@@ -31,10 +31,7 @@ from outcomeeng_evals.ci_execution import (
     execute_ci_plan,
 )
 from outcomeeng_evals.ci_plan import (
-    ROOT_INSTRUCTION_PATHS,
-    CiMode,
     EvalPlanItem,
-    build_ci_plan,
     read_changed_paths_file,
 )
 from outcomeeng_evals.definition import (
@@ -44,7 +41,6 @@ from outcomeeng_evals.definition import (
     DEFAULT_TRIALS_PER_CASE,
     MAX_TRIALS_PER_CASE,
     OWNED_PATH_ALPHABET,
-    OWNED_PATH_RECURSIVE_SUFFIX,
     EvalDefinition,
     load_definition,
 )
