@@ -12,7 +12,7 @@ from outcomeeng.validation import (
     FMT_CHECK_ARGV,
     HOOK_SAFETY_ARGV,
     MYPY_ARGV,
-    ON_DEMAND_LEVEL,
+    L3_LEVEL,
     POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
     PURPOSE_CORRECTNESS,
@@ -41,7 +41,7 @@ from outcomeeng.validation.infrastructure_index import (
     SPEC_TREE_ROOT,
     TESTS_DIRECTORY_NAME,
 )
-from outcomeeng_testing.generators.gate import on_demand_fixture_files
+from outcomeeng_testing.generators.gate import l3_fixture_files
 from outcomeeng_testing.harnesses.gate import (
     HIGH_VOLUME_CHILD_OUTPUT,
     PASS_EXIT_CODE,
@@ -56,7 +56,7 @@ from outcomeeng_testing.harnesses.gate import (
     validation_package_source_text,
     validation_subprocess_importers,
 )
-from outcomeeng_testing.harnesses.on_demand_collection import (
+from outcomeeng_testing.harnesses.l3_collection import (
     fixture_collection,
     pytest_argument_tail,
 )
@@ -114,18 +114,18 @@ def _recipe_pytest_arguments(targets: tuple[str, ...]) -> tuple[str, ...]:
     return pytest_argument_tail(step.argv)
 
 
-def test_the_test_recipe_leaves_on_demand_files_out_of_a_directory_and_runs_a_named_one() -> (
+def test_the_test_recipe_leaves_l3_files_out_of_a_directory_and_runs_a_named_one() -> (
     None
 ):
-    fixture = on_demand_fixture_files()
+    fixture = l3_fixture_files()
     default_files = frozenset(
-        test_file.path for test_file in fixture if test_file.level != ON_DEMAND_LEVEL
+        test_file.path for test_file in fixture if test_file.level != L3_LEVEL
     )
-    on_demand_files = tuple(
-        test_file.path for test_file in fixture if test_file.level == ON_DEMAND_LEVEL
+    l3_files = tuple(
+        test_file.path for test_file in fixture if test_file.level == L3_LEVEL
     )
     assert default_files
-    assert on_demand_files
+    assert l3_files
 
     directory = fixture_collection(
         fixture, _recipe_pytest_arguments((SPEC_TREE_ROOT, TESTS_DIRECTORY_NAME))
@@ -133,11 +133,11 @@ def test_the_test_recipe_leaves_on_demand_files_out_of_a_directory_and_runs_a_na
 
     assert directory.exit_code == 0, directory.output
     assert directory.collected_files == default_files
-    for on_demand_file in on_demand_files:
-        named = fixture_collection(fixture, _recipe_pytest_arguments((on_demand_file,)))
+    for l3_file in l3_files:
+        named = fixture_collection(fixture, _recipe_pytest_arguments((l3_file,)))
 
         assert named.exit_code == 0, named.output
-        assert named.collected_files == {on_demand_file}
+        assert named.collected_files == {l3_file}
 
 
 def test_the_check_wrapper_reports_no_verification_type() -> None:

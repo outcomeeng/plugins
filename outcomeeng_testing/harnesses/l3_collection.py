@@ -1,4 +1,4 @@
-"""Observations of the on-demand suite through real pytest collection.
+"""Observations of the L3 tests through real pytest collection.
 
 The harness writes a violating whole-payload fixture, test files at every
 execution level, into a temporary repository and reports which files real
@@ -9,7 +9,7 @@ linked tests own every predicate over those observations.
 
 Exception case: Stage 5, Interaction protocols — the dispatch observation runs
 the production entry point through the gate harness's recording spawner, which
-exposes the spawned argvs without launching the on-demand tests themselves.
+exposes the spawned argvs without launching the L3 tests themselves.
 """
 
 from __future__ import annotations

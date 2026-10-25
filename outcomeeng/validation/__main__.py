@@ -6,7 +6,7 @@ Usage::
     python3 -m outcomeeng.validation check-full
     python3 -m outcomeeng.validation validation
     python3 -m outcomeeng.validation test -- -k gate
-    python3 -m outcomeeng.validation test-on-demand
+    python3 -m outcomeeng.validation test-l3
 
 Constructs the production `ProcessSpawner` adapter, binds the output sink
 to stdout, and runs the selected recipe. Returns the orchestrator's exit
@@ -29,11 +29,11 @@ from outcomeeng.validation.selected_gate import (
 from outcomeeng.validation._steps import (
     RECIPE_CHECK,
     RECIPE_TEST,
-    RECIPE_TEST_ON_DEMAND,
+    RECIPE_TEST_L3,
     RECIPE_VALIDATION,
     VALIDATION_RECIPE,
-    discover_on_demand_tests,
-    on_demand_recipe,
+    discover_l3_tests,
+    l3_recipe,
     test_recipe,
 )
 
@@ -48,7 +48,7 @@ def _parser() -> argparse.ArgumentParser:
             RECIPE_CHECK_FULL,
             RECIPE_VALIDATION,
             RECIPE_TEST,
-            RECIPE_TEST_ON_DEMAND,
+            RECIPE_TEST_L3,
         ),
         default=RECIPE_CHECK,
     )
@@ -90,11 +90,11 @@ def main(
             sink=bound_sink,
             recipe=test_recipe(_recipe_args(parsed.recipe_args)),
         )
-    if parsed.recipe == RECIPE_TEST_ON_DEMAND:
+    if parsed.recipe == RECIPE_TEST_L3:
         return run_recipe(
             spawner=bound_spawner,
             sink=bound_sink,
-            recipe=on_demand_recipe(discover_on_demand_tests(bound_repo)),
+            recipe=l3_recipe(discover_l3_tests(bound_repo)),
         )
     if parsed.recipe == RECIPE_CHECK_FULL:
         return run_full_check(spawner=bound_spawner, sink=bound_sink, repo=bound_repo)

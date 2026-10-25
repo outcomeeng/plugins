@@ -8,7 +8,7 @@ from outcomeeng.validation import (
     CHECK_RECIPES,
     EVAL_LINKS_ARGV,
     EXECUTION_LEVELS,
-    ON_DEMAND_LEVEL,
+    L3_LEVEL,
     PREFLIGHT_STEPS,
     PYTEST_ARGV,
     TEST_STEPS,
@@ -39,7 +39,7 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
     category_patterns,
-    on_demand_fixture_files,
+    l3_fixture_files,
     path_from_pattern,
 )
 from outcomeeng_testing.harnesses import gate as gate_harness
@@ -57,12 +57,12 @@ from outcomeeng_testing.harnesses.gate import (
 from outcomeeng_testing.harnesses.infrastructure_index import (
     conftest_reach_layout,
     mixed_reach_layout,
-    on_demand_reach_layout,
+    l3_reach_layout,
     reach_layout,
     repository_reach,
     synthetic_repository,
 )
-from outcomeeng_testing.harnesses.on_demand_collection import (
+from outcomeeng_testing.harnesses.l3_collection import (
     fixture_collection,
     pytest_argument_tail,
 )
@@ -70,9 +70,9 @@ from outcomeeng_testing.harnesses.real_agent_selection import (
     run_full_check_observation,
 )
 
-FIXTURE = on_demand_fixture_files()
+FIXTURE = l3_fixture_files()
 DEFAULT_SUITE_FILES = frozenset(
-    test_file.path for test_file in FIXTURE if test_file.level != ON_DEMAND_LEVEL
+    test_file.path for test_file in FIXTURE if test_file.level != L3_LEVEL
 )
 
 
@@ -204,7 +204,7 @@ def test_every_assertion_path_category_maps_presence_to_targeted_execution(
 
 
 @pytest.mark.parametrize("level", EXECUTION_LEVELS)
-def test_changed_test_files_of_a_level_are_targeted_exactly_when_the_level_is_not_on_demand(
+def test_changed_test_files_of_a_level_are_targeted_exactly_when_the_level_is_not_l3(
     level: str,
 ) -> None:
     paths = tuple(
@@ -222,7 +222,7 @@ def test_changed_test_files_of_a_level_are_targeted_exactly_when_the_level_is_no
         for argument in step.argv[len(PYTEST_ARGV) :]
     }
     assert paths
-    assert targets == (set() if level == ON_DEMAND_LEVEL else set(paths))
+    assert targets == (set() if level == L3_LEVEL else set(paths))
 
 
 @pytest.mark.parametrize("pattern", PATH_CATEGORY_PATTERNS[PathCategory.EVIDENCE_LINK])
@@ -416,7 +416,7 @@ def test_test_infrastructure_reach_maps_to_gate_steps(
 @pytest.mark.parametrize(
     "kind", (InfrastructureReach.SHARED, InfrastructureReach.UNTRACEABLE), ids=str
 )
-def test_a_full_surface_reach_collects_every_default_test_and_no_on_demand_test(
+def test_a_full_surface_reach_collects_every_default_test_and_no_l3_test(
     kind: InfrastructureReach,
 ) -> None:
     with synthetic_repository() as repo:
@@ -430,9 +430,7 @@ def test_a_full_surface_reach_collects_every_default_test_and_no_on_demand_test(
     assert _collected_by_pytest_steps(plan) == (DEFAULT_SUITE_FILES,)
 
 
-def test_the_full_gate_wrapper_collects_every_default_test_and_no_on_demand_test() -> (
-    None
-):
+def test_the_full_gate_wrapper_collects_every_default_test_and_no_l3_test() -> None:
     plan = build_full_gate_plan(())
 
     assert plan.full_gate is True
@@ -441,8 +439,8 @@ def test_the_full_gate_wrapper_collects_every_default_test_and_no_on_demand_test
 
 def test_a_node_local_reach_selects_only_the_default_tests_it_reaches() -> None:
     with synthetic_repository() as repo:
-        layout = on_demand_reach_layout(repo)
-    default_path, on_demand_path = layout.tests
+        layout = l3_reach_layout(repo)
+    default_path, l3_path = layout.tests
     reached = layout.index.reach(layout.changed_path)
 
     plan = build_selected_gate_plan(
@@ -450,7 +448,7 @@ def test_a_node_local_reach_selects_only_the_default_tests_it_reaches() -> None:
     )
 
     assert reached.kind is InfrastructureReach.NODE_LOCAL
-    assert set(reached.tests) == {default_path, on_demand_path}
+    assert set(reached.tests) == {default_path, l3_path}
     assert [
         step.argv for step in plan.steps if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
     ] == [(*PYTEST_ARGV, default_path)]

@@ -96,9 +96,9 @@ SELECTED_GATE_PROPERTY_REPLAY_PATH = (
     "test_selection_is_deterministic_for_path_order_and_duplicates"
 )
 SELECTED_GATE_PROPERTY_EXAMPLES = 40
-ON_DEMAND_SUITE_PROPERTY_SEED = 20261024
-ON_DEMAND_SUITE_PROPERTY_EXAMPLES = 60
-ON_DEMAND_SUITE_PROPERTY_REPLAY_COMMAND = "just test"
+L3_TESTS_PROPERTY_SEED = 20261024
+L3_TESTS_PROPERTY_EXAMPLES = 60
+L3_TESTS_PROPERTY_REPLAY_COMMAND = "just test"
 PATHSPEC_GIT_TIMEOUT_SECONDS = 30
 STATIC_ANALYSIS_ARGVS = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
 PASS_EXIT_CODE = 0
@@ -416,26 +416,26 @@ def selected_gate_property(
     return wrapper
 
 
-def _on_demand_suite_replay_path(
+def _l3_tests_replay_path(
     test_func: Callable[[list[GeneratedTestFile]], None],
 ) -> str:
     # A property named `_{name}` runs through the test entry point `test_{name}`
     # beside it in the same file.
     source = Path(inspect.getfile(test_func)).resolve()
     return (
-        f"{ON_DEMAND_SUITE_PROPERTY_REPLAY_COMMAND} "
+        f"{L3_TESTS_PROPERTY_REPLAY_COMMAND} "
         f"{source.relative_to(Path(__file__).resolve().parents[2]).as_posix()}"
         f"::test{test_func.__name__}"
     )
 
 
-def on_demand_suite_property(
+def l3_tests_property(
     test_func: Callable[[list[GeneratedTestFile]], None],
 ) -> Callable[[], None]:
-    """Run the on-demand suite property with reproducible failure diagnostics."""
+    """Run the L3 tests property with reproducible failure diagnostics."""
 
-    configured = seed(ON_DEMAND_SUITE_PROPERTY_SEED)(
-        settings(max_examples=ON_DEMAND_SUITE_PROPERTY_EXAMPLES, deadline=None)(
+    configured = seed(L3_TESTS_PROPERTY_SEED)(
+        settings(max_examples=L3_TESTS_PROPERTY_EXAMPLES, deadline=None)(
             given(test_files=generated_test_file_sets())(test_func)
         )
     )
@@ -443,8 +443,8 @@ def on_demand_suite_property(
     def wrapper() -> None:
         run_replayable_property(
             configured,
-            seed_value=ON_DEMAND_SUITE_PROPERTY_SEED,
-            replay_path=_on_demand_suite_replay_path(test_func),
+            seed_value=L3_TESTS_PROPERTY_SEED,
+            replay_path=_l3_tests_replay_path(test_func),
         )
 
     return wrapper

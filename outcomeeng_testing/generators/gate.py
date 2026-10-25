@@ -10,7 +10,7 @@ from typing import Final
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
-from outcomeeng.validation import EXECUTION_LEVELS, ON_DEMAND_LEVEL, Step
+from outcomeeng.validation import EXECUTION_LEVELS, L3_LEVEL, Step
 from outcomeeng.validation.infrastructure_index import (
     EXECUTED_TEST_PREFIX,
     PYTHON_SUFFIX,
@@ -35,25 +35,25 @@ MAX_NESTED_SEGMENTS: Final = 3
 TEST_FILE_TOKEN_ALPHABET: Final = string.ascii_lowercase + string.digits + "_"
 MAX_TEST_FILE_TOKEN_LENGTH: Final = 8
 MAX_TEST_FILES: Final = 12
-# The violating on-demand fixture composes one test file at every execution
+# The violating L3 fixture composes one test file at every execution
 # level, in two nested nodes and in the top-level test root, with and without a
 # runner segment.
-ON_DEMAND_FIXTURE_DIRECTORIES: Final = (
+L3_FIXTURE_DIRECTORIES: Final = (
     f"{SPEC_TREE_ROOT}/21-first.enabler",
     f"{SPEC_TREE_ROOT}/32-second.enabler/21-nested.enabler",
-    f"{SPEC_TREE_ROOT}/43-dotted.{ON_DEMAND_LEVEL}.enabler",
+    f"{SPEC_TREE_ROOT}/43-dotted.{L3_LEVEL}.enabler",
     TESTS_DIRECTORY_NAME,
 )
-ON_DEMAND_FIXTURE_SUBJECT: Final = "case"
-ON_DEMAND_DECOY_SUBJECT: Final = "helper"
-# Evidence and runner tokens that equal the on-demand level sit at every level, so
+L3_FIXTURE_SUBJECT: Final = "case"
+L3_DECOY_SUBJECT: Final = "helper"
+# Evidence and runner tokens that equal the L3 level sit at every level, so
 # a file carries the level in a segment other than the third at the levels
 # outside the suite.
-ON_DEMAND_FIXTURE_VARIANTS: Final = (
+L3_FIXTURE_VARIANTS: Final = (
     ("scenario", None),
     ("property", "runner"),
-    (ON_DEMAND_LEVEL, None),
-    ("scenario", ON_DEMAND_LEVEL),
+    (L3_LEVEL, None),
+    ("scenario", L3_LEVEL),
 )
 
 
@@ -115,26 +115,24 @@ def _compose_test_file(
     )
 
 
-def on_demand_fixture_files() -> tuple[GeneratedTestFile, ...]:
+def l3_fixture_files() -> tuple[GeneratedTestFile, ...]:
     """The violating whole-payload fixture the exclusion must filter.
 
     Every execution level appears in every directory with and without a runner
-    segment, so the files at the on-demand level lie beside files of every
+    segment, so the files at the L3 level lie beside files of every
     other level in each directory a recipe collects.
     """
 
     return tuple(
-        _compose_test_file(
-            directory, ON_DEMAND_FIXTURE_SUBJECT, evidence, level, runner
-        )
-        for directory in ON_DEMAND_FIXTURE_DIRECTORIES
+        _compose_test_file(directory, L3_FIXTURE_SUBJECT, evidence, level, runner)
+        for directory in L3_FIXTURE_DIRECTORIES
         for level in EXECUTION_LEVELS
-        for evidence, runner in ON_DEMAND_FIXTURE_VARIANTS
+        for evidence, runner in L3_FIXTURE_VARIANTS
     )
 
 
-def on_demand_decoy_files() -> tuple[GeneratedTestFile, ...]:
-    """Python files at the on-demand level whose names are not test-file names."""
+def l3_decoy_files() -> tuple[GeneratedTestFile, ...]:
+    """Python files at the L3 level whose names are not test-file names."""
 
     return tuple(
         GeneratedTestFile(
@@ -142,12 +140,12 @@ def on_demand_decoy_files() -> tuple[GeneratedTestFile, ...]:
                 (
                     directory,
                     TESTS_DIRECTORY_NAME,
-                    f"{ON_DEMAND_DECOY_SUBJECT}.scenario.{ON_DEMAND_LEVEL}{PYTHON_SUFFIX}",
+                    f"{L3_DECOY_SUBJECT}.scenario.{L3_LEVEL}{PYTHON_SUFFIX}",
                 )
             ),
-            level=ON_DEMAND_LEVEL,
+            level=L3_LEVEL,
         )
-        for directory in ON_DEMAND_FIXTURE_DIRECTORIES
+        for directory in L3_FIXTURE_DIRECTORIES
     )
 
 

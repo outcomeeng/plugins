@@ -41,9 +41,9 @@ from outcomeeng_testing.generators.installation import (
     RecordDisposition,
     generated_boolean_states,
 )
-from outcomeeng.validation import PYTEST_ARGV, is_on_demand_test
+from outcomeeng.validation import PYTEST_ARGV, is_l3_test
 from outcomeeng.validation._steps import PYTEST_NODE_ID_SEPARATOR, RECIPE_TEST
-from outcomeeng_testing.harnesses.on_demand_collection import pytest_argument_tail
+from outcomeeng_testing.harnesses.l3_collection import pytest_argument_tail
 from outcomeeng_testing.harnesses.real_agent_selection import (
     direct_test_observation,
     pytest_collection_observation,
@@ -118,8 +118,8 @@ def _collected_files(collected: frozenset[str]) -> frozenset[str]:
     )
 
 
-def _carries_on_demand_level(file_path: str) -> bool:
-    return is_on_demand_test(file_path)
+def _carries_the_l3_level(file_path: str) -> bool:
+    return is_l3_test(file_path)
 
 
 def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
@@ -141,13 +141,11 @@ def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
     assert excluded.exit_code == 0, excluded.output
     assert unfiltered.exit_code == 0, unfiltered.output
     unfiltered_files = _collected_files(unfiltered.collected)
-    on_demand_files = frozenset(
-        file_path
-        for file_path in unfiltered_files
-        if _carries_on_demand_level(file_path)
+    l3_files = frozenset(
+        file_path for file_path in unfiltered_files if _carries_the_l3_level(file_path)
     )
-    assert on_demand_files
-    assert _collected_files(excluded.collected) == unfiltered_files - on_demand_files
+    assert l3_files
+    assert _collected_files(excluded.collected) == unfiltered_files - l3_files
 
 
 def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:

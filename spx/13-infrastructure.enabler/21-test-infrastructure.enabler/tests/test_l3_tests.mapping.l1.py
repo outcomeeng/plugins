@@ -1,4 +1,4 @@
-"""Mapping evidence for the explicit command that runs the on-demand suite."""
+"""Mapping evidence for the explicit command that runs the L3 tests."""
 
 from __future__ import annotations
 
@@ -7,18 +7,18 @@ import pytest
 import outcomeeng.validation.__main__ as validation_entry
 from outcomeeng.validation import (
     EXECUTION_LEVELS,
-    ON_DEMAND_LEVEL,
+    L3_LEVEL,
     PYTEST_ARGV,
     RECIPE_TEST,
-    RECIPE_TEST_ON_DEMAND,
-    on_demand_recipe,
+    RECIPE_TEST_L3,
+    l3_recipe,
     test_recipe as direct_test_recipe,
 )
 from outcomeeng_testing.generators.gate import (
-    on_demand_decoy_files,
-    on_demand_fixture_files,
+    l3_decoy_files,
+    l3_fixture_files,
 )
-from outcomeeng_testing.harnesses.on_demand_collection import (
+from outcomeeng_testing.harnesses.l3_collection import (
     fixture_collection,
     justfile_recipe_command,
     pytest_argument_tail,
@@ -27,27 +27,23 @@ from outcomeeng_testing.harnesses.on_demand_collection import (
 
 PYTHON_COMMAND = "python3"
 PYTHON_MODULE_FLAG = "-m"
-ON_DEMAND_FIXTURE_PATHS = tuple(
-    test_file.path
-    for test_file in on_demand_fixture_files()
-    if test_file.level == ON_DEMAND_LEVEL
+L3_FIXTURE_PATHS = tuple(
+    test_file.path for test_file in l3_fixture_files() if test_file.level == L3_LEVEL
 )
 
 
 @pytest.mark.parametrize("level", EXECUTION_LEVELS)
-def test_the_on_demand_recipe_targets_a_file_exactly_when_it_carries_the_on_demand_level(
+def test_the_l3_recipe_targets_a_file_exactly_when_it_carries_the_l3_level(
     level: str,
 ) -> None:
     files = tuple(
-        test_file.path
-        for test_file in on_demand_fixture_files()
-        if test_file.level == level
+        test_file.path for test_file in l3_fixture_files() if test_file.level == level
     )
 
-    recipe = on_demand_recipe(files)
+    recipe = l3_recipe(files)
 
     assert files
-    if level == ON_DEMAND_LEVEL:
+    if level == L3_LEVEL:
         (step,) = recipe.steps
         assert frozenset(step.argv[len(PYTEST_ARGV) :]) == frozenset(files)
     else:
@@ -59,9 +55,7 @@ def test_a_direct_target_keeps_every_file_it_names_whatever_its_level(
     level: str,
 ) -> None:
     named = tuple(
-        test_file.path
-        for test_file in on_demand_fixture_files()
-        if test_file.level == level
+        test_file.path for test_file in l3_fixture_files() if test_file.level == level
     )
 
     (step,) = direct_test_recipe(named).steps
@@ -69,15 +63,13 @@ def test_a_direct_target_keeps_every_file_it_names_whatever_its_level(
     assert frozenset(step.argv[len(PYTEST_ARGV) :]) == frozenset(named)
 
 
-def test_the_dispatch_collects_exactly_the_on_demand_files_of_a_repository() -> None:
-    fixture = on_demand_fixture_files()
+def test_the_dispatch_collects_exactly_the_l3_files_of_a_repository() -> None:
+    fixture = l3_fixture_files()
     expected = frozenset(
-        test_file.path for test_file in fixture if test_file.level == ON_DEMAND_LEVEL
+        test_file.path for test_file in fixture if test_file.level == L3_LEVEL
     )
 
-    spawns = recipe_dispatch_spawns(
-        (RECIPE_TEST_ON_DEMAND,), (*fixture, *on_demand_decoy_files())
-    )
+    spawns = recipe_dispatch_spawns((RECIPE_TEST_L3,), (*fixture, *l3_decoy_files()))
     (pytest_call,) = (
         call for call in spawns if call[: len(PYTEST_ARGV)] == PYTEST_ARGV
     )
@@ -89,20 +81,20 @@ def test_the_dispatch_collects_exactly_the_on_demand_files_of_a_repository() -> 
     assert collection.collected_files == expected
 
 
-def test_the_justfile_recipe_runs_the_on_demand_dispatch() -> None:
-    assert justfile_recipe_command(RECIPE_TEST_ON_DEMAND) == (
+def test_the_justfile_recipe_runs_the_l3_dispatch() -> None:
+    assert justfile_recipe_command(RECIPE_TEST_L3) == (
         PYTHON_COMMAND,
         PYTHON_MODULE_FLAG,
         str(validation_entry.__package__),
-        RECIPE_TEST_ON_DEMAND,
+        RECIPE_TEST_L3,
     )
 
 
-@pytest.mark.parametrize("named", ON_DEMAND_FIXTURE_PATHS)
+@pytest.mark.parametrize("named", L3_FIXTURE_PATHS)
 def test_the_justfile_test_recipe_forwards_a_named_file_to_the_test_dispatch(
     named: str,
 ) -> None:
-    fixture = on_demand_fixture_files()
+    fixture = l3_fixture_files()
     command = justfile_recipe_command(RECIPE_TEST, named)
     forwarded = command[command.index(str(validation_entry.__package__)) + 1 :]
 

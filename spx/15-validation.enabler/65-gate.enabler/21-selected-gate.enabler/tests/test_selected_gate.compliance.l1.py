@@ -9,8 +9,8 @@ import pytest
 
 from outcomeeng.validation import (
     CHECK_RECIPES,
-    ON_DEMAND_EXCLUSION_ARGV,
-    ON_DEMAND_LEVEL,
+    L3_SKIP_ARGV,
+    L3_LEVEL,
     PREFLIGHT_STEPS,
     PYTEST_ARGV,
     RECIPE_CHECK,
@@ -34,7 +34,7 @@ from outcomeeng.validation.selected_gate import (
     InfrastructureIndexRequired,
     CHANGESET_BASE_LABEL,
     FIRST_PARENT_BASE_REF,
-    ON_DEMAND_EXCLUDED_REASON,
+    L3_SKIPPED_REASON,
     PATH_CATEGORY_PATTERNS,
     PathCategory,
     SelectedGatePlan,
@@ -46,7 +46,7 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_FULL_GATE_PATH,
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
-    on_demand_fixture_files,
+    l3_fixture_files,
     path_from_pattern,
 )
 from outcomeeng_testing.harnesses import installation as installation_harness
@@ -63,12 +63,12 @@ from outcomeeng_testing.harnesses.gate import (
     unrelated_validation_source_path,
 )
 from outcomeeng_testing.harnesses.infrastructure_index import (
-    on_demand_reach_layout,
+    l3_reach_layout,
     reach_layout,
     repository_reach,
     synthetic_repository,
 )
-from outcomeeng_testing.harnesses.on_demand_collection import (
+from outcomeeng_testing.harnesses.l3_collection import (
     fixture_collection,
     pytest_argument_tail,
 )
@@ -80,12 +80,12 @@ from outcomeeng_testing.harnesses.real_agent_selection import (
 
 # The generator composes each fixture file at one execution level, so the level
 # of every path below is the generator's, not the selector's.
-FIXTURE = on_demand_fixture_files()
-ON_DEMAND_PATHS = frozenset(
-    test_file.path for test_file in FIXTURE if test_file.level == ON_DEMAND_LEVEL
+FIXTURE = l3_fixture_files()
+L3_PATHS = frozenset(
+    test_file.path for test_file in FIXTURE if test_file.level == L3_LEVEL
 )
 DEFAULT_SUITE_FILES = frozenset(
-    test_file.path for test_file in FIXTURE if test_file.level != ON_DEMAND_LEVEL
+    test_file.path for test_file in FIXTURE if test_file.level != L3_LEVEL
 )
 
 
@@ -234,8 +234,8 @@ def test_infrastructure_path_without_an_index_is_rejected_by_name() -> None:
     assert layout.changed_path in str(caught.value)
 
 
-def test_a_changeset_of_on_demand_files_selects_no_pytest_target() -> None:
-    files = tuple(sorted(ON_DEMAND_PATHS))
+def test_a_changeset_of_l3_files_selects_no_pytest_target() -> None:
+    files = tuple(sorted(L3_PATHS))
 
     local = build_selected_gate_plan(files)
     full = build_full_gate_plan(files)
@@ -243,16 +243,16 @@ def test_a_changeset_of_on_demand_files_selects_no_pytest_target() -> None:
     assert files
     assert _pytest_arguments(local) == ()
     for plan in (local, full):
-        assert not ON_DEMAND_PATHS & _plan_targets(plan)
+        assert not L3_PATHS & _plan_targets(plan)
 
 
 @pytest.mark.parametrize("category", tuple(PathCategory), ids=str)
-def test_no_changed_path_category_selects_an_on_demand_test(
+def test_no_changed_path_category_selects_an_l3_test(
     category: PathCategory,
 ) -> None:
     for pattern in PATH_CATEGORY_PATTERNS[category]:
         path = path_from_pattern(pattern)
-        changed = (path, *sorted(ON_DEMAND_PATHS))
+        changed = (path, *sorted(L3_PATHS))
         with synthetic_repository() as repo:
             local = build_selected_gate_plan(
                 changed, test_infrastructure=index_test_infrastructure(repo.root)
@@ -260,7 +260,7 @@ def test_no_changed_path_category_selects_an_on_demand_test(
         full = build_full_gate_plan(changed)
 
         for plan in (local, full):
-            assert not ON_DEMAND_PATHS & _plan_targets(plan), path
+            assert not L3_PATHS & _plan_targets(plan), path
             assert all(
                 step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
                 for step in plan.steps
@@ -270,20 +270,20 @@ def test_no_changed_path_category_selects_an_on_demand_test(
                 assert tuple(step.argv for step in plan.steps) == _full_surface_steps()
 
 
-def test_a_node_local_reach_of_an_on_demand_test_selects_no_on_demand_target() -> None:
+def test_a_node_local_reach_of_an_l3_test_selects_no_l3_target() -> None:
     with synthetic_repository() as repo:
-        layout = on_demand_reach_layout(repo)
+        layout = l3_reach_layout(repo)
     reached = layout.index.reach(layout.changed_path)
-    _, on_demand_path = layout.tests
+    _, l3_path = layout.tests
 
     plan = build_selected_gate_plan(
         (layout.changed_path,), test_infrastructure=layout.index
     )
 
     assert reached.kind is InfrastructureReach.NODE_LOCAL
-    assert on_demand_path in reached.tests
+    assert l3_path in reached.tests
     assert plan.full_gate is False
-    assert on_demand_path not in _plan_targets(plan)
+    assert l3_path not in _plan_targets(plan)
     assert all(
         step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
         for step in plan.steps
@@ -291,7 +291,7 @@ def test_a_node_local_reach_of_an_on_demand_test_selects_no_on_demand_target() -
     )
 
 
-def test_a_shared_test_infrastructure_module_selects_the_full_surface_without_the_on_demand_suite() -> (
+def test_a_shared_test_infrastructure_module_selects_the_full_surface_without_the_l3_tests() -> (
     None
 ):
     reach = repository_reach(installation_harness.__file__)
@@ -321,22 +321,22 @@ def test_widening_to_the_full_suite_removes_no_other_step() -> None:
     assert tuple(step.argv for step in plan.steps) == _full_surface_steps()
 
 
-def test_the_exclusion_leaves_on_demand_files_out_of_a_collected_directory() -> None:
-    directory = PurePosixPath(sorted(ON_DEMAND_PATHS)[0]).parent.as_posix()
+def test_the_exclusion_leaves_l3_files_out_of_a_collected_directory() -> None:
+    directory = PurePosixPath(sorted(L3_PATHS)[0]).parent.as_posix()
     in_directory = frozenset(
         test_file.path
         for test_file in FIXTURE
         if PurePosixPath(test_file.path).parent.as_posix() == directory
     )
 
-    excluded = fixture_collection(FIXTURE, (*ON_DEMAND_EXCLUSION_ARGV, directory))
+    excluded = fixture_collection(FIXTURE, (*L3_SKIP_ARGV, directory))
     unfiltered = fixture_collection(FIXTURE, (directory,))
 
     assert excluded.exit_code == 0, excluded.output
     assert unfiltered.exit_code == 0, unfiltered.output
     assert unfiltered.collected_files == in_directory
     assert excluded.collected_files
-    assert excluded.collected_files == in_directory - ON_DEMAND_PATHS
+    assert excluded.collected_files == in_directory - L3_PATHS
 
 
 @pytest.mark.parametrize(
@@ -358,9 +358,7 @@ def test_every_gate_execution_names_the_exclusion_before_any_step_runs(
     run = run_observation(branch_path=branch_path)
 
     assert run.exit_code == 0
-    assert run.output.index(ON_DEMAND_EXCLUDED_REASON) < run.output.index(
-        RECIPE_HEADER_PREFIX
-    )
+    assert run.output.index(L3_SKIPPED_REASON) < run.output.index(RECIPE_HEADER_PREFIX)
 
 
 @pytest.mark.parametrize(
@@ -383,10 +381,10 @@ def test_a_full_gate_execution_spawns_only_exclusion_carrying_pytest_runs(
     )
 
 
-def test_direct_execution_runs_a_named_on_demand_test_whatever_the_changeset() -> None:
-    # Both gate wrappers exclude the on-demand suite whatever the changeset is;
-    # direct execution naming an on-demand file still runs it.
-    named = tuple(ON_DEMAND_PATHS)
+def test_direct_execution_runs_a_named_l3_test_whatever_the_changeset() -> None:
+    # Both gate wrappers exclude the L3 tests whatever the changeset is;
+    # direct execution naming an L3 file still runs it.
+    named = tuple(L3_PATHS)
     gate_runs = (
         run_check_observation(branch_path=unrelated_validation_source_path()),
         run_full_check_observation(branch_path=unrelated_validation_source_path()),
@@ -403,7 +401,7 @@ def test_direct_execution_runs_a_named_on_demand_test_whatever_the_changeset() -
     assert direct.exit_code == 0
     (direct_pytest_call,) = _pytest_calls(direct.spawn_calls)
     assert set(direct_pytest_call[len(PYTEST_ARGV) :]) == set(named)
-    assert _collected_by(direct_pytest_call) == ON_DEMAND_PATHS
+    assert _collected_by(direct_pytest_call) == L3_PATHS
 
 
 def test_ci_full_verification_without_a_default_branch_selects_by_the_first_parent() -> (
@@ -411,7 +409,7 @@ def test_ci_full_verification_without_a_default_branch_selects_by_the_first_pare
 ):
     # CI's merge-commit checkout carries no remote default branch, so the full
     # gate discovers the changeset against the first parent and still excludes
-    # the on-demand suite.
+    # the L3 tests.
     run = first_parent_full_check_observation(
         branch_path=unrelated_validation_source_path()
     )
@@ -424,7 +422,7 @@ def test_ci_full_verification_without_a_default_branch_selects_by_the_first_pare
     assert pytest_calls
     assert all(_collected_by(call) == DEFAULT_SUITE_FILES for call in pytest_calls)
     plan_end = run.output.index(RECIPE_HEADER_PREFIX)
-    assert run.output.index(ON_DEMAND_EXCLUDED_REASON) < plan_end
+    assert run.output.index(L3_SKIPPED_REASON) < plan_end
     assert (
         run.output.index(f"{CHANGESET_BASE_LABEL}: {FIRST_PARENT_BASE_REF}") < plan_end
     )

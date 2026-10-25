@@ -25,7 +25,7 @@ from outcomeeng.validation._steps import (
     FMT_CHECK_ARGV,
     INSTRUCTION_BLOCK_ARGV,
     MYPY_ARGV,
-    ON_DEMAND_LEVEL,
+    L3_LEVEL,
     PREFLIGHT_STEPS,
     PYRIGHT_ARGV,
     PYTEST_ARGV,
@@ -36,7 +36,7 @@ from outcomeeng.validation._steps import (
     SPX_MARKDOWN_ARGV,
     TEST_RECIPE,
     VALIDATION_STEPS,
-    is_on_demand_test,
+    is_l3_test,
 )
 from outcomeeng.validation.infrastructure_index import (
     TEST_INFRASTRUCTURE_PACKAGE,
@@ -74,13 +74,13 @@ EVIDENCE_LINK_REASON: Final = "spec-tree evidence link surface changed"
 TEST_REASON: Final = "changed python assertion tests"
 REACHED_TESTS_REASON: Final = "tests reaching changed test infrastructure"
 FULL_CHECK_REASON: Final = "explicit full gate"
-# The on-demand suite is every test whose file name carries the on-demand
-# execution level. The pytest argv every plan carries excludes it from each
-# directory it collects, and the plan names that exclusion before any step runs.
-ON_DEMAND_EXCLUDED_REASON: Final = (
-    f"on-demand suite excluded from directory collection: {ON_DEMAND_LEVEL} "
-    "tests run as a suite through `just test-on-demand`, and a directly named "
-    "file still runs"
+# The L3 tests are every test whose file name carries the `l3` execution
+# level. The pytest argv every plan carries skips them in each directory it
+# collects, and the plan names that skip before any step runs.
+L3_SKIPPED_REASON: Final = (
+    f"L3 tests skipped in directory collection: {L3_LEVEL} tests run through "
+    "`just test-l3`, which CI runs on every pull request, and a directly "
+    "named file still runs"
 )
 # The full gate runs in CI from a merge-commit checkout that carries no
 # `origin/HEAD`; its first parent is the base tip there and the previous commit
@@ -517,12 +517,12 @@ def build_selected_gate_plan(
         for path in normalized
         if _is_python_assertion_test(path)
         and path not in deleted_path_set
-        and not is_on_demand_test(path)
+        and not is_l3_test(path)
     )
     reached_only = {
         path
         for path in reached_tests - set(changed_test_paths) - deleted_path_set
-        if not is_on_demand_test(path)
+        if not is_l3_test(path)
     }
     test_paths = tuple(sorted(set(changed_test_paths) | reached_only))
     if test_paths:
@@ -550,7 +550,7 @@ def build_full_gate_plan(changed_paths: tuple[str, ...]) -> SelectedGatePlan:
     """Build the explicit full gate plan for changed paths.
 
     The plan carries the complete validation-plus-test recipe set; its pytest
-    steps exclude the on-demand suite whatever the changed paths are.
+    steps exclude the L3 tests whatever the changed paths are.
     """
 
     normalized = tuple(sorted(set(changed_paths)))
@@ -644,7 +644,7 @@ def run_full_check(
     base_ref: str | None = None,
     runner: GitRunner = run_git_command,
 ) -> int:
-    """Run the explicit full gate, which excludes the on-demand suite."""
+    """Run the explicit full gate, which excludes the L3 tests."""
 
     resolved_base_ref = (
         base_ref if base_ref is not None else resolve_full_gate_base_ref(repo)
@@ -722,7 +722,7 @@ def render_plan(plan: SelectedGatePlan, *, changeset_base: str | None = None) ->
         f"{PLAN_LINE_INDENT}{item.step.label}: {item.reason}"
         for item in plan.selected_steps
     )
-    lines.append(f"{PLAN_LINE_INDENT}{ON_DEMAND_EXCLUDED_REASON}")
+    lines.append(f"{PLAN_LINE_INDENT}{L3_SKIPPED_REASON}")
     return "\n".join(lines) + "\n"
 
 

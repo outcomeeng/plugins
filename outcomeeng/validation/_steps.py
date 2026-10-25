@@ -41,7 +41,7 @@ INSTRUCTION_BLOCK_ARGV: Final = _INSTRUCTION_BLOCK_ARGV
 
 RECIPE_VALIDATION: Final = "validation"
 RECIPE_TEST: Final = "test"
-RECIPE_TEST_ON_DEMAND: Final = "test-on-demand"
+RECIPE_TEST_L3: Final = "test-l3"
 RECIPE_CHECK: Final = "check"
 RECIPE_AD_HOC: Final = "ad-hoc"
 VERIFICATION_TYPE_VALIDATION: Final = "validation"
@@ -97,32 +97,33 @@ FOUNDATION_MANIFEST_ARGV: Final = (
 )
 
 # The execution levels a test file name can carry, in order of increasing
-# execution pain. Every test whose file name carries the on-demand level forms
-# the on-demand suite, which no default verification runs.
+# execution pain. Every test whose file name carries the level `l3` is an L3
+# test: `just check` and `just check-full` run none, and CI runs them all
+# through `just test-l3`.
 EXECUTION_LEVEL_L1: Final = "l1"
 EXECUTION_LEVEL_L2: Final = "l2"
 EXECUTION_LEVEL_L3: Final = "l3"
 EXECUTION_LEVELS: Final = (EXECUTION_LEVEL_L1, EXECUTION_LEVEL_L2, EXECUTION_LEVEL_L3)
-ON_DEMAND_LEVEL: Final = EXECUTION_LEVEL_L3
+L3_LEVEL: Final = EXECUTION_LEVEL_L3
 TEST_FILE_NAME_SEPARATOR: Final = "."
 # `test_{subject}.{evidence}.{level}[.{runner}].py`: the level is the third
 # dot-separated segment of the file name.
 TEST_FILE_LEVEL_INDEX: Final = 2
 PYTEST_NODE_ID_SEPARATOR: Final = "::"
-# One pytest plugin excludes the on-demand suite from every directory pytest
-# collects, by the same file-name classifier the on-demand command selects with.
+# One pytest plugin excludes the L3 tests from every directory pytest
+# collects, by the same file-name classifier `just test-l3` selects with.
 # pytest never consults the plugin for a file the command line names, so a
-# target that names an on-demand file keeps it.
+# target that names an L3 file keeps it.
 PYTEST_PLUGIN_OPTION: Final = "-p"
-ON_DEMAND_PLUGIN_MODULE: Final = "outcomeeng.validation.on_demand_plugin"
-ON_DEMAND_EXCLUSION_ARGV: Final = (PYTEST_PLUGIN_OPTION, ON_DEMAND_PLUGIN_MODULE)
+L3_PLUGIN_MODULE: Final = "outcomeeng.validation.l3_plugin"
+L3_SKIP_ARGV: Final = (PYTEST_PLUGIN_OPTION, L3_PLUGIN_MODULE)
 PYTEST_ARGV: Final = (
     "uv",
     "run",
     "python",
     "-m",
     "pytest",
-    *ON_DEMAND_EXCLUSION_ARGV,
+    *L3_SKIP_ARGV,
 )
 
 # Generated eval artifacts. Both derive from `eval.toml` definitions and the
@@ -383,23 +384,23 @@ def test_file_level(path: str) -> str | None:
     return level if level in EXECUTION_LEVELS else None
 
 
-def is_on_demand_test(path: str) -> bool:
-    """Return whether ``path`` names a test of the on-demand suite."""
+def is_l3_test(path: str) -> bool:
+    """Return whether ``path`` names an L3 test."""
 
-    return test_file_level(path) == ON_DEMAND_LEVEL
+    return test_file_level(path) == L3_LEVEL
 
 
-def on_demand_recipe(test_files: Sequence[str]) -> Recipe:
-    """Return the recipe that runs every on-demand file among ``test_files``.
+def l3_recipe(test_files: Sequence[str]) -> Recipe:
+    """Return the recipe that runs every L3 file among ``test_files``.
 
-    The pytest step names each on-demand file and no other, so no other test
-    runs; with no on-demand file the recipe carries no pytest step, because an
+    The pytest step names each L3 file and no other, so no other test
+    runs; with no L3 file the recipe carries no pytest step, because an
     untargeted pytest run would collect every other test.
     """
 
-    targets = tuple(sorted({path for path in test_files if is_on_demand_test(path)}))
+    targets = tuple(sorted({path for path in test_files if is_l3_test(path)}))
     return Recipe(
-        name=RECIPE_TEST_ON_DEMAND,
+        name=RECIPE_TEST_L3,
         verification_type=TEST_RECIPE.verification_type,
         purpose=TEST_RECIPE.purpose,
         preflight_steps=TEST_RECIPE.preflight_steps,
@@ -407,8 +408,8 @@ def on_demand_recipe(test_files: Sequence[str]) -> Recipe:
     )
 
 
-def discover_on_demand_tests(root: Path) -> tuple[str, ...]:
-    """Return every on-demand test file under the pytest test roots of ``root``."""
+def discover_l3_tests(root: Path) -> tuple[str, ...]:
+    """Return every L3 test file under the pytest test roots of ``root``."""
 
     return tuple(
         sorted(
@@ -418,6 +419,6 @@ def discover_on_demand_tests(root: Path) -> tuple[str, ...]:
             for path in (root / test_root).rglob(f"*{PYTHON_SUFFIX}")
             if path.parent.name == TESTS_DIRECTORY_NAME
             and path.name.startswith(EXECUTED_TEST_PREFIX)
-            and is_on_demand_test(path.name)
+            and is_l3_test(path.name)
         )
     )

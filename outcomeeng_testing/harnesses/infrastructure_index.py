@@ -21,7 +21,7 @@ from typing import Final
 from hypothesis import given, seed, settings
 
 from outcomeeng import validation as validation_pkg
-from outcomeeng.validation._steps import EXECUTION_LEVEL_L1, ON_DEMAND_LEVEL
+from outcomeeng.validation._steps import EXECUTION_LEVEL_L1, L3_LEVEL
 from outcomeeng.validation.infrastructure_index import (
     CONFTEST_FILENAME,
     EXECUTED_TEST_PREFIX,
@@ -164,18 +164,18 @@ def reach_layout(kind: InfrastructureReach, repo: SyntheticRepository) -> ReachL
     return ReachLayout(changed_path=changed, tests=tests, index=repo.index())
 
 
-def on_demand_reach_layout(repo: SyntheticRepository) -> ReachLayout:
-    """Write a node-local module reached by one default test and one on-demand test.
+def l3_reach_layout(repo: SyntheticRepository) -> ReachLayout:
+    """Write a node-local module reached by one default test and one L3 test.
 
-    ``tests`` lists the default test first and the on-demand test second.
+    ``tests`` lists the default test first and the L3 test second.
     """
 
-    harness = f"{repo.package}.{HARNESSES_SUBPACKAGE}.on_demand"
-    import_line = f"from {repo.package}.{HARNESSES_SUBPACKAGE} import on_demand\n"
+    harness = f"{repo.package}.{HARNESSES_SUBPACKAGE}.l3"
+    import_line = f"from {repo.package}.{HARNESSES_SUBPACKAGE} import l3\n"
     changed = repo.write_module(harness, "")
     tests = (
         repo.write_test(FIRST_NODE, "default", import_line),
-        repo.write_test(FIRST_NODE, "on_demand", import_line, level=ON_DEMAND_LEVEL),
+        repo.write_test(FIRST_NODE, "l3", import_line, level=L3_LEVEL),
     )
     return ReachLayout(changed_path=changed, tests=tests, index=repo.index())
 

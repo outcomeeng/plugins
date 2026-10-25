@@ -1,11 +1,11 @@
-"""Observations for on-demand test selection in the selected and full gates.
+"""Observations for L3 test selection in the selected and full gates.
 
 The full-gate runs drive the production entry point through the gate harness's
 recording spawner and scripted git runner, and the direct-execution run drives
 the `test` recipe the direct entry point composes through the same recording
 spawner. Exception case: Stage 5, Interaction protocols — the claim is which
 argvs the gate and the direct recipe spawn, and the recording spawner exposes
-them without launching validators or the on-demand tests themselves.
+them without launching validators or the L3 tests themselves.
 
 Pytest collection runs for real: the observation is the set of test node ids a
 pytest argument tail collects, which is what the gate's exclusion decides.

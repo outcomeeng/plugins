@@ -1,4 +1,4 @@
-"""On-demand removal of gitignored cache directories and artifacts.
+"""Removal of gitignored caches and artifacts when a maintainer runs `just clean`.
 
 Replaces the Justfile `clean` recipe's `find -delete` chain with `git
 --literal-pathspecs clean -fdX`. The semantics:
