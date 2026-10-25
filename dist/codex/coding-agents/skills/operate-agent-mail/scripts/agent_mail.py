@@ -827,7 +827,7 @@ def record_from_inbox_item(item: object, *, recipient: str) -> dict[str, object]
     A row another sender wrote reads back rather than failing the read: a row
     without a thread reads as an unclassified record with no correlation and
     its subject verbatim, and an acknowledgement status outside the ones that
-    require a receipt reads as not required. A row without the store's id,
+    require an acknowledgement reads as not required. A row without the store's id,
     sender, or subject key is a malformed store response and fails the read.
     """
     value = _object(item, STORE_INBOX_FIELD)
@@ -1321,8 +1321,8 @@ def _execute_wait(
 ) -> dict[str, object]:
     """Poll the requester's inbox until a later record arrives or the timeout passes.
 
-    The wait holds no cursor, state file, or lock, marks nothing read, and
-    records no receipt: it only lists. Every listing is bounded by the time
+    The wait holds no cursor, state file, or lock, and neither reads nor
+    acknowledges a record: it only lists. Every listing is bounded by the time
     that remains.
     """
     operation = Operation.WAIT.value
