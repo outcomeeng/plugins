@@ -78,8 +78,9 @@ FULL_CHECK_REASON: Final = "explicit full gate"
 # execution level. The pytest argv every plan carries excludes it from each
 # directory it collects, and the plan names that exclusion before any step runs.
 ON_DEMAND_EXCLUDED_REASON: Final = (
-    f"on-demand suite excluded: {ON_DEMAND_LEVEL} tests run only through "
-    "`just test-on-demand`"
+    f"on-demand suite excluded from directory collection: {ON_DEMAND_LEVEL} "
+    "tests run as a suite through `just test-on-demand`, and a directly named "
+    "file still runs"
 )
 # The full gate runs in CI from a merge-commit checkout that carries no
 # `origin/HEAD`; its first parent is the base tip there and the previous commit
