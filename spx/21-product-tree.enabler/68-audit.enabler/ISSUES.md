@@ -65,9 +65,10 @@ changeset (sealed review run `2026-08-05_21-08-16-860-5bf3b83599ce`, PR #501).
 
 ## `audit-implementation` documents contracts without one worked run
 
-`src/plugins/product-tree/skills/audit-implementation/SKILL.md` documents the
-scope-unit JSON contract, the finding JSON contract, and nine failure modes, but
-carries no end-to-end walkthrough: one real `$ARGUMENTS` block, the resulting run
+`src/plugins/product-tree/skills/audit-implementation/SKILL.md` and its
+`references/run-payloads.md` and `references/failure-modes.md` document the
+scope-unit JSON contract, the finding JSON contract, and the failure modes, but
+carry no end-to-end walkthrough: one real `$ARGUMENTS` block, the resulting run
 token, one scope and one finding payload with concrete field values, and the
 final `spx verification run render` output. That shape gives
 Claude a line-for-line comparison target for detecting a malformed payload or
@@ -173,10 +174,8 @@ each `audit-*` skill directory. For `audit-implementation` the permitted set is
 `SKILL.md`, `references/`, `references/failure-modes.md`,
 `references/rule-catalog.md`, `references/run-payloads.md`,
 `references/touched-text.md`, `scripts/`, and `scripts/resolve_scope.py`. Adding
-any further bundled file — a `templates/`
-directory carrying the scope-unit and finding payload shapes, for instance —
-fails the pre-commit hook with an `expected ... found ...` diff naming the new
-paths.
+any further bundled file — a `templates/` directory, for instance — fails the
+pre-commit hook with an `expected ... found ...` diff naming the new paths.
 
 The constraint is real and serves the assertions that keep plugin-side audit
 machinery out of the skill. No spec assertion, decision, or skill-authoring
@@ -190,20 +189,19 @@ its enforcement, and a line in `spx/local/skills.md` for the authoring surface �
 or widen the validator to a category rule that admits inert data files while
 still rejecting executable audit machinery.
 
-The constraint now also blocks the standard remedy for the skill's size.
-`SKILL.md` stands at 499 of the 500-line ceiling `/skill-standards` sets, and
-the content that would move — the scope and finding payload contracts — has
-nowhere to go, because `references/failure-modes.md`,
-`references/rule-catalog.md`, `references/run-payloads.md`, and
-`references/touched-text.md` are the only reference files the inventory admits.
-The next necessary addition crosses the ceiling with no sanctioned extraction
-available, so widening the validator to a category rule is the move that unblocks
-both this entry and the ceiling.
+The scope and finding payload contracts, the idempotency-key forms, and the
+payload-file rules live in `references/run-payloads.md`; the failure modes live
+in `references/failure-modes.md`. `IMPLEMENTATION_AUDIT_ARTIFACTS` admits both
+files, and `SKILL.md` stands at 463 lines against the 500-line ceiling
+`/skill-standards` sets. The inventory remains an exact enumeration: the next
+extraction that needs a file outside the six named paths meets the same
+rejection, and the author learns the permitted set only from that rejection.
 
 **Evidence.** The pre-commit hook rejected a `templates/` directory carrying the
-two payload shapes during the completion-contract repair; the extraction was
-withdrawn and the payloads stay inline in `SKILL.md`. The ceiling pressure was
-surfaced by `instructions:skill-auditor` on the coverage-accounting repair.
+two payload shapes during the completion-contract repair. The payload contracts
+then moved into `references/run-payloads.md`, and the validator was widened by
+that one named path. The earlier ceiling pressure was surfaced by
+`instructions:skill-auditor` on the coverage-accounting repair.
 
 ## The run driver reports inconsistent provenance for its own plugin version
 
@@ -268,8 +266,8 @@ both recorded against `outcomeeng/changes#47`.
 
 ## The skill's payload templates and the contract module declare the same shapes twice
 
-`src/plugins/product-tree/skills/audit-implementation/SKILL.md` carries the scope
-and finding payload shapes as prose templates, and
+`src/plugins/product-tree/skills/audit-implementation/references/run-payloads.md`
+carries the scope and finding payload shapes as prose templates, and
 `outcomeeng/validation/implementation_audit_contract.py` builds the same
 shapes for the l3 lifecycle evidence. No build derives one from the other, so
 drift between them is invisible to the evidence.

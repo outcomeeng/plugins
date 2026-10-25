@@ -105,9 +105,9 @@ Entry key `outcomeeng_testing/evals/cli.py` `every other assert_* helper called 
 
 **Settlement condition.** Each infrastructure `AssertionError` in these modules becomes a lifecycle or dependency error type the harness owns, with every behavioral predicate left in the linked tests, and the node passes its test-evidence audit.
 
-## The CI-execution evidence helpers own the predicates their linked tests should own `outcomeeng_testing/evals/factories.py` `assert_empty_plan_exits_successfully_without_commands, assert_failing_suite_fails_aggregate_after_attempting_every_suite, assert_root_instruction_changes_select_full_suites, assert_changed_paths_file_reads_git_name_status_rows, assert_main_group_exposes_ci_subcommand, assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings` `assertion-seam`
+## The CI-execution evidence helpers own the predicates their linked tests should own `outcomeeng_testing/evals/factories.py` `assert_empty_plan_exits_successfully_without_commands, assert_failing_suite_fails_aggregate_after_attempting_every_suite, assert_changed_paths_file_reads_git_name_status_rows, assert_main_group_exposes_ci_subcommand, assert_ci_subcommand_builds_plan_and_executes_with_default_ceilings` `assertion-seam`
 
-The linked tests in `test_ci_execution.mapping.l1.py` and `test_ci_execution.compliance.l1.py` (node `21-ci-execution.enabler`) only call `assert_*` helpers; every predicate lives in the infrastructure module.
+The linked tests in `test_ci_execution.mapping.l1.py` and `test_ci_execution.compliance.l1.py` (node `21-ci-execution.enabler`) call the listed `assert_*` helpers, and each listed helper owns the predicate its test should own; the root-instruction selection test owns its own predicate over `root_instruction_plan_workspace()` and is outside this entry.
 
 **Settlement condition**: The linked tests own the predicates over observations the helpers return.
 
