@@ -27,6 +27,13 @@ CAN derive every changeset's branch, slug, base ref, head/base commit IDs, and c
 - Given an explicit range whose base names a local ref that lags `origin/<base>`, when the committed-scope command resolves it, then it returns the scope whose base identity is that local ref's commit, not the remote's tip, with no refusal, because an explicit range is the caller's exact endpoint pair ([test](tests/test_stale_base.scenario.l1.py))
 - Given an explicit range whose base names a local ref the head does not descend from, when the committed-scope command resolves it, then it returns the scope whose base identity is that local ref's commit and applies no stale-base refusal, because the refusal reads only a git-derived or `origin/` base ([test](tests/test_stale_base.scenario.l1.py))
 
+### Mappings
+
+- An unset `refs/remotes/origin/HEAD` maps to a `BaseRefNotConfiguredError` message that names the repository and the remedies `git remote set-head origin --auto` and `git remote set-head origin <branch>` ([test](tests/test_changeset_scope_remediation.mapping.l1.py))
+- A `refs/remotes/origin/HEAD` value of unexpected shape maps to a `BaseRefNotConfiguredError` message that quotes the value, states the expected `refs/remotes/origin/` prefix, and names the remedy `git remote set-head origin --auto` ([test](tests/test_changeset_scope_remediation.mapping.l1.py))
+- A detached HEAD maps to a `DetachedHeadError` message that names the repository and the remedies `git switch <branch>` and `git switch -c <new-branch>` ([test](tests/test_changeset_scope_remediation.mapping.l1.py))
+- A git failure with empty stderr during selector resolution maps to a `ScopeResolutionError` message that names the failed command and its exit status and directs the operator to verify each ref with `git rev-parse --verify <ref>` and to confirm that `git fetch origin` succeeds; a git failure with stderr maps to a message carrying that stderr ([test](tests/test_changeset_scope_remediation.mapping.l1.py))
+
 ### Compliance
 
 - ALWAYS: the merge classifier resolves a branch behind the fetched `origin/<base>` tip to its changed paths without the stale-base refusal, because classification partitions paths rather than verifying them ([test](tests/test_stale_base.compliance.l1.py))
