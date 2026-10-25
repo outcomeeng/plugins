@@ -6,6 +6,7 @@ from typing import cast
 from outcomeeng_testing.generators.agent_mail import operation_requests
 from outcomeeng_testing.harnesses.agent_mail import (
     AbsentExecutableRunner,
+    AttestedListing,
     CapturedInboxResponse,
     CapturedLabelResponse,
     RecordingRunner,
@@ -20,6 +21,7 @@ from outcomeeng_testing.harnesses.agent_mail import (
     load_agent_mail,
     mail_pool,
     run_cli_project_key,
+    run_attested_ack_mapping,
     run_inbox_row_mapping,
     run_label_response_mapping,
     run_operation_mapping,
@@ -189,11 +191,6 @@ def test_agent_mail_operation_mappings() -> None:
             assert [record[module.BODY_FIELD] for record in records] == [
                 item.get(module.STORE_BODY_FIELD, "") for item in items
             ]
-            assert [record[module.ACK_REQUIRED_FIELD] for record in records] == [
-                item[module.STORE_ACK_STATUS_FIELD]
-                in module.STORE_ACK_REQUIRED_STATUSES
-                for item in items
-            ]
         elif operation is module.Operation.SEND:
             assert response == store
             record = cast(dict[str, object], data[module.RECORD_FIELD])
@@ -290,10 +287,6 @@ def test_inbox_rows_map_totally_onto_records() -> None:
             assert record[module.RECORD_ID_FIELD] == item[module.STORE_ID_FIELD]
             assert record[module.SENDER_FIELD] == item[module.STORE_FROM_FIELD]
             assert record[module.BODY_FIELD] == item[module.STORE_BODY_FIELD]
-            assert record[module.ACK_REQUIRED_FIELD] is (
-                item[module.STORE_ACK_STATUS_FIELD]
-                in module.STORE_ACK_REQUIRED_STATUSES
-            )
             thread = item.get(module.STORE_THREAD_FIELD)
             if thread:
                 assert record[module.CORRELATION_FIELD] == thread
@@ -306,6 +299,44 @@ def test_inbox_rows_map_totally_onto_records() -> None:
                 )
 
     run_inbox_row_mapping(assert_rows)
+
+
+def test_store_acknowledgement_status_maps_to_the_stores_own_ack_requirement() -> None:
+    observed: dict[bool, set[str]] = {True: set(), False: set()}
+
+    def assert_listing(
+        module: ModuleType,
+        project_key: str,
+        listing: AttestedListing,
+        requirements: dict[int, bool],
+    ) -> None:
+        result = module.execute(
+            listing.request,
+            common_dir_seeded_runner(module, project_key, listing.result),
+        )
+
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED, (
+            listing.capture
+        )
+        items = cast(list[dict[str, object]], listing.payload[module.STORE_INBOX_FIELD])
+        data = cast(dict[str, object], result[module.DATA_FIELD])
+        records = cast(list[dict[str, object]], data[module.RECORDS_FIELD])
+        assert len(records) == len(items), listing.capture
+        for record, item in zip(records, items, strict=True):
+            message_id = cast(int, item[module.STORE_ID_FIELD])
+            status = cast(str, item[module.STORE_ACK_STATUS_FIELD])
+            assert record[module.RECORD_ID_FIELD] == message_id
+            assert record[module.ACK_REQUIRED_FIELD] is requirements[message_id], (
+                listing.capture,
+                message_id,
+                status,
+            )
+            observed[requirements[message_id]].add(status)
+
+    run_attested_ack_mapping(assert_listing)
+
+    assert observed[True] == set(load_agent_mail().STORE_ACK_REQUIRED_STATUSES)
+    assert observed[False]
 
 
 def test_send_rejects_a_recipient_the_store_reads_as_several_agents() -> None:

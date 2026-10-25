@@ -96,6 +96,16 @@ STORE_RESPONSE_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
 INBOX_ROW_SEED = 2026091807
 INBOX_ROW_EXAMPLES = 10
 INBOX_ROW_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+ACK_STATUS_SEED = 2026102501
+ACK_STATUS_EXAMPLES = 5
+ACK_STATUS_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+# The installed-store probe's committed attested run: whole-payload store
+# responses captured from the installed `am` through the adapter.
+ATTESTED_RUN_ROOT = (
+    ROOT
+    / "spx/43-coding-agents.enabler/18-agent-mail.enabler"
+    / "probes/installed-store/attested-run"
+)
 WAIT_SEED = 2026101601
 WAIT_EXAMPLES = 10
 WAIT_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
@@ -158,6 +168,17 @@ class CapturedInboxResponse:
     """One captured inbox response, or a named variant of one, replayable by path."""
 
     capture: str
+    result: CommandResultContract
+    payload: dict[str, object]
+
+
+@dataclass(frozen=True)
+class AttestedListing:
+    """One attested-run listing: the request the adapter ran, the store's reply
+    to it, and the capture's path."""
+
+    capture: str
+    request: dict[str, object]
     result: CommandResultContract
     payload: dict[str, object]
 
@@ -669,6 +690,85 @@ def inbox_request_with_bodies(module: ModuleType) -> dict[str, object]:
         ):
             return request
     raise CaptureError("the registry declares no inbox request with bodies")
+
+
+def _attested_artifacts() -> list[tuple[str, dict[str, object]]]:
+    return [
+        (
+            str(path.relative_to(ROOT)),
+            cast(dict[str, object], json.loads(path.read_text(encoding="utf-8"))),
+        )
+        for path in sorted(ATTESTED_RUN_ROOT.glob("*.json"))
+    ]
+
+
+def attested_store_ack_requirements(module: ModuleType) -> dict[int, bool]:
+    """The store's own acknowledgement requirement per message id, read from the
+    attested run's raw store inbox listings, which carry `ack_required`."""
+    requirements: dict[int, bool] = {}
+    for _, artifact in _attested_artifacts():
+        rows = artifact.get("result")
+        if not isinstance(rows, list):
+            continue
+        for row in cast(list[object], rows):
+            if isinstance(row, dict) and module.STORE_ACK_REQUIRED_FIELD in row:
+                requirements[cast(int, row[module.STORE_ID_FIELD])] = cast(
+                    bool, row[module.STORE_ACK_REQUIRED_FIELD]
+                )
+    if not requirements:
+        raise CaptureError("the attested run holds no raw store inbox listing")
+    return requirements
+
+
+def attested_listings(module: ModuleType) -> list[AttestedListing]:
+    """Every attested-run list operation whose store response lists inbox rows,
+    replayable as the store's reply."""
+    listings: list[AttestedListing] = []
+    for capture, artifact in _attested_artifacts():
+        request = artifact.get("request")
+        outcome = artifact.get("result")
+        if not isinstance(request, dict) or not isinstance(outcome, dict):
+            continue
+        if request.get(module.OPERATION_FIELD) != module.Operation.LIST.value:
+            continue
+        response = cast(dict[str, object], outcome[module.RESPONSE_FIELD])
+        listings.append(
+            AttestedListing(
+                capture,
+                cast(dict[str, object], request),
+                cast(
+                    CommandResultContract,
+                    module.CommandResult(0, json.dumps(response), ""),
+                ),
+                response,
+            )
+        )
+    if not listings:
+        raise CaptureError("the attested run holds no list operation")
+    return listings
+
+
+def run_attested_ack_mapping(
+    assert_listing: Callable[[ModuleType, str, AttestedListing, dict[int, bool]], None],
+) -> None:
+    """Replay every attested-run listing as the store's reply under generated
+    project keys, with the store's own per-id acknowledgement requirement."""
+    module = _load()
+    requirements = attested_store_ack_requirements(module)
+    listings = attested_listings(module)
+
+    @seed(ACK_STATUS_SEED)
+    @settings(max_examples=ACK_STATUS_EXAMPLES, deadline=None, print_blob=True)
+    @given(project_key=project_key_paths())
+    def generated_listings(project_key: str) -> None:
+        for listing in listings:
+            assert_listing(module, project_key, listing, requirements)
+
+    run_replayable_property(
+        generated_listings,
+        seed_value=ACK_STATUS_SEED,
+        replay_path=ACK_STATUS_REPLAY_PATH,
+    )
 
 
 def run_inbox_row_mapping(
