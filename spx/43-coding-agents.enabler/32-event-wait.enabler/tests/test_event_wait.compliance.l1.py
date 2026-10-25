@@ -34,7 +34,7 @@ def test_a_run_crosses_only_read_commands_and_leaves_no_file_or_state_change() -
         am = observed.contracts.agent_mail
         hm = observed.contracts.herdr
         reads = (
-            tuple(am.PUBLIC_GIT_COMMON_DIR_COMMAND),
+            tuple(am.common_dir_command(observed.case.repository)),
             am.PUBLIC_AM_COMMAND_PREFIXES[am.Operation.WAIT],
             hm.PUBLIC_HERDR_COMMAND_PREFIXES[hm.Operation.INVENTORY],
         )
@@ -52,7 +52,7 @@ def test_a_run_ends_within_its_timeout_and_bounds_every_command() -> None:
         timeout = observed.case.timeout_seconds
         assert observed.clock.current <= timeout
         for call in observed.calls:
-            if call.argv == tuple(am.PUBLIC_GIT_COMMON_DIR_COMMAND):
+            if call.argv == tuple(am.common_dir_command(observed.case.repository)):
                 continue
             assert call.bound is not None, call.argv
             assert call.started + call.bound <= timeout, call.argv
