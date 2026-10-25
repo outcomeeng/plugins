@@ -49,6 +49,9 @@ START_PAYLOAD_RUN_KEYS = (
 MANIFEST_SECTIONS_KEY = "sections"
 COMPLETED_REVIEW_KEY = "review"
 COMPLETED_UNREAD_KEY = "unread"
+DECLARATION_CHANGED_KEY = "generatedDeclarationChanged"
+SKIPPED_GENERATED_KEY = "skippedGenerated"
+EDIT_MARKER_COMMENT = "# declaration edited"
 jp = load_journal_projection_module()
 BASE_BRANCH = "main"
 FEATURE_BRANCH = "feature/x"
@@ -105,13 +108,17 @@ def build_changeset_repo(
     changed_paths: Iterable[str],
     unchanged_paths: Iterable[str] = (),
     rename: RenameCase | None = None,
+    head_declaration: str | None = None,
+    working_tree_declaration: str | None = None,
 ) -> str:
     """Create a repository whose feature branch adds ``changed_paths`` and applies ``rename``.
 
     The base commit holds the declaration (when given), ``unchanged_paths``, and the
     rename's old path, so none of them is part of the changeset. The feature branch adds
     each changed path with generated content and renames the old path to the new one,
-    editing its content when the case says so. Returns the base ref name.
+    editing its content when the case says so. ``head_declaration`` replaces the
+    declaration in the branch commit; ``working_tree_declaration`` replaces it in the
+    working tree after that commit. Returns the base ref name.
     """
     repo.mkdir(parents=True, exist_ok=True)
     run_git("init", "-q", "-b", BASE_BRANCH, str(repo), cwd=pathlib.Path.cwd())
@@ -133,9 +140,18 @@ def build_changeset_repo(
             _write(repo, rename.new_path, file_content(rename.old_path, edited=True))
     for path in changed_paths:
         _write(repo, path, file_content(path))
+    if head_declaration is not None:
+        _write(repo, str(GENERATED_SOURCES_PATH), head_declaration)
     run_git("add", "-A", cwd=repo)
     run_git("commit", "-q", "-m", "branch", cwd=repo)
+    if working_tree_declaration is not None:
+        _write(repo, str(GENERATED_SOURCES_PATH), working_tree_declaration)
     return BASE_BRANCH
+
+
+def edited_declaration(declaration: str) -> str:
+    """Return ``declaration`` with a trailing comment, a text that differs from it."""
+    return f"{declaration}\n{EDIT_MARKER_COMMENT}\n"
 
 
 class UnreadChannel(enum.Enum):

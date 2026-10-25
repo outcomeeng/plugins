@@ -131,6 +131,42 @@ def flagged_relation_cases() -> Iterator[FlaggedRelationCase]:
     )
 
 
+class EditSite(enum.Enum):
+    """Where a declaration differing from the base commit's declaration lives."""
+
+    HEAD = "head"
+    WORKING_TREE = "working-tree"
+
+
+@dataclass(frozen=True)
+class DeclarationEditCase:
+    """A base declaration and a differing declaration at one edit site.
+
+    The base declaration marks ``base_extent`` as a generated extent; the edited
+    declaration replaces that relation with one that marks ``edited_extent`` instead.
+    """
+
+    site: EditSite
+    base_relation: ExtentRelation
+    edited_relation: ExtentRelation
+    base_extent: str
+    edited_extent: str
+
+
+def declaration_edit_cases() -> Iterator[DeclarationEditCase]:
+    """Yield one case per site at which a declaration can differ from the base commit's."""
+    base_relation = _relation("declared-base", "declared-base-out/**")
+    edited_relation = _relation("declared-edit", "declared-edit-out/**")
+    for site in EditSite:
+        yield DeclarationEditCase(
+            site,
+            base_relation,
+            edited_relation,
+            "declared-base-out/built.txt",
+            "declared-edit-out/built.txt",
+        )
+
+
 @dataclass(frozen=True)
 class RegionOutputCase:
     """A region-bounded output beside a whole-file relation that proves the declaration is read."""
