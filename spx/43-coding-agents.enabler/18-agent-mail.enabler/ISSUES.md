@@ -192,20 +192,30 @@ The compliance assertion `ALWAYS: the adapter rejects an empty string in every t
 
 ## DEBT: the decision and the probe still claim labels on the event stream
 
-The adapter exposes no events operation, and the probe's limitations state that the run does not exercise the event stream for that reason. The adapter decision still names events where it places the labels: the rationale's sentence on position labels, the invariant on the store's labels, and the mapping assertion under `### Testing` each list `sender_display_name` on events beside inbox items and send results. Probe protocol step 3 still instructs reading the event stream and recording `sender_display_name` on each event. The captured response fixture `outcomeeng_testing/fixtures/agent_mail/responses/inbox-events.json` is read by no test.
+The adapter exposes no events operation, and the probe's limitations state that the run does not exercise the event stream for that reason. The adapter decision still names events where it places the labels: the rationale's sentence on position labels, the invariant on the store's labels, and the mapping assertion under `### Testing` each list `sender_display_name` on events beside inbox items and send results. The captured response fixture `outcomeeng_testing/fixtures/agent_mail/responses/inbox-events.json` is read by no test.
 
-**Impact**: the decision declares a pass-through on a surface no operation reaches, so its mapping assertion names a domain member the linked evidence never exercises, and the probe protocol instructs a step its own attested run states it did not perform.
+**Impact**: the decision declares a pass-through on a surface no operation reaches, so its mapping assertion names a domain member the linked evidence never exercises.
 
-**Settlement condition**: the decision's rationale, invariant, and mapping assertion name only the surfaces an adapter operation reaches, probe protocol step 3 reads the inbox alone, and the unused events response fixture is removed or consumed by a test that a declared events operation requires — or an events operation is declared and evidenced, and the claims stand on it.
+**Settlement condition**: the decision's rationale, invariant, and mapping assertion name only the surfaces an adapter operation reaches, and the unused events response fixture is removed or consumed by a test that a declared events operation requires — or an events operation is declared and evidenced, and the claims stand on it.
 
 **Evidence**: `product-tree:changes-reviewer` run `2026-10-09_19-42-27-272-9b7af3f2fe83` on head `568924292d60b6a5d51d15075eb6e83c12d72de0`, an `evidence` finding at `probes/position-labels/probe.md` line 20; run `2026-10-09_21-16-21-663-cb5623784a49` on head `f2e86d4c4637f466795d15c787f442fb1b79205c`, an `evidence` finding at `21-agent-mail-adapter.adr.md` lines 16 and 34.
 
-## DEBT: the probe precondition pins the build by its version text
+## DEBT: the decision pins the build by a source commit and a binary SHA-256 the installed CLI does not report
 
-The probe's precondition states that `am --version` reports the version the adapter decision pins. The decision pins the build by its Agent Mail source commit and the binary's SHA-256, and states that `am --version` reports 0.3.36 for builds with and without the label fields, so the version text identifies no build.
+The adapter decision names the build pin as the Agent Mail source commit and the binary's SHA-256 that the attested installed-store run records. The installed `am 0.3.36` reports a version string and no source commit, through `am --version` and `am capabilities` alike, and its executable resolves into an installation directory outside the repository boundary. The 2026-10-25 installed-store run therefore pins the version string `am 0.3.36` and records the missing commit and SHA-256 as limitations, on the Product's Maintainer's ruling. The decision still states the commit and SHA-256 pin, and states that `am --version` identifies no build.
 
-**Impact**: a run that checks only the precondition as written accepts a build without the label fields, so the precondition admits the build the probe exists to tell apart. The attested run recorded the commit and the SHA-256 itself, so its observations stand.
+**Impact**: the decision and the probe disagree about what the pin is, and a build that differs from the pinned one while reporting the same version string is not detected by the pin.
 
-**Settlement condition**: the precondition names the source commit and the binary SHA-256 the decision pins and checks the installed binary against the SHA-256.
+**Settlement condition**: the decision names the pin the installed CLI can report, or the installed CLI reports a source commit or the operator supplies the binary's SHA-256, and the installed-store probe records the pin the decision names.
 
-**Evidence**: `product-tree:changes-reviewer` run `2026-10-09_19-42-27-272-9b7af3f2fe83` on head `568924292d60b6a5d51d15075eb6e83c12d72de0`, a `consistency` finding at `probes/position-labels/probe.md` line 12; run `2026-10-09_21-16-21-663-cb5623784a49` on head `f2e86d4c4637f466795d15c787f442fb1b79205c`, the same finding at line 11.
+**Evidence**: `probes/installed-store/probe.md`, attested run of 2026-10-25, observation 1 and the limitations section.
+
+## DEBT: the adapter reads an unjudged acknowledgement-required record as not requiring acknowledgement
+
+The installed `am 0.3.36` reports `ack_status: "required"` for a record sent with an acknowledgement required that its recipient has not yet judged, `pending` after the recipient reads it, and `acked` after the recipient acknowledges it. The adapter maps only `pending` and `acked` to `ackRequired` true, so an unjudged listing, a wait result, and any listing before the first judgment read such a record back with `ackRequired` false. The decision and the spec state that an acknowledgement status owed or given reads back as true.
+
+**Impact**: a caller that lists or waits for a record cannot see that the sender asked for an acknowledgement until after it has read the record, so a required acknowledgement can go unsent.
+
+**Settlement condition**: the adapter's acknowledgement mapping reads `required` as an acknowledgement required, the mapping test and its captured response fixture carry the status, and a rerun of the installed-store probe passes.
+
+**Evidence**: `probes/installed-store/probe.md`, attested run of 2026-10-25, observation 4 and verdict, with [05](probes/installed-store/attested-run/05-list-recipient.json) and [08b](probes/installed-store/attested-run/08b-list-again-2.json).
