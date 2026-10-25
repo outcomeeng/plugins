@@ -15,11 +15,14 @@ from outcomeeng.validation.hook_contract import SESSION_START_EVENT
 from outcomeeng.validation.hook_safety import (
     BLOCKING_EVENTS,
     DEFAULT_ROOTS,
+    HOOKS_FILENAME,
     iter_tree_violations,
     main,
 )
 from outcomeeng_testing.harnesses.hook_safety import (
     HOOK_PLUGIN_NAME,
+    copy_plugin_hooks,
+    guarded_plugin_root_hooks_path,
     hook_config,
     write_plugin_hooks,
 )
@@ -40,7 +43,7 @@ def test_blocking_hook_is_reported_with_location(tmp_path: Path) -> None:
     )
     report = "\n".join(violations)
     assert HOOK_PLUGIN_NAME in report  # plugin
-    assert "hooks.json" in report  # file
+    assert HOOKS_FILENAME in report  # file
     assert event in report  # event
 
 
@@ -54,10 +57,7 @@ def test_clean_tree_reports_nothing(tmp_path: Path) -> None:
 def test_guarded_substituted_path_hook_reports_nothing(tmp_path: Path) -> None:
     # Scenario witness for the assertion's "uses a guarded command" clause: a guarded
     # substituted-path invocation in an otherwise clean tree produces no violations.
-    guarded = "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/session-start.py || echo '{}'"
-    write_plugin_hooks(
-        tmp_path, claude_root, hook_config(SESSION_START_EVENT, command=guarded)
-    )
+    copy_plugin_hooks(tmp_path, claude_root, guarded_plugin_root_hooks_path())
 
     assert iter_tree_violations(tmp_path) == []
 
@@ -75,7 +75,7 @@ def test_main_reports_location_and_exits_non_zero(
 
     assert code == 1
     assert HOOK_PLUGIN_NAME in err  # plugin
-    assert "hooks.json" in err  # file
+    assert HOOKS_FILENAME in err  # file
     assert event in err  # event
 
 
