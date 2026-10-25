@@ -37,6 +37,7 @@ from outcomeeng_testing.generators.consumption_control import (
     unsupported_models,
     duration_snapshots,
     alert_reads,
+    differing_texts,
     distinct_namespace_pairs,
     namespace_histories,
     invalid_namespaces,
@@ -2002,6 +2003,9 @@ class RetainedRecordMalformation(StrEnum):
     NON_LIST_VALUE = "non_list_value"
     NON_MAPPING_ENTRY = "non_mapping_entry"
     FOREIGN_LABEL = "foreign_label"
+    MISMATCHED_PLIST_LABEL = "mismatched_plist_label"
+    MISMATCHED_PROGRAM_ARGUMENTS = "mismatched_program_arguments"
+    MISMATCHED_WORKING_DIRECTORY = "mismatched_working_directory"
 
 
 @dataclass(frozen=True)
@@ -2009,6 +2013,11 @@ class MalformedRetainedFieldObservation:
     record_path: str
     field: str
     message: str
+
+
+def _plist_key_holding(settings: dict[str, Any], value: str) -> str:
+    """The plist key whose value is ``value``, read from the plist the installer wrote."""
+    return next(key for key, held in settings.items() if held == value)
 
 
 def malformed_retained_field_property(
@@ -2035,6 +2044,20 @@ def malformed_retained_field_property(
             label = data.draw(foreign_job_labels(schedule.MODES))
             retained[index]["label"] = label
             retained[index]["path"] = str(agents / (label + ".plist"))
+        elif malformation is RetainedRecordMalformation.MISMATCHED_PLIST_LABEL:
+            settings_ = retained[index][ScheduleField.PLIST]
+            key = _plist_key_holding(settings_, retained[index]["label"])
+            settings_[key] = data.draw(differing_texts(retained[index]["label"]))
+        elif malformation is RetainedRecordMalformation.MISMATCHED_PROGRAM_ARGUMENTS:
+            arguments = retained[index][ScheduleField.PLIST][
+                ScheduleField.PROGRAMARGUMENTS
+            ]
+            position = data.draw(st.integers(0, len(arguments) - 1))
+            arguments[position] = data.draw(differing_texts(arguments[position]))
+        elif malformation is RetainedRecordMalformation.MISMATCHED_WORKING_DIRECTORY:
+            settings_ = retained[index][ScheduleField.PLIST]
+            key = _plist_key_holding(settings_, record["root"])
+            settings_[key] = data.draw(differing_texts(record["root"]))
         else:
             retained[index] = data.draw(non_mapping_retained_entries())
         return None
@@ -2159,6 +2182,124 @@ def outside_retention_property(
                     paths,
                     frozenset(path for path in paths if Path(path).exists()),
                     tuple(gap for plan in plans for gap in plan["retention_gaps"]),
+                )
+            )
+
+    run_replayable_property(
+        run,
+        seed_value=SEED,
+        replay_path=INSTALLATION_REPLAY,
+    )
+
+
+class RetentionFailureRunner(RecordingRunner):
+    """Stage 5 failure-simulation collaborator: launchctl status reads and stops fail
+    for the labels it is told to refuse, and every other call behaves as the recorder."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.refused_status: set[str] = set()
+        self.refused_stop: set[str] = set()
+
+    def run(self, argv: tuple[str, ...], timeout: float = 30) -> Any:
+        _, _, schedule, _ = modules()
+        label = argv[-1].rsplit("/", 1)[-1]
+        refused = (
+            argv[1] == schedule.LaunchctlOperation.PRINT
+            and label in self.refused_status
+        ) or (
+            argv[1] == schedule.LaunchctlOperation.BOOTOUT
+            and label in self.refused_stop
+        )
+        if refused:
+            self.calls.append(argv)
+            return schedule.CommandResult(argv, 77, "", "permission denied")
+        return super().run(argv, timeout)
+
+
+class RetentionGap(StrEnum):
+    CHANGED_PLIST = "changed_plist"
+    STATUS_UNESTABLISHED = "status_unestablished"
+    UNREADABLE_PLIST = "unreadable_plist"
+    STOP_REFUSED = "stop_refused"
+
+
+@dataclass(frozen=True)
+class RetentionGapObservation:
+    targeted_paths: frozenset[str]
+    files_remaining: frozenset[str]
+    owned_paths_after: frozenset[str]
+    gaps: tuple[str, ...]
+    reinstall_rejection: str
+
+
+def retention_gap_property(
+    gap: RetentionGap,
+    check: Callable[[RetentionGapObservation], None],
+) -> None:
+    """Make the oldest retained launch agents of the record impossible to stop and remove
+    by ``gap``, install once more so retention passes them, and observe the record, the
+    files, and the gaps. Then restore the launch agents and reinstall under the namespace
+    that owned them. The reinstall observation is the rejection message, empty when the
+    reinstall was accepted. Any exception other than ValueError propagates."""
+    _, _, schedule, _ = modules()
+    namespaces = schedule.RETAINED_NAMESPACES
+
+    @seed(SEED)
+    @settings(max_examples=EXAMPLES, deadline=None)
+    @given(namespace_histories(namespaces + 2))
+    def run(history: list[str]) -> None:
+        with workspace() as work:
+            runner = RetentionFailureRunner()
+            agents = work.root / "launch-agents"
+            for namespace in history[: namespaces + 1]:
+                _install_under(schedule, work, runner, agents, namespace)
+            record_path = work.config.root / schedule.INSTALL_NAME
+            record = json.loads(record_path.read_text())
+            targets = record[schedule.RETAINED_JOBS][-len(schedule.MODES) :]
+            paths = [Path(entry["path"]) for entry in targets]
+            labels = {str(entry["label"]) for entry in targets}
+            originals = {path: path.read_bytes() for path in paths}
+            if gap is RetentionGap.CHANGED_PLIST:
+                for path in paths:
+                    path.write_bytes(originals[path] + b"\n")
+            elif gap is RetentionGap.STATUS_UNESTABLISHED:
+                runner.refused_status |= labels
+            elif gap is RetentionGap.UNREADABLE_PLIST:
+                for path in paths:
+                    path.chmod(0)
+            else:
+                runner.refused_stop |= labels
+            plan = _install_under(
+                schedule, work, runner, agents, history[namespaces + 1]
+            )
+            after = json.loads(record_path.read_text())
+            observed_paths = frozenset(str(path) for path in paths)
+            remaining = frozenset(str(path) for path in paths if path.exists())
+            owned = frozenset(
+                entry["path"]
+                for entry in [
+                    *after[ScheduleField.JOBS],
+                    *after[schedule.RETAINED_JOBS],
+                ]
+            )
+            for path in paths:
+                path.chmod(0o644)
+                path.write_bytes(originals[path])
+            runner.refused_status.clear()
+            runner.refused_stop.clear()
+            try:
+                _install_under(schedule, work, runner, agents, history[0])
+                rejection = ""
+            except ValueError as error:
+                rejection = str(error)
+            check(
+                RetentionGapObservation(
+                    observed_paths,
+                    remaining,
+                    owned,
+                    tuple(plan["retention_gaps"]),
+                    rejection,
                 )
             )
 

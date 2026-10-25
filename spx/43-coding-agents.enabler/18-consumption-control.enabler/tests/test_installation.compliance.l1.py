@@ -10,6 +10,8 @@ from outcomeeng_testing.harnesses.consumption_control import (
     RetainedBoundObservation,
     RetentionPlanObservation,
     RetainedRecordMalformation,
+    RetentionGap,
+    RetentionGapObservation,
     installation_observation,
     malformed_namespace_field_property,
     malformed_namespace_string_property,
@@ -20,6 +22,7 @@ from outcomeeng_testing.harnesses.consumption_control import (
     namespace_scope_property,
     outside_retention_property,
     retained_bound_property,
+    retention_gap_property,
     retention_plan_property,
     workspace,
 )
@@ -207,3 +210,89 @@ def test_retention_preserves_a_retained_launch_agent_outside_the_install_directo
         assert observed.gaps
 
     outside_retention_property(check)
+
+
+def test_a_retained_launch_agent_changed_on_disk_stays_owned_and_reported() -> None:
+    def check(observed: RetentionGapObservation) -> None:
+        assert observed.targeted_paths
+        assert observed.gaps
+        assert observed.files_remaining == observed.targeted_paths
+        assert observed.targeted_paths <= observed.owned_paths_after
+
+    retention_gap_property(RetentionGap.CHANGED_PLIST, check)
+
+
+def test_a_retained_launch_agent_with_unestablished_status_stays_owned_and_reported() -> (
+    None
+):
+    def check(observed: RetentionGapObservation) -> None:
+        assert observed.targeted_paths
+        assert observed.gaps
+        assert observed.files_remaining == observed.targeted_paths
+        assert observed.targeted_paths <= observed.owned_paths_after
+        assert not observed.reinstall_rejection
+
+    retention_gap_property(RetentionGap.STATUS_UNESTABLISHED, check)
+
+
+def test_a_retained_launch_agent_that_cannot_be_read_stays_owned_and_reported() -> None:
+    def check(observed: RetentionGapObservation) -> None:
+        assert observed.targeted_paths
+        assert observed.gaps
+        assert observed.files_remaining == observed.targeted_paths
+        assert observed.targeted_paths <= observed.owned_paths_after
+        assert not observed.reinstall_rejection
+
+    retention_gap_property(RetentionGap.UNREADABLE_PLIST, check)
+
+
+def test_a_retained_launch_agent_whose_stop_is_refused_stays_owned_and_reported() -> (
+    None
+):
+    def check(observed: RetentionGapObservation) -> None:
+        assert observed.targeted_paths
+        assert observed.gaps
+        assert observed.files_remaining == observed.targeted_paths
+        assert observed.targeted_paths <= observed.owned_paths_after
+        assert not observed.reinstall_rejection
+
+    retention_gap_property(RetentionGap.STOP_REFUSED, check)
+
+
+def test_a_retained_job_whose_plist_label_differs_is_rejected_naming_file_and_field() -> (
+    None
+):
+    def check(observed: MalformedRetainedFieldObservation) -> None:
+        assert observed.message
+        assert observed.record_path in observed.message
+        assert observed.field in observed.message
+
+    malformed_retained_field_property(
+        RetainedRecordMalformation.MISMATCHED_PLIST_LABEL, check
+    )
+
+
+def test_a_retained_job_whose_program_arguments_differ_is_rejected_naming_file_and_field() -> (
+    None
+):
+    def check(observed: MalformedRetainedFieldObservation) -> None:
+        assert observed.message
+        assert observed.record_path in observed.message
+        assert observed.field in observed.message
+
+    malformed_retained_field_property(
+        RetainedRecordMalformation.MISMATCHED_PROGRAM_ARGUMENTS, check
+    )
+
+
+def test_a_retained_job_whose_working_directory_differs_is_rejected_naming_file_and_field() -> (
+    None
+):
+    def check(observed: MalformedRetainedFieldObservation) -> None:
+        assert observed.message
+        assert observed.record_path in observed.message
+        assert observed.field in observed.message
+
+    malformed_retained_field_property(
+        RetainedRecordMalformation.MISMATCHED_WORKING_DIRECTORY, check
+    )

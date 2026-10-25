@@ -240,3 +240,9 @@ def invalid_namespaces(maximum: int) -> st.SearchStrategy[str]:
         st.just(""),
         st.just(_NAMESPACE_SEPARATOR),
     )
+
+
+def differing_texts(original: str) -> st.SearchStrategy[str]:
+    """Vary text values that differ from ``original``, such as a plist value that no
+    longer matches the job or installation root the record names."""
+    return _segments().filter(lambda value: value != original)
