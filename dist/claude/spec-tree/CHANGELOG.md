@@ -10,6 +10,20 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.108.0
+
+### Added
+
+- **`/wait-for-load` runs a heavy command under `spx orchestration lock` where the repository's lock switch is on.** The skill reads the switch from `spx/local/wait-for-load.md` at the repository root; it is on only when that overlay holds the line `orchestration-lock: on`, and an absent overlay, an overlay without that line, or any other value leaves it off. With the switch on, the skill runs the command as the argument vector of `spx orchestration lock --run-id <uuid> -- <command>`, with a new UUID for each line, and starts no waiter. It reads the guard's final standard-error line as the terminal record whose `schema` is `spx.orchestration.lock.result.v1` and whose `runId` matches, and decides from `started` and `status` together: `not_ready` means the command never started and starts no new attempt without operator direction, `completed` reports the command's own `childExitCode`, any other record with `started` false reports that status with the command unstarted and no unguarded fallback, and a standard error that ends without a record reports `interrupted` with an unknown outcome. A record lost to compaction or an output cap recovers the existing invocation and its matching record, starts no new invocation while that invocation's state is unresolved, and reports the outcome unknown when its terminal exit is known but the record is gone. The skill's `allowed-tools` gains `Bash(spx orchestration lock:*)`. Heavy runs from every session on one host then share one slot, where waiters that observed the same load dip started together.
+
+### Changed
+
+- **`/wait-for-load` keeps the waiter as its off branch.** With the switch off or the overlay absent, the skill chains the command behind `wait_for_load.py` with `&&` and re-runs the line on a lost result, as before; a repository that installs this release keeps that behavior until it adds the overlay line. A lightweight command runs with neither the lock nor the waiter, whatever the switch.
+
+### Requires
+
+- **The `spx` CLI with the `orchestration lock` command**, for a repository that turns the switch on. On a platform the guard does not support, the skill reports the guard's status and leaves the command unstarted.
+
 ## 0.107.2
 
 ### Changed
