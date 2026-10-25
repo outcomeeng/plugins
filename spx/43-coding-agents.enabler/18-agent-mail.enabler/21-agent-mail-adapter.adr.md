@@ -51,24 +51,7 @@ The adapter binds to one store's command surface, and that surface changes betwe
 
 ## Verification
 
-- ALWAYS: a list request maps to the store's non-marking listing surface in its unjudged mode, and a list request carrying the all-records option maps to that surface's complete form
-- ALWAYS: a read request maps to the store's recipient-only read command and an acknowledge request maps to the store's acknowledgement command, each for one message id, and neither request maps to the other's command
-- NEVER: a list, a wait, or any operation other than the read and the acknowledgement changes a record's read state
-- ALWAYS: a wait request carrying an id and a timeout maps to the first record addressed to the requester whose store id exceeds that id, read or unread, listed through the complete form of the listing surface, to the named timeout result when none is present before the timeout, and to the named unreachable result when the listing cannot reach back to the id
-- NEVER: a wait request without a timeout runs a store command, and no store command inside a wait outlives the timeout
-- NEVER: a wait keeps a cursor, state file, or lock
-- ALWAYS: a listed record whose store acknowledgement status shows an acknowledgement required, whether still owed or given, reads back as `ackRequired` true, and every other status reads back as false
-- ALWAYS: every correlation round-trips through the adapter's encoding and decoding to itself; every thread id the adapter writes lies inside the store's thread alphabet; no encoded form equals a correlation the adapter writes unencoded; and a thread id that is no encoded form the adapter writes reads back verbatim
-- NEVER: a send whose correlation's written thread id exceeds 128 characters reaches a store command; the request is rejected as an invalid schema first
-- ALWAYS: every emitted result carries the versioned result shape, including the failure whose input does not parse, and a runner error of any class maps to the named store-unavailable or command-failed result
-- NEVER: a text argument carrying a NUL byte reaches a store command; the request is rejected as an invalid schema first
-- NEVER: an operation derives liveness, staleness, or session state from the store's per-agent activity timestamp
 - ALWAYS: for every operation, the argument vector the adapter builds is accepted by the installed store, and every response the adapter parses is a shape that store emits, as the attested installed-store probe run records
-- ALWAYS: each captured usage and public-response fixture names the tool and the build that produced it, and the build it names is the build the installed-store probe run records
-- ALWAYS: a second terminal handback for one coordination reference that carries the same terminal kind with different content is rejected as a conflicting handback whose detail names the content difference
-- NEVER: a shipped coding-agents Python script outside `/operate-agent-mail` constructs an `am` argument vector or a shell-string `am` command, or derives a project key from Git state
-- ALWAYS: a read records, visibly to the recipient alone, that the recipient judged one message, and establishes nothing about the message's content
-- ALWAYS: an acknowledgement is a read the sender can observe, and establishes no agreement, ownership, authorization, or acceptance of a proposal
 
 ### Testing
 
@@ -82,6 +65,21 @@ The adapter binds to one store's command surface, and that surface changes betwe
 - NEVER: a registration result carries the registration token the store returns ([compliance])
 - ALWAYS: an absent `am` executable maps to the store-unavailable result and a working directory where no program resolves maps to the repository-unresolved result ([mapping])
 - NEVER: an operation reaches a program outside the adapter's own command vectors — every operation completes where only those programs resolve ([compliance])
+- ALWAYS: a list request maps to the store's non-marking listing surface in its unjudged mode, and a list request carrying the all-records option maps to that surface's complete form ([mapping])
+- ALWAYS: a read request maps to the store's recipient-only read command and an acknowledge request maps to the store's acknowledgement command, each for one message id, and neither request maps to the other's command ([mapping])
+- NEVER: a list, a wait, or any operation other than the read and the acknowledgement changes a record's read state ([compliance])
+- ALWAYS: a wait request carrying an id and a timeout maps to the first record addressed to the requester whose store id exceeds that id, read or unread, listed through the complete form of the listing surface, to the named timeout result when none is present before the timeout, and to the named unreachable result when the listing cannot reach back to the id ([mapping])
+- NEVER: a wait request without a timeout runs a store command, and no store command inside a wait outlives the timeout ([compliance])
+- NEVER: a wait keeps a cursor, state file, or lock ([compliance])
+- ALWAYS: a listed record whose store acknowledgement status shows an acknowledgement required, whether still owed or given, reads back as `ackRequired` true, and every other status reads back as false ([mapping])
+- ALWAYS: every correlation round-trips through the adapter's encoding and decoding to itself; every thread id the adapter writes lies inside the store's thread alphabet; no encoded form equals a correlation the adapter writes unencoded; and a thread id that is no encoded form the adapter writes reads back verbatim ([property])
+- NEVER: a send whose correlation's written thread id exceeds 128 characters reaches a store command; the request is rejected as an invalid schema first ([compliance])
+- ALWAYS: every emitted result carries the versioned result shape, including the failure whose input does not parse, and a runner error of any class maps to the named store-unavailable or command-failed result ([compliance])
+- NEVER: a text argument carrying a NUL byte reaches a store command; the request is rejected as an invalid schema first ([compliance])
+- NEVER: an operation derives liveness, staleness, or session state from the store's per-agent activity timestamp ([compliance])
+- ALWAYS: each captured usage and public-response fixture names the tool and the build that produced it, and the build it names is the build the installed-store probe run records ([conformance])
+- ALWAYS: a second terminal handback for one coordination reference that carries the same terminal kind with different content is rejected as a conflicting handback whose detail names the content difference ([property])
+- NEVER: a shipped coding-agents Python script outside `/operate-agent-mail` constructs an `am` argument vector or a shell-string `am` command, or derives a project key from Git state ([compliance])
 
 ### Audit
 
@@ -92,3 +90,5 @@ The adapter binds to one store's command surface, and that surface changes betwe
 - ALWAYS: `/operate-agent-mail` owns all bundled-script access; composing skills invoke the capability through the skill surface rather than manufacturing a cross-skill filesystem path ([audit])
 - NEVER: framework mocks or monkeypatching replace store behavior or the command-runner boundary ([audit])
 - NEVER: the adapter owns another workflow's retry, checkpoint, persistence, result interpretation, or continuation decision ([audit])
+- ALWAYS: a read records, visibly to the recipient alone, that the recipient judged one message, and establishes nothing about the message's content ([audit:read-semantics])
+- ALWAYS: an acknowledgement is a read the sender can observe, and establishes no agreement, ownership, authorization, or acceptance of a proposal ([audit:acknowledgement-semantics])
