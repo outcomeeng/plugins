@@ -148,8 +148,9 @@ through the native plugin update, every other such record by rewriting its
 `installed_plugins.json` entry to the head's install path, version, and commit,
 whether or not the record's directory still exists. No command runs with any
 other checkout as its working directory, and no other checkout's settings or
-project directory is inspected. A record outside project and local scope or
-outside the catalog is reported and left unchanged. The invocation checkout's
+project directory is inspected. A record of a plugin id the catalog renames
+moves to the successor plugin's entry; any other record outside project and
+local scope or outside the catalog is reported and left unchanged. The invocation checkout's
 own settings matter only to bootstrap: settings it cannot read stop bootstrap
 and nothing else. The run also refreshes the selected `$CODEX_HOME`, plans from
 one listing read, reads the listing again after execution, reports each record's

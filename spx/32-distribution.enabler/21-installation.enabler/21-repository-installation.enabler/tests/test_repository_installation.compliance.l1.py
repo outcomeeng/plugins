@@ -119,6 +119,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_failed_run_restore,
     install_record_fixture_path,
     observe_install_record_rewrite,
+    observe_retired_record_migration,
     observe_racing_install_record_rewrite,
     observe_scope_split,
     skill_enabling_definition,
@@ -1247,6 +1248,67 @@ def test_the_install_record_rewrite_is_atomic_and_preserves_every_other_field(
     assert observation.text_after.endswith("\n") == observation.text_before.endswith(
         "\n"
     )
+
+
+def test_a_retired_plugin_record_in_another_checkout_moves_to_its_successor_by_the_rewrite(
+    tmp_path: Path,
+) -> None:
+    observation = observe_retired_record_migration(
+        install_record_fixture_path(), tmp_path
+    )
+    before = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.document_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    after = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.document_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    moved_fields = {
+        CLAUDE_INSTALLED_RECORD_PATH_FIELD,
+        CLAUDE_INSTALLED_RECORD_VERSION_FIELD,
+        CLAUDE_INSTALLED_RECORD_COMMIT_FIELD,
+    }
+    target_version = observation.target.versions[PRODUCT_TREE_PLUGIN]
+
+    assert observation.warnings == ()
+    assert observation.retired_identifier in before
+    assert observation.retired_identifier not in after
+    for retired in observation.retired_entries:
+        address = (
+            retired[CLAUDE_PLUGIN_SCOPE_FIELD],
+            retired[CLAUDE_PLUGIN_PROJECT_PATH_FIELD],
+        )
+        holding = [
+            entry
+            for entry in after[observation.successor_identifier]
+            if (
+                entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+                entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD],
+            )
+            == address
+        ]
+        assert len(holding) == 1, address
+        assert holding[0][CLAUDE_INSTALLED_RECORD_VERSION_FIELD] == target_version
+        assert holding[0][CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] == (
+            observation.target.commit
+        )
+        assert holding[0][CLAUDE_INSTALLED_RECORD_PATH_FIELD] == str(
+            observation.cache_root / PRODUCT_TREE_PLUGIN / target_version
+        )
+        assert {k: v for k, v in holding[0].items() if k not in moved_fields} == {
+            k: v for k, v in retired.items() if k not in moved_fields
+        }
+    for identifier, entries in before.items():
+        if identifier in {
+            observation.retired_identifier,
+            observation.successor_identifier,
+        }:
+            continue
+        plugin = marketplace_plugin_name(identifier, MARKETPLACE)
+        if plugin in observation.target.versions:
+            continue
+        assert after[identifier] == entries, identifier
 
 
 def test_a_record_written_between_the_writers_read_and_its_replace_survives(

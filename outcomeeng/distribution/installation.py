@@ -2042,8 +2042,12 @@ def claude_refresh_records(
     the shared cache; every other project- or local-scope record of a
     cataloged plugin moves by a rewrite of its install-record entry, whether
     or not its project directory still exists, so no command runs in another
-    checkout. A record outside the catalog, or outside project and local
-    scope, is reported and left unchanged; a refresh-scope entry with no
+    checkout. A project- or local-scope record of the retired plugin id
+    outside the invocation checkout moves as a record of its successor: the
+    plan carries the successor record at the same scope and project path,
+    unless the listing already carries one there, and the rewrite replaces
+    the retired entry with it. A record outside the catalog, or outside
+    project and local scope, is reported and left unchanged; a refresh-scope entry with no
     project path, and an entry the listing reports with no version, are
     listing defects reported the same way. Both moved sets follow catalog
     order, then project path, then scope, so the plan is stable across
@@ -2065,6 +2069,24 @@ def claude_refresh_records(
                 project_path=record.project_path,
             )
         elif record.plugin == RETIRED_PLUGIN and at_checkout:
+            continue
+        elif record.plugin == RETIRED_PLUGIN and PRODUCT_TREE_PLUGIN in catalog:
+            if not any(
+                isinstance(other, ClaudeInstallRecord)
+                and other.plugin == PRODUCT_TREE_PLUGIN
+                and other.scope == record.scope
+                and other.project_path == record.project_path
+                for other in records
+            ):
+                rewrites.append(
+                    ClaudeInstallRecord(
+                        plugin=PRODUCT_TREE_PLUGIN,
+                        scope=record.scope,
+                        project_path=record.project_path,
+                        version=record.version,
+                        enabled=record.enabled,
+                    )
+                )
             continue
         elif record.plugin not in catalog:
             message = UNCATALOGED_RECORD_WARNING.format(
@@ -4048,27 +4070,33 @@ def apply_install_record_writes(
         raise ValueError(f"{document_path} carries no plugin records")
     written: list[RecordRewrite] = []
     warnings: list[InstallationWarning] = []
+    retired_identifier = marketplace_plugin_identifier(RETIRED_PLUGIN, marketplace)
     for rewrite in rewrites:
         identifier = marketplace_plugin_identifier(rewrite.record.plugin, marketplace)
         entries = plugins.get(identifier)
         matched = False
+        adopted: list[dict[str, object]] = []
+        if rewrite.record.plugin == PRODUCT_TREE_PLUGIN:
+            adopted = _take_record_entries(
+                plugins,
+                retired_identifier,
+                rewrite.record.scope,
+                rewrite.record.project_path,
+            )
         if isinstance(entries, list):
             for entry in entries:
-                if not isinstance(entry, dict):
-                    continue
-                project_path = entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
-                if (
-                    entry.get(CLAUDE_PLUGIN_SCOPE_FIELD) == rewrite.record.scope
-                    and isinstance(project_path, str)
-                    and Path(project_path).expanduser().resolve()
-                    == rewrite.record.project_path
+                if _entry_addresses(
+                    entry, rewrite.record.scope, rewrite.record.project_path
                 ):
-                    entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD] = str(
-                        rewrite.install_path
-                    )
-                    entry[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] = rewrite.version
-                    entry[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] = rewrite.commit
+                    _set_target(entry, rewrite)
                     matched = True
+        if not matched and adopted:
+            _set_target(adopted[0], rewrite)
+            if isinstance(entries, list):
+                entries.append(adopted[0])
+            else:
+                plugins[identifier] = [adopted[0]]
+            matched = True
         if matched:
             written.append(rewrite)
             continue
@@ -4090,6 +4118,48 @@ def apply_install_record_writes(
     if text.endswith("\n"):
         rendered += "\n"
     return rendered, tuple(written), tuple(warnings)
+
+
+def _entry_addresses(entry: object, scope: str, project_path: Path) -> bool:
+    """Whether one install-record entry holds one scope and project path."""
+    if not isinstance(entry, dict):
+        return False
+    entry_path = entry.get(CLAUDE_PLUGIN_PROJECT_PATH_FIELD)
+    return (
+        entry.get(CLAUDE_PLUGIN_SCOPE_FIELD) == scope
+        and isinstance(entry_path, str)
+        and Path(entry_path).expanduser().resolve() == project_path
+    )
+
+
+def _set_target(entry: dict[str, object], rewrite: RecordRewrite) -> None:
+    """Point one install-record entry at the rewrite's install path, version, and commit."""
+    entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD] = str(rewrite.install_path)
+    entry[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] = rewrite.version
+    entry[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] = rewrite.commit
+
+
+def _take_record_entries(
+    plugins: dict[str, object], identifier: str, scope: str, project_path: Path
+) -> list[dict[str, object]]:
+    """Remove and return the entries of `identifier` that hold one scope and project path.
+
+    An identifier left with no entry is removed from `plugins`.
+    """
+    entries = plugins.get(identifier)
+    if not isinstance(entries, list):
+        return []
+    taken = [entry for entry in entries if _entry_addresses(entry, scope, project_path)]
+    kept = [
+        entry for entry in entries if not _entry_addresses(entry, scope, project_path)
+    ]
+    if not taken:
+        return []
+    if kept:
+        plugins[identifier] = kept
+    else:
+        del plugins[identifier]
+    return taken
 
 
 def _drop_project_entries(plugins: dict[str, object], project: Path) -> None:

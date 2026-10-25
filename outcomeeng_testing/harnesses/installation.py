@@ -115,6 +115,8 @@ from outcomeeng.distribution.installation import (
     ScopeSplitEntry,
     ScopeSplitError,
     PRODUCT_TREE_PLUGIN,
+    RETIRED_PLUGIN,
+    claude_refresh_records,
     STATE_ENV_NAMES,
     STATE_ROOT_OPTION,
     build_isolated_installation_plan,
@@ -2278,6 +2280,96 @@ def observe_racing_install_record_rewrite(
 
 
 @dataclass(frozen=True)
+class RetiredRecordMigrationObservation:
+    """One rewrite over a document that records the retired plugin id in other checkouts.
+
+    The retired entries are the ones the harness added to the copy of a real
+    install-record document: one at the scope and project path a successor
+    entry already holds, one at a project path no successor entry holds.
+    """
+
+    document_before: dict[str, object]
+    document_after: dict[str, object]
+    retired_identifier: str
+    successor_identifier: str
+    retired_entries: tuple[dict[str, object], ...]
+    rewrites: tuple[RecordRewrite, ...]
+    warnings: tuple[InstallationWarning, ...]
+    target: MarketplaceTarget
+    cache_root: Path
+
+
+def observe_retired_record_migration(
+    fixture: Path, tmp_path: Path
+) -> RetiredRecordMigrationObservation:
+    """Plan and perform the refresh rewrite over a document that records the retired id.
+
+    The fixture's first successor entry is copied under the retired id twice:
+    once unchanged, so a successor entry holds the same scope and project path,
+    and once at a project path no successor entry holds. The plan is built by
+    the refresh's record split from the listing the document renders, with an
+    invocation checkout that holds none of the records, and every planned
+    record points at a target version with a cache directory.
+    """
+    document_path = tmp_path / CLAUDE_INSTALLED_PLUGINS_RELATIVE
+    document_path.parent.mkdir(parents=True)
+    shutil.copy2(fixture, document_path)
+    document = cast(
+        "dict[str, dict[str, list[dict[str, object]]]]",
+        json.loads(document_path.read_text(encoding="utf-8")),
+    )
+    plugins = document[CLAUDE_INSTALLED_PLUGINS_FIELD]
+    successor_identifier = marketplace_plugin_identifier(
+        PRODUCT_TREE_PLUGIN, MARKETPLACE
+    )
+    retired_identifier = marketplace_plugin_identifier(RETIRED_PLUGIN, MARKETPLACE)
+    held = plugins[successor_identifier][0]
+    retired_entries = (
+        dict(held),
+        {**held, CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(tmp_path / "retired-checkout")},
+    )
+    plugins[retired_identifier] = [dict(entry) for entry in retired_entries]
+    document_path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+    document_before = cast(
+        "dict[str, object]", json.loads(document_path.read_text(encoding="utf-8"))
+    )
+    catalog = catalog_plugin_names(repository_root() / CLAUDE_CATALOG_PATH)
+    _, planned, split_warnings = claude_refresh_records(
+        claude_install_records(_listing_from_record_file(document_path), MARKETPLACE),
+        catalog,
+        tmp_path / "invocation-checkout",
+    )
+    target_version = served_version(len(planned))
+    cache_root = tmp_path / "cache" / MARKETPLACE
+    names = sorted({record.plugin for record in planned})
+    for plugin in names:
+        (cache_root / plugin / target_version).mkdir(parents=True)
+    target = MarketplaceTarget(
+        commit="3" * 40, versions={plugin: target_version for plugin in names}
+    )
+    rewrites, plan_warnings = plan_install_record_rewrite(
+        planned, target, cache_root, cached_plugin_versions(cache_root, names)
+    )
+    written, write_warnings = rewrite_install_records(
+        document_path, rewrites, MARKETPLACE
+    )
+    return RetiredRecordMigrationObservation(
+        document_before=document_before,
+        document_after=cast(
+            "dict[str, object]",
+            json.loads(document_path.read_text(encoding="utf-8")),
+        ),
+        retired_identifier=retired_identifier,
+        successor_identifier=successor_identifier,
+        retired_entries=retired_entries,
+        rewrites=written,
+        warnings=(*split_warnings, *plan_warnings, *write_warnings),
+        target=target,
+        cache_root=cache_root,
+    )
+
+
+@dataclass(frozen=True)
 class RegistryState:
     """One run's registry and invocation-checkout starting state.
 
@@ -3766,8 +3858,6 @@ def observe_migrating_inventory(
     the native install the migration plans records that version as the real
     install does.
     """
-    from outcomeeng.distribution.installation import RETIRED_PLUGIN
-
     checkout = repository_root()
     with TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory)
