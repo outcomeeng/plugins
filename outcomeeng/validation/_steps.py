@@ -58,6 +58,13 @@ SHELLCHECK_ARGV: Final = (
     "-m",
     "outcomeeng.validation.shellcheck",
 )
+CI_CREDENTIALS_ARGV: Final = (
+    "uv",
+    "run",
+    "python",
+    "-m",
+    "outcomeeng.validation.ci_credentials",
+)
 FMT_CHECK_ARGV: Final = ("dprint", "check")
 RUFF_FORMAT_ARGV: Final = ("uv", "run", "ruff", "format", "--check", ".")
 RUFF_CHECK_ARGV: Final = ("uv", "run", "ruff", "check", ".")
@@ -236,6 +243,7 @@ VALIDATION_STEPS: Final = (
     Step(label="fmt-check", argv=FMT_CHECK_ARGV),
     Step(label="actionlint", argv=ACTIONLINT_ARGV),
     Step(label="shellcheck", argv=SHELLCHECK_ARGV),
+    Step(label="ci-credentials", argv=CI_CREDENTIALS_ARGV),
     Step(label="ruff-format", argv=RUFF_FORMAT_ARGV),
     Step(label="ruff", argv=RUFF_CHECK_ARGV),
     Step(label="mypy", argv=MYPY_ARGV),

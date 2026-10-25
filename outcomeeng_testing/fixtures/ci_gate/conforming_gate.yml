@@ -24,4 +24,8 @@ jobs:
         run: just check-full
       - name: Run L3 tests
         continue-on-error: false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUBAGENT_DISCOVERY_AUTH_MODE: api
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: just test-l3

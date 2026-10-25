@@ -8,7 +8,17 @@ from pathlib import Path
 import pytest
 
 import outcomeeng.validation.__main__ as validation_entry
-from outcomeeng.validation import ACTIONLINT_ARGV, RECIPE_TEST_L3, SHELLCHECK_ARGV
+from outcomeeng.validation import (
+    ACTIONLINT_ARGV,
+    CI_CREDENTIALS_ARGV,
+    RECIPE_TEST_L3,
+    SHELLCHECK_ARGV,
+)
+from outcomeeng.validation.ci_credentials import (
+    CredentialViolation,
+    CredentialViolationKind,
+    workflow_credential_violations,
+)
 from outcomeeng.validation.selected_gate import RECIPE_CHECK_FULL
 from outcomeeng.validation.spx_version import SPX_PACKAGE_NAME
 from outcomeeng.validation.ci_gate import (
@@ -34,7 +44,8 @@ from outcomeeng.validation.ci_gate import (
 )
 from outcomeeng_testing.harnesses.ci_gate import (
     credential_violation_fixture_paths,
-    gate_fixture_path,
+    GATE_FIXTURES,
+    fixture_directory_names,
     l3_value_violation_fixture_paths,
     observe_ci_toolchain,
     observe_gate_job,
@@ -79,35 +90,14 @@ def test_each_gate_recipe_dispatches_its_own_validation_command(recipe: str) -> 
 
 def test_a_gate_job_without_the_l3_tests_is_detected() -> None:
     assert (
-        _gate_recipe_sequence(gate_fixture_path("missing_l3_recipe.yml"))
-        != GATE_RECIPE_COMMANDS
+        _gate_recipe_sequence(GATE_FIXTURES.missing_l3_recipe) != GATE_RECIPE_COMMANDS
     )
 
 
 def test_l3_tests_before_the_full_gate_are_detected() -> None:
     assert (
-        _gate_recipe_sequence(gate_fixture_path("l3_before_full_gate.yml"))
-        != GATE_RECIPE_COMMANDS
+        _gate_recipe_sequence(GATE_FIXTURES.l3_before_full_gate) != GATE_RECIPE_COMMANDS
     )
-
-
-def _run_credentials(workflow_path: Path | None = None) -> set[tuple[str, str, str]]:
-    """Return every (run command, credential, value) a gate step receives.
-
-    A step receives the workflow's, the job's, and its own environment, so a
-    credential declared at any of the three reaches the step.
-    """
-    credentials = {
-        requirement.environment_name for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
-    }
-    return {
-        (run_command, name, value)
-        for run_command, environment in observe_ci_toolchain(
-            workflow_path
-        ).effective_run_environments
-        for name, value in environment.items()
-        if name in credentials
-    }
 
 
 def _required_credentials() -> set[tuple[str, str, str]]:
@@ -117,8 +107,12 @@ def _required_credentials() -> set[tuple[str, str, str]]:
     }
 
 
+def test_gate_runs_the_credential_check() -> None:
+    assert CI_CREDENTIALS_ARGV in observe_validation_step_argvs()
+
+
 def test_only_the_l3_step_receives_the_l3_credentials() -> None:
-    assert _run_credentials() == _required_credentials()
+    assert workflow_credential_violations() == ()
 
 
 def test_credential_violation_fixtures_are_present() -> None:
@@ -129,11 +123,11 @@ def test_credential_violation_fixtures_are_present() -> None:
     "fixture", credential_violation_fixture_paths(), ids=lambda path: path.name
 )
 def test_a_credential_reaching_the_full_gate_step_is_detected(fixture: Path) -> None:
-    assert GITHUB_TOKEN_ENVIRONMENT in {
-        name
-        for run_command, name, _ in _run_credentials(fixture)
-        if run_command == GATE_RECIPE_COMMAND
-    }
+    assert CredentialViolation(
+        CredentialViolationKind.FOREIGN_STEP,
+        GATE_RECIPE_COMMAND,
+        GITHUB_TOKEN_ENVIRONMENT,
+    ) in workflow_credential_violations(fixture)
 
 
 def test_l3_value_violation_fixtures_are_present() -> None:
@@ -144,15 +138,24 @@ def test_l3_value_violation_fixtures_are_present() -> None:
     "fixture", l3_value_violation_fixture_paths(), ids=lambda path: path.name
 )
 def test_a_wrong_l3_credential_value_is_detected(fixture: Path) -> None:
-    received = {
-        credential
-        for credential in _run_credentials(fixture)
-        if credential[0] == L3_RECIPE_COMMAND
-    }
-    required = _required_credentials()
+    assert any(
+        violation.kind is CredentialViolationKind.WRONG_VALUE
+        and violation.run_command == L3_RECIPE_COMMAND
+        for violation in workflow_credential_violations(fixture)
+    )
 
-    assert {name for _, name, _ in received} == {name for _, name, _ in required}
-    assert received != required
+
+def test_a_missing_l3_credential_is_detected() -> None:
+    violations = workflow_credential_violations(GATE_FIXTURES.l3_credentials_missing)
+
+    assert set(violations) == {
+        CredentialViolation(
+            CredentialViolationKind.MISSING,
+            requirement.run_command,
+            requirement.environment_name,
+        )
+        for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
+    }
 
 
 def _inlined_gate_steps(workflow_path: Path | None = None) -> set[str]:
@@ -178,7 +181,7 @@ def test_gate_workflow_never_inlines_a_gate_step() -> None:
 
 
 def test_inlined_gate_steps_are_detected() -> None:
-    assert _inlined_gate_steps(gate_fixture_path("inlined_gate_steps.yml")) != set()
+    assert _inlined_gate_steps(GATE_FIXTURES.inlined_gate_steps) != set()
 
 
 def test_gate_workflow_provisions_the_declared_toolchain() -> None:
@@ -235,9 +238,7 @@ def test_every_provisioned_tool_is_declared() -> None:
 
 
 def test_missing_tool_provisioning_is_detected() -> None:
-    observation = observe_ci_toolchain(
-        gate_fixture_path("missing_tool_provisioning.yml")
-    )
+    observation = observe_ci_toolchain(GATE_FIXTURES.missing_tool_provisioning)
 
     assert any(
         not any(
@@ -255,15 +256,13 @@ def test_missing_tool_provisioning_is_detected() -> None:
 
 
 def test_mismatched_python_version_is_detected() -> None:
-    observation = observe_gate_python_versions(
-        gate_fixture_path("mismatched_python_version.yml")
-    )
+    observation = observe_gate_python_versions(GATE_FIXTURES.mismatched_python_version)
 
     assert observation.workflow_version != observation.project_version
 
 
 def test_missing_gate_recipe_is_detected() -> None:
-    commands = observe_gate_run_commands(gate_fixture_path("missing_gate_recipe.yml"))
+    commands = observe_gate_run_commands(GATE_FIXTURES.missing_gate_recipe)
 
     assert GATE_RECIPE_COMMAND not in commands
 
@@ -314,12 +313,13 @@ def test_reusable_workflow_callers_declare_no_timeout() -> None:
 
 
 def test_conforming_fixture_satisfies_every_gate_rule() -> None:
-    workflow_path = gate_fixture_path("conforming_gate.yml")
+    workflow_path = GATE_FIXTURES.conforming_gate
     triggers = observe_gate_triggers(workflow_path)
 
     assert GATE_PULL_REQUEST_EVENT in triggers.events
     assert GATE_PUSH_BRANCH in triggers.push_branches
     assert _gate_recipe_sequence(workflow_path) == GATE_RECIPE_COMMANDS
+    assert workflow_credential_violations(workflow_path) == ()
     job = observe_gate_job(workflow_path)
 
     assert not job.has_condition
@@ -333,27 +333,28 @@ def test_conforming_fixture_satisfies_every_gate_rule() -> None:
 
 
 def test_job_level_condition_is_detected() -> None:
-    assert observe_gate_job(gate_fixture_path("job_level_condition.yml")).has_condition
+    assert observe_gate_job(GATE_FIXTURES.job_level_condition).has_condition
 
 
 def test_unbounded_gate_job_is_detected() -> None:
-    unbounded = observe_gate_job(gate_fixture_path("unbounded_gate_job.yml"))
+    unbounded = observe_gate_job(GATE_FIXTURES.unbounded_gate_job)
 
     assert unbounded.timeout_minutes is None
 
 
 def test_yaml_suffixed_workflow_jobs_are_observed() -> None:
-    observations = observe_workflow_jobs(gate_fixture_path("yaml_extension_workflows"))
+    observations = observe_workflow_jobs(GATE_FIXTURES.yaml_extension_workflows)
 
     assert [(each.workflow, each.timeout_minutes) for each in observations] == [
-        ("unbounded.yaml", None)
+        (name, None)
+        for name in fixture_directory_names(GATE_FIXTURES.yaml_extension_workflows)
     ]
 
 
 def test_timeout_above_the_maximum_is_detected() -> None:
     over_bound = next(
         each
-        for each in observe_workflow_jobs(gate_fixture_path("violating_bounds"))
+        for each in observe_workflow_jobs(GATE_FIXTURES.violating_bounds)
         if not each.calls_reusable_workflow
     )
 
@@ -364,7 +365,7 @@ def test_timeout_above_the_maximum_is_detected() -> None:
 def test_reusable_caller_declaring_a_timeout_is_detected() -> None:
     caller = next(
         each
-        for each in observe_workflow_jobs(gate_fixture_path("violating_bounds"))
+        for each in observe_workflow_jobs(GATE_FIXTURES.violating_bounds)
         if each.calls_reusable_workflow
     )
 
@@ -372,25 +373,25 @@ def test_reusable_caller_declaring_a_timeout_is_detected() -> None:
 
 
 def test_job_level_continue_on_error_is_detected() -> None:
-    observation = observe_gate_job(gate_fixture_path("job_level_continue_on_error.yml"))
+    observation = observe_gate_job(GATE_FIXTURES.job_level_continue_on_error)
 
     assert observation.continue_on_error not in CONTINUE_ON_ERROR_FALSY
 
 
 def test_step_level_condition_is_detected() -> None:
-    steps = observe_gate_steps(gate_fixture_path("step_level_condition.yml"))
+    steps = observe_gate_steps(GATE_FIXTURES.step_level_condition)
 
     assert any(step.has_condition for step in steps)
 
 
 def test_step_level_continue_on_error_is_detected() -> None:
-    steps = observe_gate_steps(gate_fixture_path("step_level_continue_on_error.yml"))
+    steps = observe_gate_steps(GATE_FIXTURES.step_level_continue_on_error)
 
     assert any(step.continue_on_error not in CONTINUE_ON_ERROR_FALSY for step in steps)
 
 
 def test_expression_continue_on_error_is_detected() -> None:
-    workflow_path = gate_fixture_path("expression_continue_on_error.yml")
+    workflow_path = GATE_FIXTURES.expression_continue_on_error
     job = observe_gate_job(workflow_path)
     steps = observe_gate_steps(workflow_path)
 
@@ -399,7 +400,7 @@ def test_expression_continue_on_error_is_detected() -> None:
 
 
 def test_missing_fail_fast_preamble_is_detected() -> None:
-    steps = observe_gate_steps(gate_fixture_path("missing_fail_fast_preamble.yml"))
+    steps = observe_gate_steps(GATE_FIXTURES.missing_fail_fast_preamble)
 
     assert any(
         len(step.shell_lines) > 1 and step.shell_lines[0] != FAIL_FAST_PREAMBLE
@@ -408,7 +409,7 @@ def test_missing_fail_fast_preamble_is_detected() -> None:
 
 
 def test_every_soft_pass_snippet_is_detected() -> None:
-    steps = observe_gate_steps(gate_fixture_path("soft_pass_snippets.yml"))
+    steps = observe_gate_steps(GATE_FIXTURES.soft_pass_snippets)
 
     assert len(steps) == len(SOFT_PASS_SHELL_SNIPPETS)
     assert all(
@@ -418,7 +419,7 @@ def test_every_soft_pass_snippet_is_detected() -> None:
 
 
 def test_trap_soft_passed_step_shell_is_detected() -> None:
-    steps = observe_gate_steps(gate_fixture_path("trap_soft_passed_step.yml"))
+    steps = observe_gate_steps(GATE_FIXTURES.trap_soft_passed_step)
 
     assert any(
         line.startswith(TRAP_COMMAND_PREFIX)
@@ -432,21 +433,19 @@ def test_trap_soft_passed_step_shell_is_detected() -> None:
 
 
 def test_missing_pull_request_trigger_is_detected() -> None:
-    triggers = observe_gate_triggers(
-        gate_fixture_path("missing_pull_request_trigger.yml")
-    )
+    triggers = observe_gate_triggers(GATE_FIXTURES.missing_pull_request_trigger)
 
     assert GATE_PULL_REQUEST_EVENT not in triggers.events
 
 
 def test_missing_main_push_branch_is_detected() -> None:
-    triggers = observe_gate_triggers(gate_fixture_path("missing_main_push_branch.yml"))
+    triggers = observe_gate_triggers(GATE_FIXTURES.missing_main_push_branch)
 
     assert GATE_PUSH_BRANCH not in triggers.push_branches
 
 
 def test_missing_push_trigger_is_detected() -> None:
-    triggers = observe_gate_triggers(gate_fixture_path("missing_push_trigger.yml"))
+    triggers = observe_gate_triggers(GATE_FIXTURES.missing_push_trigger)
 
     assert GATE_PUSH_EVENT not in triggers.events
 
@@ -473,7 +472,7 @@ def test_gate_workflow_never_installs_spx_from_the_registry() -> None:
 
 
 def test_registry_installed_spx_is_detected() -> None:
-    workflow_path = gate_fixture_path("spx_installed_from_registry.yml")
+    workflow_path = GATE_FIXTURES.spx_installed_from_registry
     observation = observe_ci_toolchain(workflow_path)
 
     assert RETIRED_SPX_VERSION_ENVIRONMENT in observation.job_environment
@@ -485,7 +484,7 @@ def test_registry_installed_spx_is_detected() -> None:
 
 
 def test_spx_pinned_to_a_moving_ref_is_detected() -> None:
-    observation = observe_spx_source(gate_fixture_path("spx_pinned_to_moving_ref.yml"))
+    observation = observe_spx_source(GATE_FIXTURES.spx_pinned_to_moving_ref)
 
     assert observation.commit_pin is not None
     assert not re.fullmatch(FULL_COMMIT_SHA_PATTERN, observation.commit_pin)
@@ -493,7 +492,7 @@ def test_spx_pinned_to_a_moving_ref_is_detected() -> None:
 
 
 def test_spx_built_from_a_pinned_commit_satisfies_the_provisioning_rule() -> None:
-    workflow_path = gate_fixture_path("spx_built_from_commit.yml")
+    workflow_path = GATE_FIXTURES.spx_built_from_commit
     observation = observe_spx_source(workflow_path)
 
     assert observation.commit_pin is not None

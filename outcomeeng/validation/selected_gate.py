@@ -33,6 +33,7 @@ from outcomeeng.validation._steps import (
     RUFF_CHECK_ARGV,
     RUFF_FORMAT_ARGV,
     SHELLCHECK_ARGV,
+    CI_CREDENTIALS_ARGV,
     SPX_MARKDOWN_ARGV,
     TEST_RECIPE,
     VALIDATION_STEPS,
@@ -256,7 +257,8 @@ VALIDATION_LANES: Final[Mapping[PathCategory, ValidationLane]] = MappingProxyTyp
             argvs=(FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV), reason=MARKDOWN_REASON
         ),
         PathCategory.WORKFLOW: ValidationLane(
-            argvs=(ACTIONLINT_ARGV, SHELLCHECK_ARGV), reason=WORKFLOW_REASON
+            argvs=(ACTIONLINT_ARGV, SHELLCHECK_ARGV, CI_CREDENTIALS_ARGV),
+            reason=WORKFLOW_REASON,
         ),
         PathCategory.PYTHON_FORMAT_LINT: ValidationLane(
             argvs=(RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV), reason=PYTHON_REASON

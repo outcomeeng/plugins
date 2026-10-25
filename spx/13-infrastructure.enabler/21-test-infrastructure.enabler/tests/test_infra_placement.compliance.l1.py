@@ -4,7 +4,7 @@
 implementation (harnesses, generators, fixtures) outside `spx/` and outside any
 `tests/` directory; for Python the home is the `<package>_testing/` package at
 the repository root. This verifies the locally decidable subset against the
-repository's git-tracked files AND against synthetic violating placements, so the
+repository's git-tracked files AND against generated violating placements, so the
 check proves enforcement rather than only observing the current clean state.
 `tests/` filename-shape conformance is verified separately
 (`spx/15-test-language.adr.md` and the validator under `spx/15-validation.enabler/`),
@@ -17,6 +17,10 @@ import outcomeeng
 from outcomeeng.validation.infrastructure_placement import (
     TEST_INFRASTRUCTURE_PACKAGE_SUFFIX,
     misplaced_test_infrastructure,
+)
+from outcomeeng_testing.generators.infrastructure_placement import (
+    allowed_placements,
+    misplaced_placements,
 )
 from outcomeeng_testing.harnesses.spec_tree import (
     marketplace_root_for_spec_tree_root_test,
@@ -50,22 +54,16 @@ class TestNoMisplacedTestInfrastructure:
             f"any tests/ directory; misplaced tracked files: {misplaced}"
         )
 
-    def test_rule_flags_a_package_under_spx(self) -> None:
-        violating = (
-            f"spx/55-example.enabler/{outcomeeng.__name__}"
-            f"{TEST_INFRASTRUCTURE_PACKAGE_SUFFIX}/harnesses/cli.py",
-        )
-        assert misplaced_test_infrastructure(violating) == violating
+    def test_rule_flags_every_package_under_spx_or_inside_a_tests_directory(
+        self,
+    ) -> None:
+        violating = misplaced_placements()
 
-    def test_rule_flags_a_package_inside_a_tests_directory(self) -> None:
-        violating = (
-            f"lib/tests/sample{TEST_INFRASTRUCTURE_PACKAGE_SUFFIX}/fixtures.py",
-        )
+        assert violating
         assert misplaced_test_infrastructure(violating) == violating
 
     def test_rule_allows_the_root_home_and_ordinary_test_files(self) -> None:
-        compliant = (
-            f"{outcomeeng.__name__}{TEST_INFRASTRUCTURE_PACKAGE_SUFFIX}/harnesses/cli.py",
-            "spx/55-example.enabler/tests/test_x.scenario.l1.py",
-        )
+        compliant = allowed_placements()
+
+        assert compliant
         assert misplaced_test_infrastructure(compliant) == ()

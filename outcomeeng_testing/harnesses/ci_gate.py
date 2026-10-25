@@ -12,6 +12,7 @@ from typing import Any, Final, cast
 import yaml
 
 from outcomeeng.validation import VALIDATION_STEPS
+from outcomeeng.validation.ci_credentials import GATE_WORKFLOW_PATH
 from outcomeeng.validation.ci_gate import (
     GATE_JOB_NAME,
     JOB_TIMEOUT_KEY,
@@ -23,7 +24,7 @@ from outcomeeng.validation.ci_gate import (
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_DIRECTORY: Final = REPO_ROOT / ".github" / "workflows"
-GATE_WORKFLOW: Final = WORKFLOW_DIRECTORY / "check.yml"
+GATE_WORKFLOW: Final = GATE_WORKFLOW_PATH
 
 
 def workflow_paths(directory: Path | None = None) -> tuple[Path, ...]:
@@ -44,10 +45,8 @@ class CiToolchainObservation:
     Each step environment is keyed by the step's normalized `run:` body, empty
     for a step that runs no command, so a step's name never decides which
     command its environment reaches. Every environment maps each name to the
-    value the workflow writes for it. `run_environments` holds what a step
-    declares itself; `effective_run_environments` holds what the step receives
-    from the workflow, the job, and the step together, a narrower scope's value
-    replacing a wider one's.
+    value the workflow writes for it, and `run_environments` holds what each
+    step declares itself.
     """
 
     workflow_environment: Mapping[str, str]
@@ -55,7 +54,6 @@ class CiToolchainObservation:
     action_references: tuple[str, ...]
     run_commands: tuple[str, ...]
     run_environments: tuple[tuple[str, Mapping[str, str]], ...]
-    effective_run_environments: tuple[tuple[str, Mapping[str, str]], ...]
 
 
 @dataclass(frozen=True)
@@ -123,9 +121,69 @@ CREDENTIAL_VIOLATION_FIXTURE_GLOB: Final = "credentials_*.yml"
 L3_VALUE_VIOLATION_FIXTURE_GLOB: Final = "l3_value_*.yml"
 
 
-def gate_fixture_path(name: str) -> Path:
-    """Return the path to an inert violating- or conforming-workflow fixture."""
-    return CI_GATE_FIXTURES / name
+@dataclass(frozen=True)
+class GateFixtures:
+    """Each inert violating or conforming workflow fixture, named by the case it holds."""
+
+    conforming_gate: Path
+    expression_continue_on_error: Path
+    inlined_gate_steps: Path
+    job_level_condition: Path
+    job_level_continue_on_error: Path
+    l3_before_full_gate: Path
+    l3_credentials_missing: Path
+    mismatched_python_version: Path
+    missing_fail_fast_preamble: Path
+    missing_gate_recipe: Path
+    missing_l3_recipe: Path
+    missing_main_push_branch: Path
+    missing_pull_request_trigger: Path
+    missing_push_trigger: Path
+    missing_tool_provisioning: Path
+    soft_pass_snippets: Path
+    spx_built_from_commit: Path
+    spx_installed_from_registry: Path
+    spx_pinned_to_moving_ref: Path
+    step_level_condition: Path
+    step_level_continue_on_error: Path
+    trap_soft_passed_step: Path
+    unbounded_gate_job: Path
+    violating_bounds: Path
+    yaml_extension_workflows: Path
+
+
+GATE_FIXTURES: Final = GateFixtures(
+    conforming_gate=CI_GATE_FIXTURES / "conforming_gate.yml",
+    expression_continue_on_error=CI_GATE_FIXTURES / "expression_continue_on_error.yml",
+    inlined_gate_steps=CI_GATE_FIXTURES / "inlined_gate_steps.yml",
+    job_level_condition=CI_GATE_FIXTURES / "job_level_condition.yml",
+    job_level_continue_on_error=CI_GATE_FIXTURES / "job_level_continue_on_error.yml",
+    l3_before_full_gate=CI_GATE_FIXTURES / "l3_before_full_gate.yml",
+    l3_credentials_missing=CI_GATE_FIXTURES / "l3_credentials_missing.yml",
+    mismatched_python_version=CI_GATE_FIXTURES / "mismatched_python_version.yml",
+    missing_fail_fast_preamble=CI_GATE_FIXTURES / "missing_fail_fast_preamble.yml",
+    missing_gate_recipe=CI_GATE_FIXTURES / "missing_gate_recipe.yml",
+    missing_l3_recipe=CI_GATE_FIXTURES / "missing_l3_recipe.yml",
+    missing_main_push_branch=CI_GATE_FIXTURES / "missing_main_push_branch.yml",
+    missing_pull_request_trigger=CI_GATE_FIXTURES / "missing_pull_request_trigger.yml",
+    missing_push_trigger=CI_GATE_FIXTURES / "missing_push_trigger.yml",
+    missing_tool_provisioning=CI_GATE_FIXTURES / "missing_tool_provisioning.yml",
+    soft_pass_snippets=CI_GATE_FIXTURES / "soft_pass_snippets.yml",
+    spx_built_from_commit=CI_GATE_FIXTURES / "spx_built_from_commit.yml",
+    spx_installed_from_registry=CI_GATE_FIXTURES / "spx_installed_from_registry.yml",
+    spx_pinned_to_moving_ref=CI_GATE_FIXTURES / "spx_pinned_to_moving_ref.yml",
+    step_level_condition=CI_GATE_FIXTURES / "step_level_condition.yml",
+    step_level_continue_on_error=CI_GATE_FIXTURES / "step_level_continue_on_error.yml",
+    trap_soft_passed_step=CI_GATE_FIXTURES / "trap_soft_passed_step.yml",
+    unbounded_gate_job=CI_GATE_FIXTURES / "unbounded_gate_job.yml",
+    violating_bounds=CI_GATE_FIXTURES / "violating_bounds",
+    yaml_extension_workflows=CI_GATE_FIXTURES / "yaml_extension_workflows",
+)
+
+
+def fixture_directory_names(directory: Path) -> tuple[str, ...]:
+    """Return the name of every file in a fixture directory."""
+    return tuple(sorted(path.name for path in directory.iterdir() if path.is_file()))
 
 
 def credential_violation_fixture_paths() -> tuple[Path, ...]:
@@ -225,10 +283,6 @@ def observe_ci_toolchain(
         ),
         run_commands=runs,
         run_environments=run_environments,
-        effective_run_environments=tuple(
-            (run_command, MappingProxyType({**workflow_env, **env, **step_env}))
-            for run_command, step_env in run_environments
-        ),
     )
 
 
