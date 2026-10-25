@@ -906,60 +906,75 @@ def test_prowl_agents_response_maps_to_panes_with_adapter_supplied_fill() -> Non
         core._prowl_panes({"data": {}})
 
 
-class _KeyedMail(_SentMail):
-    """Mail stub whose adapter call resolves the project key as the adapter does."""
+class _RequestMail(_SentMail):
+    """Recording mail collaborator that keeps each adapter request whole."""
 
     def __init__(self, common: Path) -> None:
         super().__init__(common)
-        self.keys: list[str] = []
+        self.requests: list[dict] = []
 
     def execute(self, request: dict) -> dict:
-        client = direction.MailClient()
-        adapter = client.module()
-        self.keys.append(adapter.resolve_project_key(adapter.SubprocessRunner()))
+        self.requests.append(request)
         return {"status": "succeeded", "data": {"records": []}}
 
 
-def _git_repository(path: Path) -> str:
-    import subprocess
+def _mail_request_arguments(tmp_path: Path, operation: str, front: str) -> dict:
+    common = tmp_path / operation
+    _override(common, "Lead Director", front)
+    body = tmp_path / f"{operation}-body.txt"
+    body.write_text("hello", encoding="utf-8")
+    commands = {
+        "list": ["inbox", "--position", "Lead Director"],
+        "send": [
+            "send",
+            "--position",
+            "Lead Director",
+            "--authority",
+            "grant",
+            "--recipient",
+            "worker",
+            "--subject",
+            "s",
+            "--correlation",
+            "c",
+            "--body-file",
+            body.name,
+            "--scratch-directory",
+            str(tmp_path),
+        ],
+    }
+    mail = _RequestMail(common)
 
-    path.mkdir(parents=True)
-    subprocess.run(["git", "init", "--quiet", str(path)], check=True)
-    return str((path / ".git").resolve())
+    status = direction.main(
+        commands[operation],
+        stdout=StringIO(),
+        runtime=(mail, None),  # type: ignore[arg-type]
+        checkout=tmp_path / "checkout",
+    )
+
+    assert status == 0
+    assert [r["operation"] for r in mail.requests] == [operation]
+    return mail.requests[0]["arguments"]
 
 
-def test_configured_mail_channel_selects_that_repositorys_mail_project(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("operation", ["list", "send"])
+def test_mail_request_carries_the_configured_channel_as_its_repository(
+    tmp_path: Path, operation: str
 ) -> None:
-    invocation = tmp_path / "invocation"
-    invocation_key = _git_repository(invocation)
     channel = tmp_path / "channel"
-    channel_key = _git_repository(channel)
-    monkeypatch.chdir(invocation)
-    configured = tmp_path / "configured"
-    unset = tmp_path / "unset"
-    _override(
-        configured,
-        "Lead Director",
+    channel.mkdir()
+
+    configured = _mail_request_arguments(
+        tmp_path / "configured",
+        operation,
         f'+++\n[mail]\nagent = "director"\nchannel = "{channel}"\n+++\n',
     )
-    _override(unset, "Lead Director", '+++\n[mail]\nagent = "director"\n+++\n')
-    keys: dict[str, list[str]] = {}
+    unset = _mail_request_arguments(
+        tmp_path / "unset", operation, '+++\n[mail]\nagent = "director"\n+++\n'
+    )
 
-    for label, common in (("configured", configured), ("unset", unset)):
-        mail = _KeyedMail(common)
-        status = direction.main(
-            ["inbox", "--position", "Lead Director"],
-            stdout=StringIO(),
-            runtime=(mail, None),  # type: ignore[arg-type]
-            checkout=tmp_path / "checkout",
-        )
-        assert status == 0
-        keys[label] = mail.keys
-
-    assert keys["configured"] == [channel_key]
-    assert keys["unset"] == [invocation_key]
-    assert Path.cwd() == invocation
+    assert configured["repository"] == str(channel)
+    assert "repository" not in unset
 
 
 class _FailingPrompt(_Panes):

@@ -13,7 +13,9 @@ The skill reaches panes through the environment adapters of `spx/43-coding-agent
 
 ## Assertions
 
-- ALWAYS: every mail request `/direct-positions` sends carries the composed `mail.channel` as its `repository` when the configuration sets one and carries none otherwise
+### Mappings
+
+- ALWAYS: every mail request `/direct-positions` sends carries the composed `mail.channel` as its `repository` when the configuration sets one and carries none otherwise ([test](tests/test_direction.mapping.l1.py))
 
 ### Compliance
 
