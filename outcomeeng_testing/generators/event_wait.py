@@ -10,7 +10,7 @@ from enum import StrEnum
 
 from hypothesis import strategies as st
 
-from outcomeeng_testing.generators.agent_mail import agent_names
+from outcomeeng_testing.generators.agent_mail import agent_names, project_key_paths
 from outcomeeng_testing.generators.consumption_control import alert_reads
 
 TIMEOUT_CEILING_SECONDS = 20
@@ -57,10 +57,13 @@ class WorldCase:
     `alert_records` and `alert_cutoff` are the detector's stored alerts and the
     instant the spend source passes, as offsets from the detector's base.
     `clock_offset` is the clock source's instant in seconds after the run starts.
+    `repository` is the absolute path a mail source names, or `None` when it
+    names none.
     """
 
     timeout_seconds: int
     agent: str
+    repository: str | None
     mail: MailReading | None
     pane: PaneReading | None
     session_pairs: tuple[tuple[str, str], ...]
@@ -112,6 +115,7 @@ def world_cases(
     def build(
         timeout_seconds: int,
         agent: str,
+        repository: str | None,
         mail_reading: MailReading | None,
         pane_reading: PaneReading | None,
         pairs: tuple[tuple[str, str], ...],
@@ -123,6 +127,7 @@ def world_cases(
         return WorldCase(
             timeout_seconds,
             agent,
+            repository,
             mail_reading,
             pane_reading,
             pairs,
@@ -142,6 +147,7 @@ def world_cases(
         build,
         timeout_seconds=st.integers(min_value=1, max_value=TIMEOUT_CEILING_SECONDS),
         agent=agent_names(),
+        repository=st.none() | project_key_paths(),
         mail_reading=_reading(
             sources, mandatory, mail, st.sampled_from(tuple(MailReading))
         ),
