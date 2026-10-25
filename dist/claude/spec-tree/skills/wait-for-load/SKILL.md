@@ -42,12 +42,13 @@ Guard a resource-intensive command: a test suite, an eval, a full gate, a compil
 <lock_result>
 The skill carries no slot, load, wait, or result logic of its own for a lock line; the guard owns admission, the wait cap, and the terminal record. The guard writes its final standard-error line as the terminal record, a JSON document whose `schema` is `spx.orchestration.lock.result.v1`. Accept it only when its `runId` equals the run id passed for that line, and decide from `started` and `status` together, never from the exit code alone.
 
-| Record                                                            | Report                                                                                                         |
-| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `started` false, `status` `not_ready`, exit 3 (wait cap reached)  | `not_ready`; the command never started; start no new attempt without operator direction                        |
-| `started` true, `status` `completed`                              | The command's own result by `childExitCode`; a `childExitCode` of 3 is the command's exit 3, never `not_ready` |
-| `started` false, any other `status`, such as unsupported platform | That status with the command unstarted; run no unguarded fallback                                              |
-| Standard error ends with no terminal record                       | `interrupted` with an unknown outcome, never `not_ready` and never success; start no new invocation on its own |
+| Record                                                                                     | Report                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `started` false, `status` `not_ready`, exit 3 (wait cap reached)                           | `not_ready`; the command never started; start no new attempt without operator direction                                                                                                   |
+| `started` true, `status` `completed`                                                       | The command's own result by `childExitCode`; a `childExitCode` of 3 is the command's exit 3, never `not_ready`                                                                            |
+| `started` true, `status` other than `completed`, or a `signal` in place of `childExitCode` | The `status` and the `signal` or `childExitCode` as the record carries them; the command started, so never `not_ready` and never success; start no new attempt without operator direction |
+| `started` false, any other `status`, such as unsupported platform                          | That status with the command unstarted; run no unguarded fallback                                                                                                                         |
+| Standard error ends with no terminal record                                                | `interrupted` with an unknown outcome, never `not_ready` and never success; start no new invocation on its own                                                                            |
 
 A guarded command that itself runs a nested `/wait-for-load` line takes the nested command's exit code as that line's result and expects no terminal record from the nested line.
 
