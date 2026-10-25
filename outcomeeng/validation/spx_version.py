@@ -97,7 +97,7 @@ VERIFICATION_RUN_REQUIRED_COMMANDS: Final = (
     "finish",
     "render",
 )
-REQUIRED_SPX_VERSION: Final = "0.8.0"
+REQUIRED_SPX_VERSION: Final = "0.10.0"
 
 SPX_EXECUTABLE: Final = "spx"
 VERSION_SEPARATOR: Final = "."
