@@ -1,6 +1,8 @@
 # ISSUES — plugin-build / post-restructure follow-ups
 
-## Property predicates are hidden in boolean-returning harnesses
+## Property predicates are hidden in boolean-returning harnesses `spx/18-plugin-build.enabler/tests/test_plugin_build.property.l1.py` `canonical_build_is_deterministic(), canonical_build_is_idempotent(), canonical_build_rejects_formatter_version_drift() call sites` `assertion-seam`
+
+Entry key `spx/18-plugin-build.enabler/tests/test_plugin_build.property.l1.py` `canonical_build_is_deterministic(), canonical_build_is_idempotent(), canonical_build_rejects_formatter_version_drift() call sites` `assertion-seam`: The property tests delegate their invariants to boolean-returning harness functions.
 
 Implementation audit `2026-09-14_11-26-09-644-eb39d2a3b433` rejected
 `tests/test_plugin_build.property.l1.py:21`: the formatter-version-drift test
@@ -126,7 +128,9 @@ and `2026-09-18_13-02-51-809-99cdf563caa5` (debt, evidence) during Change #76; `
 
 **Settlement condition.** One whole-tree sweep aligns the agent-concept uses to "agent" or "agent harness", separating them from generic execution-time "runtime". Node names carry the term (`spx/15-validation.enabler/32-runtime-token.enabler` and `spx/18-plugin-build.enabler/21-source-and-templating.enabler/21-runtime-parameterization.enabler`), so the sweep includes `/refactor` node renames and is a structural change, not a text pass. Each node in the sweep records its share in its own `ISSUES.md`.
 
-## DEBT [evidence]: build tests delegate their predicates to the harness (f-001, f-002, f-004, f-005, f-006)
+## DEBT [evidence]: build tests delegate their predicates to the harness (f-001, f-002, f-004, f-005, f-006) `spx/18-plugin-build.enabler/tests/test_plugin_build.compliance.l1.py` `canonical_dist_files_trace_to_source_ancestors() and orphaned_dist_artifact_is_rejected() call sites` `assertion-seam`
+
+Entry key `spx/18-plugin-build.enabler/tests/test_plugin_build.compliance.l1.py` `canonical_dist_files_trace_to_source_ancestors() and orphaned_dist_artifact_is_rejected() call sites` `assertion-seam`: The compliance tests delegate their predicates to boolean-returning harness functions.
 
 Five findings (all REJECT) on the linked tests of this node, each a test that
 asserts a boolean its harness computes, so the test file does not expose its
@@ -181,7 +185,9 @@ change.
 **Settlement condition**: each cited test holds its own predicate over an
 observation the harness returns, and the node passes its test-evidence audit.
 
-## DEBT [evidence]: the orphan violating case cannot reach the enforcement (f-003)
+## DEBT [evidence]: the orphan violating case cannot reach the enforcement (f-003) `outcomeeng_testing/harnesses/plugin_build.py` `orphaned_dist_artifact_is_rejected` `unfalsifiable`
+
+Entry key `outcomeeng_testing/harnesses/plugin_build.py` `orphaned_dist_artifact_is_rejected` `unfalsifiable`: The orphan violating case never passes through the build or the dist-tracing enforcement.
 
 Finding f-003 (REJECT, falsifiability) at
 `outcomeeng_testing/harnesses/plugin_build.py:77`: the orphan violating case
@@ -212,7 +218,9 @@ ownership of the build ADR. The harness case drives dist tracing in
 **Settlement condition**: the orphan case fails when dist-tracing enforcement
 is mutated.
 
-## DEBT [evidence]: the harness raises AssertionError at lines 254, 262, 400, 408, and 409 (f-008)
+## DEBT [evidence]: the harness raises AssertionError at lines 254, 262, 400, 408, and 409 (f-008) `outcomeeng_testing/harnesses/plugin_build.py` `_generated_build_is_deterministic, _generated_build_is_idempotent, _generated_build_rejects_formatter_version_drift, _require_build_implementation, _formatter_probe, _require_same_snapshot` `assertion-seam`
+
+Entry key `outcomeeng_testing/harnesses/plugin_build.py` `_generated_build_is_deterministic, _generated_build_is_idempotent, _generated_build_rejects_formatter_version_drift, _require_build_implementation, _formatter_probe, _require_same_snapshot` `assertion-seam`: The harness owns the predicates and raises AssertionError for them.
 
 Finding f-008 (REJECT) at `outcomeeng_testing/harnesses/plugin_build.py:409`,
 and at lines 254, 262, 400, and 408: the harness raises `AssertionError` for

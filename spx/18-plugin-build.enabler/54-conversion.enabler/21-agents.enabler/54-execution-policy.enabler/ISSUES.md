@@ -2,7 +2,9 @@
 
 Coordination note; not spec truth.
 
-## DEBT [evidence]: expected tables repeat the converter's tables (f-001, f-002)
+## DEBT [evidence]: expected tables repeat the converter's tables (f-001, f-002) `outcomeeng_testing/harnesses/agent_conversion.py` `EXPECTED_PERMISSION_MODE_CORRESPONDENCE, EXPECTED_TOOL_CLASSIFICATION` `oracle-independence`
+
+Entry key `outcomeeng_testing/harnesses/agent_conversion.py` `EXPECTED_PERMISSION_MODE_CORRESPONDENCE, EXPECTED_TOOL_CLASSIFICATION` `oracle-independence`: Both expected tables copy the converter's own `PERMISSION_MODE_MAPPINGS` and tool sets, and the spec declares no rows.
 
 Two findings (both REJECT, oracle independence) in
 `outcomeeng_testing/harnesses/agent_conversion.py`, read by the tests under
@@ -44,7 +46,9 @@ agent conversion does not call.
 **Settlement condition**: neither expected table repeats the converter's table;
 each is derived from an independently owned source or declared in the spec.
 
-## DEBT [evidence]: web-capability mapping exercised only over whole class sets (f-003)
+## DEBT [evidence]: web-capability mapping exercised only over whole class sets (f-003) `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/tests/test_execution_policy.mapping.l1.py` `test_tool_allowlist_with_web_tool_leaves_web_search_to_runtime_default, test_tool_allowlist_without_web_tool_disables_web_search` `misaligned`
+
+Entry key `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/tests/test_execution_policy.mapping.l1.py` `test_tool_allowlist_with_web_tool_leaves_web_search_to_runtime_default, test_tool_allowlist_without_web_tool_disables_web_search` `misaligned`: The "any web-capable tool" quantifier is exercised only over whole class sets; a superset mutation of `map_web_search` passes.
 
 Finding f-003 (REJECT, incomplete mapping domain) at
 `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/tests/test_execution_policy.mapping.l1.py:60`:
@@ -75,7 +79,9 @@ agent conversion does not call.
 allowlists, so a superset mutation of `map_web_search` or `infer_sandbox_mode`
 fails it.
 
-## DEBT [evidence]: converted `web_search` unobserved (f-004)
+## DEBT [evidence]: converted `web_search` unobserved (f-004) `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/tests/test_execution_policy.mapping.l1.py` `the convert_agent observation of web_search` `unfalsifiable`
+
+Entry key `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/tests/test_execution_policy.mapping.l1.py` `the convert_agent observation of web_search` `unfalsifiable`: Deleting the `web_search` assignment inside `convert_agent` fails nothing.
 
 Finding f-004 (REJECT, surviving mutation) at
 `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/tests/test_execution_policy.mapping.l1.py:48`:
@@ -104,7 +110,9 @@ agent conversion does not call.
 **Settlement condition**: a test asserts `web_search` on `convert_agent`
 output, so deleting the assignment fails it.
 
-## DEBT [evidence]: tool-derived read-only sandbox fallback unobserved (f-005)
+## DEBT [evidence]: tool-derived read-only sandbox fallback unobserved (f-005) `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/tests/test_execution_policy.mapping.l1.py` `the convert_agent observation of the tool-derived sandbox_mode fallback` `unfalsifiable`
+
+Entry key `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/tests/test_execution_policy.mapping.l1.py` `the convert_agent observation of the tool-derived sandbox_mode fallback` `unfalsifiable`: Deleting the `infer_sandbox_mode` fallback inside `convert_agent` fails nothing.
 
 Finding f-005 (REJECT, surviving mutation) at
 `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-execution-policy.enabler/tests/test_execution_policy.mapping.l1.py:68`:

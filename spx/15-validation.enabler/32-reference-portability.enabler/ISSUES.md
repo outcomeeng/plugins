@@ -19,7 +19,9 @@ from the source module purely for the test is the test-data-in-source anti-patte
 [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md) forbids, and the test-evidence audit approved the
 inline samples on that basis.
 
-## DEBT [evidence]: harness owns the reference-portability predicates (f-001 to f-005)
+## DEBT [evidence]: harness owns the reference-portability predicates (f-001 to f-005) `outcomeeng_testing/harnesses/reference_portability.py` `violation_reports_file_line_reference_and_failure, portable_content_reports_nothing_and_succeeds, every_nonportable_category_is_flagged, every_portable_category_is_accepted` `assertion-seam`
+
+Entry key `outcomeeng_testing/harnesses/reference_portability.py` `violation_reports_file_line_reference_and_failure, portable_content_reports_nothing_and_succeeds, every_nonportable_category_is_flagged, every_portable_category_is_accepted` `assertion-seam`: The harness owns every pass/fail predicate of these verdict functions and returns booleans; the linked tests only `assert <verdict>()`.
 
 Five findings (all REJECT) on the evidence chain of this node:
 
@@ -66,3 +68,9 @@ contracts, none of which the changeset changes.
 return observations while the linked tests own the predicates and an independent
 oracle, and an audit inspects the generator's import chain through
 `outcomeeng/distribution/build.py` or the generator stops importing the build.
+
+## DEBT [evidence]: harness owns the reference-portability predicates (f-001 to f-005) `outcomeeng_testing/harnesses/reference_portability.py` `violation_reports_file_line_reference_and_failure` `oracle-independence`
+
+The expected diagnostic is `format_violation(violation)`, the production formatter that also produces the actual output.
+
+**Settlement condition**: The expected diagnostic is independent of the production formatter.
