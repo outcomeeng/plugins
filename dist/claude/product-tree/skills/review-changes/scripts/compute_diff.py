@@ -17,8 +17,8 @@ Tested with:
 - Staged, unstaged, and untracked worktree changes -> emits all four sections.
 - ``origin/HEAD`` derivation without env -> emits the diff.
 - ``SPX_VERIFY_HEAD_REF`` overrides the default ``HEAD`` head ref.
-- ``--bundle-dir`` -> writes ``diff.md`` and ``manifest.json`` to caller-owned
-  scratch storage and reports the bundle paths.
+- ``--bundle-dir`` -> writes ``diff.md`` and ``manifest.json`` to the named
+  scratch directory and reports the bundle paths.
 - Missing base-ref sources -> exits non-zero and names env and git sources.
 
 Stdlib-only.
@@ -376,7 +376,7 @@ def _manifest_dict(
 
 
 def _resolve_bundle_dir(bundle_dir: pathlib.Path) -> pathlib.Path:
-    """Return a normalized caller-owned bundle directory path."""
+    """Return a normalized bundle directory path."""
     resolved = bundle_dir.expanduser().resolve(strict=False)
     if resolved == resolved.parent:
         raise RuntimeError(
@@ -418,7 +418,7 @@ def _bundle_file_path(bundle_dir: pathlib.Path, filename: str) -> pathlib.Path:
 def write_bundle(
     *, base_ref: str, head_ref: str, bundle_dir: pathlib.Path
 ) -> dict[str, object]:
-    """Write a caller-owned scratch diff bundle and return a small summary."""
+    """Write a scratch diff bundle and return a small summary."""
     safe_bundle_dir = _resolve_bundle_dir(bundle_dir)
     sections = diff_sections(base_ref, head_ref)
     diff_text = "\n".join(section.text for section in sections)
@@ -453,7 +453,7 @@ def main(argv: list[str] | None = None) -> int:
         type=pathlib.Path,
         default=None,
         help=(
-            "write diff.md and manifest.json into this caller-owned scratch "
+            "write diff.md and manifest.json into this scratch "
             "directory instead of writing the full diff to stdout"
         ),
     )

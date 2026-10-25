@@ -37,8 +37,8 @@ Load each required bundled reference directly from this index:
   - assigned-worktree discipline, branch hygiene, topology, push, and base sync;
   - deterministic scope, local review, authority gates, and auditor verdicts;
   - review inspection, classification, check waits, failure modes, and success criteria.
-- Read `${SKILL_DIR}/references/merge-cleanup.md` immediately before a merge mutation, and whenever `<merge_cleanup>` or `<failure_modes>` in `merge-policy.md` call for the merge sequence. It owns the merge command, overlay checks, worktree transition, and branch cleanup sequence.
-- Read `${SKILL_DIR}/references/action-tokens.md` before emitting a merge-lifecycle action token, and whenever `<action_tokens>` in `merge-policy.md` calls for a token. It owns every token's trigger condition and required follow-up. Read `<base_sync>` and `<pr_check_wait>` in `merge-policy.md` alongside it when a token calls for base synchronization or a check wait.
+- Read `${SKILL_DIR}/references/merge-cleanup.md` immediately before a merge mutation, and whenever `<failure_modes>` or `<success_criteria>` in `merge-policy.md` call for the merge sequence. It owns the merge command, overlay checks, worktree transition, and branch cleanup sequence.
+- Read `${SKILL_DIR}/references/action-tokens.md` before emitting a merge-lifecycle action token, and whenever `<authority_gates>` or `<review_inspection>` in `merge-policy.md` calls for a token. It owns every token's trigger condition and required follow-up. Read `<base_sync>` and `<pr_check_wait>` in `merge-policy.md` alongside it when a token calls for base synchronization or a check wait.
 
 Read each reference an operation needs directly from this index, select its tagged section, and apply it without reimplementing it. A bundled reference never dispatches another bundled reference.
 

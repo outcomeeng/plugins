@@ -148,7 +148,7 @@ class Concern(StrEnum):
 class ReviewResultValidationError(ValueError):
     """Raised when a review-result document does not conform to the schema.
 
-    Raised by the legacy ``journal_emit.py finding-reported`` path; agents consume the error message verbatim to correlate
+    Raised by the legacy ``journal_emit.py finding-reported`` path; the error message is used verbatim to correlate
     the failure with the finding they just emitted and re-emit before that
     finding's journal append.
     """
