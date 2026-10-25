@@ -6,7 +6,8 @@ write and prune destinations changed between preflight and mutation (through
 the injected digest reader), adoption of identical unrecorded destinations an
 interrupted run left behind, atomic ownership updates with no temporary
 files left behind, and the pruning of definitions recorded for a plugin id the
-marketplace catalog renames to this plugin.
+marketplace catalog renames to this plugin, with every retained one reported as
+a partial migration on each run, check-only runs included.
 """
 
 from __future__ import annotations
@@ -22,9 +23,11 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-PLUGIN = "typescript"
-REPLACED_IDS = ""
-REPLACED = tuple(filter(None, REPLACED_IDS.split(",")))
+DATA: Any = json.loads(
+    Path(__file__).with_name("place_agents.json").read_text(encoding="utf-8")
+)
+PLUGIN: str = DATA["plugin"]
+REPLACED: tuple[str, ...] = tuple(DATA["replaced"])
 OWNED_PLUGINS = (PLUGIN, *REPLACED)
 SHIPPED = Path(__file__).resolve().parent.parent / "agents"
 OWNERSHIP = ".outcomeeng-marketplace-ownership.json"
@@ -38,6 +41,7 @@ AGENTS_DIRECTORY = "agents"
 WRITE_PREFIX = "write: "
 PRUNE_PREFIX = "prune: "
 RETAINED_PREFIX = "retained: "
+PARTIAL_MIGRATION_PREFIX = "partial-migration: "
 COLLISION_PREFIX = "collision: "
 SCOPE_SPLIT_REMOVAL_PREFIX = "scope-split directed-removal: "
 SCOPE_SPLIT_COLLISION_PREFIX = "scope-split collision: "
@@ -314,6 +318,11 @@ def main(
         elif present:
             prunes.append((path, entry[ENTRY_DIGEST_FIELD]))
     _print_each([*splits, *collisions, *retained])
+    if retained:
+        print(
+            f"{PARTIAL_MIGRATION_PREFIX}{len(retained)} definition(s) of replaced "
+            "plugins stay in the registry and stay discoverable until resolved"
+        )
     for path, _, _ in writes:
         print(f"{WRITE_PREFIX}{path}")
     for path, _ in prunes:

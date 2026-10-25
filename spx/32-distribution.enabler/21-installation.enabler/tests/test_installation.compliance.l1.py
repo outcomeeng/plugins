@@ -22,7 +22,6 @@ from outcomeeng.distribution.installation import (
     CODEX_HOME_ENV,
     FETCH_PROJECT_PREFIX,
     FIRST_INSTALL_WARNING,
-    RETIRED_PLUGIN,
     InstallationMode,
     Operation,
     ReportField,
@@ -41,6 +40,7 @@ from outcomeeng_testing.generators.installation import (
     UNCACHED_OTHER_CHECKOUT_STATE,
 )
 from outcomeeng_testing.harnesses.installation import (
+    RETIRED_PLUGIN,
     RegistryState,
     absent_from_every_agent,
     captured_non_pending_failure_wordings,

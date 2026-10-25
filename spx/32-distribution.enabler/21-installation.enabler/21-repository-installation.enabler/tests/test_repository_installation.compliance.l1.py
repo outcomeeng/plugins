@@ -6,6 +6,7 @@ import re
 import subprocess
 import tomllib
 from string import Formatter
+from collections.abc import Mapping
 from typing import cast
 from pathlib import Path
 
@@ -89,6 +90,7 @@ from outcomeeng_testing.harnesses.real_agent_homes import (
 from outcomeeng_testing.harnesses.installation import (
     captured_non_pending_failure_wordings,
     MARKETPLACE,
+    RETIRED_ONLY_FIELD,
     DefinitionPlacement,
     captured_codex_home_refusal,
     observe_catalog_name_read,
@@ -194,6 +196,8 @@ def test_plugin_lifecycle_prunes_the_matching_definitions_of_a_plugin_the_catalo
     current = lifecycle.ship_agent()
     replaced_name, replaced_content = lifecycle.replaced_definition()
     replaced = lifecycle.write_home(replaced_name, replaced_content)
+    second_name, second_content = lifecycle.replaced_definition(1)
+    second = lifecycle.write_home(second_name, second_content)
     other_name, other_content = generated_agent_file()
     other = lifecycle.write_home(other_name, other_content)
     other_entry = lifecycle.ownership_entry(
@@ -206,7 +210,12 @@ def test_plugin_lifecycle_prunes_the_matching_definitions_of_a_plugin_the_catalo
             lifecycle.ownership_entry(
                 replaced_name,
                 hashlib.sha256(replaced_content).hexdigest(),
-                plugin=lifecycle.replaced_plugin,
+                plugin=lifecycle.replaced_plugins[0],
+            ),
+            lifecycle.ownership_entry(
+                second_name,
+                hashlib.sha256(second_content).hexdigest(),
+                plugin=lifecycle.replaced_plugins[1],
             ),
             other_entry,
         )
@@ -216,11 +225,14 @@ def test_plugin_lifecycle_prunes_the_matching_definitions_of_a_plugin_the_catalo
     check = lifecycle.run(check=True)
     assert check.exit_code == module.EXIT_CHANGES_PENDING
     assert f"{module.PRUNE_PREFIX}{replaced}" in check.stdout
+    assert f"{module.PRUNE_PREFIX}{second}" in check.stdout
     assert check.home_snapshot == before
 
     placed = lifecycle.run()
     assert placed.exit_code == 0
     assert not replaced.exists()
+    assert not second.exists()
+    assert module.PARTIAL_MIGRATION_PREFIX not in placed.stdout
     assert other.read_bytes() == other_content
     assert (lifecycle.home_agents / current.name).read_bytes() == current.read_bytes()
     recorded = json.loads(lifecycle.ownership_path.read_text(encoding="utf-8"))
@@ -244,7 +256,7 @@ def test_plugin_lifecycle_retains_and_reports_a_changed_definition_of_a_replaced
     recorded_entry = lifecycle.ownership_entry(
         replaced_name,
         hashlib.sha256(replaced_content).hexdigest(),
-        plugin=lifecycle.replaced_plugin,
+        plugin=lifecycle.replaced_plugins[0],
     )
     lifecycle.write_ownership(lifecycle.ownership_document(recorded_entry))
 
@@ -252,10 +264,19 @@ def test_plugin_lifecycle_retains_and_reports_a_changed_definition_of_a_replaced
 
     assert placed.exit_code == 0
     assert f"{module.RETAINED_PREFIX}{changed}" in placed.stdout
+    assert module.PARTIAL_MIGRATION_PREFIX in placed.stdout
     assert changed.read_bytes() == changed_content
     assert (lifecycle.home_agents / current.name).read_bytes() == current.read_bytes()
     recorded = json.loads(lifecycle.ownership_path.read_text(encoding="utf-8"))
     assert recorded_entry in recorded[module.OWNERSHIP_ENTRIES_FIELD]
+
+    settled = lifecycle.snapshot(lifecycle.home)
+    rechecked = lifecycle.run(check=True)
+
+    assert rechecked.exit_code == module.EXIT_CURRENT
+    assert f"{module.RETAINED_PREFIX}{changed}" in rechecked.stdout
+    assert module.PARTIAL_MIGRATION_PREFIX in rechecked.stdout
+    assert rechecked.home_snapshot == settled
 
 
 def test_plugin_lifecycle_retains_and_reports_a_linked_definition_of_a_replaced_plugin(
@@ -275,7 +296,7 @@ def test_plugin_lifecycle_retains_and_reports_a_linked_definition_of_a_replaced_
             lifecycle.ownership_entry(
                 replaced_name,
                 hashlib.sha256(replaced_content).hexdigest(),
-                plugin=lifecycle.replaced_plugin,
+                plugin=lifecycle.replaced_plugins[0],
             )
         )
     )
@@ -1256,13 +1277,13 @@ def test_a_retired_plugin_record_in_another_checkout_moves_to_its_successor_by_t
     observation = observe_retired_record_migration(
         install_record_fixture_path(), tmp_path
     )
-    before = cast(
-        "dict[str, list[dict[str, str]]]",
-        observation.document_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
-    )
     after = cast(
         "dict[str, list[dict[str, str]]]",
         observation.document_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    before = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.document_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
     )
     moved_fields = {
         CLAUDE_INSTALLED_RECORD_PATH_FIELD,
@@ -1271,44 +1292,48 @@ def test_a_retired_plugin_record_in_another_checkout_moves_to_its_successor_by_t
     }
     target_version = observation.target.versions[PRODUCT_TREE_PLUGIN]
 
-    assert observation.warnings == ()
-    assert observation.retired_identifier in before
-    assert observation.retired_identifier not in after
-    for retired in observation.retired_entries:
-        address = (
-            retired[CLAUDE_PLUGIN_SCOPE_FIELD],
-            retired[CLAUDE_PLUGIN_PROJECT_PATH_FIELD],
-        )
-        holding = [
-            entry
-            for entry in after[observation.successor_identifier]
+    def holding(entry: Mapping[str, object]) -> list[dict[str, str]]:
+        return [
+            candidate
+            for candidate in after[observation.successor_identifier]
             if (
+                candidate[CLAUDE_PLUGIN_SCOPE_FIELD],
+                candidate[CLAUDE_PLUGIN_PROJECT_PATH_FIELD],
+            )
+            == (
                 entry[CLAUDE_PLUGIN_SCOPE_FIELD],
                 entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD],
             )
-            == address
         ]
-        assert len(holding) == 1, address
-        assert holding[0][CLAUDE_INSTALLED_RECORD_VERSION_FIELD] == target_version
-        assert holding[0][CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] == (
+
+    def unset(entry: Mapping[str, object]) -> dict[str, object]:
+        return {k: v for k, v in entry.items() if k not in moved_fields}
+
+    assert observation.warnings == ()
+    for retired in observation.renames:
+        identifier = marketplace_plugin_identifier(retired, MARKETPLACE)
+        assert identifier in before
+        assert identifier not in after
+    contested = holding(observation.contested_entry)
+    assert len(contested) == 1
+    assert unset(contested[0]) == unset(observation.held_entry)
+    assert RETIRED_ONLY_FIELD not in contested[0]
+    first_taken = observation.taken_entries[0]
+    taken = holding(first_taken)
+    assert len(taken) == 1
+    assert unset(taken[0]) == unset(first_taken)
+    for entry in (*contested, *taken):
+        assert entry[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] == target_version
+        assert entry[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] == (
             observation.target.commit
         )
-        assert holding[0][CLAUDE_INSTALLED_RECORD_PATH_FIELD] == str(
+        assert entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD] == str(
             observation.cache_root / PRODUCT_TREE_PLUGIN / target_version
         )
-        assert {k: v for k, v in holding[0].items() if k not in moved_fields} == {
-            k: v for k, v in retired.items() if k not in moved_fields
-        }
     for identifier, entries in before.items():
-        if identifier in {
-            observation.retired_identifier,
-            observation.successor_identifier,
-        }:
-            continue
         plugin = marketplace_plugin_name(identifier, MARKETPLACE)
-        if plugin in observation.target.versions:
-            continue
-        assert after[identifier] == entries, identifier
+        if identifier in after and plugin not in observation.target.versions:
+            assert after[identifier] == entries, identifier
 
 
 def test_a_record_written_between_the_writers_read_and_its_replace_survives(

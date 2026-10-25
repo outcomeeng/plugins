@@ -1293,20 +1293,28 @@ def make_jinja_environment(
 
     environment.globals["authorized_plugins"] = authorized_plugins
 
-    def replaced_plugins(plugin: str) -> tuple[str, ...]:
-        """Read the retired ids the Claude Code catalog renames to `plugin`.
+    def placement_data(plugin: str) -> str:
+        """Render the data file one plugin's agent-placement script reads.
 
-        The Claude Code catalog alone declares renames, and the ids it retires
-        are retired for every target, so a Codex placement script names them too.
-        The catalog is read only when a template requests it.
+        The file names the plugin and the retired ids the Claude Code catalog
+        renames to it. The Claude Code catalog alone declares renames, and the
+        ids it retires are retired for every target, so a Codex placement
+        script names them too. The catalog is read only when a template
+        requests it.
         """
         if shared_root is None:
             raise TemplateRenderError("plugin renames require a source root")
-        return replaced_plugin_names(
-            shared_root.parent.parent / CLAUDE_CATALOG_PATH, plugin
-        )
+        document = {
+            "plugin": plugin,
+            "replaced": list(
+                replaced_plugin_names(
+                    shared_root.parent.parent / CLAUDE_CATALOG_PATH, plugin
+                )
+            ),
+        }
+        return json.dumps(document, indent=2) + "\n"
 
-    environment.globals["replaced_plugins"] = replaced_plugins
+    environment.globals["placement_data"] = placement_data
     return environment
 
 

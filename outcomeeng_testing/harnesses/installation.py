@@ -115,7 +115,6 @@ from outcomeeng.distribution.installation import (
     ScopeSplitEntry,
     ScopeSplitError,
     PRODUCT_TREE_PLUGIN,
-    RETIRED_PLUGIN,
     claude_refresh_records,
     STATE_ENV_NAMES,
     STATE_ROOT_OPTION,
@@ -432,20 +431,21 @@ class PluginLifecycleHarness:
 
     root: Path
     plugin_name: str
-    replaced_plugin: str
-    """A plugin id the harness's catalog renames to `plugin_name`."""
+    replaced_plugins: tuple[str, ...]
+    """Plugin ids the harness's catalog renames to `plugin_name`."""
 
     @classmethod
     def create(cls, root: Path) -> PluginLifecycleHarness:
         """Materialize the placement script for a freshly generated plugin name.
 
-        The catalog the script is built from renames a second fresh plugin id to
-        the first, as a marketplace does when it retires a plugin for a successor.
+        The catalog the script is built from renames two further fresh plugin
+        ids to the first, as a marketplace does when it retires plugins for a
+        successor.
         """
         harness = cls(
             root=root,
             plugin_name=generated_plugin_name(),
-            replaced_plugin=generated_plugin_name(),
+            replaced_plugins=(generated_plugin_name(), generated_plugin_name()),
         )
         harness._materialize_script()
         return harness
@@ -502,7 +502,9 @@ class PluginLifecycleHarness:
                     CATALOG_PLUGINS_FIELD: [
                         {CATALOG_PLUGIN_NAME_FIELD: self.plugin_name}
                     ],
-                    CATALOG_RENAMES_FIELD: {self.replaced_plugin: self.plugin_name},
+                    CATALOG_RENAMES_FIELD: dict.fromkeys(
+                        self.replaced_plugins, self.plugin_name
+                    ),
                 }
             ),
             encoding="utf-8",
@@ -517,6 +519,19 @@ class PluginLifecycleHarness:
         )
         self.script_path.parent.mkdir(parents=True, exist_ok=True)
         self.script_path.write_text(rendered, encoding="utf-8")
+        self.script_path.with_suffix(".json").write_text(
+            render_text(
+                (
+                    repository_root() / "src/templates/plugin/scripts/place_agents.json"
+                ).read_text(encoding="utf-8"),
+                shared_root=build_root / "src" / "shared",
+                variables={
+                    BUILD_TARGET_VARIABLE: Target.CODEX.value,
+                    PLUGIN_NAME_VARIABLE: self.plugin_name,
+                },
+            ),
+            encoding="utf-8",
+        )
         self.shipped_agents.mkdir(parents=True, exist_ok=True)
         self.checkout.mkdir(parents=True, exist_ok=True)
 
@@ -587,12 +602,13 @@ class PluginLifecycleHarness:
             AGENT_OWNERSHIP_DIGEST_FIELD: digest,
         }
 
-    def replaced_definition(self) -> tuple[str, bytes]:
-        """The filename and bytes the replaced plugin's own placement gave a fresh agent."""
+    def replaced_definition(self, index: int = 0) -> tuple[str, bytes]:
+        """The filename and bytes the placement of replaced plugin `index` gave a fresh agent."""
         slug = generated_agent_slug()
+        replaced = self.replaced_plugins[index]
         return (
-            shipped_codex_definition_name(self.replaced_plugin, slug),
-            f'{AGENT_NAME_FIELD} = "{self.replaced_plugin}-{slug}"\n'.encode(),
+            shipped_codex_definition_name(replaced, slug),
+            f'{AGENT_NAME_FIELD} = "{replaced}-{slug}"\n'.encode(),
         )
 
     @staticmethod
@@ -2066,6 +2082,12 @@ def observe_committed_renames() -> dict[str, str]:
     return cast("dict[str, str]", document.get(CATALOG_RENAMES_FIELD, {}))
 
 
+RETIRED_PLUGIN: str = next(iter(observe_committed_renames()))
+"""The first plugin id the raw committed Claude Code catalog retires."""
+RETIRED_ONLY_FIELD = "fixtureOrigin"
+"""An unknown field a harness-written install-record entry carries, which no refresh sets."""
+
+
 @dataclass(frozen=True)
 class RecordRewriteObservation:
     """One rewrite over a copy of a real install-record document.
@@ -2281,18 +2303,22 @@ def observe_racing_install_record_rewrite(
 
 @dataclass(frozen=True)
 class RetiredRecordMigrationObservation:
-    """One rewrite over a document that records the retired plugin id in other checkouts.
+    """One rewrite over a document that records retired plugin ids in other checkouts.
 
-    The retired entries are the ones the harness added to the copy of a real
-    install-record document: one at the scope and project path a successor
-    entry already holds, one at a project path no successor entry holds.
+    The harness adds retired entries to a copy of a real install-record
+    document. `contested` is the address a successor entry already holds,
+    where the retired entry differs from it in its unknown fields; `taken` is
+    an address only retired entries hold, one per retired id. The renames map
+    two retired ids to the successor.
     """
 
     document_before: dict[str, object]
     document_after: dict[str, object]
-    retired_identifier: str
+    renames: dict[str, str]
     successor_identifier: str
-    retired_entries: tuple[dict[str, object], ...]
+    held_entry: dict[str, object]
+    contested_entry: dict[str, object]
+    taken_entries: tuple[dict[str, object], ...]
     rewrites: tuple[RecordRewrite, ...]
     warnings: tuple[InstallationWarning, ...]
     target: MarketplaceTarget
@@ -2302,12 +2328,12 @@ class RetiredRecordMigrationObservation:
 def observe_retired_record_migration(
     fixture: Path, tmp_path: Path
 ) -> RetiredRecordMigrationObservation:
-    """Plan and perform the refresh rewrite over a document that records the retired id.
+    """Plan and perform the refresh rewrite over a document that records retired ids.
 
-    The fixture's first successor entry is copied under the retired id twice:
-    once unchanged, so a successor entry holds the same scope and project path,
-    and once at a project path no successor entry holds. The plan is built by
-    the refresh's record split from the listing the document renders, with an
+    The fixture's first successor entry is copied under the first retired id
+    at its own address with differing unknown fields, and under every retired
+    id at an address no successor entry holds. The plan is built by the
+    refresh's record split from the listing the document renders, with an
     invocation checkout that holds none of the records, and every planned
     record points at a target version with a cache directory.
     """
@@ -2319,16 +2345,29 @@ def observe_retired_record_migration(
         json.loads(document_path.read_text(encoding="utf-8")),
     )
     plugins = document[CLAUDE_INSTALLED_PLUGINS_FIELD]
+    renames = {
+        RETIRED_PLUGIN: PRODUCT_TREE_PLUGIN,
+        generated_plugin_name(): PRODUCT_TREE_PLUGIN,
+    }
     successor_identifier = marketplace_plugin_identifier(
         PRODUCT_TREE_PLUGIN, MARKETPLACE
     )
-    retired_identifier = marketplace_plugin_identifier(RETIRED_PLUGIN, MARKETPLACE)
     held = plugins[successor_identifier][0]
-    retired_entries = (
-        dict(held),
-        {**held, CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(tmp_path / "retired-checkout")},
+    contested = {**held, RETIRED_ONLY_FIELD: generated_plugin_name()}
+    taken_path = str(tmp_path / "retired-checkout")
+    taken = tuple(
+        {
+            **held,
+            CLAUDE_PLUGIN_PROJECT_PATH_FIELD: taken_path,
+            RETIRED_ONLY_FIELD: retired,
+        }
+        for retired in renames
     )
-    plugins[retired_identifier] = [dict(entry) for entry in retired_entries]
+    for index, retired in enumerate(renames):
+        entries = [dict(taken[index])]
+        if index == 0:
+            entries.insert(0, dict(contested))
+        plugins[marketplace_plugin_identifier(retired, MARKETPLACE)] = entries
     document_path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
     document_before = cast(
         "dict[str, object]", json.loads(document_path.read_text(encoding="utf-8"))
@@ -2338,6 +2377,7 @@ def observe_retired_record_migration(
         claude_install_records(_listing_from_record_file(document_path), MARKETPLACE),
         catalog,
         tmp_path / "invocation-checkout",
+        renames,
     )
     target_version = served_version(len(planned))
     cache_root = tmp_path / "cache" / MARKETPLACE
@@ -2351,7 +2391,7 @@ def observe_retired_record_migration(
         planned, target, cache_root, cached_plugin_versions(cache_root, names)
     )
     written, write_warnings = rewrite_install_records(
-        document_path, rewrites, MARKETPLACE
+        document_path, rewrites, MARKETPLACE, renames=renames
     )
     return RetiredRecordMigrationObservation(
         document_before=document_before,
@@ -2359,9 +2399,11 @@ def observe_retired_record_migration(
             "dict[str, object]",
             json.loads(document_path.read_text(encoding="utf-8")),
         ),
-        retired_identifier=retired_identifier,
+        renames=renames,
         successor_identifier=successor_identifier,
-        retired_entries=retired_entries,
+        held_entry=dict(held),
+        contested_entry=contested,
+        taken_entries=taken,
         rewrites=written,
         warnings=(*split_warnings, *plan_warnings, *write_warnings),
         target=target,

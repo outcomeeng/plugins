@@ -18,7 +18,6 @@ from outcomeeng.distribution.installation import (
     CLAUDE_REPOSITORY_FIELD,
     CLAUDE_SCOPE_FLAG,
     FIRST_INSTALL_WARNING,
-    RETIRED_PLUGIN,
     Operation,
     PATHLESS_LISTING_ENTRY_WARNING,
     VERSIONLESS_LISTING_ENTRY_WARNING,
@@ -59,6 +58,7 @@ from outcomeeng_testing.harnesses.real_agent_selection import (
 )
 from outcomeeng_testing.harnesses.installation import (
     observe_unlocated_registry_plan,
+    RETIRED_PLUGIN,
     DECLARED_CLAUDE_SOURCE,
     MARKETPLACE,
     RegistryState,

@@ -23,6 +23,8 @@
     "src/plugins/*/skills/*/scripts/artifact-registry.json",
     // The authored price data file carries one build token and renders into JSON under dist/.
     "src/plugins/*/skills/*/scripts/model-prices.json",
+    // The authored placement data file is one build token and renders into JSON under dist/.
+    "src/templates/plugin/scripts/place_agents.json",
   ],
   "dockerfile": {},
   "json": {

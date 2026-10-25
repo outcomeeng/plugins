@@ -95,7 +95,7 @@ prune: /Users/dev/.codex/agents/instructions_verifier.toml
 collision: /Users/dev/.codex/agents/instructions_notes.toml (unrecorded)
 ```
 
-`write` names a destination whose bytes differ from the shipped definition, `prune` a recorded `instructions` destination the plugin no longer ships or a recorded destination of an id the catalog renames to it, and `collision` a present file the ownership record does not authorize, with its cause: `symlink`, `unrecorded`, `owned by <plugin>`, `not a regular file`, or `digest mismatch`. A `retained` line names a recorded definition of a plugin id the catalog renames to `instructions` that was changed or replaced with a link; the run leaves it in place and goes on. A `scope-split directed-removal:` or `scope-split collision:` line names a checkout copy under `.codex/agents/` — matched by shipped bytes, by the `instructions` filename prefix, or by a `skills.config` entry naming a `instructions:` skill — and stops mutation. After the mutating form succeeds, the ownership record carries one entry per written destination:
+`write` names a destination whose bytes differ from the shipped definition, `prune` a recorded `instructions` destination the plugin no longer ships or a recorded destination of an id the catalog renames to it, and `collision` a present file the ownership record does not authorize, with its cause: `symlink`, `unrecorded`, `owned by <plugin>`, `not a regular file`, or `digest mismatch`. A `retained` line names a recorded definition of a plugin id the catalog renames to `instructions` that was changed or replaced with a link; the run leaves it in place and goes on. Each run that reports a `retained` line, `--check` runs included, also prints a `partial-migration:` line and exits like any other run: the retained definition stays discoverable in the registry until the operator resolves it by hand, so a `0` exit with a `partial-migration:` line is a completed placement and an unfinished migration. A `scope-split directed-removal:` or `scope-split collision:` line names a checkout copy under `.codex/agents/` — matched by shipped bytes, by the `instructions` filename prefix, or by a `skills.config` entry naming a `instructions:` skill — and stops mutation. After the mutating form succeeds, the ownership record carries one entry per written destination:
 
 ```json
 { "destination": "agents/instructions_reviewer.toml", "plugin": "instructions", "digest": "<sha256 of the installed bytes>" }
@@ -133,7 +133,7 @@ A marketplace source and cache snapshot can diverge. Read only the skill-directo
 - `check` writes nothing and reports every drift, collision, and scope split.
 - `init` and `upgrade` mutate only the selected home after a clean preflight and external-write approval.
 - Every replacement or prune is authorized by matching ownership, this plugin's or that of an id renamed to it, and digest; foreign or modified files remain untouched.
-- A final check reports no drift, collision, or scope split.
+- A final check reports no drift, collision, or scope split, and the report claims a finished migration only when it prints no `partial-migration:` line.
 - Missing-role repair ends with a harness plugin-index reload or a new session.
 
 </success_criteria>
