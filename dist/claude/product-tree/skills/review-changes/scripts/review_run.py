@@ -54,6 +54,8 @@ _SKILL_DIR = _HERE.parent
 _SKILLS_DIR = _SKILL_DIR.parent
 _REVIEW_PROMPT = pathlib.Path("references") / "review-prompt.md"
 _STATE_FILENAME = "state.json"
+_MANIFEST_NAME = "review manifest"
+_STATE_NAME = "review runner state"
 _REVIEW_TYPE = "review"
 _DEFAULT_TARGET = "working-diff"
 _PARTICIPANTS = ("review",)
@@ -364,7 +366,7 @@ def _metadata_from_manifest(
     *, manifest_path: pathlib.Path, started_at: str, target: str
 ) -> dict[str, Any]:
     repo = pathlib.Path.cwd()
-    manifest = _read_json_file(manifest_path, name="review manifest")
+    manifest = _read_json_file(manifest_path, name=_MANIFEST_NAME)
     base_ref = _require_manifest_str(manifest, "base_ref", path=manifest_path)
     head_ref = _require_manifest_str(manifest, "head_ref", path=manifest_path)
     scope = {
@@ -473,8 +475,12 @@ def _state_path(scratch_dir: pathlib.Path) -> pathlib.Path:
     return scratch_dir / _STATE_FILENAME
 
 
-def _write_state(state: dict[str, object]) -> pathlib.Path:
-    scratch_dir = pathlib.Path(str(state["scratchDir"]))
+def _write_state(state: dict[str, object], scratch_dir: pathlib.Path) -> pathlib.Path:
+    """Write the run state into the scratch directory `start` created.
+
+    The destination comes from the directory the runner itself created, never
+    from a value read out of a file, so no file content chooses the write path.
+    """
     path = _state_path(scratch_dir)
     path.write_text(
         json.dumps(state, sort_keys=True, indent=2) + "\n", encoding="utf-8"
@@ -483,7 +489,7 @@ def _write_state(state: dict[str, object]) -> pathlib.Path:
 
 
 def _read_state(path: pathlib.Path) -> dict[str, Any]:
-    state = _read_json_file(path, name="review runner state")
+    state = _read_json_file(path, name=_STATE_NAME)
     run_token = state.get("runToken")
     if not isinstance(run_token, str) or run_token == "":
         raise ValueError(
@@ -607,9 +613,7 @@ def _generated_file_entries(
     A relation flagged for a changed declaration exempts no file.
     """
     entries: list[dict[str, object]] = []
-    for extent in _record_list(
-        state, "generatedExtents", path=path, name="review runner state"
-    ):
+    for extent in _record_list(state, "generatedExtents", path=path, name=_STATE_NAME):
         if extent.get("flagged_reason"):
             continue
         files = extent.get("files")
@@ -641,7 +645,7 @@ def _unchanged_rename_entries(
 ) -> list[dict[str, object]]:
     """One entry per rename whose content is unchanged, in path order."""
     entries: list[dict[str, object]] = []
-    for record in _record_list(state, "renames", path=path, name="review runner state"):
+    for record in _record_list(state, "renames", path=path, name=_STATE_NAME):
         renamed = record.get("path")
         former = record.get("former_path")
         if not isinstance(renamed, str) or not renamed or not isinstance(former, str):
@@ -852,12 +856,12 @@ def _start(args: argparse.Namespace) -> int:
         code = _append_event(run_token, event, journal_env=journal_env)
         if code != 0:
             return code
-        manifest = _read_json_file(manifest_path, name="review manifest")
+        manifest = _read_json_file(manifest_path, name=_MANIFEST_NAME)
         generated_extents = _record_list(
-            manifest, "generated_extents", path=manifest_path, name="review manifest"
+            manifest, "generated_extents", path=manifest_path, name=_MANIFEST_NAME
         )
         renames = _record_list(
-            manifest, "renames", path=manifest_path, name="review manifest"
+            manifest, "renames", path=manifest_path, name=_MANIFEST_NAME
         )
         declaration_changed = manifest.get("generated_declaration_changed") is True
         state: dict[str, object] = {
@@ -872,7 +876,7 @@ def _start(args: argparse.Namespace) -> int:
             "generatedDeclarationChanged": declaration_changed,
             "renames": renames,
         }
-        state_path = _write_state(state)
+        state_path = _write_state(state, scratch_dir)
         output = {
             "runToken": run_token,
             "statePath": str(state_path),

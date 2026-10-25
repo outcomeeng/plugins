@@ -77,7 +77,7 @@ def _load_coordination_note_pattern() -> re.Pattern[str]:
     The sibling path is checked before it is executed, so an incomplete install
     reports the missing path instead of raising a raw traceback.
     """
-    global _coordination_note_pattern  # noqa: PLW0603 — one-time lazy cache
+    global _coordination_note_pattern  # noqa: PLW0603  # one-time lazy cache
     if _coordination_note_pattern is not None:
         return _coordination_note_pattern
     path = pathlib.Path(__file__).resolve().with_name(_CONTRACT_FILENAME)
@@ -161,8 +161,8 @@ def _working_tree_paths(repo: pathlib.Path) -> list[str]:
     """
     command = ["git", "status", "--porcelain", "-z"]
     try:
-        result = subprocess.run(  # noqa: S603 — fixed argument list, no shell
-            command,  # noqa: S607 — git via PATH, portable helper
+        result = subprocess.run(  # noqa: S603  # fixed argument list, no shell
+            command,  # noqa: S607  # git via PATH, portable helper
             cwd=repo,
             capture_output=True,
             text=True,

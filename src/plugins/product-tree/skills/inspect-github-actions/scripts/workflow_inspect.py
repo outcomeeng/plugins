@@ -46,6 +46,9 @@ POSITIONAL_LONG_OPTIONS: dict[str, tuple[str, ...]] = {
     "artifacts": ("--help",),
 }
 VALUE_OPTIONS = ("--max-bytes",)
+RUN_ID_LABEL = "run id"
+RUNS_SOURCE = "`workflow_inspect.py runs`"
+CONFIRM_RUN_ID_ACTION = f"confirm the run id with {RUNS_SOURCE}"
 
 
 def _run(cmd: list[str]) -> tuple[int, str, str]:
@@ -202,7 +205,7 @@ def cmd_run(run_id: str) -> dict[str, Any]:
     fields = (
         "databaseId,status,conclusion,workflowName,headBranch,headSha,createdAt,jobs"
     )
-    invalid = _validate_id("run", "run id", run_id, "`workflow_inspect.py runs`")
+    invalid = _validate_id("run", RUN_ID_LABEL, run_id, RUNS_SOURCE)
     if invalid:
         return {"schema_version": SCHEMA_VERSION, "error": invalid}
     data, err = _gh_json(
@@ -216,7 +219,7 @@ def cmd_run(run_id: str) -> dict[str, Any]:
                 "run",
                 run_id,
                 "gh run view returned no run object",
-                "confirm the run id with `workflow_inspect.py runs`",
+                CONFIRM_RUN_ID_ACTION,
             ),
         }
     jobs = data.get("jobs") or []
@@ -243,7 +246,7 @@ def cmd_run(run_id: str) -> dict[str, Any]:
 
 
 def cmd_jobs(run_id: str) -> dict[str, Any]:
-    invalid = _validate_id("jobs", "run id", run_id, "`workflow_inspect.py runs`")
+    invalid = _validate_id("jobs", RUN_ID_LABEL, run_id, RUNS_SOURCE)
     if invalid:
         return {"schema_version": SCHEMA_VERSION, "jobs": [], "error": invalid}
     data, err = _gh_json(
@@ -258,7 +261,7 @@ def cmd_jobs(run_id: str) -> dict[str, Any]:
                 "jobs",
                 run_id,
                 "gh run view returned no jobs object",
-                "confirm the run id with `workflow_inspect.py runs`",
+                CONFIRM_RUN_ID_ACTION,
             ),
         }
     jobs = data.get("jobs") or []
@@ -293,7 +296,7 @@ def cmd_log(run_id: str, failed: bool, max_bytes: int) -> dict[str, Any]:
         "byte_count": 0,
         "truncated": False,
     }
-    invalid = _validate_id("log", "run id", run_id, "`workflow_inspect.py runs`")
+    invalid = _validate_id("log", RUN_ID_LABEL, run_id, RUNS_SOURCE)
     if invalid:
         return {**failure, "error": invalid}
     if max_bytes < 1:
@@ -376,7 +379,7 @@ def cmd_artifacts(run_id: str) -> dict[str, Any]:
     # archive_download_url is a presigned URL with embedded credentials; never
     # surface it through the agent. Callers that need to download an artifact
     # invoke `gh run download <run-id>` directly.
-    invalid = _validate_id("artifacts", "run id", run_id, "`workflow_inspect.py runs`")
+    invalid = _validate_id("artifacts", RUN_ID_LABEL, run_id, RUNS_SOURCE)
     if invalid:
         return {"schema_version": SCHEMA_VERSION, "artifacts": [], "error": invalid}
     data, err = _gh_json(
@@ -400,7 +403,7 @@ def cmd_artifacts(run_id: str) -> dict[str, Any]:
                 "artifacts",
                 run_id,
                 "gh api returned no artifacts object",
-                "confirm the run id with `workflow_inspect.py runs`",
+                CONFIRM_RUN_ID_ACTION,
             ),
         }
     return {

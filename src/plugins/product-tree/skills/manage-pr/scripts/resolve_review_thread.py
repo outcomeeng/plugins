@@ -54,6 +54,7 @@ REPOSITORY_PATTERN = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 NUMBER_PATTERN = re.compile(r"[1-9]\d*")
 COMMENT_ID_PATTERN = re.compile(r"[A-Za-z0-9_=-]{1,256}")
 HOST_PATTERN = re.compile(r"[A-Za-z0-9.-]+")
+OBJECT_SHAPE = "an object"
 CommandRunner = Callable[..., subprocess.CompletedProcess[str]]
 
 
@@ -221,7 +222,7 @@ def shape_object(
 
 def require_object(value: object, field: str, where: str) -> dict[str, object]:
     if not isinstance(value, dict):
-        raise shape_error(field, "an object", value, where)
+        raise shape_error(field, OBJECT_SHAPE, value, where)
     return value
 
 
@@ -255,7 +256,7 @@ def thread_has_comment(
         return True
     page_info = comments.get("pageInfo")
     if not isinstance(page_info, dict):
-        raise shape_error("comments.pageInfo", "an object", page_info, where)
+        raise shape_error("comments.pageInfo", OBJECT_SHAPE, page_info, where)
     while page_info.get("hasNextPage"):
         end_cursor = page_info.get("endCursor")
         if not isinstance(end_cursor, str) or not end_cursor:
@@ -275,7 +276,7 @@ def thread_has_comment(
             return True
         page_info = comments.get("pageInfo")
         if not isinstance(page_info, dict):
-            raise shape_error("comments.pageInfo", "an object", page_info, where)
+            raise shape_error("comments.pageInfo", OBJECT_SHAPE, page_info, where)
     return False
 
 
@@ -313,7 +314,7 @@ def iter_thread_comments(
 def next_threads_cursor(review_threads: dict[str, object], where: str) -> str | None:
     page_info = review_threads.get("pageInfo")
     if not isinstance(page_info, dict):
-        raise shape_error("reviewThreads.pageInfo", "an object", page_info, where)
+        raise shape_error("reviewThreads.pageInfo", OBJECT_SHAPE, page_info, where)
     if not page_info.get("hasNextPage"):
         return None
     end_cursor = page_info.get("endCursor")
