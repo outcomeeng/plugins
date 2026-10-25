@@ -13,12 +13,17 @@ This capability is an agent adapter: the configured way the agent harness lets o
 
 ## Assertions
 
+- Every operation accepts an optional `repository`; a request naming one maps to the same store command under that repository's project key, the result's project key equals that key, and the project-key form given a repository answers that repository's key
+- NEVER: a request whose `repository` is not an absolute path string reaches a store command; it is rejected as an invalid schema first
+- NEVER: the adapter registers an identity on a caller's behalf; a send from a name the named store does not hold returns the store's failure as the command-failed result
+- ALWAYS: `/operate-agent-mail` documents the optional `repository` and states that the result's project key reports the store the operation acted on
+
 ### Mappings
 
 - Registration, send, list, read, and acknowledge each map one source-owned request shape to one store command and checked result, and wait maps one source-owned request shape to listing commands bounded by its timeout and one checked result; a registration request carries an optional display name that maps to the store's display name, an absent display name passes no display-name argument, a blank display name passes through as an empty value that clears the label, and every checked result preserves the store's labels verbatim beside its message, thread, and agent identities ([test](tests/test_agent_mail.mapping.l1.py))
 - A wait request carrying an id and a timeout maps to the first record addressed to the requester whose store id exceeds that id, read or unread, carried as a listed record; to the named timeout result when no such record is present before the timeout; and to the named unreachable result when the listing cannot reach back to the id ([test](tests/test_agent_mail.mapping.l1.py))
 - A listed record with or without a body and a send result carry the store's `sender_display_name` verbatim, null included, and a send result carries `to_display_names` as the mapping from each recipient stable name visible to the reader to its label; no label enters the message record ([test](tests/test_agent_mail.mapping.l1.py))
-- The project key maps from the absolute canonical path of the repository's common Git directory, read for the adapter's own working directory with every variable removed that can make Git answer the location question from something other than that directory, so no value the caller inherited moves the answer — neither onto another repository nor away from its own — so every worktree of one pool, the pool's bare repository, and its main checkout resolve one mail project; a working directory that is no repository yields the unavailable result ([test](tests/test_agent_mail.mapping.l1.py))
+- The project key maps from the absolute canonical path of the repository's common Git directory, read for the working directory of the repository a request names, or for the adapter's own working directory when it names none, with every variable removed that can make Git answer the location question from something other than that directory, so no value the caller inherited moves the answer — neither onto another repository nor away from its own — so every worktree of one pool, the pool's bare repository, and its main checkout resolve one mail project, a named path included; a working directory that is no repository yields the unavailable result ([test](tests/test_agent_mail.mapping.l1.py))
 - A list request maps to the store's non-marking listing surface in its unjudged mode, and a list request carrying the all-records option maps to that surface's complete form ([test](tests/test_agent_mail.mapping.l1.py))
 - A read request maps to the store's recipient-only read command and an acknowledge request maps to the store's acknowledgement command, each for one message id; neither request maps to the other's command ([test](tests/test_agent_mail.mapping.l1.py))
 
@@ -36,7 +41,7 @@ This capability is an agent adapter: the configured way the agent harness lets o
 ### Compliance
 
 - ALWAYS: the adapter rejects an empty string in every text field of every operation except a registration's display name ([test](tests/test_agent_mail.compliance.l1.py))
-- ALWAYS: an absent store or an unresolvable repository yields the source-owned unavailable result and no fallback ([test](tests/test_agent_mail.compliance.l1.py))
+- ALWAYS: an absent store, an adapter working directory that is no repository, or a named path that resolves to no repository yields the source-owned unavailable result and no fallback, and a named path never yields the key of the adapter's working directory ([test](tests/test_agent_mail.compliance.l1.py))
 - NEVER: a mail operation invokes an SPX command ([test](tests/test_agent_mail.compliance.l1.py))
 - NEVER: a registration result carries the registration token the store returns ([test](tests/test_agent_mail.compliance.l1.py))
 - NEVER: a mail operation selects, routes, or addresses by a label; the stable name or the store id selects every target ([test](tests/test_agent_mail.compliance.l1.py))
