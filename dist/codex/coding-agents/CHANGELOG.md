@@ -43,6 +43,16 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 - **`/direct-positions` and `/orchestrate-change` name the `product-tree` plugin.** The resume line names `/product-tree:understand`, the Executor start selects the `product-tree` plugin's `change-executor` definition, and the claim runs through `product-tree:claim-change`. Before this change, each named `spec-tree`, which stops resolving once the methodology plugin is installed under its new name.
 
+## Unreleased
+
+### Changed
+
+- **`/orchestrate-change` grants the Executor session the verification-run write paths and checks them before the session receives the Change.** Before each start and relaunch, the skill obtains from `spx verification run paths` the directories a changeset-scoped `audit` run and `review` run write, and passes each as one `--add-dir` argument in the start's `agentArguments`, leaving the operator's approval policy unchanged. After the session is ready and before the Change's issue reference is sent, a permission preflight reads the session's effective permissions; a denied path stops the start or relaunch with a `configuration-error` result naming each denied path, and the Executor receives no Change. The paths are planned anew for every start, relaunch, and change of verification scope, and the skill holds no store path of its own.
+
+### Requires
+
+- **An `@outcomeeng/spx` release that carries `spx verification run paths`.**
+
 ## 0.16.3
 
 ### Added
