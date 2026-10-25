@@ -12,7 +12,7 @@ The marketplace carries no version of its own — each plugin is versioned indep
 
 ### Breaking
 
-- **The `spec-tree` plugin is renamed to `product-tree`.** Every reference to `spec-tree@outcomeeng` stops resolving. Re-install as `product-tree@outcomeeng`: update any project-scoped `.claude/settings.json` naming the old identity for Claude Code, and re-install into the selected `$CODEX_HOME` for Codex. Its skills carry over under the `product-tree:` namespace, and the language and craft plugins name that namespace from their releases of this date. The methodology the marketplace delivers is named Product Tree.
+- **The `spec-tree` plugin is renamed to `product-tree`.** Every reference to `spec-tree@outcomeeng` stops resolving. Re-install as `product-tree@outcomeeng`: update any project-scoped `.claude/settings.json` naming the old identity for Claude Code, and re-install into the selected `$CODEX_HOME` for Codex. The Claude Code catalog now maps the retired id to its successor in its `renames` map, and the README section "Upgrading from spec-tree" names the step for each place a consumer's setup can still name `spec-tree`: the installed plugin, project activation, the repository instruction blocks, and the Codex agent registry. Its skills carry over under the `product-tree:` namespace, and the language and craft plugins name that namespace from their releases of this date. The methodology the marketplace delivers is named Product Tree.
 
 ## 2026-07-18
 

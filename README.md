@@ -222,6 +222,41 @@ just build-skills   # uv run python -m outcomeeng.distribution.build src dist
 
 The pre-commit hook runs `build-skills` automatically, and `just check-full`'s `dist-diff` step (`git diff --exit-code dist`) fails when `dist/` is out of sync with `src/`, so each `src/plugins/` change and its regenerated `dist/` commit together. Never hand-edit `dist/`.
 
+## Upgrading from spec-tree
+
+The `spec-tree` plugin is now `product-tree`. Five places in a consumer's setup can still name `spec-tree`, and each takes one step.
+
+### The installed plugin
+
+Claude Code lists `spec-tree` as `failed to load` after the marketplace refresh until its install record is replaced. Install the successor at the scope that holds the old record, then uninstall the old one, and commit the changed `.claude/settings.json`:
+
+```bash
+claude plugin marketplace update outcomeeng
+claude plugin install product-tree@outcomeeng --scope project
+claude plugin uninstall spec-tree@outcomeeng --scope project
+```
+
+The install only adds a key, so the uninstall is what removes the `spec-tree` key. For a plugin installed at user scope, run both commands without `--scope project`.
+
+Codex adds the successor first and then removes the old plugin. After the marketplace refresh, `spec-tree` no longer appears in `codex plugin list`, and `codex plugin remove spec-tree@outcomeeng` still removes it, together with its entry in `$CODEX_HOME/config.toml` and its cache:
+
+```bash
+codex plugin add product-tree@outcomeeng
+codex plugin remove spec-tree@outcomeeng
+```
+
+### Project activation
+
+The `enabledPlugins` key in `.claude/settings.json` is handled by the commands above. No Codex command edits a project's committed `.codex/config.toml`: replace `[plugins."spec-tree@outcomeeng"]` with `[plugins."product-tree@outcomeeng"]` in that file by hand.
+
+### Repository instruction blocks
+
+Run the `update-instruction-block` skill of the `product-tree` plugin in each repository. It replaces the `SPEC-TREE` router block and shared regions in `CLAUDE.md` and `AGENTS.md` with their `PRODUCT-TREE` forms once.
+
+### The Codex agent registry
+
+Codex reads subagent definitions from `$CODEX_HOME/agents`. Run the `product-tree-plugin` skill in Codex with the `upgrade` verb. It writes the `product-tree_*.toml` definitions and prunes the `spec-tree_*.toml` definitions that the marketplace ownership record lists, while their content still matches the record. A definition you changed, or replaced with a link, stays in place and the step reports it as `retained`: delete that file by hand.
+
 ## Plugins
 
 Skills are available in both Claude Code and Codex, with generated plugin surfaces carrying the thin agents their target supports. Every skill and thin agent across every plugin is listed in the auto-generated catalog below, sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md` and `agents/*.md`. Run `just docs` to regenerate after touching any of those files; `just check-full` enforces freshness in CI.

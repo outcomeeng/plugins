@@ -53,6 +53,7 @@ from outcomeeng.distribution.installation import (
     ClaudeInstallRecord,
     CATALOG_PLUGIN_NAME_FIELD,
     CATALOG_PLUGINS_FIELD,
+    CATALOG_RENAMES_FIELD,
     CHECKOUT_OPTION,
     CLAUDE_CATALOG_PATH,
     CLAUDE_MARKETPLACE_LIST_COMMAND,
@@ -429,11 +430,21 @@ class PluginLifecycleHarness:
 
     root: Path
     plugin_name: str
+    replaced_plugin: str
+    """A plugin id the harness's catalog renames to `plugin_name`."""
 
     @classmethod
     def create(cls, root: Path) -> PluginLifecycleHarness:
-        """Materialize the placement script for a freshly generated plugin name."""
-        harness = cls(root=root, plugin_name=generated_plugin_name())
+        """Materialize the placement script for a freshly generated plugin name.
+
+        The catalog the script is built from renames a second fresh plugin id to
+        the first, as a marketplace does when it retires a plugin for a successor.
+        """
+        harness = cls(
+            root=root,
+            plugin_name=generated_plugin_name(),
+            replaced_plugin=generated_plugin_name(),
+        )
         harness._materialize_script()
         return harness
 
@@ -480,8 +491,23 @@ class PluginLifecycleHarness:
         template = (
             repository_root() / "src/templates/plugin/scripts/place_agents.py"
         ).read_text(encoding="utf-8")
+        build_root = self.root / "build"
+        catalog = build_root / CLAUDE_CATALOG_PATH
+        catalog.parent.mkdir(parents=True, exist_ok=True)
+        catalog.write_text(
+            json.dumps(
+                {
+                    CATALOG_PLUGINS_FIELD: [
+                        {CATALOG_PLUGIN_NAME_FIELD: self.plugin_name}
+                    ],
+                    CATALOG_RENAMES_FIELD: {self.replaced_plugin: self.plugin_name},
+                }
+            ),
+            encoding="utf-8",
+        )
         rendered = render_text(
             template,
+            shared_root=build_root / "src" / "shared",
             variables={
                 BUILD_TARGET_VARIABLE: Target.CODEX.value,
                 PLUGIN_NAME_VARIABLE: self.plugin_name,
@@ -549,13 +575,23 @@ class PluginLifecycleHarness:
         """The ownership-record destination for a home agent file name."""
         return f"{CODEX_HOME_AGENTS_PATH.as_posix()}/{name}"
 
-    def ownership_entry(self, name: str, digest: str) -> dict[str, object]:
-        """One ownership entry claiming `name` for this plugin at `digest`."""
+    def ownership_entry(
+        self, name: str, digest: str, *, plugin: str | None = None
+    ) -> dict[str, object]:
+        """One ownership entry claiming `name` for `plugin`, this plugin by default, at `digest`."""
         return {
             AGENT_OWNERSHIP_DESTINATION_FIELD: self.destination_of(name),
-            AGENT_OWNERSHIP_PLUGIN_FIELD: self.plugin_name,
+            AGENT_OWNERSHIP_PLUGIN_FIELD: plugin or self.plugin_name,
             AGENT_OWNERSHIP_DIGEST_FIELD: digest,
         }
+
+    def replaced_definition(self) -> tuple[str, bytes]:
+        """The filename and bytes the replaced plugin's own placement gave a fresh agent."""
+        slug = generated_agent_slug()
+        return (
+            shipped_codex_definition_name(self.replaced_plugin, slug),
+            f'{AGENT_NAME_FIELD} = "{self.replaced_plugin}-{slug}"\n'.encode(),
+        )
 
     @staticmethod
     def ownership_document(*entries: Mapping[str, object]) -> dict[str, object]:
@@ -1999,6 +2035,33 @@ def install_record_fixture_path() -> Path:
     writes beside the three a rewrite sets.
     """
     return INSTALLATION_FIXTURES / "installed_plugins.json"
+
+
+def invalid_renames_catalog_paths() -> tuple[Path, ...]:
+    """Every catalog whose `renames` field a marketplace catalog must not carry.
+
+    Each file is a whole catalog that breaks one rule of the field: it retires a
+    plugin the catalog lists, names a successor the catalog lacks, holds an id
+    that is not one path segment or carries the separator the build joins ids
+    with, or has a field that is no map of names. A new file in the directory is
+    a new case.
+    """
+    return tuple(sorted((INSTALLATION_FIXTURES / "invalid-renames").glob("*.json")))
+
+
+def observe_committed_renames() -> dict[str, str]:
+    """Read the retired-to-successor ids from the raw committed Claude Code catalog.
+
+    The read uses json.loads over the committed file and none of the production
+    readers, so it stays independent of the code under test.
+    """
+    document = cast(
+        "dict[str, object]",
+        json.loads(
+            (repository_root() / CLAUDE_CATALOG_PATH).read_text(encoding="utf-8")
+        ),
+    )
+    return cast("dict[str, str]", document.get(CATALOG_RENAMES_FIELD, {}))
 
 
 @dataclass(frozen=True)

@@ -192,6 +192,8 @@ its own plugin's namespace; the marketplace-scope pass lives in
 publishes has no shipped path to prune it: the definition stays until the
 consumer removes it by hand.
 
+A plugin the catalog renames to another is the exception: the successor's shipped `place_agents.py` prunes the retired id's recorded definitions while their digest matches. The gap stays for a plugin the catalog retires without a successor.
+
 The retired plan for this node proposed embedding a committed-catalog snapshot,
 stamped with a deterministic catalog revision, in each plugin's shipped tree so
 any single plugin's lifecycle skill could run the marketplace-scope pass. That

@@ -28,6 +28,7 @@ from outcomeeng.distribution.installation import (
     ReportField,
     PRODUCT_TREE_PLUGIN,
     STATE_ENV_NAMES,
+    catalog_renames,
     marketplace_plugin_identifier,
     marketplace_plugin_name,
 )
@@ -45,6 +46,7 @@ from outcomeeng_testing.harnesses.installation import (
     captured_non_pending_failure_wordings,
     committed_catalog_plugin_names,
     install_record_fixture_path,
+    invalid_renames_catalog_paths,
     observe_codex_config_independence,
     observe_committed_declarations,
     observe_designated_failure,
@@ -726,3 +728,18 @@ def test_a_record_written_after_the_listing_read_survives_the_install_record_wri
     assert surviving == [observation.concurrent_entry]
     assert observation.reads > 1
     assert observation.rewrites
+
+
+def test_a_catalog_renames_field_that_breaks_a_rule_is_rejected_when_the_catalog_is_read() -> (
+    None
+):
+    invalid = invalid_renames_catalog_paths()
+    assert invalid, "no invalid renames catalog exists to reject"
+
+    for catalog in invalid:
+        try:
+            accepted = catalog_renames(catalog)
+        except ValueError as error:
+            assert catalog.name in str(error), f"{catalog.name}: {error}"
+        else:
+            raise AssertionError(f"{catalog.name} was accepted as {accepted}")

@@ -69,6 +69,10 @@ AGENT_OWNERSHIP_PLUGIN_FIELD = "plugin"
 AGENT_OWNERSHIP_DIGEST_FIELD = "digest"
 CATALOG_PLUGINS_FIELD = "plugins"
 CATALOG_PLUGIN_NAME_FIELD = "name"
+CATALOG_RENAMES_FIELD = "renames"
+"""The catalog field mapping each retired plugin id to the plugin that replaces it."""
+CATALOG_RENAME_LIST_SEPARATOR = ","
+"""The separator the build joins retired plugin ids with, so no retired id carries it."""
 HOME_ENV = "HOME"
 CLAUDE_CONFIG_ENV = "CLAUDE_CONFIG_DIR"
 CODEX_HOME_ENV = "CODEX_HOME"
@@ -2357,6 +2361,66 @@ def catalog_plugin_names(catalog_path: Path) -> tuple[str, ...]:
     return tuple(names)
 
 
+def _is_catalog_name_segment(name: str) -> bool:
+    """Whether `name` is one path segment, with no separator the catalog forbids."""
+    return (
+        bool(name)
+        and name not in (os.curdir, os.pardir)
+        and CATALOG_RENAME_LIST_SEPARATOR not in name
+        and not any(separator in name for separator in CATALOG_NAME_SEPARATORS)
+    )
+
+
+def catalog_renames(catalog_path: Path) -> dict[str, str]:
+    """Read and validate the retired-to-successor plugin ids one catalog declares.
+
+    The `renames` field maps each retired plugin id to the plugin that replaces
+    it. A catalog without the field declares none. A retired id is one path
+    segment that no cataloged plugin carries, and its successor is a cataloged
+    plugin, so a rename never chains and never names a plugin the catalog lacks.
+    """
+    plugins = set(catalog_plugin_names(catalog_path))
+    document = cast(
+        "dict[str, object]", json.loads(catalog_path.read_text(encoding="utf-8"))
+    )
+    declared = document.get(CATALOG_RENAMES_FIELD)
+    if declared is None:
+        return {}
+    if not isinstance(declared, dict):
+        raise ValueError(
+            f"marketplace catalog {catalog_path} {CATALOG_RENAMES_FIELD} "
+            "must be a JSON object"
+        )
+    renames: dict[str, str] = {}
+    for retired, successor in declared.items():
+        if not isinstance(successor, str) or not _is_catalog_name_segment(retired):
+            raise ValueError(
+                f"marketplace catalog {catalog_path} {CATALOG_RENAMES_FIELD} entry "
+                f"{retired!r} must map one path segment to a plugin name"
+            )
+        if retired in plugins:
+            raise ValueError(
+                f"marketplace catalog {catalog_path} {CATALOG_RENAMES_FIELD} "
+                f"retires {retired!r}, which the catalog still lists"
+            )
+        if successor not in plugins:
+            raise ValueError(
+                f"marketplace catalog {catalog_path} {CATALOG_RENAMES_FIELD} "
+                f"maps {retired!r} to {successor!r}, which the catalog does not list"
+            )
+        renames[retired] = successor
+    return renames
+
+
+def replaced_plugin_names(catalog_path: Path, plugin: str) -> tuple[str, ...]:
+    """The retired plugin ids one catalog renames to `plugin`, in catalog order."""
+    return tuple(
+        retired
+        for retired, successor in catalog_renames(catalog_path).items()
+        if successor == plugin
+    )
+
+
 def confined_path(root: Path, candidate: Path) -> Path | None:
     """Return `candidate` with symbolic links resolved, or None when it leaves `root`."""
     resolved_root = os.path.realpath(root)
@@ -4564,6 +4628,9 @@ __all__ = [
     "build_persistent_installation_plan",
     "build_persistent_preflight",
     "catalog_plugin_names",
+    "catalog_renames",
+    "replaced_plugin_names",
+    "CATALOG_RENAMES_FIELD",
     "checkout_scope_split_entries",
     "confined_path",
     "generated_codex_agents_root",

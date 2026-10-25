@@ -68,5 +68,8 @@
       "source": "./dist/claude/contribute",
       "description": "Contributions to repositories you do not control: /upstream, /open-upstream-pr, /manage-upstream-pr, /open-upstream-issue, /manage-upstream-issue, /sync-fork"
     }
-  ]
+  ],
+  "renames": {
+    "spec-tree": "product-tree"
+  }
 }

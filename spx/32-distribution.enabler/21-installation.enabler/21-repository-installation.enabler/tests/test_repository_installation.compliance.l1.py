@@ -185,6 +185,108 @@ def test_plugin_lifecycle_prunes_only_matching_owned_definitions(
     assert foreign.read_bytes() == foreign_content
 
 
+def test_plugin_lifecycle_prunes_the_matching_definitions_of_a_plugin_the_catalog_renames_to_it(
+    tmp_path: Path,
+) -> None:
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
+    module = lifecycle.load_module()
+    current = lifecycle.ship_agent()
+    replaced_name, replaced_content = lifecycle.replaced_definition()
+    replaced = lifecycle.write_home(replaced_name, replaced_content)
+    other_name, other_content = generated_agent_file()
+    other = lifecycle.write_home(other_name, other_content)
+    other_entry = lifecycle.ownership_entry(
+        other_name,
+        hashlib.sha256(other_content).hexdigest(),
+        plugin=generated_plugin_name(),
+    )
+    lifecycle.write_ownership(
+        lifecycle.ownership_document(
+            lifecycle.ownership_entry(
+                replaced_name,
+                hashlib.sha256(replaced_content).hexdigest(),
+                plugin=lifecycle.replaced_plugin,
+            ),
+            other_entry,
+        )
+    )
+    before = lifecycle.snapshot(lifecycle.home)
+
+    check = lifecycle.run(check=True)
+    assert check.exit_code == module.EXIT_CHANGES_PENDING
+    assert f"{module.PRUNE_PREFIX}{replaced}" in check.stdout
+    assert check.home_snapshot == before
+
+    placed = lifecycle.run()
+    assert placed.exit_code == 0
+    assert not replaced.exists()
+    assert other.read_bytes() == other_content
+    assert (lifecycle.home_agents / current.name).read_bytes() == current.read_bytes()
+    recorded = json.loads(lifecycle.ownership_path.read_text(encoding="utf-8"))
+    destinations = [
+        entry[module.ENTRY_DESTINATION_FIELD]
+        for entry in recorded[module.OWNERSHIP_ENTRIES_FIELD]
+    ]
+    assert lifecycle.destination_of(replaced_name) not in destinations
+    assert other_entry in recorded[module.OWNERSHIP_ENTRIES_FIELD]
+
+
+def test_plugin_lifecycle_retains_and_reports_a_changed_definition_of_a_replaced_plugin(
+    tmp_path: Path,
+) -> None:
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
+    module = lifecycle.load_module()
+    current = lifecycle.ship_agent()
+    replaced_name, replaced_content = lifecycle.replaced_definition()
+    changed_content = generated_definition_edit(replaced_content)
+    changed = lifecycle.write_home(replaced_name, changed_content)
+    recorded_entry = lifecycle.ownership_entry(
+        replaced_name,
+        hashlib.sha256(replaced_content).hexdigest(),
+        plugin=lifecycle.replaced_plugin,
+    )
+    lifecycle.write_ownership(lifecycle.ownership_document(recorded_entry))
+
+    placed = lifecycle.run()
+
+    assert placed.exit_code == 0
+    assert f"{module.RETAINED_PREFIX}{changed}" in placed.stdout
+    assert changed.read_bytes() == changed_content
+    assert (lifecycle.home_agents / current.name).read_bytes() == current.read_bytes()
+    recorded = json.loads(lifecycle.ownership_path.read_text(encoding="utf-8"))
+    assert recorded_entry in recorded[module.OWNERSHIP_ENTRIES_FIELD]
+
+
+def test_plugin_lifecycle_retains_and_reports_a_linked_definition_of_a_replaced_plugin(
+    tmp_path: Path,
+) -> None:
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
+    module = lifecycle.load_module()
+    lifecycle.ship_agent()
+    replaced_name, replaced_content = lifecycle.replaced_definition()
+    external = lifecycle.outside / replaced_name
+    external.write_bytes(replaced_content)
+    lifecycle.home_agents.mkdir(parents=True, exist_ok=True)
+    linked = lifecycle.home_agents / replaced_name
+    linked.symlink_to(external)
+    lifecycle.write_ownership(
+        lifecycle.ownership_document(
+            lifecycle.ownership_entry(
+                replaced_name,
+                hashlib.sha256(replaced_content).hexdigest(),
+                plugin=lifecycle.replaced_plugin,
+            )
+        )
+    )
+
+    placed = lifecycle.run()
+
+    assert placed.exit_code == 0
+    assert f"{module.RETAINED_PREFIX}{linked}" in placed.stdout
+    assert linked.is_symlink()
+    assert external.read_bytes() == replaced_content
+
+
 def test_plugin_lifecycle_rejects_an_unrecorded_destination_without_mutation(
     tmp_path: Path,
 ) -> None:

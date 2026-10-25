@@ -1,0 +1,8 @@
+{
+  "name": "outcomeeng",
+  "plugins": [
+    { "name": "product-tree", "source": "./dist/claude/product-tree" },
+    { "name": "python", "source": "./dist/claude/python" }
+  ],
+  "renames": { "spec-tree,python": "product-tree" }
+}
