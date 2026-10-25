@@ -130,13 +130,16 @@ jobs:
           dprint --version
 
       - name: Run quality gate
-        # GH_TOKEN authenticates the gh CLI for the [test]-lane l3
-        # workflow-observability tests; without it `gh auth status` fails and
-        # those tests fail loudly by design. OPENAI_API_KEY authenticates the
-        # disposable Codex home the [test]-lane l3 subagent-discovery probe logs
-        # into; without it that probe fails loudly by design.
+        run: just check-full
+
+      - name: Run L3 tests
+        # GH_TOKEN authenticates the gh CLI for the L3 workflow-observability
+        # tests; without it `gh auth status` fails and those tests fail loudly
+        # by design. OPENAI_API_KEY authenticates the disposable Codex home the
+        # L3 subagent-discovery probe logs into; without it that probe fails
+        # loudly by design. No other step reads these credentials.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SUBAGENT_DISCOVERY_AUTH_MODE: api
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: just check-full
+        run: just test-l3

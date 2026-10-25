@@ -22,3 +22,6 @@ jobs:
       - name: Run quality gate
         continue-on-error: false
         run: just check-full
+      - name: Run L3 tests
+        continue-on-error: false
+        run: just test-l3
