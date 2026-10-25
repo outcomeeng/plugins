@@ -19,7 +19,9 @@ Tested inputs and error cases: the co-located classifier scenario and mapping
 evidence exercises importlib loading of `changeset_scope.py`, end-to-end
 changed-path delegation through `detect_base_ref` and `branch_scope`, finite
 coordination-note classification, git porcelain records for paths containing
-spaces, and unconfigured remote-default diagnostics before this script is
+spaces, unconfigured remote-default diagnostics, and the environment failures
+(absent sibling module, git absent from PATH, a directory outside any git
+working tree) that each exit 1 behind the error prefix before this script is
 bundled.
 """
 
@@ -34,22 +36,69 @@ import sys
 from types import ModuleType
 from typing import cast
 
-_CONTRACT = runpy.run_path(str(pathlib.Path(__file__).with_name("merge_contract.py")))
-COORDINATION_NOTE_BASENAMES = cast(
-    tuple[str, ...], _CONTRACT["COORDINATION_NOTE_BASENAMES"]
-)
-_COORDINATION_NOTE = re.compile(
-    r"(^|/)("
-    + "|".join(re.escape(name) for name in COORDINATION_NOTE_BASENAMES)
-    + r")$"
-)
+_CONTRACT_FILENAME = "merge_contract.py"
 _CHANGESET_SCOPE_RELPATH = ("scope-changeset", "scripts", "changeset_scope.py")
 _PREVIEW_LIMIT = 40
 BASE_REF_ERROR_PREFIX = "error: merge changeset classification failed"
+_DIFF_FIX = "Fetch origin so the remote-tracking base ref exists, then rerun."
+_GIT_ABSENT_FIX = "Install git or add it to PATH, then rerun."
+_NOT_A_WORKING_TREE_FIX = "Run the classifier from inside a git working tree."
+_coordination_note_pattern: re.Pattern[str] | None = None
 
 
 class ChangesetClassificationError(RuntimeError):
     """The merge classifier cannot derive a transport-selection changeset."""
+
+
+def _git_absent_error(
+    command: list[str], repo: pathlib.Path
+) -> ChangesetClassificationError:
+    return ChangesetClassificationError(
+        f"cannot run `{' '.join(command)}` in {repo}: git is not on PATH. "
+        f"{_GIT_ABSENT_FIX}"
+    )
+
+
+def _git_failure_error(
+    command: list[str],
+    repo: pathlib.Path,
+    exc: subprocess.CalledProcessError,
+    fix: str,
+) -> ChangesetClassificationError:
+    detail = (exc.stderr or "").strip() or f"exit status {exc.returncode}"
+    return ChangesetClassificationError(
+        f"`{' '.join(command)}` failed in {repo}: {detail}. {fix}"
+    )
+
+
+def _load_coordination_note_pattern() -> re.Pattern[str]:
+    """Compile the coordination-note matcher from the sibling `merge_contract.py`.
+
+    The sibling path is checked before it is executed, so an incomplete install
+    reports the missing path instead of raising a raw traceback.
+    """
+    global _coordination_note_pattern  # noqa: PLW0603 — one-time lazy cache
+    if _coordination_note_pattern is not None:
+        return _coordination_note_pattern
+    path = pathlib.Path(__file__).resolve().with_name(_CONTRACT_FILENAME)
+    if not path.is_file():
+        raise ChangesetClassificationError(
+            f"cannot load {_CONTRACT_FILENAME} from {path}: the file is absent. "
+            "Reinstall the product-tree plugin so the merge skill's scripts "
+            "directory is complete."
+        )
+    try:
+        contract = runpy.run_path(str(path))
+        basenames = cast(tuple[str, ...], contract["COORDINATION_NOTE_BASENAMES"])
+    except (OSError, SyntaxError, KeyError) as exc:
+        raise ChangesetClassificationError(
+            f"cannot read COORDINATION_NOTE_BASENAMES from {path}: "
+            f"{type(exc).__name__}: {exc}. Reinstall the product-tree plugin."
+        ) from exc
+    _coordination_note_pattern = re.compile(
+        r"(^|/)(" + "|".join(re.escape(name) for name in basenames) + r")$"
+    )
+    return _coordination_note_pattern
 
 
 def _load_changeset_scope() -> ModuleType:
@@ -65,7 +114,11 @@ def _load_changeset_scope() -> ModuleType:
         return cached
     skills_dir = pathlib.Path(__file__).resolve().parent.parent.parent
     path = skills_dir.joinpath(*_CHANGESET_SCOPE_RELPATH)
-    spec = importlib.util.spec_from_file_location("changeset_scope", path)
+    spec = (
+        importlib.util.spec_from_file_location("changeset_scope", path)
+        if path.is_file()
+        else None
+    )
     if spec is None or spec.loader is None:
         siblings = (
             sorted(entry.name for entry in skills_dir.iterdir() if entry.is_dir())
@@ -80,7 +133,15 @@ def _load_changeset_scope() -> ModuleType:
         )
     module = importlib.util.module_from_spec(spec)
     sys.modules["changeset_scope"] = module
-    spec.loader.exec_module(module)
+    try:
+        spec.loader.exec_module(module)
+    except (OSError, SyntaxError, ImportError) as exc:
+        del sys.modules["changeset_scope"]
+        raise ChangesetClassificationError(
+            f"cannot execute changeset_scope from {path}: "
+            f"{type(exc).__name__}: {exc}. Reinstall the product-tree plugin so "
+            "the scope-changeset skill sits beside the merge skill."
+        ) from exc
     return module
 
 
@@ -108,16 +169,9 @@ def _working_tree_paths(repo: pathlib.Path) -> list[str]:
             check=True,
         )
     except FileNotFoundError as exc:
-        raise ChangesetClassificationError(
-            f"cannot run `{' '.join(command)}` in {repo}: git is not on PATH. "
-            "Install git or add it to PATH, then rerun."
-        ) from exc
+        raise _git_absent_error(command, repo) from exc
     except subprocess.CalledProcessError as exc:
-        detail = (exc.stderr or "").strip() or f"exit status {exc.returncode}"
-        raise ChangesetClassificationError(
-            f"`{' '.join(command)}` failed in {repo}: {detail}. "
-            "Run the classifier from inside a git working tree."
-        ) from exc
+        raise _git_failure_error(command, repo, exc, _NOT_A_WORKING_TREE_FIX) from exc
     fields = result.stdout.split("\x00")
     paths: list[str] = []
     index = 0
@@ -136,7 +190,7 @@ def _working_tree_paths(repo: pathlib.Path) -> list[str]:
 
 def is_coordination_note(path: str) -> bool:
     """True when `path`'s basename is a coordination note (`PLAN.md`/`ISSUES.md`)."""
-    return _COORDINATION_NOTE.search(path) is not None
+    return _load_coordination_note_pattern().search(path) is not None
 
 
 def classify(paths: list[str]) -> tuple[int, int]:
@@ -154,12 +208,19 @@ def classify(paths: list[str]) -> tuple[int, int]:
 def changed_paths(repo: pathlib.Path) -> list[str]:
     """Full changed-file set: committed branch scope plus working-tree changes."""
     changeset_scope = _load_changeset_scope()
+    # Working-tree status runs first: it is the earliest git invocation that
+    # fails for a directory outside any working tree, so that failure reports
+    # git's own diagnostic rather than a base-ref configuration error.
+    working = _working_tree_paths(repo)
     try:
         base = changeset_scope.detect_base_ref(repo)
+        committed = changeset_scope.branch_scope(base, repo=repo)
     except changeset_scope.BaseRefNotConfiguredError as exc:
         raise ChangesetClassificationError(str(exc)) from exc
-    committed = changeset_scope.branch_scope(base, repo=repo)
-    working = _working_tree_paths(repo)
+    except FileNotFoundError as exc:
+        raise _git_absent_error(["git"], repo) from exc
+    except subprocess.CalledProcessError as exc:
+        raise _git_failure_error(list(exc.cmd), repo, exc, _DIFF_FIX) from exc
     return [*committed, *working]
 
 

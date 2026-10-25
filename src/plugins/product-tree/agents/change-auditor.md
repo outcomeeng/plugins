@@ -35,10 +35,19 @@ request files, and persistence; relay its result.
 <workflow>
 
 1. Confirm `product-tree:audit-change` is loaded, loading it through the skill
-   tool when its body is absent. If loading fails, return the skill's `BLOCKED`
-   prerequisite shape with `detail` set to
-   `product-tree:audit-change: <exact availability or loading failure>`,
-   `runnerExit: none`, `judgmentStatus: incomplete`, and `judgedFindings: []`.
+   tool when its body is absent. If loading fails, the skill's `verdict_format`
+   is unavailable, so return this block, which this wrapper defines for that
+   case alone, with `<detail>` set to
+   `product-tree:audit-change: <exact availability or loading failure>`:
+
+   ```text
+   BLOCKED
+   result: {"operation":null,"status":"blocked","reason":"missing-prerequisite","detail":"<detail>","runToken":"not-started"}
+   runnerExit: none
+   judgmentStatus: incomplete
+   judgedFindings: []
+   ```
+
    Do no specialized audit work from memory.
 2. Invoke `product-tree:product-tree-plugin` with the verb `version` and retain the
    non-empty version it reports. A missing version or a blocked result returns

@@ -37,7 +37,7 @@ Language-specific ADR concerns — testability-in-Verification (dependency injec
 
 - NEVER modify the ADR under audit or any other file — this audit produces a verdict, never a fix or a commit.
 - ALWAYS derive the valid section set from the canonical ADR template before judging structure — never from memory.
-- ALWAYS name the section, the violated rule, and the evidence in every REJECT finding — the author repairs from the finding alone, and an unanchored finding leaves nothing to repair.
+- ALWAYS name the section, the violated rule, and the evidence in every `blocking` finding — the author repairs from the finding alone, and an unanchored finding leaves nothing to repair.
 - NEVER issue a finding the cited rule or canonical template does not support — drop an unbacked finding rather than reject the ADR for it.
 - NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding as `filed`, and NEVER raise a recorded finding's severity or let a `filed` finding start to reject unless the run names a changed basis. `${SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `filed` form; `${SKILL_DIR}/references/rule-catalog.md` defines the rule identifiers.
 
@@ -77,7 +77,7 @@ Use the canonical ADR template guidance loaded in Step 1 to derive the valid sec
 
 Verify the decision is stated in the opening (no "Purpose" preamble) and a `## Verification` section is present. Rationale and Invariants are optional — Invariants appears only when the decision establishes algebraic properties.
 
-**No decision statement, or no Verification section → REJECT — "missing-section."**
+**No decision statement, or no Verification section → `blocking` — "missing-section."**
 
 </step>
 
@@ -87,13 +87,13 @@ Verify the decision is stated in the opening (no "Purpose" preamble) and a `## V
 
 Check EVERY section for temporal language:
 
-| Temporal (REJECT)                     | Atemporal (correct)             |
+| Temporal (blocking)                   | Atemporal (correct)             |
 | ------------------------------------- | ------------------------------- |
 | "We decided to use X because Y broke" | "X governs Z"                   |
 | "Currently the build does X"          | "The build does X"              |
 | "After profiling, we added caching"   | "Caching reduces latency for Z" |
 
-**Any temporal language in any section → REJECT — "temporal-voice."**
+**Any temporal language in any section → `blocking` — "temporal-voice."**
 
 </step>
 
@@ -115,7 +115,7 @@ For each routed rule:
 
 An unsupported bare mechanism tag, a tag disagreeing with its subsection, a missing tag inside a routed subsection, more than one tag, an `### Audit` slug that repeats within the ADR, or an assertion type that contradicts the claim's shape is invalid.
 
-**A routed rule with a missing, unsupported, duplicate, repeated-slug, or subsection-mismatched tag → REJECT — "invalid-tag." An assertion type that contradicts the claim's shape → REJECT — "assertion-type-mismatch."**
+**A routed rule with a missing, unsupported, duplicate, repeated-slug, or subsection-mismatched tag → `blocking` — "invalid-tag." An assertion type that contradicts the claim's shape → `blocking` — "assertion-type-mismatch."**
 
 </step>
 
@@ -168,7 +168,7 @@ The `overall` is `APPROVED` iff every native and composed row is `PASS` or `NOT_
 }
 ```
 
-Each finding is keyed `<adr-file-path>:<rule-id>` and carries `rule` (the `<rule-id>`), `severity: "blocking | filed"`, `locations` (every location in the ADR where that rule is violated), `message`, `observed`, and `expected`; a `filed` finding additionally carries `key`, `baseRefEvidence`, and `issuesEntry` (`path`, `heading`). Every `<rule-id>` comes from `${SKILL_DIR}/references/rule-catalog.md`; a validated composed finding retains the rule identifier of the invoked skill's own catalog. A finding names no identifier outside those catalogs.
+Each finding is keyed `<adr-file-path>:<rule-id>` and carries `rule` (the `<rule-id>`), `severity: "blocking | filed"`, `locations` (every location in the ADR where that rule is violated), `message`, `observed`, and `expected`; a `filed` finding additionally carries `baseRefEvidence`, and `issuesEntry` (`path`, `heading`). Every `<rule-id>` comes from `${SKILL_DIR}/references/rule-catalog.md`; a validated composed finding retains the rule identifier of the invoked skill's own catalog. A finding names no identifier outside those catalogs.
 
 </verdict_format>
 
@@ -198,8 +198,8 @@ The verdict is sound when:
 
 - Every ADR rule was judged with none skipped — section structure, atemporal voice, and per-rule tag validity and assertion-type fit; when a language is in scope, the composed `/audit-<lang>-architecture` rows are judged too (coverage-complete).
 - The verdict states one `APPROVED` or `REJECTED` overall determination, every native and composed row carrying `PASS`, `FAIL`, or explained `NOT_APPLICABLE`, with no rule left unevaluated.
-- Each REJECT finding lies on touched text, and every finding outside touched text appears as `filed` with its key, `baseRefEvidence`, and `issuesEntry`.
-- Each REJECT finding is falsifiable: it names the section, the violated rule, and the evidence — the missing section, the temporal phrase, or the mismatched tag.
+- Each `blocking` finding lies on touched text, and every finding outside touched text appears as `filed` with its key, `baseRefEvidence`, and `issuesEntry`.
+- Each `blocking` finding is falsifiable: it names the section, the violated rule, and the evidence — the missing section, the temporal phrase, or the mismatched tag.
 - The same ADR yields the same verdict.
 
 </success_criteria>

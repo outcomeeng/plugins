@@ -162,7 +162,7 @@ Each script is tested with the standard library only; the tests that run offline
 
 - `scripts/gh_access.py` — remote parsing of SCP-form, URL-form, and malformed remotes; an enterprise host reaching every API call; account filtering by host; a run outside a git checkout; an unreachable repository; and a live run against real `gh` credentials.
 - `scripts/mutation_gate.py` — a gated command refused without `--user-instructed` and, with it, allowed and logged; an ungated command passed through; a blocked command writing only to stderr.
-- `scripts/workflow_inspect.py` — every subcommand against recorded `gh` replies; log truncation at, below, and above `--max-bytes`, including inside a multibyte character; invalid run ids, PR numbers, `--limit`, and `--max-bytes` rejected before any `gh` call; `gh` failures, timeouts, non-JSON output, and wrong-shape JSON, each reported as `<subcommand> <argument>: <cause>. Next: <action>.` with exit 1; and one live run against real `gh` credentials.
+- `scripts/workflow_inspect.py` — every subcommand against recorded `gh` replies; log truncation at, below, and above `--max-bytes`, including inside a multibyte character; invalid run ids and PR numbers, dash-led tokens such as `--5` and `-abc` included, and invalid `--limit` and `--max-bytes` rejected before any `gh` call; `gh` failures, timeouts, non-JSON output, and wrong-shape JSON, each reported as `<subcommand> <argument>: <cause>. Next: <action>.` with exit 1; and one live run against real `gh` credentials.
 - All three — standard-library imports only, `capture_output=True` on every `subprocess.run`, no `subprocess.Popen`, no `gh run watch`, and no `time.sleep`.
 
 </script_test_record>

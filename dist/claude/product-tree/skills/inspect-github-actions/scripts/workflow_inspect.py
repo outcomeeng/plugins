@@ -14,6 +14,9 @@ log text inside a `log` field (not JSON-structured) and preserves whitespace
 exactly as `gh` emits it; output exceeding `--max-bytes` is truncated to the
 last N bytes with `truncated: true` in the response.
 
+A run id or pull request number that is not a positive integer, a dash-led
+token such as `--5` or `-abc` included, is rejected before any `gh` call.
+
 Failures set `error` to `<subcommand> <argument>: <cause>. Next: <action>.` and
 exit 1. Every `gh` call goes through the module-level `_run` function.
 
@@ -32,6 +35,17 @@ from typing import Any
 SCHEMA_VERSION = 1
 DEFAULT_LOG_MAX_BYTES = 100_000
 SUBPROCESS_TIMEOUT_SECONDS = 60
+POSITIONAL_PLACEHOLDER = "0"
+# Subcommands that take one positional number, with the long options each
+# accepts and the subset of those that consume the following token as a value.
+POSITIONAL_LONG_OPTIONS: dict[str, tuple[str, ...]] = {
+    "run": ("--help",),
+    "jobs": ("--help",),
+    "log": ("--help", "--failed", "--max-bytes"),
+    "checks": ("--help",),
+    "artifacts": ("--help",),
+}
+VALUE_OPTIONS = ("--max-bytes",)
 
 
 def _run(cmd: list[str]) -> tuple[int, str, str]:
@@ -81,6 +95,48 @@ def _validate_id(subcommand: str, label: str, value: str, source: str) -> str | 
         f"{label} must be a positive integer, got '{value}'",
         f"pass the number from {source}",
     )
+
+
+def _is_option(token: str, long_options: tuple[str, ...]) -> bool:
+    """Report whether argparse reads `token` as one of the subcommand's options."""
+    if token == "-h":
+        return True
+    name = token.split("=", 1)[0]
+    return (
+        len(name) > 2
+        and name.startswith("--")
+        and any(option.startswith(name) for option in long_options)
+    )
+
+
+def _hoist_dash_led_positional(argv: list[str]) -> tuple[list[str], str | None]:
+    """Detach a dash-led run id or pull request number from `argv`.
+
+    argparse reads a token such as `--5` or `-abc` as an unknown option and
+    exits 2 with a usage error. When the first token after the subcommand that
+    is not one of its options (or an option's value) starts with a dash, return
+    `argv` with a placeholder number in its place and the original token, so the
+    positional validation reports it like any other non-positive-integer value.
+    """
+    if len(argv) < 3 or argv[1] not in POSITIONAL_LONG_OPTIONS:
+        return argv, None
+    long_options = POSITIONAL_LONG_OPTIONS[argv[1]]
+    index = 2
+    while index < len(argv):
+        token = argv[index]
+        if token == "--":
+            return argv, None
+        if _is_option(token, long_options):
+            takes_value = "=" not in token and any(
+                option.startswith(token) for option in VALUE_OPTIONS
+            )
+            index += 2 if takes_value else 1
+            continue
+        if token.startswith("-") and token != "-":
+            hoisted = [*argv[:index], POSITIONAL_PLACEHOLDER, *argv[index + 1 :]]
+            return hoisted, token
+        return argv, None
+    return argv, None
 
 
 def _gh_json(
@@ -414,7 +470,13 @@ def main(argv: list[str]) -> int:
 
     sub.add_parser("workflow-files", help="list workflow definitions")
 
-    args = parser.parse_args(argv[1:])
+    parse_argv, dash_led = _hoist_dash_led_positional(argv)
+    args = parser.parse_args(parse_argv[1:])
+    if dash_led is not None:
+        if args.cmd == "checks":
+            args.pr_number = dash_led
+        else:
+            args.run_id = dash_led
 
     if args.cmd == "runs":
         result = cmd_runs(args.branch, args.limit)

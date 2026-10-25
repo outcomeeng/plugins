@@ -11,7 +11,11 @@ Tested with: the stale-base refusal before any journal opens, an unfetchable
 base reported as a diagnostic line rather than a traceback, the
 start/append-scope/append-finding/finish round trip, a finish before every
 changed file has a scope-advanced event, a rename's source and destination
-scope, a finding's optional `unit` and `tracked` fields carried onto the
+scope, a declared generated extent and a content-unchanged rename listed at
+`start`, skipped by `finish` without a scope-advanced event or an unread mark
+and recorded on the run-completed event, a relation flagged when the changeset
+also changes its sources or generator, `finish --unread-file` reading one
+unread path per line, a finding's optional `unit` and `tracked` fields carried onto the
 finding-reported event and a tracked `debt` finding counted toward `debt`, a
 nonzero `spx journal` exit propagated with its stderr, a finish that marks
 changed files unread sealing `failed` with the unread files named in the
@@ -211,6 +215,20 @@ def _require_manifest_str(
             f"got {value!r}; keys present: {', '.join(sorted(manifest))}. "
             "Start a new run with `review_run.py start` to regenerate the "
             "manifest."
+        )
+    return value
+
+
+def _record_list(
+    container: dict[str, Any], key: str, *, path: pathlib.Path, name: str
+) -> list[dict[str, Any]]:
+    """Return ``container[key]`` as a list of JSON objects; absent means empty."""
+    value = container.get(key, [])
+    if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
+        raise ValueError(
+            f"{name} {path} key {key!r} must be a JSON array of objects, got "
+            f"{value!r}. Start a new run with `review_run.py start` to "
+            "regenerate it."
         )
     return value
 
@@ -424,8 +442,8 @@ def _journal_json(
         sys.stderr.write(
             f"`spx journal {shlex.join(args)}` returned invalid JSON on "
             f"stdout: {exc.msg} at line {exc.lineno} column {exc.colno}. "
-            "Confirm the installed spx supports this journal verb and "
-            "rerun.\n"
+            "Confirm the installed spx supports this journal verb, then "
+            "start a new run with `review_run.py start`.\n"
         )
         return 1, None, result.stdout
 
@@ -548,6 +566,8 @@ def _completed_event(
     prefix: list[dict[str, object]],
     completed_at: str,
     unread: list[str],
+    skipped_generated: list[dict[str, object]],
+    renamed_unchanged: list[dict[str, object]],
 ) -> dict[str, object]:
     parsed = jp.run_metadata_from_json(json.dumps(metadata))
     run = replace(jp.run_from_metadata(parsed), completed_at=completed_at)
@@ -564,7 +584,62 @@ def _completed_event(
         }
         if unread:
             data["review"]["unread"] = list(unread)
+        if skipped_generated:
+            data["review"]["skippedGenerated"] = skipped_generated
+        if renamed_unchanged:
+            data["review"]["renamedUnchanged"] = renamed_unchanged
     return event
+
+
+def _generated_file_entries(
+    state: dict[str, Any], *, path: pathlib.Path
+) -> list[dict[str, object]]:
+    """One entry per declared generated extent file and relation, in file order."""
+    entries: list[dict[str, object]] = []
+    for extent in _record_list(
+        state, "generatedExtents", path=path, name="review runner state"
+    ):
+        files = extent.get("files")
+        relation = extent.get("relation")
+        regenerate = extent.get("regenerate", "")
+        if (
+            not isinstance(files, list)
+            or not all(isinstance(item, str) and item for item in files)
+            or not isinstance(relation, int)
+            or not isinstance(regenerate, str)
+        ):
+            raise ValueError(
+                f"review runner state {path} key 'generatedExtents' holds an "
+                f"entry with unusable files, relation, or regenerate: "
+                f"{extent!r}. Start a new run with `review_run.py start` to "
+                "regenerate it."
+            )
+        entries.extend(
+            {"file": file, "relation": relation, "regenerate": regenerate}
+            for file in files
+        )
+    return sorted(
+        entries, key=lambda entry: (str(entry["file"]), int(str(entry["relation"])))
+    )
+
+
+def _unchanged_rename_entries(
+    state: dict[str, Any], *, path: pathlib.Path
+) -> list[dict[str, object]]:
+    """One entry per rename whose content is unchanged, in path order."""
+    entries: list[dict[str, object]] = []
+    for record in _record_list(state, "renames", path=path, name="review runner state"):
+        renamed = record.get("path")
+        former = record.get("former_path")
+        if not isinstance(renamed, str) or not renamed or not isinstance(former, str):
+            raise ValueError(
+                f"review runner state {path} key 'renames' holds an entry "
+                f"with an unusable path or former_path: {record!r}. Start a "
+                "new run with `review_run.py start` to regenerate it."
+            )
+        if record.get("content_unchanged") is True:
+            entries.append({"file": renamed, "formerPath": former})
+    return sorted(entries, key=lambda entry: str(entry["file"]))
 
 
 def _scope_coverage_error(
@@ -572,7 +647,14 @@ def _scope_coverage_error(
     metadata: dict[str, Any],
     prefix: list[dict[str, object]],
     unread: list[str],
+    exempt: set[str],
 ) -> str | None:
+    """Describe why the run's scope coverage is refused, or return None.
+
+    ``exempt`` holds the changed files that need neither a scope-advanced event
+    nor an unread mark: declared generated extents and pure renames. Every
+    refusal ends the run, so each message says so and names a new `start`.
+    """
     expected = _expected_scope_units(metadata)
     if isinstance(expected, str):
         return expected
@@ -582,20 +664,24 @@ def _scope_coverage_error(
     if contradictory:
         return (
             f"files both read and marked unread: {', '.join(contradictory)}. "
-            "A file with a scope-advanced event was read; drop --unread for "
-            "each of these files."
+            "A file with a scope-advanced event was read. The run is ended; "
+            "start a new run with `review_run.py start` and mark as unread "
+            "only the files the review did not read."
         )
     outside = sorted(marked_unread - expected)
     if outside:
         return (
             f"unread files outside changed files: {', '.join(outside)}. "
-            f"--unread names only changed files; the changed files are: "
-            f"{', '.join(sorted(expected))}. Drop or correct each --unread "
-            "value to one of them."
+            f"--unread and --unread-file name only changed files; the changed "
+            f"files are: {', '.join(sorted(expected))}. The run is ended; "
+            "start a new run with `review_run.py start` and name only files "
+            "from that list."
         )
 
     return _scope_unit_delta_message(
-        expected=expected - marked_unread, advanced=advanced
+        required=expected - exempt - marked_unread,
+        expected=expected,
+        advanced=advanced,
     )
 
 
@@ -634,21 +720,26 @@ def _advanced_scope_units(prefix: list[dict[str, object]]) -> set[str]:
     return advanced
 
 
-def _scope_unit_delta_message(*, expected: set[str], advanced: set[str]) -> str | None:
-    missing = sorted(expected - advanced)
+def _scope_unit_delta_message(
+    *, required: set[str], expected: set[str], advanced: set[str]
+) -> str | None:
+    missing = sorted(required - advanced)
     unexpected = sorted(advanced - expected)
     parts: list[str] = []
     if missing:
         parts.append(
-            f"missing scope-advanced events for: {', '.join(missing)}. Run "
-            "`review_run.py append-scope` for each of them, or pass --unread "
-            "<file> to `finish` for each file the review did not read"
+            f"missing scope-advanced events for: {', '.join(missing)}. The "
+            "run is ended; start a new run with `review_run.py start`, call "
+            "`review_run.py append-scope` for each file after reading it, and "
+            "pass --unread or --unread-file to `finish` for each file the "
+            "review did not read"
         )
     if unexpected:
         parts.append(
             f"scope-advanced events outside changed files: "
             f"{', '.join(unexpected)}. `append-scope` accepts only changed "
-            "files; start a new run with `review_run.py start`"
+            "files; the run is ended, so start a new run with "
+            "`review_run.py start`"
         )
     return "; ".join(parts) if parts else None
 
@@ -748,6 +839,13 @@ def _start(args: argparse.Namespace) -> int:
         code = _append_event(run_token, event, journal_env=journal_env)
         if code != 0:
             return code
+        manifest = _read_json_file(manifest_path, name="review manifest")
+        generated_extents = _record_list(
+            manifest, "generated_extents", path=manifest_path, name="review manifest"
+        )
+        renames = _record_list(
+            manifest, "renames", path=manifest_path, name="review manifest"
+        )
         state: dict[str, object] = {
             "runToken": run_token,
             "startedAt": started_at,
@@ -756,15 +854,18 @@ def _start(args: argparse.Namespace) -> int:
             "manifestPath": str(manifest_path),
             "metadata": metadata,
             "journalEnv": journal_env,
+            "generatedExtents": generated_extents,
+            "renames": renames,
         }
         state_path = _write_state(state)
-        manifest = _read_json_file(manifest_path, name="review manifest")
         output = {
             "runToken": run_token,
             "statePath": str(state_path),
             "diffPath": str(summary["diff_path"]),
             "manifestPath": str(manifest_path),
             "changedFiles": _manifest_changed_files(manifest, path=manifest_path),
+            "generatedExtents": generated_extents,
+            "renames": renames,
         }
         json.dump(output, sys.stdout, sort_keys=True)
         sys.stdout.write("\n")
@@ -828,6 +929,23 @@ def _append_finding(args: argparse.Namespace) -> int:
     return 0
 
 
+def _unread_from_files(paths: list[pathlib.Path]) -> set[str]:
+    """Read one changed path per line from each file; blank lines name nothing."""
+    unread: set[str] = set()
+    for path in paths:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            raise ValueError(
+                f"cannot read the --unread-file {path}: {_error_text(exc)}. "
+                "Write one changed path per line to a readable UTF-8 file"
+            ) from exc
+        unread.update(
+            line.rstrip("\r") for line in text.split("\n") if line.rstrip("\r")
+        )
+    return unread
+
+
 def _finish(args: argparse.Namespace) -> int:
     try:
         state = _read_state(args.state)
@@ -850,13 +968,22 @@ def _finish(args: argparse.Namespace) -> int:
                 f"`spx journal read --type review --run {run_token} --from 0` "
                 "must print a JSON array of events, got "
                 f"{type(prefix_value).__name__}. Confirm the installed spx "
-                "supports `spx journal read` and rerun `finish`.\n"
+                "supports `spx journal read`. The run is ended; start a new "
+                "run with `review_run.py start`.\n"
             )
             return 1
         prefix = [event for event in prefix_value if isinstance(event, dict)]
-        unread = sorted(set(args.unread))
+        unread = sorted(set(args.unread) | _unread_from_files(args.unread_file))
+        skipped_generated = _generated_file_entries(state, path=args.state)
+        skipped_files = {str(entry["file"]) for entry in skipped_generated}
+        renamed_unchanged = [
+            entry
+            for entry in _unchanged_rename_entries(state, path=args.state)
+            if entry["file"] not in skipped_files
+        ]
+        exempt = skipped_files | {str(entry["file"]) for entry in renamed_unchanged}
         coverage_error = _scope_coverage_error(
-            metadata=state["metadata"], prefix=prefix, unread=unread
+            metadata=state["metadata"], prefix=prefix, unread=unread, exempt=exempt
         )
         if coverage_error is not None:
             sys.stderr.write(f"{coverage_error}\n")
@@ -867,6 +994,8 @@ def _finish(args: argparse.Namespace) -> int:
             prefix=prefix,
             completed_at=completed_at,
             unread=unread,
+            skipped_generated=skipped_generated,
+            renamed_unchanged=renamed_unchanged,
         )
         code = _append_event(run_token, event, journal_env=journal_env)
         if code != 0:
@@ -931,6 +1060,16 @@ def main(argv: list[str] | None = None) -> int:
         action="append",
         default=[],
         help="a changed file the review did not read; seals the run failed",
+    )
+    finish.add_argument(
+        "--unread-file",
+        action="append",
+        default=[],
+        type=pathlib.Path,
+        help=(
+            "a file listing one unread changed path per line; each path is "
+            "marked unread exactly as one --unread argument marks it"
+        ),
     )
 
     args = parser.parse_args(argv)

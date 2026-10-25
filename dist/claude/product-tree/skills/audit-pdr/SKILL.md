@@ -156,7 +156,7 @@ Classify every finding per `${CLAUDE_SKILL_DIR}/references/touched-text.md`: a f
 
 Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
 
-The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `blocking` finding naming the missing evidence. Findings within each row carry severity `blocking` for violations on touched text and `filed` for a finding outside touched text. A `filed` finding fails no row and additionally carries `key`, `baseRefEvidence`, and `issuesEntry` (`path`, `heading`).
+The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `blocking` finding naming the missing evidence. Findings within each row carry severity `blocking` for violations on touched text and `filed` for a finding outside touched text. A `filed` finding fails no row and additionally carries `baseRefEvidence`, and `issuesEntry` (`path`, `heading`).
 
 ```json
 {

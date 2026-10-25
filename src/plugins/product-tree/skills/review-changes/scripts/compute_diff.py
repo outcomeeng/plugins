@@ -19,6 +19,12 @@ Tested with:
 - ``SPX_VERIFY_HEAD_REF`` overrides the default ``HEAD`` head ref.
 - ``--bundle-dir`` -> writes ``diff.md`` and ``manifest.json`` to the named
   scratch directory and reports the bundle paths.
+- A renamed file -> listed once under its new path; the manifest's ``renames``
+  records its former path and whether its content is unchanged.
+- ``spx/local/generated-sources.toml`` at the repository root -> the manifest's
+  ``generated_extents`` lists each changed file that a relation's whole-file
+  output pattern matches, grouped by relation; a region-bounded output leaves
+  its file ordinary, and an absent declaration lists no extent.
 - Missing base-ref sources -> exits non-zero and names env and git sources.
 
 Stdlib-only.
@@ -33,8 +39,10 @@ import json
 import os
 import pathlib
 import shlex
+import re
 import subprocess
 import sys
+import tomllib
 from dataclasses import dataclass
 from types import ModuleType
 
@@ -51,6 +59,17 @@ DIFF_SECTION_UNTRACKED = "Untracked files"
 DIFF_RENAME_COPY_ARGS = ("--find-renames", "--find-copies")
 RENAME_STATUS_PREFIX = "R"
 COPY_STATUS_PREFIX = "C"
+UNCHANGED_SIMILARITY = 100
+GENERATED_SOURCES_PATH = pathlib.PurePosixPath("spx/local/generated-sources.toml")
+
+
+@dataclass(frozen=True)
+class ChangedEntry:
+    """One changed path; ``former_path`` is set for a rename only."""
+
+    path: str
+    former_path: str | None = None
+    similarity: int | None = None
 
 
 @dataclass(frozen=True)
@@ -58,6 +77,7 @@ class DiffSection:
     title: str
     text: str
     files: tuple[str, ...]
+    renames: tuple[ChangedEntry, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -212,23 +232,17 @@ def _diff_section(title: str, diff: str) -> str:
     return f"### {title}\n\n{diff}"
 
 
-def _dedupe_paths(paths: list[str]) -> tuple[str, ...]:
-    seen: set[str] = set()
-    unique: list[str] = []
-    for path in paths:
-        if path not in seen:
-            seen.add(path)
-            unique.append(path)
-    return tuple(unique)
+def _diff_changed_entries(args: list[str]) -> tuple[ChangedEntry, ...]:
+    """Return each changed path once; a rename carries its former path.
 
-
-def _diff_changed_paths(args: list[str]) -> tuple[str, ...]:
+    A copy lists only its destination, because the copy source is unchanged.
+    """
     command = ["git", "diff", "--name-status", "-z", *DIFF_RENAME_COPY_ARGS, *args]
     records = _git_stdout(command[1:]).split("\0")
     if records and records[-1] == "":
         records.pop()
 
-    paths: list[str] = []
+    entries: dict[str, ChangedEntry] = {}
     index = 0
     while index < len(records):
         status = records[index]
@@ -241,9 +255,8 @@ def _diff_changed_paths(args: list[str]) -> tuple[str, ...]:
                 "the command by hand and check that git is not wrapped by a "
                 "pager or alias that rewrites its output."
             )
-        path_count = (
-            2 if status.startswith((RENAME_STATUS_PREFIX, COPY_STATUS_PREFIX)) else 1
-        )
+        is_rename = status.startswith(RENAME_STATUS_PREFIX)
+        path_count = 2 if is_rename or status.startswith(COPY_STATUS_PREFIX) else 1
         if index + path_count > len(records):
             raise RuntimeError(
                 f"`{shlex.join(command)}` emitted a truncated record: status "
@@ -252,9 +265,18 @@ def _diff_changed_paths(args: list[str]) -> tuple[str, ...]:
                 "records. Rerun the command by hand; a truncated stream "
                 "means git exited early or its output was cut."
             )
-        paths.extend(records[index : index + path_count])
+        paths = records[index : index + path_count]
         index += path_count
-    return _dedupe_paths(paths)
+        entry = ChangedEntry(path=paths[-1])
+        if is_rename:
+            similarity = status[len(RENAME_STATUS_PREFIX) :]
+            entry = ChangedEntry(
+                path=paths[1],
+                former_path=paths[0],
+                similarity=int(similarity) if similarity.isdigit() else None,
+            )
+        entries.setdefault(entry.path, entry)
+    return tuple(entries.values())
 
 
 def _untracked_paths() -> tuple[str, ...]:
@@ -277,34 +299,23 @@ def _untracked_diff(paths: tuple[str, ...]) -> str:
     return "\n".join(sections)
 
 
+def _tracked_section(title: str, diff_args: list[str]) -> DiffSection:
+    entries = _diff_changed_entries(diff_args)
+    return DiffSection(
+        title,
+        _diff_section(title, _git_diff([*DIFF_RENAME_COPY_ARGS, *diff_args])),
+        tuple(entry.path for entry in entries),
+        tuple(entry for entry in entries if entry.former_path is not None),
+    )
+
+
 def diff_sections(base_ref: str, head_ref: str) -> tuple[DiffSection, ...]:
     """Return non-empty review-input sections with changed file names."""
     untracked_paths = _untracked_paths()
     candidates = (
-        DiffSection(
-            DIFF_SECTION_COMMITTED,
-            _diff_section(
-                DIFF_SECTION_COMMITTED,
-                _git_diff([*DIFF_RENAME_COPY_ARGS, f"{base_ref}...{head_ref}"]),
-            ),
-            _diff_changed_paths([f"{base_ref}...{head_ref}"]),
-        ),
-        DiffSection(
-            DIFF_SECTION_STAGED,
-            _diff_section(
-                DIFF_SECTION_STAGED,
-                _git_diff([*DIFF_RENAME_COPY_ARGS, "--cached"]),
-            ),
-            _diff_changed_paths(["--cached"]),
-        ),
-        DiffSection(
-            DIFF_SECTION_UNSTAGED,
-            _diff_section(
-                DIFF_SECTION_UNSTAGED,
-                _git_diff([*DIFF_RENAME_COPY_ARGS]),
-            ),
-            _diff_changed_paths([]),
-        ),
+        _tracked_section(DIFF_SECTION_COMMITTED, [f"{base_ref}...{head_ref}"]),
+        _tracked_section(DIFF_SECTION_STAGED, ["--cached"]),
+        _tracked_section(DIFF_SECTION_UNSTAGED, []),
         DiffSection(
             DIFF_SECTION_UNTRACKED,
             _diff_section(DIFF_SECTION_UNTRACKED, _untracked_diff(untracked_paths)),
@@ -352,6 +363,8 @@ def _manifest_dict(
     head_ref: str,
     diff_text: str,
     sections: tuple[DiffSection, ...],
+    renames: list[dict[str, object]],
+    generated_extents: list[dict[str, object]],
 ) -> dict[str, object]:
     diff_bytes = diff_text.encode("utf-8")
     return {
@@ -372,7 +385,178 @@ def _manifest_dict(
             }
             for section in _section_manifests(sections)
         ],
+        "renames": renames,
+        "generated_extents": generated_extents,
     }
+
+
+def rename_records(sections: tuple[DiffSection, ...]) -> list[dict[str, object]]:
+    """List each renamed path once with its former path.
+
+    ``content_unchanged`` holds when every section that lists the path lists it
+    as a rename of identical content, so a rename edited afterwards in the
+    staged, unstaged, or untracked state is not a pure rename.
+    """
+    records: dict[str, dict[str, object]] = {}
+    plain: set[str] = set()
+    for section in sections:
+        renamed = {entry.path: entry for entry in section.renames}
+        for path in section.files:
+            entry = renamed.get(path)
+            if entry is None:
+                plain.add(path)
+                continue
+            unchanged = entry.similarity == UNCHANGED_SIMILARITY
+            record = records.get(path)
+            if record is None:
+                records[path] = {
+                    "path": path,
+                    "former_path": entry.former_path,
+                    "content_unchanged": unchanged,
+                }
+            elif not unchanged:
+                record["content_unchanged"] = False
+    for path in plain:
+        if path in records:
+            records[path]["content_unchanged"] = False
+    return [records[path] for path in sorted(records)]
+
+
+def _glob_regex(pattern: str) -> re.Pattern[str]:
+    """Compile a declaration path pattern: ``**`` spans directories, ``*`` and
+    ``?`` stay inside one path segment."""
+    out: list[str] = []
+    index = 0
+    while index < len(pattern):
+        if pattern.startswith("**/", index):
+            out.append("(?:.*/)?")
+            index += 3
+        elif pattern.startswith("**", index):
+            out.append(".*")
+            index += 2
+        elif pattern[index] == "*":
+            out.append("[^/]*")
+            index += 1
+        elif pattern[index] == "?":
+            out.append("[^/]")
+            index += 1
+        else:
+            out.append(re.escape(pattern[index]))
+            index += 1
+    return re.compile("".join(out))
+
+
+def _matches_any(path: str, patterns: list[str]) -> bool:
+    return any(_glob_regex(pattern).fullmatch(path) for pattern in patterns)
+
+
+def _pattern_list(
+    relation: dict[str, object], key: str, *, ordinal: int, source: pathlib.Path
+) -> list[str]:
+    value = relation.get(key, [])
+    if not isinstance(value, list):
+        raise RuntimeError(
+            f"{source} relation {ordinal}: key {key!r} must be an array, got "
+            f"{type(value).__name__}. Fix the declaration and rerun."
+        )
+    return [item for item in value if isinstance(item, str)]
+
+
+def load_generated_relations(repo_root: pathlib.Path) -> list[dict[str, object]]:
+    """Read the generated-source declaration at the repository root.
+
+    Each returned relation carries its 1-based ``relation`` ordinal and the
+    whole-file ``outputs`` patterns only: a region-bounded output (an inline
+    table naming ``file``, ``begin``, and ``end``) bounds no whole-file extent.
+    An absent declaration yields no relation.
+    """
+    source = repo_root / GENERATED_SOURCES_PATH
+    if not source.is_file():
+        return []
+    try:
+        document = tomllib.loads(source.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError) as exc:
+        raise RuntimeError(
+            f"cannot read the generated-source declaration {source}: "
+            f"{str(exc) or type(exc).__name__}. Fix the declaration and rerun."
+        ) from exc
+    declared = document.get("relation", [])
+    if not isinstance(declared, list):
+        raise RuntimeError(
+            f"{source} key 'relation' must be an array of tables, got "
+            f"{type(declared).__name__}. Fix the declaration and rerun."
+        )
+    relations: list[dict[str, object]] = []
+    for ordinal, relation in enumerate(declared, start=1):
+        if not isinstance(relation, dict):
+            raise RuntimeError(
+                f"{source} relation {ordinal} must be a table, got "
+                f"{type(relation).__name__}. Fix the declaration and rerun."
+            )
+        regenerate = relation.get("regenerate", "")
+        relations.append(
+            {
+                "relation": ordinal,
+                "outputs": _pattern_list(
+                    relation, "outputs", ordinal=ordinal, source=source
+                ),
+                "sources": _pattern_list(
+                    relation, "sources", ordinal=ordinal, source=source
+                ),
+                "generator": _pattern_list(
+                    relation, "generator", ordinal=ordinal, source=source
+                ),
+                "regenerate": regenerate if isinstance(regenerate, str) else "",
+            }
+        )
+    return relations
+
+
+def generated_extents(
+    relations: list[dict[str, object]],
+    changed_files: list[str],
+    renames: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Group the changed files that whole-file output patterns match by relation.
+
+    A relation is flagged when the changeset also changes one of its declared
+    sources or generator paths (a rename's former path counts as changed), so
+    the extents are evidence the reviewer may read. A relation's own extents
+    never count as its changed inputs.
+    """
+    touched = set(changed_files)
+    touched.update(
+        str(record["former_path"])
+        for record in renames
+        if isinstance(record.get("former_path"), str)
+    )
+    extents: list[dict[str, object]] = []
+    for relation in relations:
+        outputs = relation["outputs"]
+        sources = relation["sources"]
+        generator = relation["generator"]
+        assert isinstance(outputs, list)
+        assert isinstance(sources, list)
+        assert isinstance(generator, list)
+        files = [path for path in changed_files if _matches_any(path, outputs)]
+        if not files:
+            continue
+        inputs = sorted(touched - set(files))
+        changed_sources = [path for path in inputs if _matches_any(path, sources)]
+        changed_generator = [path for path in inputs if _matches_any(path, generator)]
+        extents.append(
+            {
+                "relation": relation["relation"],
+                "sources": sources,
+                "generator": generator,
+                "regenerate": relation["regenerate"],
+                "files": files,
+                "flagged": bool(changed_sources or changed_generator),
+                "changed_sources": changed_sources,
+                "changed_generator": changed_generator,
+            }
+        )
+    return extents
 
 
 def _resolve_bundle_dir(bundle_dir: pathlib.Path) -> pathlib.Path:
@@ -422,11 +606,22 @@ def write_bundle(
     safe_bundle_dir = _resolve_bundle_dir(bundle_dir)
     sections = diff_sections(base_ref, head_ref)
     diff_text = "\n".join(section.text for section in sections)
+    changed_files = list(
+        dict.fromkeys(path for section in sections for path in section.files)
+    )
+    renames = rename_records(sections)
+    repo_root = pathlib.Path(
+        _git_stdout(["rev-parse", "--show-toplevel"]).strip()
+    ).resolve(strict=True)
     manifest = _manifest_dict(
         base_ref=base_ref,
         head_ref=head_ref,
         diff_text=diff_text,
         sections=sections,
+        renames=renames,
+        generated_extents=generated_extents(
+            load_generated_relations(repo_root), changed_files, renames
+        ),
     )
     safe_bundle_dir.mkdir(parents=True, exist_ok=True)
     diff_path = _bundle_file_path(safe_bundle_dir, BUNDLE_DIFF_FILENAME)

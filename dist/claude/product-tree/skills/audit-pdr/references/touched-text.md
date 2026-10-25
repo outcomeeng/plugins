@@ -48,11 +48,11 @@ A rule violated both on touched text and elsewhere yields two findings under one
 
 <severity_and_disposition>
 
-A finding keeps the severity and disposition recorded for its key in the governing node's `ISSUES.md`, found in the PDR's directory or its nearest ancestor holding one. Its severity rises, or a `FILED` finding starts to reject, only when the run names one changed basis in the finding's `evidence`: the text now lies in the diff, the change invalidates it, or the standard's catalog changed the rule or its severity. A run that names no basis returns the finding with its recorded severity and disposition.
+A finding keeps the severity and disposition recorded for its key in the governing node's `ISSUES.md`, found in the PDR's directory or its nearest ancestor holding one. Its severity rises, or a `filed` finding starts to reject, only when the run names one changed basis in the finding's `evidence`: the text now lies in the diff, the change invalidates it, or the standard's catalog changed the rule or its severity. A run that names no basis returns the finding with its recorded severity and disposition.
 </severity_and_disposition>
 
 <filed_finding>
 
-A `filed` finding carries the usual finding fields plus `key`, `baseRefEvidence`, the `<base>..<head>` diff range showing every location lies outside the change, and `issuesEntry`, an object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and whose `heading` is the heading of the entry that records the finding. The finding sits in the row of the property it concerns without failing that row.
+A `filed` finding carries the usual finding fields plus `baseRefEvidence`, the `<base>..<head>` diff range showing every location lies outside the change, and `issuesEntry`, an object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and whose `heading` is the heading of the entry that records the finding. The finding sits in the row of the property it concerns without failing that row.
 
 </filed_finding>

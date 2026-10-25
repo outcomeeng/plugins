@@ -16,33 +16,35 @@ Live repository state for mode detection, read at invocation.
 
 **Arguments:** `$ARGUMENTS`
 
-**Current branch:**
+**Current branch (empty = detached HEAD):**
 !`git branch --show-current || echo '(not a git repo)'`
 
 **Working tree (empty = clean):**
-!`git status --porcelain 2>/dev/null | head -100`
+!`git rev-parse --is-inside-work-tree >/dev/null 2>&1 && git status --porcelain | head -100 || echo '(not a git repo)'`
 
-**Unstaged diff (name/status):**
-!`git diff --name-status 2>/dev/null | head -100`
+**Unstaged diff (name/status; empty = none):**
+!`git rev-parse --is-inside-work-tree >/dev/null 2>&1 && git diff --name-status | head -100 || echo '(not a git repo)'`
 
-**Staged diff (name/status):**
-!`git diff --cached --name-status 2>/dev/null | head -100`
+**Staged diff (name/status; empty = none):**
+!`git rev-parse --is-inside-work-tree >/dev/null 2>&1 && git diff --cached --name-status | head -100 || echo '(not a git repo)'`
 
-**Commits ahead of base (default branch):**
-!`git log --oneline origin/HEAD..HEAD 2>/dev/null | head -10`
+**Commits ahead of base (default branch; empty = zero commits ahead, `(base unresolved)` = the base is unknown):**
+!`git rev-parse --verify --quiet origin/HEAD >/dev/null && git log --oneline origin/HEAD..HEAD | head -10 || echo '(base unresolved)'`
 
-**Existing PR for this branch:**
-!`gh pr view --json url --jq '.url' 2>/dev/null || echo '(none)'`
+**Existing PR for this branch (a URL, or the `gh` message when none is found or `gh` fails):**
+!`gh pr view --json url --jq '.url' 2>&1 | head -3`
 
 </context>
 
 <mode_detection>
 Read `$ARGUMENTS` and the injected state, then pick exactly one mode:
 
-- **Open PR** — `$ARGUMENTS` names a PR number or PR URL, or the injected state shows an existing PR for this branch. The PR already defines lifecycle state; manage it.
+- **Open PR** — `$ARGUMENTS` names a PR number or PR URL, or the injected state shows a PR URL for this branch. A `gh` error message in that block is no PR evidence. The PR already defines lifecycle state; manage it.
 - **Instructed** — `$ARGUMENTS` is non-empty. Interpret it as instructions: what to ship, and any constraint on scope, branch, or framing. When the instruction names work that does not yet exist, implementation is part of the job.
 - **Existing changeset** — `$ARGUMENTS` is empty and the working tree is dirty, or the branch is ahead of its base. The changeset already defines the work; derive intent from the diff and commits.
-- **Empty** — `$ARGUMENTS` is empty, the working tree is clean, and the branch is the base with no commits ahead. Nothing is staged to ship; establish the change through the Step 1 interview before any mutation.
+- **Empty** — `$ARGUMENTS` is empty, the working tree is clean, and the injected base resolved with zero commits ahead (the commits block is empty, not `(base unresolved)`). Nothing is staged to ship; establish the change through the Step 1 interview before any mutation.
+
+An unresolved base is never zero commits ahead. When the commits block reads `(base unresolved)` and `$ARGUMENTS` is empty with a clean working tree, resolve the default branch with `gh repo view --json defaultBranchRef --jq .defaultBranchRef.name`, then read `git log --oneline origin/<default-branch>..HEAD`. Select Empty only when that range resolves and is empty; select Existing changeset when it lists commits; when it still does not resolve, select Existing changeset and derive intent from `git log` and the diff rather than the interview.
 
 </mode_detection>
 
