@@ -12,7 +12,7 @@ The rule catalog of the changeset-coherence audit: every rule identifier a findi
 
 <key_form>
 
-The unit of a finding is the repository-relative path of the changed artifact that lacks the evidence, or `scope` for a finding that concerns the changeset or a cluster as a whole. The key is `<unit>:<rule-id>`, for example `src/plugins/example/SKILL.md:missing-generated-source-evidence`. One key covers every location within that unit where the rule is violated, and the finding lists each location.
+The unit of a finding is the repository-relative path of the changed artifact that lacks the evidence, or `scope` for a finding that concerns the changeset or a cluster as a whole. The key is `<unit>:<rule-id>`, for example `<changed-path>:missing-generated-source-evidence`. One key covers every location within that unit where the rule is violated, and the finding lists each location.
 
 </key_form>
 
