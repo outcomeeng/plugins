@@ -13,7 +13,7 @@ The rule catalog of the PDR audit: every rule identifier a finding may carry, it
 
 <key_form>
 
-The unit of a finding is the audited PDR file path, or `input` when the request carries no path. The key is `<unit>:<rule-id>`, for example `spx/21-x.enabler/15-y.pdr.md:temporal-voice`. One key covers every location in the PDR where that rule is violated, and the finding lists each such location by the section, property, or rule text, never a line number.
+The unit of a finding is the audited PDR file path, or `input` when the request carries no path. The key is `<unit>:<rule-id>`, for example `spx/55-example.enabler/15-y.pdr.md:temporal-voice`. One key covers every location in the PDR where that rule is violated, and the finding lists each such location by the section, property, or rule text, never a line number.
 
 Severity in the tables below labels the defect on touched text. A finding whose locations all lie outside touched text takes severity `filed`.
 

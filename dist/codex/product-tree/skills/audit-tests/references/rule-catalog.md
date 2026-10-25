@@ -16,7 +16,7 @@ The rule catalog of the test-evidence audit: every rule identifier a native find
 
 <key_form>
 
-The unit of a finding is the repository-relative path of the artifact that holds the defect: a test, harness, generator, fixture, discovery artifact, or governed production source. For a finding that names no artifact, because the request carries no target, the unit is `input`. The key is `<unit>:<rule-id>`, for example `spx/21-x.enabler/tests/test_x.mapping.l1.py:source-ownership`. One key covers every location in that file where the rule is violated, and the finding lists each location as the assertion joined to the declaration or call that violates the rule, named by its text, never by a line number.
+The unit of a finding is the repository-relative path of the artifact that holds the defect: a test, harness, generator, fixture, discovery artifact, or governed production source. For a finding that names no artifact, because the request carries no target, the unit is `input`. The key is `<unit>:<rule-id>`, for example `spx/55-example.enabler/tests/test_x.mapping.l1.py:source-ownership`. One key covers every location in that file where the rule is violated, and the finding lists each location as the assertion joined to the declaration or call that violates the rule, named by its text, never by a line number.
 
 Severity in the tables below labels the defect on touched text. A finding whose locations all lie outside touched text takes severity `FILED`.
 

@@ -13,7 +13,7 @@ The rule catalog of the assertion audit: every rule identifier a finding may car
 
 <key_form>
 
-The unit of a finding is the unit key of the audited assertion, `assertion:<designator>:<path>`, where the designator is the assertion's rule slug, or `ordinal-<n>` when the assertion is pathless. The key is `<unit>:<rule-id>`, for example `assertion:no-dead-links:spx/21-x.enabler/x.md:subject-not-found`. One key covers every location where that rule is violated on that assertion, and the finding lists each such location by the subject path and the line or section, separated by `;`.
+The unit of a finding is the unit key of the audited assertion, `assertion:<designator>:<path>`, where the designator is the assertion's rule slug, or `ordinal-<n>` when the assertion is pathless. The key is `<unit>:<rule-id>`, for example `assertion:no-dead-links:spx/55-example.enabler/x.md:subject-not-found`. One key covers every location where that rule is violated on that assertion, and the finding lists each such location by the subject path and the line or section, separated by `;`.
 
 An `[audit:{rule-slug}]` assertion names the spec's own rule slug. The slug identifies the unit and opens the finding's message as the designator, so the slug is carried by the unit key and the message and is never the rule identifier. The identifier names the way the audit judges the assertion.
 
