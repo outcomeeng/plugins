@@ -79,7 +79,7 @@ FULL_CHECK_REASON: Final = "explicit full gate"
 # collects, and the plan names that skip before any step runs.
 L3_SKIPPED_REASON: Final = (
     f"L3 tests skipped in directory collection: {L3_LEVEL} tests run through "
-    "`just test-l3`, which CI runs on every pull request, and a directly "
+    "`just test-l3`, and a directly "
     "named file still runs"
 )
 # The full gate runs in CI from a merge-commit checkout that carries no

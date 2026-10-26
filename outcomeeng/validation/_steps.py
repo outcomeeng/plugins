@@ -101,8 +101,8 @@ FOUNDATION_MANIFEST_ARGV: Final = (
 
 # The execution levels a test file name can carry, in order of increasing
 # execution pain. Every test whose file name carries the level `l3` is an L3
-# test: `just check` and `just check-full` run none, and CI runs them all
-# through `just test-l3`.
+# test: `just check` and `just check-full` run none, and `just test-l3` runs
+# them all.
 EXECUTION_LEVEL_L1: Final = "l1"
 EXECUTION_LEVEL_L2: Final = "l2"
 EXECUTION_LEVEL_L3: Final = "l3"
