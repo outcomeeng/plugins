@@ -12,7 +12,7 @@ test *args:
 test-v *args:
     python3 -m outcomeeng.validation test -- -v {{args}}
 
-# Run every L3 test, the l3 [test] files no other recipe runs; CI runs it after check-full
+# Run every L3 test, the l3 [test] files no other recipe runs
 test-l3:
     python3 -m outcomeeng.validation test-l3
 
