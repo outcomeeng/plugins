@@ -31,6 +31,12 @@ from outcomeeng.validation.ci_gate import (
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_DIRECTORY: Final = REPO_ROOT / ".github" / "workflows"
 GATE_WORKFLOW: Final = GATE_WORKFLOW_PATH
+# GitHub Actions keys the harness reads at more than one site.
+STEP_NAME_KEY: Final = "name"
+STEP_WITH_KEY: Final = "with"
+STEP_USES_KEY: Final = "uses"
+CONDITION_KEY: Final = "if"
+CONTINUE_ON_ERROR_KEY: Final = "continue-on-error"
 
 
 def workflow_paths(directory: Path | None = None) -> tuple[Path, ...]:
@@ -222,9 +228,9 @@ def setup_python_version(workflow_data: dict[str, Any]) -> str:
     setup_step = next(
         step
         for step in gate_steps(workflow_data)
-        if step.get("name") == PYTHON_SETUP_STEP_NAME
+        if step.get(STEP_NAME_KEY) == PYTHON_SETUP_STEP_NAME
     )
-    return cast("str", setup_step["with"]["python-version"])
+    return cast("str", setup_step[STEP_WITH_KEY]["python-version"])
 
 
 def required_python_version() -> str:
@@ -290,7 +296,7 @@ def observe_ci_toolchain(
         workflow_environment=workflow_env,
         job_environment=env,
         action_references=tuple(
-            cast("str", step["uses"]) for step in steps if "uses" in step
+            cast("str", step[STEP_USES_KEY]) for step in steps if STEP_USES_KEY in step
         ),
         run_commands=runs,
         run_environments=run_environments,
@@ -316,11 +322,11 @@ def observe_gate_steps(
         run = cast("str", step.get(STEP_RUN_KEY, ""))
         observations.append(
             GateStepObservation(
-                name=cast("str", step.get("name", "")),
+                name=cast("str", step.get(STEP_NAME_KEY, "")),
                 run=run,
                 shell_lines=tuple(shell_lines(run)),
-                continue_on_error=cast("str | None", step.get("continue-on-error")),
-                has_condition="if" in step,
+                continue_on_error=cast("str | None", step.get(CONTINUE_ON_ERROR_KEY)),
+                has_condition=CONDITION_KEY in step,
             )
         )
     return tuple(observations)
@@ -330,8 +336,8 @@ def observe_gate_job(workflow_path: Path | None = None) -> GateJobObservation:
     """Return the gate job's own condition, soft-pass, and completion bound."""
     job = gate_job(workflow(workflow_path))
     return GateJobObservation(
-        has_condition="if" in job,
-        continue_on_error=cast("str | None", job.get("continue-on-error")),
+        has_condition=CONDITION_KEY in job,
+        continue_on_error=cast("str | None", job.get(CONTINUE_ON_ERROR_KEY)),
         timeout_minutes=cast("str | None", job.get(JOB_TIMEOUT_KEY)),
     )
 
@@ -362,11 +368,11 @@ def observe_spx_source(workflow_path: Path | None = None) -> SpxSourceObservatio
     env = cast("dict[str, str]", job.get(WORKFLOW_ENVIRONMENT_KEY, {}))
     checkouts = tuple(
         (
-            cast("dict[str, str]", step.get("with", {})).get("repository"),
-            cast("dict[str, str]", step.get("with", {})).get("ref"),
+            cast("dict[str, str]", step.get(STEP_WITH_KEY, {})).get("repository"),
+            cast("dict[str, str]", step.get(STEP_WITH_KEY, {})).get("ref"),
         )
         for step in gate_steps(workflow(workflow_path))
-        if "actions/checkout@" in cast("str", step.get("uses", ""))
+        if "actions/checkout@" in cast("str", step.get(STEP_USES_KEY, ""))
     )
     return SpxSourceObservation(
         commit_pin=env.get(SPX_COMMIT_ENVIRONMENT), checkouts=checkouts
