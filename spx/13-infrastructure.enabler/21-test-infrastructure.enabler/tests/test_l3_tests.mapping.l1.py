@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-import outcomeeng.validation.__main__ as validation_entry
 from outcomeeng.validation import (
     EXECUTION_LEVELS,
     L3_LEVEL,
@@ -21,6 +20,7 @@ from outcomeeng_testing.generators.gate import (
 from outcomeeng_testing.harnesses.l3_collection import (
     fixture_collection,
     justfile_recipe_command,
+    justfile_recipe_dispatch,
     pytest_argument_tail,
     recipe_dispatch_spawns,
 )
@@ -80,8 +80,7 @@ def test_the_dispatch_collects_exactly_the_l3_files_of_a_repository() -> None:
 
 
 def test_the_justfile_recipe_runs_the_l3_dispatch() -> None:
-    test_command = justfile_recipe_command(RECIPE_TEST)
-    entry = test_command[: test_command.index(str(validation_entry.__package__)) + 1]
+    entry = justfile_recipe_dispatch(RECIPE_TEST).entry
 
     assert justfile_recipe_command(RECIPE_TEST_L3) == (*entry, RECIPE_TEST_L3)
 
@@ -91,8 +90,7 @@ def test_the_justfile_test_recipe_forwards_a_named_file_to_the_test_dispatch(
     named: str,
 ) -> None:
     fixture = l3_fixture_files()
-    command = justfile_recipe_command(RECIPE_TEST, named)
-    forwarded = command[command.index(str(validation_entry.__package__)) + 1 :]
+    forwarded = justfile_recipe_dispatch(RECIPE_TEST, named).recipe_words
 
     spawns = recipe_dispatch_spawns(forwarded, fixture)
     (pytest_call,) = (

@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-import outcomeeng.validation.__main__ as validation_entry
 from outcomeeng.validation import (
     ACTIONLINT_ARGV,
     CI_CREDENTIALS_ARGV,
@@ -57,7 +56,8 @@ from outcomeeng_testing.harnesses.ci_gate import (
     observe_validation_step_argvs,
     observe_workflow_jobs,
 )
-from outcomeeng_testing.harnesses.l3_collection import justfile_recipe_command
+from outcomeeng_testing.harnesses.l3_collection import justfile_recipe_dispatch
+from outcomeeng_testing.harnesses.python_code_quality import run_check_full_dispatch
 
 
 def test_gate_workflow_triggers_on_pull_request_and_main_push() -> None:
@@ -68,35 +68,36 @@ def test_gate_workflow_triggers_on_pull_request_and_main_push() -> None:
     assert GATE_PUSH_BRANCH in observation.push_branches
 
 
-def _gate_recipe_sequence(workflow_path: Path | None = None) -> tuple[str, ...]:
-    """Return the gate recipes the gate job runs, in the order it runs them."""
-    return tuple(
-        command
-        for command in observe_gate_run_commands(workflow_path)
-        if command in GATE_RECIPE_COMMANDS
-    )
-
-
 def test_gate_workflow_runs_the_full_gate_and_then_the_l3_tests() -> None:
-    assert _gate_recipe_sequence() == GATE_RECIPE_COMMANDS
+    commands = observe_gate_run_commands()
+
+    assert (
+        tuple(command for command in commands if command in GATE_RECIPE_COMMANDS)
+        == GATE_RECIPE_COMMANDS
+    )
 
 
 @pytest.mark.parametrize("recipe", (RECIPE_CHECK_FULL, RECIPE_TEST_L3))
 def test_each_gate_recipe_dispatches_its_own_validation_command(recipe: str) -> None:
-    command = justfile_recipe_command(recipe)
-
-    assert command[command.index(str(validation_entry.__package__)) + 1 :] == (recipe,)
+    assert justfile_recipe_dispatch(recipe).recipe_words == (recipe,)
 
 
 def test_a_gate_job_without_the_l3_tests_is_detected() -> None:
+    commands = observe_gate_run_commands(GATE_FIXTURES.missing_l3_recipe)
+
     assert (
-        _gate_recipe_sequence(GATE_FIXTURES.missing_l3_recipe) != GATE_RECIPE_COMMANDS
+        tuple(command for command in commands if command in GATE_RECIPE_COMMANDS)
+        != GATE_RECIPE_COMMANDS
     )
 
 
 def test_l3_tests_before_the_full_gate_are_detected() -> None:
+    commands = observe_gate_run_commands(GATE_FIXTURES.l3_before_full_gate)
+
+    assert set(commands) >= set(GATE_RECIPE_COMMANDS)
     assert (
-        _gate_recipe_sequence(GATE_FIXTURES.l3_before_full_gate) != GATE_RECIPE_COMMANDS
+        tuple(command for command in commands if command in GATE_RECIPE_COMMANDS)
+        != GATE_RECIPE_COMMANDS
     )
 
 
@@ -108,7 +109,10 @@ def _required_credentials() -> set[tuple[str, str, str]]:
 
 
 def test_gate_runs_the_credential_check() -> None:
-    assert CI_CREDENTIALS_ARGV in observe_validation_step_argvs()
+    run = run_check_full_dispatch()
+
+    assert run.exit_code == 0
+    assert CI_CREDENTIALS_ARGV in run.spawn_calls
 
 
 def test_only_the_l3_step_receives_the_l3_credentials() -> None:
@@ -158,30 +162,32 @@ def test_a_missing_l3_credential_is_detected() -> None:
     }
 
 
-def _inlined_gate_steps(workflow_path: Path | None = None) -> set[str]:
-    """Return gate-step commands a workflow runs as their own shell line."""
-    recipes = {" ".join(argv) for argv in observe_validation_step_argvs()}
-    return {
-        line
-        for step in observe_gate_steps(workflow_path)
-        for line in step.shell_lines
-        if line in recipes
-    }
+def test_gate_runs_the_workflow_and_shell_lint_steps() -> None:
+    run = run_check_full_dispatch()
 
-
-def test_gate_declares_the_workflow_and_shell_lint_steps() -> None:
-    argvs = observe_validation_step_argvs()
-
-    assert ACTIONLINT_ARGV in argvs
-    assert SHELLCHECK_ARGV in argvs
+    assert run.exit_code == 0
+    assert ACTIONLINT_ARGV in run.spawn_calls
+    assert SHELLCHECK_ARGV in run.spawn_calls
 
 
 def test_gate_workflow_never_inlines_a_gate_step() -> None:
-    assert _inlined_gate_steps() == set()
+    step_commands = {" ".join(argv) for argv in observe_validation_step_argvs()}
+
+    assert not any(
+        line in step_commands
+        for step in observe_gate_steps()
+        for line in step.shell_lines
+    )
 
 
 def test_inlined_gate_steps_are_detected() -> None:
-    assert _inlined_gate_steps(GATE_FIXTURES.inlined_gate_steps) != set()
+    step_commands = {" ".join(argv) for argv in observe_validation_step_argvs()}
+
+    assert any(
+        line in step_commands
+        for step in observe_gate_steps(GATE_FIXTURES.inlined_gate_steps)
+        for line in step.shell_lines
+    )
 
 
 def test_gate_workflow_provisions_the_declared_toolchain() -> None:
@@ -318,7 +324,11 @@ def test_conforming_fixture_satisfies_every_gate_rule() -> None:
 
     assert GATE_PULL_REQUEST_EVENT in triggers.events
     assert GATE_PUSH_BRANCH in triggers.push_branches
-    assert _gate_recipe_sequence(workflow_path) == GATE_RECIPE_COMMANDS
+    commands = observe_gate_run_commands(workflow_path)
+    assert (
+        tuple(command for command in commands if command in GATE_RECIPE_COMMANDS)
+        == GATE_RECIPE_COMMANDS
+    )
     assert workflow_credential_violations(workflow_path) == ()
     job = observe_gate_job(workflow_path)
 

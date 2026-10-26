@@ -7,15 +7,15 @@ does not meet.
 
 from __future__ import annotations
 
-from outcomeeng.validation.spx_version import parse_version
+from outcomeeng.validation.spx_version import VERSION_SEPARATOR
 
 
 def floors_above(reported: str) -> tuple[str, ...]:
     """Return one floor per component of ``reported``, that component raised by one."""
 
-    parts = parse_version(reported)
+    parts = tuple(int(part) for part in reported.split(VERSION_SEPARATOR))
     return tuple(
-        ".".join(
+        VERSION_SEPARATOR.join(
             str(part + 1 if index == raised else part)
             for index, part in enumerate(parts)
         )

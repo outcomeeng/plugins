@@ -2,15 +2,26 @@
 
 from __future__ import annotations
 
+import io
 import json
+import os
 import shutil
 import subprocess
-from dataclasses import dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Final
 
+import outcomeeng.validation.__main__ as validation_entry
 from outcomeeng.validation import MYPY_ARGV, PYRIGHT_ARGV, PYTHON_SOURCE_PATHS
+from outcomeeng.validation._model import ProcessHandle
+from outcomeeng.validation.selected_gate import RECIPE_CHECK_FULL
+from outcomeeng_testing.harnesses.changeset_scope import (
+    build_repo_without_origin,
+    commit_file,
+)
+from outcomeeng_testing.harnesses.gate import RecordingHandle
 from outcomeeng_testing.harnesses.spec_tree import (
     marketplace_root_for_spec_tree_root_test,
 )
@@ -23,6 +34,11 @@ INERT_SOURCE_SUFFIX: Final = ".txt"
 PYRIGHT_PROJECT_FLAG: Final = "--project"
 PYRIGHT_JSON_FLAG: Final = "--outputjson"
 MYPY_ERROR_MARKER: Final = ": error:"
+CHECKER_FAILURE_EXIT_CODE: Final = 1
+_FIRST_PID: Final = 10_000
+# The full gate diffs the head against its first parent, so the scratch
+# checkout carries a second commit on top of the builder's initial one.
+_SECOND_COMMIT_FILE: Final = "changed.txt"
 
 
 @dataclass(frozen=True)
@@ -97,3 +113,54 @@ def run_repository_mypy(test_file: str, fixture: Path) -> TypeCheckRun:
             MYPY_ERROR_MARKER in line for line in result.stdout.splitlines()
         ),
     )
+
+
+@dataclass
+class CheckerFailingSpawner:
+    """A ProcessSpawner whose child exits nonzero for one argv and zero for every other."""
+
+    failing_argv: tuple[str, ...] | None = None
+    spawn_calls: list[tuple[str, ...]] = field(default_factory=list)
+
+    def spawn(self, argv: Sequence[str], output_path: Path) -> ProcessHandle:
+        recorded = tuple(argv)
+        self.spawn_calls.append(recorded)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text("", encoding="utf-8")
+        return RecordingHandle(
+            pid=_FIRST_PID + len(self.spawn_calls),
+            exit_code=(
+                CHECKER_FAILURE_EXIT_CODE if recorded == self.failing_argv else os.EX_OK
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class FullDispatchRun:
+    """The exit code and the spawned argvs of one `check-full` dispatch."""
+
+    exit_code: int
+    spawn_calls: tuple[tuple[str, ...], ...]
+
+
+def run_check_full_dispatch(
+    failing_argv: tuple[str, ...] | None = None,
+) -> FullDispatchRun:
+    """Dispatch `check-full` through the validation entry point against a scratch checkout.
+
+    Every child the dispatch spawns is recorded and exits zero, except the one
+    whose argv equals ``failing_argv``, which exits nonzero.
+    """
+
+    spawner = CheckerFailingSpawner(failing_argv=failing_argv)
+    with TemporaryDirectory() as directory:
+        repo = Path(directory)
+        build_repo_without_origin(repo)
+        commit_file(repo, _SECOND_COMMIT_FILE, _SECOND_COMMIT_FILE, _SECOND_COMMIT_FILE)
+        exit_code = validation_entry.main(
+            [RECIPE_CHECK_FULL],
+            spawner=spawner,
+            sink=io.StringIO(),
+            repo=repo,
+        )
+    return FullDispatchRun(exit_code=exit_code, spawn_calls=tuple(spawner.spawn_calls))
