@@ -12,7 +12,13 @@ from typing import Any, Final, cast
 import yaml
 
 from outcomeeng.validation import VALIDATION_STEPS
-from outcomeeng.validation.ci_credentials import GATE_WORKFLOW_PATH
+from outcomeeng.validation.ci_credentials import (
+    GATE_WORKFLOW_PATH,
+    JOB_STEPS_KEY,
+    STEP_RUN_KEY,
+    WORKFLOW_ENVIRONMENT_KEY,
+    WORKFLOW_JOBS_KEY,
+)
 from outcomeeng.validation.ci_gate import (
     GATE_JOB_NAME,
     JOB_TIMEOUT_KEY,
@@ -205,11 +211,11 @@ def workflow(workflow_path: Path | None = None) -> dict[str, Any]:
 
 
 def gate_job(workflow_data: dict[str, Any]) -> dict[str, Any]:
-    return cast("dict[str, Any]", workflow_data["jobs"][GATE_JOB_NAME])
+    return cast("dict[str, Any]", workflow_data[WORKFLOW_JOBS_KEY][GATE_JOB_NAME])
 
 
 def gate_steps(workflow_data: dict[str, Any]) -> list[dict[str, Any]]:
-    return cast("list[dict[str, Any]]", gate_job(workflow_data)["steps"])
+    return cast("list[dict[str, Any]]", gate_job(workflow_data)[JOB_STEPS_KEY])
 
 
 def setup_python_version(workflow_data: dict[str, Any]) -> str:
@@ -248,9 +254,9 @@ def observe_gate_triggers(workflow_path: Path | None = None) -> GateTriggerObser
 def observe_gate_run_commands(workflow_path: Path | None = None) -> tuple[str, ...]:
     """Return every normalized `run:` body the gate job declares."""
     return tuple(
-        cast("str", step["run"]).strip()
+        cast("str", step[STEP_RUN_KEY]).strip()
         for step in gate_steps(workflow(workflow_path))
-        if "run" in step
+        if STEP_RUN_KEY in step
     )
 
 
@@ -260,7 +266,9 @@ def observe_validation_step_argvs() -> frozenset[tuple[str, ...]]:
 
 
 def _environment(section: dict[str, Any]) -> Mapping[str, str]:
-    return MappingProxyType(dict(cast("dict[str, str]", section.get("env", {}))))
+    return MappingProxyType(
+        dict(cast("dict[str, str]", section.get(WORKFLOW_ENVIRONMENT_KEY, {})))
+    )
 
 
 def observe_ci_toolchain(
@@ -271,9 +279,12 @@ def observe_ci_toolchain(
     workflow_env = _environment(workflow_data)
     env = _environment(gate_job(workflow_data))
     steps = gate_steps(workflow_data)
-    runs = tuple(cast("str", step["run"]) for step in steps if "run" in step)
+    runs = tuple(
+        cast("str", step[STEP_RUN_KEY]) for step in steps if STEP_RUN_KEY in step
+    )
     run_environments = tuple(
-        (cast("str", step.get("run", "")).strip(), _environment(step)) for step in steps
+        (cast("str", step.get(STEP_RUN_KEY, "")).strip(), _environment(step))
+        for step in steps
     )
     return CiToolchainObservation(
         workflow_environment=workflow_env,
@@ -302,7 +313,7 @@ def observe_gate_steps(
     """Return each gate step's condition, soft-pass surface, and shell body."""
     observations: list[GateStepObservation] = []
     for step in gate_steps(workflow(workflow_path)):
-        run = cast("str", step.get("run", ""))
+        run = cast("str", step.get(STEP_RUN_KEY, ""))
         observations.append(
             GateStepObservation(
                 name=cast("str", step.get("name", "")),
@@ -332,7 +343,7 @@ def observe_workflow_jobs(
     directory = WORKFLOW_DIRECTORY if workflow_directory is None else workflow_directory
     observations: list[WorkflowJobObservation] = []
     for path in workflow_paths(directory):
-        jobs = cast("dict[str, Any]", workflow(path).get("jobs") or {})
+        jobs = cast("dict[str, Any]", workflow(path).get(WORKFLOW_JOBS_KEY) or {})
         observations.extend(
             WorkflowJobObservation(
                 workflow=path.name,
@@ -348,7 +359,7 @@ def observe_workflow_jobs(
 def observe_spx_source(workflow_path: Path | None = None) -> SpxSourceObservation:
     """Return the spx commit pin and the (repository, ref) of each checkout step."""
     job = gate_job(workflow(workflow_path))
-    env = cast("dict[str, str]", job.get("env", {}))
+    env = cast("dict[str, str]", job.get(WORKFLOW_ENVIRONMENT_KEY, {}))
     checkouts = tuple(
         (
             cast("dict[str, str]", step.get("with", {})).get("repository"),
