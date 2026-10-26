@@ -271,10 +271,33 @@ def observe_validation_step_argvs() -> frozenset[tuple[str, ...]]:
     return frozenset(step.argv for step in VALIDATION_STEPS)
 
 
-def _environment(section: dict[str, Any]) -> Mapping[str, str]:
-    return MappingProxyType(
-        dict(cast("dict[str, str]", section.get(WORKFLOW_ENVIRONMENT_KEY, {})))
-    )
+def _optional_text(section: Mapping[str, object], key: str) -> str | None:
+    """Return the scalar a workflow section writes under ``key``, or None when absent."""
+    value = section.get(key)
+    if value is None or isinstance(value, str):
+        return value
+    raise TypeError(f"workflow key {key!r} holds {type(value).__name__}, not text")
+
+
+def _text_mapping(section: Mapping[str, object], key: str) -> Mapping[str, str]:
+    """Return the name-to-text mapping a workflow section writes under ``key``."""
+    value = section.get(key, {})
+    if not isinstance(value, Mapping):
+        raise TypeError(
+            f"workflow key {key!r} holds {type(value).__name__}, not a mapping"
+        )
+    entries = {
+        name: text
+        for name, text in value.items()
+        if isinstance(name, str) and isinstance(text, str)
+    }
+    if len(entries) != len(value):
+        raise TypeError(f"workflow key {key!r} maps a name or value that is not text")
+    return MappingProxyType(entries)
+
+
+def _environment(section: Mapping[str, object]) -> Mapping[str, str]:
+    return _text_mapping(section, WORKFLOW_ENVIRONMENT_KEY)
 
 
 def observe_ci_toolchain(
@@ -325,7 +348,7 @@ def observe_gate_steps(
                 name=cast("str", step.get(STEP_NAME_KEY, "")),
                 run=run,
                 shell_lines=tuple(shell_lines(run)),
-                continue_on_error=cast("str | None", step.get(CONTINUE_ON_ERROR_KEY)),
+                continue_on_error=_optional_text(step, CONTINUE_ON_ERROR_KEY),
                 has_condition=CONDITION_KEY in step,
             )
         )
@@ -337,8 +360,8 @@ def observe_gate_job(workflow_path: Path | None = None) -> GateJobObservation:
     job = gate_job(workflow(workflow_path))
     return GateJobObservation(
         has_condition=CONDITION_KEY in job,
-        continue_on_error=cast("str | None", job.get(CONTINUE_ON_ERROR_KEY)),
-        timeout_minutes=cast("str | None", job.get(JOB_TIMEOUT_KEY)),
+        continue_on_error=_optional_text(job, CONTINUE_ON_ERROR_KEY),
+        timeout_minutes=_optional_text(job, JOB_TIMEOUT_KEY),
     )
 
 
@@ -355,7 +378,7 @@ def observe_workflow_jobs(
                 workflow=path.name,
                 job=job_id,
                 calls_reusable_workflow=REUSABLE_WORKFLOW_CALL_KEY in job,
-                timeout_minutes=cast("str | None", job.get(JOB_TIMEOUT_KEY)),
+                timeout_minutes=_optional_text(job, JOB_TIMEOUT_KEY),
             )
             for job_id, job in jobs.items()
         )
@@ -365,11 +388,11 @@ def observe_workflow_jobs(
 def observe_spx_source(workflow_path: Path | None = None) -> SpxSourceObservation:
     """Return the spx commit pin and the (repository, ref) of each checkout step."""
     job = gate_job(workflow(workflow_path))
-    env = cast("dict[str, str]", job.get(WORKFLOW_ENVIRONMENT_KEY, {}))
+    env = _environment(job)
     checkouts = tuple(
         (
-            cast("dict[str, str]", step.get(STEP_WITH_KEY, {})).get("repository"),
-            cast("dict[str, str]", step.get(STEP_WITH_KEY, {})).get("ref"),
+            _text_mapping(step, STEP_WITH_KEY).get("repository"),
+            _text_mapping(step, STEP_WITH_KEY).get("ref"),
         )
         for step in gate_steps(workflow(workflow_path))
         if "actions/checkout@" in cast("str", step.get(STEP_USES_KEY, ""))
