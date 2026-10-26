@@ -102,6 +102,16 @@ def test_the_test_recipe_runs_pytest_after_preflight() -> None:
         assert isinstance(step[SUMMARY_KEY_EXIT_CODE], int)
 
 
+# Assertion design record: passing pipeline output
+# - Assertion: given all steps exiting 0, each step prints its status line
+#   without captured child output, and the run ends with a timing summary
+#   (one existential interaction).
+# - Production subject: the engine's live sink output, observed through the run.
+# - Case provenance: the harness's three no-op steps.
+# - Oracle owner: the scenario sentence, read as one timing row per completed
+#   step, each naming its label as a whole word.
+# - Rejected mutation: the timing summary prints one row for every step.
+# - Failure observation: the steps' naming rows are fewer than the steps.
 def test_a_passing_pipeline_prints_headers_in_order_and_removes_logs() -> None:
     steps = three_no_op_steps()
 
@@ -119,12 +129,31 @@ def test_a_passing_pipeline_prints_headers_in_order_and_removes_logs() -> None:
     assert run.written_outputs == (PASSING_CHILD_OUTPUT,) * len(steps)
     header_positions = [run.output.index(f"━━━ {step.label} ━━━") for step in steps]
     assert header_positions == sorted(header_positions)
+    naming_rows = [
+        [
+            index
+            for index, row in enumerate(summary.splitlines())
+            if step.label in row.split()
+        ]
+        for step in steps
+    ]
+    assert all(len(rows) == 1 for rows in naming_rows), naming_rows
+    assert len({rows[0] for rows in naming_rows}) == len(steps)
     for step in steps:
-        assert step.label in summary
         assert f"{STEP_PASS_STATUS}  {step.label}" in run.output
     assert run.retained_logs == (None,) * len(steps)
 
 
+# Assertion design record: failing step at position k
+# - Assertion: given step k failing, the timing summary prints rows for steps
+#   1..k followed by a FAILED row naming the failing step (one existential
+#   interaction).
+# - Production subject: the engine's timing summary on the live sink.
+# - Case provenance: the harness's three no-op steps, the second one failing.
+# - Oracle owner: the scenario sentence, read as one timing row each for steps
+#   1 and 2 in order, then one FAILED row naming step 2, and no row for step 3.
+# - Rejected mutation: the timing summary prints one row for every step.
+# - Failure observation: step 1's row is not before step 2's timing row.
 def test_a_failing_step_stops_the_pipeline_and_retains_its_log() -> None:
     steps = three_no_op_steps()
     failing_output = "\n".join(
@@ -139,13 +168,19 @@ def test_a_failing_step_stops_the_pipeline_and_retains_its_log() -> None:
     )
 
     summary = run.output[run.output.index("━━━ Timing Summary ━━━") :]
+    summary_rows = summary.splitlines()
+    naming_rows = [
+        [index for index, row in enumerate(summary_rows) if step.label in row.split()]
+        for step in steps
+    ]
+    failed_rows = [index for index, row in enumerate(summary_rows) if "FAILED" in row]
     assert run.exit_code == FAIL_EXIT_CODE
     assert len(run.spawn_calls) == 2
-    assert steps[0].label in summary
-    assert steps[1].label in summary
-    assert steps[2].label not in summary
-    assert "FAILED" in summary
-    assert steps[1].label in summary[summary.index("FAILED") :]
+    assert len(naming_rows[0]) == 1
+    assert len(naming_rows[1]) == 2
+    assert naming_rows[2] == []
+    assert naming_rows[0][0] < naming_rows[1][0] < naming_rows[1][1]
+    assert failed_rows == [naming_rows[1][1]]
     assert f"{STEP_FAIL_STATUS}  {steps[1].label}" in run.output
     assert FULL_LOG_LABEL in run.output
     assert run.log_paths[1] in run.output
