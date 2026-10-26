@@ -2236,6 +2236,16 @@ def racing_document_reader(
     return reader
 
 
+def _read_installed_plugins_document(
+    document_path: Path,
+) -> dict[str, dict[str, list[dict[str, object]]]]:
+    """The install-record document at the path, typed as the agent writes it."""
+    return cast(
+        "dict[str, dict[str, list[dict[str, object]]]]",
+        json.loads(document_path.read_text(encoding="utf-8")),
+    )
+
+
 def observe_racing_install_record_rewrite(
     fixture: Path, tmp_path: Path
 ) -> RacingRewriteObservation:
@@ -2251,10 +2261,7 @@ def observe_racing_install_record_rewrite(
     document_path.parent.mkdir(parents=True)
     shutil.copy2(fixture, document_path)
     rewrites, warnings, target, _ = _planned_document_rewrite(document_path, tmp_path)
-    document = cast(
-        "dict[str, dict[str, list[dict[str, object]]]]",
-        json.loads(document_path.read_text(encoding="utf-8")),
-    )
+    document = _read_installed_plugins_document(document_path)
     identifier = next(
         key
         for key in document[CLAUDE_INSTALLED_PLUGINS_FIELD]
@@ -2265,10 +2272,7 @@ def observe_racing_install_record_rewrite(
     )
 
     def inject() -> None:
-        written_document = cast(
-            "dict[str, dict[str, list[dict[str, object]]]]",
-            json.loads(document_path.read_text(encoding="utf-8")),
-        )
+        written_document = _read_installed_plugins_document(document_path)
         written_document[CLAUDE_INSTALLED_PLUGINS_FIELD][identifier].append(dict(entry))
         document_path.write_text(
             json.dumps(written_document, indent=2) + "\n", encoding="utf-8"
@@ -2340,10 +2344,7 @@ def observe_retired_record_migration(
     document_path = tmp_path / CLAUDE_INSTALLED_PLUGINS_RELATIVE
     document_path.parent.mkdir(parents=True)
     shutil.copy2(fixture, document_path)
-    document = cast(
-        "dict[str, dict[str, list[dict[str, object]]]]",
-        json.loads(document_path.read_text(encoding="utf-8")),
-    )
+    document = _read_installed_plugins_document(document_path)
     plugins = document[CLAUDE_INSTALLED_PLUGINS_FIELD]
     renames = {
         RETIRED_PLUGIN: PRODUCT_TREE_PLUGIN,
@@ -2385,7 +2386,7 @@ def observe_retired_record_migration(
     for plugin in names:
         (cache_root / plugin / target_version).mkdir(parents=True)
     target = MarketplaceTarget(
-        commit="3" * 40, versions={plugin: target_version for plugin in names}
+        commit="3" * 40, versions=dict.fromkeys(names, target_version)
     )
     rewrites, plan_warnings = plan_install_record_rewrite(
         planned, target, cache_root, cached_plugin_versions(cache_root, names)

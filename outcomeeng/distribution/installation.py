@@ -2041,6 +2041,40 @@ def _listing_defect_warning(
     return InstallationWarning(agent=Target.CLAUDE, message=message, blocking=in_scope)
 
 
+def _successor_records(
+    record: ClaudeInstallRecord,
+    successor: str,
+    records: Sequence[ListedInstallRecord],
+    added: Sequence[ClaudeInstallRecord],
+) -> tuple[ClaudeInstallRecord, ...]:
+    """The record a retired plugin's record moves as, or none where one holds its address.
+
+    The successor record sits at the retired record's scope and project path.
+    The listing or the records already added may hold one there, in which case
+    that record stands and the retired one adds nothing.
+    """
+
+    def holds_address(other: object) -> bool:
+        return (
+            isinstance(other, ClaudeInstallRecord)
+            and other.plugin == successor
+            and other.scope == record.scope
+            and other.project_path == record.project_path
+        )
+
+    if any(holds_address(other) for other in (*records, *added)):
+        return ()
+    return (
+        ClaudeInstallRecord(
+            plugin=successor,
+            scope=record.scope,
+            project_path=record.project_path,
+            version=record.version,
+            enabled=record.enabled,
+        ),
+    )
+
+
 def claude_refresh_records(
     records: Sequence[ListedInstallRecord],
     catalog: Sequence[str],
@@ -2088,28 +2122,9 @@ def claude_refresh_records(
         elif record.plugin in renames and at_checkout:
             continue
         elif record.plugin in renames:
-            successor = renames[record.plugin]
-            if not any(
-                isinstance(other, ClaudeInstallRecord)
-                and other.plugin == successor
-                and other.scope == record.scope
-                and other.project_path == record.project_path
-                for other in records
-            ) and not any(
-                added.plugin == successor
-                and added.scope == record.scope
-                and added.project_path == record.project_path
-                for added in rewrites
-            ):
-                rewrites.append(
-                    ClaudeInstallRecord(
-                        plugin=successor,
-                        scope=record.scope,
-                        project_path=record.project_path,
-                        version=record.version,
-                        enabled=record.enabled,
-                    )
-                )
+            rewrites.extend(
+                _successor_records(record, renames[record.plugin], records, rewrites)
+            )
             continue
         elif record.plugin not in catalog:
             message = UNCATALOGED_RECORD_WARNING.format(
