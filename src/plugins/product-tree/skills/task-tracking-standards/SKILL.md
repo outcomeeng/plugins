@@ -20,7 +20,7 @@ Load this skill before any workflow:
 - creates or refreshes a heartbeat for a workflow whose governing skill has no foreground wait command
 - schedules a delayed rollout or external-convergence re-check
 - deletes a heartbeat because acceptance is reached, the work item closed, or the only remaining action is operator approval
-- launches local background work the harness tracks — a backgrounded command or a subagent — and must choose between ending the turn for the completion notification and running it in the foreground with an adequate timeout
+- launches local work — a command or a subagent — and must choose between ending the turn for a completion notification and collecting the result within the active turn
 
 </when_to_load>
 
@@ -92,13 +92,19 @@ Never use shell `sleep`, `gh run watch`, `until`/`while` polling, a backgrounded
 </runtime_timer>
 
 <local_background_work>
-A runtime timer or heartbeat is for a wait the harness cannot observe — external state such as a rollout or service convergence. Local background work the harness tracks is the opposite case: it needs neither a timer nor a poll.
+A runtime timer or heartbeat is for a wait the harness cannot observe — external state such as a rollout or service convergence. Local work the session itself launches needs neither a timer nor a poll.
 
-When a backgrounded shell command or an ordinary background subagent is launched, the harness re-invokes on its completion. Launch it, end the turn, and resume from the completion notification. Never create a heartbeat to re-check it — that duplicates the notification the harness already sends — and never poll it in-shell with a wait loop, a `sleep`, or a watch command. The in-shell poll is the unreaped process leak itself, not a way around it.
+{!% if target == 'claude' %!}
+When a backgrounded shell command or an ordinary background subagent is launched, the harness re-invokes the session on its completion. Launch it, end the turn, and resume from the completion notification. Never create a heartbeat to re-check it — that duplicates the notification the harness already sends — and never poll it in-shell with a wait loop, a `sleep`, or a watch command. The in-shell poll is the unreaped process leak itself, not a way around it.
 
 Typed verifier and reviewer agents are excluded from completion-notification handling. When the runtime router requires an exposed wait capability, collect their final result through that capability; treat any completion notification as supplemental rather than the planned result-collection mechanism.
 
 When the wait is short and ending the turn is overkill, run the command in the foreground with a timeout large enough to cover it — one bounded invocation, not a background launch followed by polling.
+{!% else %!}
+This harness documents no wake of the session when a background process exits, so the session owns every local wait and collects its result itself. Run a local command in the foreground with a timeout large enough to cover it — one bounded invocation — and collect its result within the active turn. When the command cannot finish within the turn, move the work to the next step boundary. Collect a subagent launch within the active turn through the native wait capability. Never start a local command in the background, never expect a completion notification to resume the session, and never create a heartbeat to re-check it.
+
+Never poll a local command in-shell with a wait loop, a `sleep`, or a watch command. The poll loop spawns a process tree per iteration that the harness does not reap, and across turns and concurrent agents it exhausts the host's process limit.
+{!% endif %!}
 </local_background_work>
 
 <prompt_template>
@@ -119,11 +125,24 @@ Resume <owning skill> (+ /task-tracking-standards) for <repo path> <work-item po
 </prompt_template>
 
 <failure_modes>
+
+{!% if target == 'claude' %!}
+
 **Duplicate background-work heartbeat**
 
 - **What happened:** Claude created a heartbeat for a background subagent that already produced a completion notification.
 - **Why it failed:** Both continuations fired for one work item, causing duplicate state inspection and competing next actions.
 - **How to avoid:** Use the harness completion notification for ordinary background work and the required typed wait capability for verifier or reviewer agents.
+
+{!% else %!}
+
+**Background launch awaiting a wake that never comes**
+
+- **What happened:** Claude started a local command in the background and ended the turn to wait for a completion notification.
+- **Why it failed:** This harness documents no wake when a background process exits, so nothing resumed the session and the result went uncollected.
+- **How to avoid:** Run the command in the foreground with a timeout that covers it and collect the result within the active turn, or move the work to the next step boundary.
+
+{!% endif %!}
 
 **Stale heartbeat payload**
 
@@ -131,11 +150,11 @@ Resume <owning skill> (+ /task-tracking-standards) for <repo path> <work-item po
 - **Why it failed:** The branch advanced before the wake-up, so the prompt resumed stale conclusions against a new head.
 - **How to avoid:** Build the prompt as `<heartbeat_payload>` defines it.
 
-**Local background polling**
+**Local command polling**
 
-- **What happened:** Claude polled a local background command with repeated shell sleeps.
+- **What happened:** Claude polled a local command with repeated shell sleeps.
 - **Why it failed:** Every iteration added another monitored process tree until process and file-descriptor pressure disrupted unrelated work.
-- **How to avoid:** End the turn for the harness completion notification or run one foreground command with an adequate timeout.
+- **How to avoid:** {!% if target == 'claude' %!}End the turn for the harness completion notification or run one foreground command with an adequate timeout.{!% else %!}Run one foreground command with an adequate timeout and collect it within the active turn, or move the work to the next step boundary.{!% endif %!}
 
 </failure_modes>
 
@@ -154,7 +173,7 @@ Tracking is correct when:
 - wake-ups reload the named skills and re-read authoritative state before acting, never assuming conversation memory survived
 - failed checks stay in the active workflow until classified and repaired or blocked by an explicit operator decision
 - shell `sleep`, polling loops, `gh run watch`, background keep-alives, backgrounded watchers, and duplicate heartbeats are absent
-- local background work the harness tracks ends the turn for its completion notification, or runs in the foreground with an adequate timeout — never a poll loop or a heartbeat that duplicates the notification
+- {!% if target == 'claude' %!}local background work ends the turn for its completion notification, or runs in the foreground with an adequate timeout — never a poll loop or a heartbeat that duplicates the notification{!% else %!}local work runs in the foreground with an adequate timeout and is collected within the active turn, or moves to the next step boundary — never a background launch, a poll loop, or a heartbeat that waits for a notification{!% endif %!}
 - heartbeat deletion happens only at acceptance, closure, no remaining repository action, or approval-only boundary
 
 </success_criteria>

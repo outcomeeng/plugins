@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.109.1
+
+### Changed
+
+- **`/task-tracking-standards` states the local-work arming rule for the harness that reads it.** The Claude Code rendering tells an agent that a backgrounded shell command or an ordinary background subagent re-invokes the session on its completion, so it launches the work, ends the turn, and resumes from the completion notification. The Codex rendering tells an agent to run a local command in the foreground with a timeout that covers it and to collect the result within the active turn, or to move the work to the next step boundary, to collect a subagent launch within the active turn through the native wait capability, and never to expect the harness to re-invoke the session when background work ends. Before this change, both renderings told an agent that the harness re-invokes the session on a background completion.
+
 ## 0.109.0
 
 ### Breaking
