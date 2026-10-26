@@ -1,4 +1,10 @@
-"""Harnesses that type-check an inert source fixture under the gate's type checkers."""
+"""Harnesses that type-check an inert source fixture under the gate's type checkers.
+
+Exception case: Stage 5, Failure simulation — the full-gate dispatch observation
+runs the production entry point `main` through a spawner whose child for one
+chosen argv exits nonzero, so the dispatch's handling of a failing static-analysis
+step is observable without making a real checker fail.
+"""
 
 from __future__ import annotations
 
