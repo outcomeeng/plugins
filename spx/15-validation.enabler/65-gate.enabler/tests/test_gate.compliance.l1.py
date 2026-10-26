@@ -10,8 +10,11 @@ from outcomeeng.validation import (
     CHECK_RECIPES,
     EVAL_LINKS_ARGV,
     FMT_CHECK_ARGV,
+    FORWARDED_SIGNALS,
     HOOK_SAFETY_ARGV,
     MYPY_ARGV,
+    MYPY_STRICT_FLAG,
+    L3_LEVEL,
     POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
     PURPOSE_CORRECTNESS,
@@ -36,6 +39,11 @@ from outcomeeng.validation import (
     VERIFICATION_TYPE_VALIDATION,
     test_recipe as build_test_recipe,
 )
+from outcomeeng.validation.infrastructure_index import (
+    SPEC_TREE_ROOT,
+    TESTS_DIRECTORY_NAME,
+)
+from outcomeeng_testing.generators.gate import l3_fixture_files
 from outcomeeng_testing.harnesses.gate import (
     HIGH_VOLUME_CHILD_OUTPUT,
     PASS_EXIT_CODE,
@@ -49,6 +57,10 @@ from outcomeeng_testing.harnesses.gate import (
     recipe_run_observation,
     validation_package_source_text,
     validation_subprocess_importers,
+)
+from outcomeeng_testing.harnesses.l3_collection import (
+    fixture_collection,
+    pytest_argument_tail,
 )
 
 
@@ -64,7 +76,7 @@ def test_the_full_gate_carries_every_required_step() -> None:
     assert RUFF_FORMAT_ARGV in step_argvs
     assert RUFF_CHECK_ARGV in step_argvs
     assert set(STATIC_ANALYSIS_ARGVS).issubset(step_argvs)
-    assert "--strict" in MYPY_ARGV
+    assert MYPY_STRICT_FLAG in MYPY_ARGV
     assert SPX_MARKDOWN_ARGV in step_argvs
     assert EVAL_LINKS_ARGV in step_argvs
     assert HOOK_SAFETY_ARGV in step_argvs
@@ -97,6 +109,37 @@ def test_recipe_types_and_purposes_match_the_verification_taxonomy() -> None:
     assert targeted.steps == (
         Step(label="pytest", argv=(*PYTEST_ARGV, PYTEST_TARGET_ARG)),
     )
+
+
+def _recipe_pytest_arguments(targets: tuple[str, ...]) -> tuple[str, ...]:
+    (step,) = build_test_recipe(targets).steps
+    return pytest_argument_tail(step.argv)
+
+
+def test_the_test_recipe_leaves_l3_files_out_of_a_directory_and_runs_a_named_one() -> (
+    None
+):
+    fixture = l3_fixture_files()
+    default_files = frozenset(
+        test_file.path for test_file in fixture if test_file.level != L3_LEVEL
+    )
+    l3_files = tuple(
+        test_file.path for test_file in fixture if test_file.level == L3_LEVEL
+    )
+    assert default_files
+    assert l3_files
+
+    directory = fixture_collection(
+        fixture, _recipe_pytest_arguments((SPEC_TREE_ROOT, TESTS_DIRECTORY_NAME))
+    )
+
+    assert directory.exit_code == 0, directory.output
+    assert directory.collected_files == default_files
+    for l3_file in l3_files:
+        named = fixture_collection(fixture, _recipe_pytest_arguments((l3_file,)))
+
+        assert named.exit_code == 0, named.output
+        assert named.collected_files == {l3_file}
 
 
 def test_the_check_wrapper_reports_no_verification_type() -> None:
@@ -147,8 +190,11 @@ def test_subprocess_lives_only_in_the_production_spawner() -> None:
         assert isinstance(preexec_fn, ast.Name)
         assert preexec_fn.id == "_restore_child_signal_mask"
     assert "signal.pthread_sigmask(signal.SIG_UNBLOCK" in source
-    for signal_name in ("SIGTERM", "SIGINT", "SIGHUP"):
-        assert f"signal.{signal_name}" in source
+    assert sorted(forwarded.name for forwarded in FORWARDED_SIGNALS) == sorted(
+        member.name for member in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
+    )
+    for forwarded in FORWARDED_SIGNALS:
+        assert f"signal.{forwarded.name}" in source
 
 
 def test_no_gate_module_polls_with_while_true_sleep() -> None:

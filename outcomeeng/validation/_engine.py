@@ -317,6 +317,8 @@ def _execute_recipe(
     spawner: ProcessSpawner,
     sink: TextIO,
     recipe: Recipe,
+    *,
+    monotonic: Callable[[], float] = time.monotonic,
 ) -> tuple[int, dict[str, object]]:
     timings: list[tuple[str, int]] = []
     step_records: list[dict[str, object]] = []
@@ -325,7 +327,7 @@ def _execute_recipe(
     retained_log_path: Path | None = None
     created_log_paths: list[Path] = []
     failed_status = 0
-    total_start = time.monotonic()
+    total_start = monotonic()
     step_index = 0
     sink.write(f"{recipe_header(recipe.name)}\n")
     sink.flush()
@@ -338,7 +340,7 @@ def _execute_recipe(
                 step_index += 1
                 sink.write(f"━━━ {step.label} ━━━\n")
                 sink.flush()
-                step_start = time.monotonic()
+                step_start = monotonic()
                 log_path = _create_log_path(step_index, step.label)
                 created_log_paths.append(log_path)
                 try:
@@ -357,7 +359,7 @@ def _execute_recipe(
                     exit_code = SPAWN_FAILURE_EXIT_CODE
                 finally:
                     _current_handle_ref[0] = None
-                elapsed = round(time.monotonic() - step_start)
+                elapsed = round(monotonic() - step_start)
                 timings.append((step.label, elapsed))
                 if exit_code != 0:
                     excerpt = _read_failure_excerpt(log_path)
@@ -400,7 +402,7 @@ def _execute_recipe(
                 sink.flush()
             if failed_step is not None:
                 break
-        total = round(time.monotonic() - total_start)
+        total = round(monotonic() - total_start)
         if failed_step is None:
             _write_timing_summary(sink, timings, total=total)
             return 0, _recipe_summary(
@@ -446,18 +448,21 @@ def run_recipe(
     recipe: Recipe,
     *,
     summary_path: Path | None = None,
+    monotonic: Callable[[], float] = time.monotonic,
 ) -> int:
     """Run one primitive recipe and write its structured summary."""
 
     resolved_summary_path = summary_path or _create_summary_path(recipe.name)
     old_handlers = _install_signal_handlers()
-    total_start = time.monotonic()
+    total_start = monotonic()
     try:
         try:
-            exit_code, summary = _execute_recipe(spawner, sink, recipe)
+            exit_code, summary = _execute_recipe(
+                spawner, sink, recipe, monotonic=monotonic
+            )
         except _ForwardedSignal as interrupt:
             exit_code = interrupt.exit_code
-            elapsed = round(time.monotonic() - total_start)
+            elapsed = round(monotonic() - total_start)
             summary = _recipe_summary(
                 recipe=recipe,
                 phase=PHASE_RECIPE,
@@ -479,18 +484,21 @@ def run_check(
     recipes: Sequence[Recipe],
     *,
     summary_path: Path | None = None,
+    monotonic: Callable[[], float] = time.monotonic,
 ) -> int:
     """Run primitive recipes in order and stop at the first failed recipe."""
 
     resolved_summary_path = summary_path or _create_summary_path(RECIPE_CHECK)
     old_handlers = _install_signal_handlers()
     recipe_summaries: list[dict[str, object]] = []
-    total_start = time.monotonic()
+    total_start = monotonic()
     exit_code = 0
     try:
         try:
             for recipe in recipes:
-                exit_code, summary = _execute_recipe(spawner, sink, recipe)
+                exit_code, summary = _execute_recipe(
+                    spawner, sink, recipe, monotonic=monotonic
+                )
                 recipe_summaries.append(summary)
                 if exit_code != 0:
                     break
@@ -505,7 +513,7 @@ def run_check(
             exit_code = interrupt.exit_code
             status = RUN_FAIL_STATUS
             phase = PHASE_RECIPE
-        elapsed = round(time.monotonic() - total_start)
+        elapsed = round(monotonic() - total_start)
         wrapper_steps: list[object] = []
         for summary in recipe_summaries:
             steps = summary[SUMMARY_KEY_STEPS]
@@ -533,6 +541,8 @@ def run(
     spawner: ProcessSpawner,
     sink: TextIO,
     steps: Sequence[Step],
+    *,
+    monotonic: Callable[[], float] = time.monotonic,
 ) -> int:
     """Run an ad hoc step list through the recipe engine.
 
@@ -550,4 +560,5 @@ def run(
             preflight_steps=(),
             steps=tuple(steps),
         ),
+        monotonic=monotonic,
     )

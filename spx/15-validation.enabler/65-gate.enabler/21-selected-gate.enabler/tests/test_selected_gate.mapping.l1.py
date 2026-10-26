@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from outcomeeng.distribution import agents as agent_conversion
 from outcomeeng.validation import (
     CHECK_RECIPES,
     EVAL_LINKS_ARGV,
+    EXECUTION_LEVELS,
+    L3_LEVEL,
     PREFLIGHT_STEPS,
     PYTEST_ARGV,
     TEST_STEPS,
@@ -19,12 +20,10 @@ from outcomeeng.validation.infrastructure_index import (
 )
 from outcomeeng.validation.selected_gate import (
     PATH_CATEGORY_PATTERNS,
-    VALIDATION_LANES,
     ChangedPath,
     FULL_GATE_REASON,
     InfrastructureIndexRequired,
     PathCategory,
-    REAL_AGENT_CODEX_EXCLUSION,
     REACHED_TESTS_REASON,
     SHARED_TEST_INFRASTRUCTURE_REASON,
     SelectedGatePlan,
@@ -39,6 +38,8 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
     category_patterns,
+    declared_lane_steps,
+    l3_fixture_files,
     path_from_pattern,
 )
 from outcomeeng_testing.harnesses import gate as gate_harness
@@ -56,12 +57,18 @@ from outcomeeng_testing.harnesses.gate import (
 from outcomeeng_testing.harnesses.infrastructure_index import (
     conftest_reach_layout,
     mixed_reach_layout,
+    l3_reach_layout,
     reach_layout,
     repository_reach,
     synthetic_repository,
 )
+from outcomeeng_testing.harnesses.l3_collection import (
+    default_suite_fixture_paths,
+    plan_collected_files,
+    plan_pytest_arguments,
+    plan_pytest_targets,
+)
 from outcomeeng_testing.harnesses.real_agent_selection import (
-    repository_relative_path,
     run_full_check_observation,
 )
 
@@ -88,12 +95,11 @@ def _pathspec_categories(path: str) -> frozenset[PathCategory]:
 def _lane_steps(
     categories: frozenset[PathCategory],
 ) -> frozenset[tuple[tuple[str, ...], str]]:
-    # Each lane of a category the path lies in contributes every step it
-    # declares, carrying that lane's reason.
+    # Each spec-declared lane of a category the path lies in contributes every
+    # step it names, carrying that lane's reason.
+    declared = declared_lane_steps()
     return frozenset(
-        (argv, VALIDATION_LANES[category].reason)
-        for category in categories & VALIDATION_LANES.keys()
-        for argv in VALIDATION_LANES[category].argvs
+        step for category in categories & declared.keys() for step in declared[category]
     )
 
 
@@ -172,13 +178,25 @@ def test_every_assertion_path_category_maps_presence_to_targeted_execution(
     path = path_from_pattern(pattern)
     plan = build_selected_gate_plan((path,), deleted_paths=(path,) if deleted else ())
 
-    targets = {
-        argument
-        for step in plan.steps
-        if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-        for argument in step.argv[len(PYTEST_ARGV) :]
-    }
-    assert (path in targets) is not deleted
+    assert (path in plan_pytest_targets(plan)) is not deleted
+
+
+@pytest.mark.parametrize("level", EXECUTION_LEVELS)
+def test_changed_test_files_of_a_level_are_targeted_exactly_when_the_level_is_not_l3(
+    level: str,
+) -> None:
+    paths = tuple(
+        test_file.path
+        for test_file in l3_fixture_files()
+        if test_file.level == level and test_file.path.startswith(f"{SPEC_TREE_ROOT}/")
+    )
+
+    plan = build_selected_gate_plan(paths)
+
+    assert paths
+    assert plan_pytest_targets(plan) == (
+        frozenset() if level == L3_LEVEL else frozenset(paths)
+    )
 
 
 @pytest.mark.parametrize("pattern", PATH_CATEGORY_PATTERNS[PathCategory.EVIDENCE_LINK])
@@ -221,12 +239,9 @@ def test_full_gate_paths_select_the_complete_recipe_set(path: str) -> None:
     plan = build_selected_gate_plan((path_from_pattern(path),))
 
     assert plan.full_gate is True
-    assert tuple(
-        step.argv[: -len(REAL_AGENT_CODEX_EXCLUSION)]
-        if step.argv[-len(REAL_AGENT_CODEX_EXCLUSION) :] == REAL_AGENT_CODEX_EXCLUSION
-        else step.argv
-        for step in plan.steps
-    ) == tuple(step.argv for step in (*VALIDATION_STEPS, *TEST_STEPS))
+    assert tuple(step.argv for step in plan.steps) == tuple(
+        step.argv for step in (*VALIDATION_STEPS, *TEST_STEPS)
+    )
     assert set(_reasons(plan)) == {FULL_GATE_REASON}
 
 
@@ -345,28 +360,70 @@ def test_test_infrastructure_reach_maps_to_gate_steps(
 
     if kind is InfrastructureReach.NODE_LOCAL:
         assert plan.full_gate is False
-        assert [item.step.argv for item in pytest_steps] == [
-            (*PYTEST_ARGV, *layout.tests)
+        assert [item.step.argv[: len(PYTEST_ARGV)] for item in pytest_steps] == [
+            PYTEST_ARGV
+        ]
+        assert [set(item.step.argv[len(PYTEST_ARGV) :]) for item in pytest_steps] == [
+            set(layout.tests)
         ]
         assert [item.reason for item in pytest_steps] == [REACHED_TESTS_REASON]
     elif kind is InfrastructureReach.SHARED:
         assert plan.full_gate is True
         assert tuple(step.argv for step in plan.steps) == (
             *(step.argv for step in VALIDATION_STEPS),
-            *((*step.argv, *REAL_AGENT_CODEX_EXCLUSION) for step in TEST_STEPS),
+            *(step.argv for step in TEST_STEPS),
         )
         assert set(_reasons(plan)) == {SHARED_TEST_INFRASTRUCTURE_REASON}
     elif kind is InfrastructureReach.UNTRACEABLE:
         assert plan.full_gate is True
         assert tuple(step.argv for step in plan.steps) == (
             *(step.argv for step in VALIDATION_STEPS),
-            *((*step.argv, *REAL_AGENT_CODEX_EXCLUSION) for step in TEST_STEPS),
+            *(step.argv for step in TEST_STEPS),
         )
         assert set(_reasons(plan)) == {UNTRACEABLE_TEST_INFRASTRUCTURE_REASON}
     else:
         assert kind is InfrastructureReach.UNREACHED
         assert plan.full_gate is False
         assert pytest_steps == []
+
+
+@pytest.mark.parametrize(
+    "kind", (InfrastructureReach.SHARED, InfrastructureReach.UNTRACEABLE), ids=str
+)
+def test_a_full_surface_reach_collects_every_default_test_and_no_l3_test(
+    kind: InfrastructureReach,
+) -> None:
+    with synthetic_repository() as repo:
+        layout = reach_layout(kind, repo)
+
+    plan = build_selected_gate_plan(
+        (layout.changed_path,), test_infrastructure=layout.index
+    )
+
+    assert plan.full_gate is True
+    assert plan_collected_files(plan) == (default_suite_fixture_paths(),)
+
+
+def test_the_full_gate_wrapper_collects_every_default_test_and_no_l3_test() -> None:
+    plan = build_full_gate_plan(())
+
+    assert plan.full_gate is True
+    assert plan_collected_files(plan) == (default_suite_fixture_paths(),)
+
+
+def test_a_node_local_reach_selects_only_the_default_tests_it_reaches() -> None:
+    with synthetic_repository() as repo:
+        layout = l3_reach_layout(repo)
+    default_path, l3_path = layout.tests
+    reached = layout.index.reach(layout.changed_path)
+
+    plan = build_selected_gate_plan(
+        (layout.changed_path,), test_infrastructure=layout.index
+    )
+
+    assert reached.kind is InfrastructureReach.NODE_LOCAL
+    assert set(reached.tests) == {default_path, l3_path}
+    assert plan_pytest_arguments(plan) == ((default_path,),)
 
 
 def test_module_reached_by_conftest_selects_the_full_surface() -> None:
@@ -397,8 +454,11 @@ def test_step_fed_by_changed_and_reached_tests_names_both_reasons() -> None:
     ]
 
     assert plan.full_gate is False
-    assert [item.step.argv for item in pytest_steps] == [
-        (*PYTEST_ARGV, *sorted((layout.changed_test, *layout.reached_tests)))
+    assert [item.step.argv[: len(PYTEST_ARGV)] for item in pytest_steps] == [
+        PYTEST_ARGV
+    ]
+    assert [set(item.step.argv[len(PYTEST_ARGV) :]) for item in pytest_steps] == [
+        {layout.changed_test, *layout.reached_tests}
     ]
     assert TEST_REASON in pytest_steps[0].reason
     assert REACHED_TESTS_REASON in pytest_steps[0].reason
@@ -421,55 +481,33 @@ def test_the_gate_harness_shared_with_the_parent_node_selects_the_full_surface()
 
 
 @pytest.mark.parametrize("category", tuple(PathCategory), ids=str)
-def test_the_full_gate_wrapper_runs_real_agent_codex_tests_only_for_agent_definitions(
+def test_the_full_gate_wrapper_runs_the_complete_recipe_set_for_every_category(
     category: PathCategory,
 ) -> None:
-    agent_definition = category is PathCategory.AGENT_DEFINITION
     for pattern in PATH_CATEGORY_PATTERNS[category]:
         plan = build_full_gate_plan((path_from_pattern(pattern),))
 
         assert plan.full_gate is True
-        assert plan.real_agent_codex is agent_definition
         assert tuple(step.argv for step in plan.steps) == tuple(
-            step.argv
-            if agent_definition or step.argv[: len(PYTEST_ARGV)] != PYTEST_ARGV
-            else (*step.argv, *REAL_AGENT_CODEX_EXCLUSION)
-            for recipe in CHECK_RECIPES
-            for step in recipe.steps
+            step.argv for recipe in CHECK_RECIPES for step in recipe.steps
         )
 
 
-def test_an_empty_changeset_runs_the_full_gate_without_real_agent_codex_tests() -> None:
+def test_an_empty_changeset_runs_the_complete_recipe_set_in_the_full_gate() -> None:
     plan = build_full_gate_plan(())
 
     assert plan.full_gate is True
-    assert plan.real_agent_codex is False
     assert tuple(step.argv for step in plan.steps) == tuple(
-        (*step.argv, *REAL_AGENT_CODEX_EXCLUSION)
-        if step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
-        else step.argv
-        for recipe in CHECK_RECIPES
-        for step in recipe.steps
+        step.argv for recipe in CHECK_RECIPES for step in recipe.steps
     )
 
 
-@pytest.mark.parametrize("agent_definition", (True, False))
-def test_explicit_full_execution_spawns_the_planned_recipe_set(
-    agent_definition: bool,
-) -> None:
-    path = (
-        repository_relative_path(agent_conversion.__file__)
-        if agent_definition
-        else SELECTED_GATE_PYTHON_SOURCE_PATH
-    )
-
-    run = run_full_check_observation(branch_path=path)
+def test_explicit_full_execution_spawns_the_planned_recipe_set() -> None:
+    run = run_full_check_observation(branch_path=SELECTED_GATE_PYTHON_SOURCE_PATH)
 
     assert run.exit_code == 0
     assert run.spawn_calls == tuple(
         step.argv
-        if agent_definition or step.argv[: len(PYTEST_ARGV)] != PYTEST_ARGV
-        else (*step.argv, *REAL_AGENT_CODEX_EXCLUSION)
         for recipe in CHECK_RECIPES
         for step in (*PREFLIGHT_STEPS, *recipe.steps)
     )

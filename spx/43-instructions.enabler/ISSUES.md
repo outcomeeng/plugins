@@ -25,7 +25,7 @@ Gate changed skills with `instructions:skill-auditor`, then `just build-skills`,
 Required handling:
 
 - Add a mechanical `audit-skill` flag for a `<quick_start>` block on a foundation, gate, validator, or reference skill, so a reintroduced block is caught the way `auditor_skeleton_violation` catches it on an `audit-*` skill.
-- Preserve legitimate `<quick_start>` blocks on on-demand tool skills.
+- Preserve legitimate `<quick_start>` blocks on tool skills with a meaningful fast path.
 
 Gate changed skills with `instructions:skill-auditor`.
 

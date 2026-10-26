@@ -100,6 +100,7 @@ VERIFICATION_RUN_REQUIRED_COMMANDS: Final = (
 REQUIRED_SPX_VERSION: Final = "0.8.0"
 
 SPX_EXECUTABLE: Final = "spx"
+VERSION_SEPARATOR: Final = "."
 SPX_VERSION_ARGUMENT: Final = "--version"
 _REPORTED_VERSION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\d+(?:\.\d+)+")
 
@@ -110,7 +111,7 @@ def parse_version(version: str) -> tuple[int, ...]:
     Raises ``ValueError`` on a non-dotted-numeric value so a malformed pin or
     floor is a loud failure rather than a silent mis-comparison.
     """
-    return tuple(int(part) for part in version.split("."))
+    return tuple(int(part) for part in version.split(VERSION_SEPARATOR))
 
 
 def parse_reported_version(output: str) -> str | None:

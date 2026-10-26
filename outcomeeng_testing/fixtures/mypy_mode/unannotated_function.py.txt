@@ -1,0 +1,5 @@
+"""A function without annotations, which mypy checks only in strict mode."""
+
+
+def double(value):
+    return value * 2

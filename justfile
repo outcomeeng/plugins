@@ -12,6 +12,10 @@ test *args:
 test-v *args:
     python3 -m outcomeeng.validation test -- -v {{args}}
 
+# Run every L3 test, the l3 [test] files no other recipe runs
+test-l3:
+    python3 -m outcomeeng.validation test-l3
+
 # Run one [eval] suite using plugin_dir from eval.toml unless PLUGIN_DIR is set
 eval eval_toml:
     #!/usr/bin/env bash

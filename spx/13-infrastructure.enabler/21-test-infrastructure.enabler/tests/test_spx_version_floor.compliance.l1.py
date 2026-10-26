@@ -15,11 +15,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from outcomeeng.validation import spx_version
-
-
-def _floor_relative_to(reported: str, step: int) -> str:
-    parts = spx_version.parse_version(reported)
-    return ".".join(str(part) for part in (*parts[:-1], parts[-1] + step))
+from outcomeeng_testing.generators.spx_version import floors_above
+from outcomeeng_testing.harnesses.spx_version import absent_spx_executable
 
 
 def test_reported_version_meets_the_declared_floor() -> None:
@@ -34,18 +31,22 @@ def test_floor_equal_to_the_reported_version_passes() -> None:
     reported = spx_version.read_reported_version()
 
     assert reported is not None, "the spx CLI on the path reports no version"
-    assert spx_version.main(floor=_floor_relative_to(reported, 0)) == 0
+    assert spx_version.main(floor=reported) == 0
 
 
 def test_floor_above_the_reported_version_fails() -> None:
     reported = spx_version.read_reported_version()
 
     assert reported is not None, "the spx CLI on the path reports no version"
-    assert spx_version.main(floor=_floor_relative_to(reported, 1)) == 1
+    floors = floors_above(reported)
+    assert floors
+    for floor in floors:
+        assert not spx_version.is_satisfied(reported, floor)
+        assert spx_version.main(floor=floor) == 1
 
 
 def test_cli_that_is_absent_fails(tmp_path: Path) -> None:
-    absent = tmp_path / "spx"
+    absent = absent_spx_executable(tmp_path)
 
-    assert spx_version.read_reported_version(str(absent)) is None
-    assert spx_version.main(executable=str(absent)) == 1
+    assert spx_version.read_reported_version(absent) is None
+    assert spx_version.main(executable=absent) == 1

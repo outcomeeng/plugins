@@ -95,12 +95,6 @@ def test_gate_workflow_provisions_the_declared_toolchain() -> None:
                 requirement.verification_fragment in command
                 for command in observation.run_commands
             )
-    for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS:
-        assert any(
-            step_name == requirement.step_name
-            and requirement.environment_name in environment
-            for step_name, environment in observation.step_environments
-        )
 
 
 def test_every_provisioned_tool_is_declared() -> None:
@@ -143,12 +137,6 @@ def test_missing_tool_provisioning_is_detected() -> None:
             for surface in (*observation.action_references, *observation.run_commands)
         )
         for requirement in CI_TOOL_REQUIREMENTS
-    )
-    assert not any(
-        step_name == requirement.step_name
-        and requirement.environment_name in environment
-        for step_name, environment in observation.step_environments
-        for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
     )
 
 

@@ -14,7 +14,7 @@ validation recipe. Pytest-backed `[test]` evidence belongs to the test recipe.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Final
 
 from outcomeeng.distribution.contracts import (
@@ -26,13 +26,24 @@ from outcomeeng.distribution.contracts import (
     Target,
 )
 from outcomeeng.validation._model import Recipe, Step
+from outcomeeng.validation.infrastructure_index import (
+    EXECUTED_TEST_PREFIX,
+    PYTHON_SUFFIX,
+    SPEC_TREE_ROOT,
+    TESTS_DIRECTORY_NAME,
+)
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
+# The directories `[tool.pytest.ini_options] testpaths` collects.
+TEST_ROOTS: Final = (SPEC_TREE_ROOT, TESTS_DIRECTORY_NAME)
 PYTHON_SOURCE_PATHS: Final = ("outcomeeng", "outcomeeng_testing", "outcomeeng_evals")
 INSTRUCTION_BLOCK_ARGV: Final = _INSTRUCTION_BLOCK_ARGV
+# The command that starts the validation entry point; each recipe word follows it.
+VALIDATION_ENTRY_COMMAND: Final = ("python3", "-m", str(__package__))
 
 RECIPE_VALIDATION: Final = "validation"
 RECIPE_TEST: Final = "test"
+RECIPE_TEST_L3: Final = "test-l3"
 RECIPE_CHECK: Final = "check"
 RECIPE_AD_HOC: Final = "ad-hoc"
 VERIFICATION_TYPE_VALIDATION: Final = "validation"
@@ -52,8 +63,10 @@ SHELLCHECK_ARGV: Final = (
 FMT_CHECK_ARGV: Final = ("dprint", "check")
 RUFF_FORMAT_ARGV: Final = ("uv", "run", "ruff", "format", "--check", ".")
 RUFF_CHECK_ARGV: Final = ("uv", "run", "ruff", "check", ".")
-MYPY_ARGV: Final = ("uv", "run", "mypy", "--strict", *PYTHON_SOURCE_PATHS)
+MYPY_STRICT_FLAG: Final = "--strict"
+MYPY_ARGV: Final = ("uv", "run", "mypy", MYPY_STRICT_FLAG, *PYTHON_SOURCE_PATHS)
 PYRIGHT_ARGV: Final = ("uv", "run", "pyright", *PYTHON_SOURCE_PATHS)
+STATIC_ANALYSIS_ARGVS: Final = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
 SPX_MARKDOWN_ARGV: Final = ("uv", "run", "spx", "validation", "markdown")
 # Every `[test]` and `[eval]` link in spec markdown resolves to its evidence
 # file; a dangling link is a coverage gap the gate refuses to carry.
@@ -86,7 +99,36 @@ FOUNDATION_MANIFEST_ARGV: Final = (
     "-m",
     "outcomeeng.validation.foundation_manifest",
 )
-PYTEST_ARGV: Final = ("uv", "run", "python", "-m", "pytest")
+
+# The execution levels a test file name can carry, in order of increasing
+# execution pain. Every test whose file name carries the level `l3` is an L3
+# test: `just check` and `just check-full` run none, and `just test-l3` runs
+# them all.
+EXECUTION_LEVEL_L1: Final = "l1"
+EXECUTION_LEVEL_L2: Final = "l2"
+EXECUTION_LEVEL_L3: Final = "l3"
+EXECUTION_LEVELS: Final = (EXECUTION_LEVEL_L1, EXECUTION_LEVEL_L2, EXECUTION_LEVEL_L3)
+L3_LEVEL: Final = EXECUTION_LEVEL_L3
+TEST_FILE_NAME_SEPARATOR: Final = "."
+# `test_{subject}.{evidence}.{level}[.{runner}].py`: the level is the third
+# dot-separated segment of the file name.
+TEST_FILE_LEVEL_INDEX: Final = 2
+PYTEST_NODE_ID_SEPARATOR: Final = "::"
+# One pytest plugin excludes the L3 tests from every directory pytest
+# collects, by the same file-name classifier `just test-l3` selects with.
+# pytest never consults the plugin for a file the command line names, so a
+# target that names an L3 file keeps it.
+PYTEST_PLUGIN_OPTION: Final = "-p"
+L3_PLUGIN_MODULE: Final = "outcomeeng.validation.l3_plugin"
+L3_SKIP_ARGV: Final = (PYTEST_PLUGIN_OPTION, L3_PLUGIN_MODULE)
+PYTEST_ARGV: Final = (
+    "uv",
+    "run",
+    "python",
+    "-m",
+    "pytest",
+    *L3_SKIP_ARGV,
+)
 
 # Generated eval artifacts. Both derive from `eval.toml` definitions and the
 # producers those definitions name; both fail the gate when the committed
@@ -329,4 +371,58 @@ def test_recipe(pytest_args: Sequence[str] = ()) -> Recipe:
         purpose=TEST_RECIPE.purpose,
         preflight_steps=TEST_RECIPE.preflight_steps,
         steps=(Step(label="pytest", argv=(*PYTEST_ARGV, *pytest_args)),),
+    )
+
+
+def test_file_level(path: str) -> str | None:
+    """Return the execution level a test file name carries, or ``None``.
+
+    ``path`` may carry a pytest node-id tail; only the file name decides.
+    """
+
+    name = PurePosixPath(path.split(PYTEST_NODE_ID_SEPARATOR, maxsplit=1)[0]).name
+    segments = name.split(TEST_FILE_NAME_SEPARATOR)
+    if len(segments) <= TEST_FILE_LEVEL_INDEX + 1 or segments[-1] != PYTHON_SUFFIX[1:]:
+        return None
+    level = segments[TEST_FILE_LEVEL_INDEX]
+    return level if level in EXECUTION_LEVELS else None
+
+
+def is_l3_test(path: str) -> bool:
+    """Return whether ``path`` names an L3 test."""
+
+    return test_file_level(path) == L3_LEVEL
+
+
+def l3_recipe(test_files: Sequence[str]) -> Recipe:
+    """Return the recipe that runs every L3 file among ``test_files``.
+
+    The pytest step names each L3 file and no other, so no other test
+    runs; with no L3 file the recipe carries no pytest step, because an
+    untargeted pytest run would collect every other test.
+    """
+
+    targets = tuple(sorted({path for path in test_files if is_l3_test(path)}))
+    return Recipe(
+        name=RECIPE_TEST_L3,
+        verification_type=TEST_RECIPE.verification_type,
+        purpose=TEST_RECIPE.purpose,
+        preflight_steps=TEST_RECIPE.preflight_steps,
+        steps=(Step(label="pytest", argv=(*PYTEST_ARGV, *targets)),) if targets else (),
+    )
+
+
+def discover_l3_tests(root: Path) -> tuple[str, ...]:
+    """Return every L3 test file under the pytest test roots of ``root``."""
+
+    return tuple(
+        sorted(
+            path.relative_to(root).as_posix()
+            for test_root in TEST_ROOTS
+            if (root / test_root).is_dir()
+            for path in (root / test_root).rglob(f"*{PYTHON_SUFFIX}")
+            if path.parent.name == TESTS_DIRECTORY_NAME
+            and path.name.startswith(EXECUTED_TEST_PREFIX)
+            and is_l3_test(path.name)
+        )
     )

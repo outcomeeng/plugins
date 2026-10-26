@@ -24,6 +24,7 @@ import json
 import math
 import os
 import subprocess
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,14 +35,13 @@ from hypothesis import given, seed, settings
 
 from outcomeeng import validation as validation_pkg
 from outcomeeng.validation import (
-    MYPY_ARGV,
     POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
     PREFLIGHT_STEPS,
-    PYRIGHT_ARGV,
-    RUFF_CHECK_ARGV,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
+    STATIC_ANALYSIS_ARGVS,
+    SUMMARY_PATH_LABEL,
     TEST_STEPS,
     VALIDATION_RECIPE,
     VALIDATION_STEPS,
@@ -72,13 +72,17 @@ from outcomeeng.validation.selected_gate import (
     run_selected_check as production_run_selected_check,
 )
 from outcomeeng_testing.generators.gate import (
+    GeneratedTestFile,
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
     SELECTED_GATE_SKILL_PATH,
     SELECTED_GATE_WORKFLOW_PATH,
     category_patterns,
+    clock_increments,
+    generated_test_file_sets,
     path_from_pattern,
     selected_gate_changed_paths,
+    step_lists,
 )
 from outcomeeng_testing.harnesses.changeset_scope import (
     CHANGESET_SCOPE,
@@ -94,8 +98,12 @@ SELECTED_GATE_PROPERTY_REPLAY_PATH = (
     "test_selection_is_deterministic_for_path_order_and_duplicates"
 )
 SELECTED_GATE_PROPERTY_EXAMPLES = 40
+L3_TESTS_PROPERTY_SEED = 20261024
+L3_TESTS_PROPERTY_EXAMPLES = 60
+STEP_LIST_PROPERTY_SEED = 20261025
+STEP_LIST_PROPERTY_EXAMPLES = 50
+PROPERTY_REPLAY_COMMAND = "just test"
 PATHSPEC_GIT_TIMEOUT_SECONDS = 30
-STATIC_ANALYSIS_ARGVS = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
 PASS_EXIT_CODE = 0
 FAIL_EXIT_CODE = 2
 PASSING_CHILD_OUTPUT = "passing validator output"
@@ -411,6 +419,95 @@ def selected_gate_property(
     return wrapper
 
 
+def _property_replay_path(test_func: Callable[..., None]) -> str:
+    # A property named `_{name}` runs through the test entry point `test_{name}`
+    # beside it in the same file.
+    source = Path(inspect.getfile(test_func)).resolve()
+    return (
+        f"{PROPERTY_REPLAY_COMMAND} "
+        f"{source.relative_to(Path(__file__).resolve().parents[2]).as_posix()}"
+        f"::test{test_func.__name__}"
+    )
+
+
+def l3_tests_property(
+    test_func: Callable[[list[GeneratedTestFile]], None],
+) -> Callable[[], None]:
+    """Run the L3 tests property with reproducible failure diagnostics."""
+
+    configured = seed(L3_TESTS_PROPERTY_SEED)(
+        settings(max_examples=L3_TESTS_PROPERTY_EXAMPLES, deadline=None)(
+            given(test_files=generated_test_file_sets())(test_func)
+        )
+    )
+
+    def wrapper() -> None:
+        run_replayable_property(
+            configured,
+            seed_value=L3_TESTS_PROPERTY_SEED,
+            replay_path=_property_replay_path(test_func),
+        )
+
+    return wrapper
+
+
+def step_list_property(
+    test_func: Callable[[tuple[Step, ...]], None],
+) -> Callable[[], None]:
+    """Run a gate step-list property with reproducible failure diagnostics."""
+
+    configured = seed(STEP_LIST_PROPERTY_SEED)(
+        settings(max_examples=STEP_LIST_PROPERTY_EXAMPLES, deadline=None)(
+            given(steps=step_lists())(test_func)
+        )
+    )
+
+    def wrapper() -> None:
+        run_replayable_property(
+            configured,
+            seed_value=STEP_LIST_PROPERTY_SEED,
+            replay_path=_property_replay_path(test_func),
+        )
+
+    return wrapper
+
+
+def timed_step_list_property(
+    test_func: Callable[[tuple[Step, ...], tuple[float, ...]], None],
+) -> Callable[[], None]:
+    """Run a gate step-list property over generated controlled-clock advances."""
+
+    configured = seed(STEP_LIST_PROPERTY_SEED)(
+        settings(max_examples=STEP_LIST_PROPERTY_EXAMPLES, deadline=None)(
+            given(steps=step_lists(), increments=clock_increments())(test_func)
+        )
+    )
+
+    def wrapper() -> None:
+        run_replayable_property(
+            configured,
+            seed_value=STEP_LIST_PROPERTY_SEED,
+            replay_path=_property_replay_path(test_func),
+        )
+
+    return wrapper
+
+
+@dataclass
+class ScriptedMonotonicClock:
+    """A monotonic clock that advances by the scripted increments on each read."""
+
+    increments: tuple[float, ...]
+    current: float = 0.0
+    reads: int = 0
+
+    def __call__(self) -> float:
+        reading = self.current
+        self.current += self.increments[self.reads % len(self.increments)]
+        self.reads += 1
+        return reading
+
+
 def validation_package_modules() -> list[Path]:
     """Return the gate orchestrator's own modules."""
 
@@ -482,6 +579,18 @@ class PipelineRunObservation:
     written_outputs: tuple[str, ...]
     retained_logs: tuple[str | None, ...]
     log_paths: tuple[str, ...]
+    summary_path: str
+    summary: dict[str, object]
+
+
+def summary_path_from_output(output: str) -> str:
+    """Return the summary path a run announced on its live output."""
+
+    for line in output.splitlines():
+        if line.startswith(SUMMARY_PATH_LABEL):
+            return line.removeprefix(SUMMARY_PATH_LABEL).strip()
+    msg = "run output announces no summary path"
+    raise GateSummaryShapeError(msg)
 
 
 def pipeline_run_observation(
@@ -489,15 +598,18 @@ def pipeline_run_observation(
     steps: tuple[Step, ...],
     exit_codes: Sequence[int],
     outputs: Sequence[str] = (),
+    monotonic: Callable[[], float] = time.monotonic,
 ) -> PipelineRunObservation:
     """Run the ad-hoc pipeline over ``steps`` with scripted children."""
 
     spawner = RecordingSpawner(exit_codes=list(exit_codes), outputs=list(outputs))
     sink = io.StringIO()
-    exit_code = run(spawner=spawner, sink=sink, steps=steps)
+    exit_code = run(spawner=spawner, sink=sink, steps=steps, monotonic=monotonic)
+    output = sink.getvalue()
+    summary_path = summary_path_from_output(output)
     return PipelineRunObservation(
         exit_code=exit_code,
-        output=sink.getvalue(),
+        output=output,
         spawn_calls=tuple(spawner.spawn_calls),
         written_outputs=tuple(spawner.written_outputs),
         retained_logs=tuple(
@@ -505,6 +617,8 @@ def pipeline_run_observation(
             for path in spawner.output_paths
         ),
         log_paths=tuple(str(path) for path in spawner.output_paths),
+        summary_path=summary_path,
+        summary=read_summary(Path(summary_path)),
     )
 
 
@@ -1077,7 +1191,9 @@ __all__ = [
     "RecordingGitRunner",
     "RecordingHandle",
     "RecordingSpawner",
+    "ScriptedMonotonicClock",
     "SignalRaisingSpawner",
+    "STATIC_ANALYSIS_ARGVS",
     "SpawnFailingSpawner",
 ]
 

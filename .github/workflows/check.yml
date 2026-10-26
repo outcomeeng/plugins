@@ -14,7 +14,6 @@ on:
 
 permissions:
   contents: read
-  actions: read # gh run list/view in the [test]-lane l3 workflow-observability tests
 
 jobs:
   check:
@@ -117,8 +116,8 @@ jobs:
           set -euo pipefail
           # bun add -g installs into $BUN_INSTALL/bin, which setup-bun puts on
           # PATH; echo it to GITHUB_PATH so the gate steps find each binary.
-          # claude -> manifests and installation tests; codex -> installation tests;
-          # dprint -> fmt-check step.
+          # claude -> manifests step; codex -> the native-profile evidence that
+          # reads the installed app-server; dprint -> fmt-check step.
           bun add -g \
             "@anthropic-ai/claude-code@${CLAUDE_CLI_VERSION}" \
             "@openai/codex@${CODEX_CLI_VERSION}" \
@@ -130,13 +129,4 @@ jobs:
           dprint --version
 
       - name: Run quality gate
-        # GH_TOKEN authenticates the gh CLI for the [test]-lane l3
-        # workflow-observability tests; without it `gh auth status` fails and
-        # those tests fail loudly by design. OPENAI_API_KEY authenticates the
-        # disposable Codex home the [test]-lane l3 subagent-discovery probe logs
-        # into; without it that probe fails loudly by design.
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SUBAGENT_DISCOVERY_AUTH_MODE: api
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: just check-full

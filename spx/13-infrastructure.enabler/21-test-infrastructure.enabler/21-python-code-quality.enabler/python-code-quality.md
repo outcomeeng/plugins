@@ -8,10 +8,10 @@ CAN maintain type-correct, lint-clean code enforced by `just check-full`
 
 ### Conformance
 
-- Python files pass `ruff check` with the configured rule set ([test](tests/test_python_code_quality.conformance.l2.py))
-- The importable product packages pass `mypy --strict` ([test](tests/test_python_code_quality.conformance.l2.py))
-- The importable product packages pass `pyright` in standard mode ([test](tests/test_python_code_quality.conformance.l2.py))
+- Python files pass `ruff check` with the configured rule set ([test](tests/test_python_code_quality.conformance.l1.py))
+- The importable product packages pass `mypy --strict` ([test](tests/test_python_code_quality.conformance.l1.py))
+- The importable product packages pass `pyright` in standard mode ([test](tests/test_python_code_quality.conformance.l1.py))
 
 ### Compliance
 
-- ALWAYS: `ruff check`, `mypy --strict` over the importable product packages, and `pyright` over the importable product packages run as named steps in `just check-full` — static analysis must block the quality gate ([test](tests/test_python_code_quality.compliance.l2.py))
+- ALWAYS: `ruff check`, `mypy --strict` over the importable product packages, and `pyright` over the importable product packages run as named steps in `just check-full` — static analysis must block the quality gate ([test](tests/test_python_code_quality.compliance.l1.py))
