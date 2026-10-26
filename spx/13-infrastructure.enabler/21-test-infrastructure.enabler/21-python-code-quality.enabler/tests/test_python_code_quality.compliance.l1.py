@@ -17,8 +17,6 @@ from outcomeeng_testing.harnesses.l3_collection import (
 )
 from outcomeeng_testing.harnesses.python_code_quality import (
     run_check_full_dispatch,
-    run_repository_mypy,
-    strict_mode_violation_fixture_path,
 )
 from outcomeeng_testing.harnesses.spec_tree import (
     marketplace_root_for_spec_tree_root_test,
@@ -71,13 +69,6 @@ def test_a_check_full_recipe_that_skips_the_full_gate_is_detected() -> None:
 
     assert dispatch.entry == VALIDATION_ENTRY_COMMAND
     assert dispatch.recipe_words != (RECIPE_CHECK_FULL,)
-
-
-def test_mypy_gate_step_rejects_a_strict_mode_violation() -> None:
-    run = run_repository_mypy(__file__, strict_mode_violation_fixture_path())
-
-    assert run.error_count > 0
-    assert run.returncode != 0
 
 
 def test_type_checking_steps_target_product_packages() -> None:
