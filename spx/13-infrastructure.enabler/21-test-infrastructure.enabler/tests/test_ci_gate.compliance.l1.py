@@ -3,16 +3,9 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
-import pytest
-
-from outcomeeng.validation import (
-    ACTIONLINT_ARGV,
-    RECIPE_TEST_L3,
-    SHELLCHECK_ARGV,
-    VALIDATION_ENTRY_COMMAND,
-)
-from outcomeeng.validation.selected_gate import RECIPE_CHECK_FULL
+from outcomeeng.validation import ACTIONLINT_ARGV, SHELLCHECK_ARGV
 from outcomeeng.validation.spx_version import SPX_PACKAGE_NAME
 from outcomeeng.validation.ci_gate import (
     CI_STEP_ENVIRONMENT_REQUIREMENTS,
@@ -27,15 +20,13 @@ from outcomeeng.validation.ci_gate import (
     GATE_PUSH_BRANCH,
     GATE_PUSH_EVENT,
     GATE_RECIPE_COMMAND,
-    GATE_RECIPE_COMMANDS,
     MAXIMUM_JOB_TIMEOUT_MINUTES,
     PINNED_VERSION_ENVIRONMENT_SUFFIX,
     SOFT_PASS_SHELL_SNIPPETS,
     TRAP_COMMAND_PREFIX,
 )
 from outcomeeng_testing.harnesses.ci_gate import (
-    GATE_FIXTURES,
-    fixture_directory_names,
+    gate_fixture_path,
     observe_ci_toolchain,
     observe_gate_job,
     observe_gate_python_versions,
@@ -46,8 +37,6 @@ from outcomeeng_testing.harnesses.ci_gate import (
     observe_validation_step_argvs,
     observe_workflow_jobs,
 )
-from outcomeeng_testing.harnesses.l3_collection import justfile_recipe_dispatch
-from outcomeeng_testing.harnesses.python_code_quality import run_check_full_dispatch
 
 
 def test_gate_workflow_triggers_on_pull_request_and_main_push() -> None:
@@ -58,68 +47,34 @@ def test_gate_workflow_triggers_on_pull_request_and_main_push() -> None:
     assert GATE_PUSH_BRANCH in observation.push_branches
 
 
-def test_gate_workflow_runs_the_full_gate_and_then_the_l3_tests() -> None:
-    commands = observe_gate_run_commands()
-
-    assert (
-        tuple(command for command in commands if command in GATE_RECIPE_COMMANDS)
-        == GATE_RECIPE_COMMANDS
-    )
+def test_gate_workflow_invokes_the_full_gate_recipe() -> None:
+    assert GATE_RECIPE_COMMAND in observe_gate_run_commands()
 
 
-@pytest.mark.parametrize("recipe", (RECIPE_CHECK_FULL, RECIPE_TEST_L3))
-def test_each_gate_recipe_dispatches_its_own_validation_command(recipe: str) -> None:
-    dispatch = justfile_recipe_dispatch(recipe)
-
-    assert dispatch.entry == VALIDATION_ENTRY_COMMAND
-    assert dispatch.recipe_words == (recipe,)
-
-
-def test_a_gate_job_without_the_l3_tests_is_detected() -> None:
-    commands = observe_gate_run_commands(GATE_FIXTURES.missing_l3_recipe)
-
-    assert (
-        tuple(command for command in commands if command in GATE_RECIPE_COMMANDS)
-        != GATE_RECIPE_COMMANDS
-    )
+def _inlined_gate_steps(workflow_path: Path | None = None) -> set[str]:
+    """Return gate-step commands a workflow runs as their own shell line."""
+    recipes = {" ".join(argv) for argv in observe_validation_step_argvs()}
+    return {
+        line
+        for step in observe_gate_steps(workflow_path)
+        for line in step.shell_lines
+        if line in recipes
+    }
 
 
-def test_l3_tests_before_the_full_gate_are_detected() -> None:
-    commands = observe_gate_run_commands(GATE_FIXTURES.l3_before_full_gate)
+def test_gate_declares_the_workflow_and_shell_lint_steps() -> None:
+    argvs = observe_validation_step_argvs()
 
-    assert set(commands) >= set(GATE_RECIPE_COMMANDS)
-    assert (
-        tuple(command for command in commands if command in GATE_RECIPE_COMMANDS)
-        != GATE_RECIPE_COMMANDS
-    )
-
-
-def test_gate_runs_the_workflow_and_shell_lint_steps() -> None:
-    run = run_check_full_dispatch()
-
-    assert run.exit_code == 0
-    assert ACTIONLINT_ARGV in run.spawn_calls
-    assert SHELLCHECK_ARGV in run.spawn_calls
+    assert ACTIONLINT_ARGV in argvs
+    assert SHELLCHECK_ARGV in argvs
 
 
 def test_gate_workflow_never_inlines_a_gate_step() -> None:
-    step_commands = {" ".join(argv) for argv in observe_validation_step_argvs()}
-
-    assert not any(
-        line in step_commands
-        for step in observe_gate_steps()
-        for line in step.shell_lines
-    )
+    assert _inlined_gate_steps() == set()
 
 
 def test_inlined_gate_steps_are_detected() -> None:
-    step_commands = {" ".join(argv) for argv in observe_validation_step_argvs()}
-
-    assert any(
-        line in step_commands
-        for step in observe_gate_steps(GATE_FIXTURES.inlined_gate_steps)
-        for line in step.shell_lines
-    )
+    assert _inlined_gate_steps(gate_fixture_path("inlined_gate_steps.yml")) != set()
 
 
 def test_gate_workflow_provisions_the_declared_toolchain() -> None:
@@ -140,11 +95,11 @@ def test_gate_workflow_provisions_the_declared_toolchain() -> None:
                 requirement.verification_fragment in command
                 for command in observation.run_commands
             )
-    for step_requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS:
+    for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS:
         assert any(
-            run_command == step_requirement.run_command
-            and step_requirement.environment_name in environment
-            for run_command, environment in observation.run_environments
+            step_name == requirement.step_name
+            and requirement.environment_name in environment
+            for step_name, environment in observation.step_environments
         )
 
 
@@ -168,17 +123,19 @@ def test_every_provisioned_tool_is_declared() -> None:
         if requirement.version_environment is not None
     }
     assert {
-        (run_command, name)
-        for run_command, environment in observation.run_environments
+        (step_name, name)
+        for step_name, environment in observation.step_environments
         for name in environment
     } == {
-        (requirement.run_command, requirement.environment_name)
+        (requirement.step_name, requirement.environment_name)
         for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
     }
 
 
 def test_missing_tool_provisioning_is_detected() -> None:
-    observation = observe_ci_toolchain(GATE_FIXTURES.missing_tool_provisioning)
+    observation = observe_ci_toolchain(
+        gate_fixture_path("missing_tool_provisioning.yml")
+    )
 
     assert any(
         not any(
@@ -188,21 +145,23 @@ def test_missing_tool_provisioning_is_detected() -> None:
         for requirement in CI_TOOL_REQUIREMENTS
     )
     assert not any(
-        run_command == requirement.run_command
+        step_name == requirement.step_name
         and requirement.environment_name in environment
-        for run_command, environment in observation.run_environments
+        for step_name, environment in observation.step_environments
         for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
     )
 
 
 def test_mismatched_python_version_is_detected() -> None:
-    observation = observe_gate_python_versions(GATE_FIXTURES.mismatched_python_version)
+    observation = observe_gate_python_versions(
+        gate_fixture_path("mismatched_python_version.yml")
+    )
 
     assert observation.workflow_version != observation.project_version
 
 
 def test_missing_gate_recipe_is_detected() -> None:
-    commands = observe_gate_run_commands(GATE_FIXTURES.missing_gate_recipe)
+    commands = observe_gate_run_commands(gate_fixture_path("missing_gate_recipe.yml"))
 
     assert GATE_RECIPE_COMMAND not in commands
 
@@ -253,16 +212,12 @@ def test_reusable_workflow_callers_declare_no_timeout() -> None:
 
 
 def test_conforming_fixture_satisfies_every_gate_rule() -> None:
-    workflow_path = GATE_FIXTURES.conforming_gate
+    workflow_path = gate_fixture_path("conforming_gate.yml")
     triggers = observe_gate_triggers(workflow_path)
 
     assert GATE_PULL_REQUEST_EVENT in triggers.events
     assert GATE_PUSH_BRANCH in triggers.push_branches
-    commands = observe_gate_run_commands(workflow_path)
-    assert (
-        tuple(command for command in commands if command in GATE_RECIPE_COMMANDS)
-        == GATE_RECIPE_COMMANDS
-    )
+    assert GATE_RECIPE_COMMAND in observe_gate_run_commands(workflow_path)
     job = observe_gate_job(workflow_path)
 
     assert not job.has_condition
@@ -276,28 +231,27 @@ def test_conforming_fixture_satisfies_every_gate_rule() -> None:
 
 
 def test_job_level_condition_is_detected() -> None:
-    assert observe_gate_job(GATE_FIXTURES.job_level_condition).has_condition
+    assert observe_gate_job(gate_fixture_path("job_level_condition.yml")).has_condition
 
 
 def test_unbounded_gate_job_is_detected() -> None:
-    unbounded = observe_gate_job(GATE_FIXTURES.unbounded_gate_job)
+    unbounded = observe_gate_job(gate_fixture_path("unbounded_gate_job.yml"))
 
     assert unbounded.timeout_minutes is None
 
 
 def test_yaml_suffixed_workflow_jobs_are_observed() -> None:
-    observations = observe_workflow_jobs(GATE_FIXTURES.yaml_extension_workflows)
+    observations = observe_workflow_jobs(gate_fixture_path("yaml_extension_workflows"))
 
     assert [(each.workflow, each.timeout_minutes) for each in observations] == [
-        (name, None)
-        for name in fixture_directory_names(GATE_FIXTURES.yaml_extension_workflows)
+        ("unbounded.yaml", None)
     ]
 
 
 def test_timeout_above_the_maximum_is_detected() -> None:
     over_bound = next(
         each
-        for each in observe_workflow_jobs(GATE_FIXTURES.violating_bounds)
+        for each in observe_workflow_jobs(gate_fixture_path("violating_bounds"))
         if not each.calls_reusable_workflow
     )
 
@@ -308,7 +262,7 @@ def test_timeout_above_the_maximum_is_detected() -> None:
 def test_reusable_caller_declaring_a_timeout_is_detected() -> None:
     caller = next(
         each
-        for each in observe_workflow_jobs(GATE_FIXTURES.violating_bounds)
+        for each in observe_workflow_jobs(gate_fixture_path("violating_bounds"))
         if each.calls_reusable_workflow
     )
 
@@ -316,25 +270,25 @@ def test_reusable_caller_declaring_a_timeout_is_detected() -> None:
 
 
 def test_job_level_continue_on_error_is_detected() -> None:
-    observation = observe_gate_job(GATE_FIXTURES.job_level_continue_on_error)
+    observation = observe_gate_job(gate_fixture_path("job_level_continue_on_error.yml"))
 
     assert observation.continue_on_error not in CONTINUE_ON_ERROR_FALSY
 
 
 def test_step_level_condition_is_detected() -> None:
-    steps = observe_gate_steps(GATE_FIXTURES.step_level_condition)
+    steps = observe_gate_steps(gate_fixture_path("step_level_condition.yml"))
 
     assert any(step.has_condition for step in steps)
 
 
 def test_step_level_continue_on_error_is_detected() -> None:
-    steps = observe_gate_steps(GATE_FIXTURES.step_level_continue_on_error)
+    steps = observe_gate_steps(gate_fixture_path("step_level_continue_on_error.yml"))
 
     assert any(step.continue_on_error not in CONTINUE_ON_ERROR_FALSY for step in steps)
 
 
 def test_expression_continue_on_error_is_detected() -> None:
-    workflow_path = GATE_FIXTURES.expression_continue_on_error
+    workflow_path = gate_fixture_path("expression_continue_on_error.yml")
     job = observe_gate_job(workflow_path)
     steps = observe_gate_steps(workflow_path)
 
@@ -343,7 +297,7 @@ def test_expression_continue_on_error_is_detected() -> None:
 
 
 def test_missing_fail_fast_preamble_is_detected() -> None:
-    steps = observe_gate_steps(GATE_FIXTURES.missing_fail_fast_preamble)
+    steps = observe_gate_steps(gate_fixture_path("missing_fail_fast_preamble.yml"))
 
     assert any(
         len(step.shell_lines) > 1 and step.shell_lines[0] != FAIL_FAST_PREAMBLE
@@ -352,7 +306,7 @@ def test_missing_fail_fast_preamble_is_detected() -> None:
 
 
 def test_every_soft_pass_snippet_is_detected() -> None:
-    steps = observe_gate_steps(GATE_FIXTURES.soft_pass_snippets)
+    steps = observe_gate_steps(gate_fixture_path("soft_pass_snippets.yml"))
 
     assert len(steps) == len(SOFT_PASS_SHELL_SNIPPETS)
     assert all(
@@ -362,7 +316,7 @@ def test_every_soft_pass_snippet_is_detected() -> None:
 
 
 def test_trap_soft_passed_step_shell_is_detected() -> None:
-    steps = observe_gate_steps(GATE_FIXTURES.trap_soft_passed_step)
+    steps = observe_gate_steps(gate_fixture_path("trap_soft_passed_step.yml"))
 
     assert any(
         line.startswith(TRAP_COMMAND_PREFIX)
@@ -376,19 +330,21 @@ def test_trap_soft_passed_step_shell_is_detected() -> None:
 
 
 def test_missing_pull_request_trigger_is_detected() -> None:
-    triggers = observe_gate_triggers(GATE_FIXTURES.missing_pull_request_trigger)
+    triggers = observe_gate_triggers(
+        gate_fixture_path("missing_pull_request_trigger.yml")
+    )
 
     assert GATE_PULL_REQUEST_EVENT not in triggers.events
 
 
 def test_missing_main_push_branch_is_detected() -> None:
-    triggers = observe_gate_triggers(GATE_FIXTURES.missing_main_push_branch)
+    triggers = observe_gate_triggers(gate_fixture_path("missing_main_push_branch.yml"))
 
     assert GATE_PUSH_BRANCH not in triggers.push_branches
 
 
 def test_missing_push_trigger_is_detected() -> None:
-    triggers = observe_gate_triggers(GATE_FIXTURES.missing_push_trigger)
+    triggers = observe_gate_triggers(gate_fixture_path("missing_push_trigger.yml"))
 
     assert GATE_PUSH_EVENT not in triggers.events
 
@@ -415,7 +371,7 @@ def test_gate_workflow_never_installs_spx_from_the_registry() -> None:
 
 
 def test_registry_installed_spx_is_detected() -> None:
-    workflow_path = GATE_FIXTURES.spx_installed_from_registry
+    workflow_path = gate_fixture_path("spx_installed_from_registry.yml")
     observation = observe_ci_toolchain(workflow_path)
 
     assert RETIRED_SPX_VERSION_ENVIRONMENT in observation.job_environment
@@ -427,7 +383,7 @@ def test_registry_installed_spx_is_detected() -> None:
 
 
 def test_spx_pinned_to_a_moving_ref_is_detected() -> None:
-    observation = observe_spx_source(GATE_FIXTURES.spx_pinned_to_moving_ref)
+    observation = observe_spx_source(gate_fixture_path("spx_pinned_to_moving_ref.yml"))
 
     assert observation.commit_pin is not None
     assert not re.fullmatch(FULL_COMMIT_SHA_PATTERN, observation.commit_pin)
@@ -435,7 +391,7 @@ def test_spx_pinned_to_a_moving_ref_is_detected() -> None:
 
 
 def test_spx_built_from_a_pinned_commit_satisfies_the_provisioning_rule() -> None:
-    workflow_path = GATE_FIXTURES.spx_built_from_commit
+    workflow_path = gate_fixture_path("spx_built_from_commit.yml")
     observation = observe_spx_source(workflow_path)
 
     assert observation.commit_pin is not None

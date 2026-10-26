@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import tomllib
-from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from types import MappingProxyType
 from typing import Any, Final, cast
 
 import yaml
@@ -24,16 +22,6 @@ from outcomeeng.validation.ci_gate import (
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_DIRECTORY: Final = REPO_ROOT / ".github" / "workflows"
 GATE_WORKFLOW: Final = WORKFLOW_DIRECTORY / "check.yml"
-# GitHub Actions keys the harness reads at more than one site.
-WORKFLOW_ENVIRONMENT_KEY: Final = "env"
-WORKFLOW_JOBS_KEY: Final = "jobs"
-JOB_STEPS_KEY: Final = "steps"
-STEP_RUN_KEY: Final = "run"
-STEP_NAME_KEY: Final = "name"
-STEP_WITH_KEY: Final = "with"
-STEP_USES_KEY: Final = "uses"
-CONDITION_KEY: Final = "if"
-CONTINUE_ON_ERROR_KEY: Final = "continue-on-error"
 
 
 def workflow_paths(directory: Path | None = None) -> tuple[Path, ...]:
@@ -49,16 +37,12 @@ PROJECT_METADATA: Final = REPO_ROOT / "pyproject.toml"
 
 @dataclass(frozen=True)
 class CiToolchainObservation:
-    """Raw job, action, command, and step-environment observations.
+    """Raw job environment, action, command, and step-environment observations."""
 
-    Each step environment is keyed by the step's normalized `run:` body, empty
-    for a step that runs no command.
-    """
-
-    job_environment: Mapping[str, str]
+    job_environment: frozenset[str]
     action_references: tuple[str, ...]
     run_commands: tuple[str, ...]
-    run_environments: tuple[tuple[str, Mapping[str, str]], ...]
+    step_environments: tuple[tuple[str, frozenset[str]], ...]
 
 
 @dataclass(frozen=True)
@@ -118,67 +102,9 @@ class GatePythonObservation:
 CI_GATE_FIXTURES: Final = REPO_ROOT / "outcomeeng_testing" / "fixtures" / "ci_gate"
 
 
-@dataclass(frozen=True)
-class GateFixtures:
-    """Each inert violating or conforming workflow fixture, named by the case it holds."""
-
-    conforming_gate: Path
-    expression_continue_on_error: Path
-    inlined_gate_steps: Path
-    job_level_condition: Path
-    job_level_continue_on_error: Path
-    l3_before_full_gate: Path
-    mismatched_python_version: Path
-    missing_fail_fast_preamble: Path
-    missing_gate_recipe: Path
-    missing_l3_recipe: Path
-    missing_main_push_branch: Path
-    missing_pull_request_trigger: Path
-    missing_push_trigger: Path
-    missing_tool_provisioning: Path
-    soft_pass_snippets: Path
-    spx_built_from_commit: Path
-    spx_installed_from_registry: Path
-    spx_pinned_to_moving_ref: Path
-    step_level_condition: Path
-    step_level_continue_on_error: Path
-    trap_soft_passed_step: Path
-    unbounded_gate_job: Path
-    violating_bounds: Path
-    yaml_extension_workflows: Path
-
-
-GATE_FIXTURES: Final = GateFixtures(
-    conforming_gate=CI_GATE_FIXTURES / "conforming_gate.yml",
-    expression_continue_on_error=CI_GATE_FIXTURES / "expression_continue_on_error.yml",
-    inlined_gate_steps=CI_GATE_FIXTURES / "inlined_gate_steps.yml",
-    job_level_condition=CI_GATE_FIXTURES / "job_level_condition.yml",
-    job_level_continue_on_error=CI_GATE_FIXTURES / "job_level_continue_on_error.yml",
-    l3_before_full_gate=CI_GATE_FIXTURES / "l3_before_full_gate.yml",
-    mismatched_python_version=CI_GATE_FIXTURES / "mismatched_python_version.yml",
-    missing_fail_fast_preamble=CI_GATE_FIXTURES / "missing_fail_fast_preamble.yml",
-    missing_gate_recipe=CI_GATE_FIXTURES / "missing_gate_recipe.yml",
-    missing_l3_recipe=CI_GATE_FIXTURES / "missing_l3_recipe.yml",
-    missing_main_push_branch=CI_GATE_FIXTURES / "missing_main_push_branch.yml",
-    missing_pull_request_trigger=CI_GATE_FIXTURES / "missing_pull_request_trigger.yml",
-    missing_push_trigger=CI_GATE_FIXTURES / "missing_push_trigger.yml",
-    missing_tool_provisioning=CI_GATE_FIXTURES / "missing_tool_provisioning.yml",
-    soft_pass_snippets=CI_GATE_FIXTURES / "soft_pass_snippets.yml",
-    spx_built_from_commit=CI_GATE_FIXTURES / "spx_built_from_commit.yml",
-    spx_installed_from_registry=CI_GATE_FIXTURES / "spx_installed_from_registry.yml",
-    spx_pinned_to_moving_ref=CI_GATE_FIXTURES / "spx_pinned_to_moving_ref.yml",
-    step_level_condition=CI_GATE_FIXTURES / "step_level_condition.yml",
-    step_level_continue_on_error=CI_GATE_FIXTURES / "step_level_continue_on_error.yml",
-    trap_soft_passed_step=CI_GATE_FIXTURES / "trap_soft_passed_step.yml",
-    unbounded_gate_job=CI_GATE_FIXTURES / "unbounded_gate_job.yml",
-    violating_bounds=CI_GATE_FIXTURES / "violating_bounds",
-    yaml_extension_workflows=CI_GATE_FIXTURES / "yaml_extension_workflows",
-)
-
-
-def fixture_directory_names(directory: Path) -> tuple[str, ...]:
-    """Return the name of every file in a fixture directory."""
-    return tuple(sorted(path.name for path in directory.iterdir() if path.is_file()))
+def gate_fixture_path(name: str) -> Path:
+    """Return the path to an inert violating- or conforming-workflow fixture."""
+    return CI_GATE_FIXTURES / name
 
 
 def workflow(workflow_path: Path | None = None) -> dict[str, Any]:
@@ -190,20 +116,20 @@ def workflow(workflow_path: Path | None = None) -> dict[str, Any]:
 
 
 def gate_job(workflow_data: dict[str, Any]) -> dict[str, Any]:
-    return cast("dict[str, Any]", workflow_data[WORKFLOW_JOBS_KEY][GATE_JOB_NAME])
+    return cast("dict[str, Any]", workflow_data["jobs"][GATE_JOB_NAME])
 
 
 def gate_steps(workflow_data: dict[str, Any]) -> list[dict[str, Any]]:
-    return cast("list[dict[str, Any]]", gate_job(workflow_data)[JOB_STEPS_KEY])
+    return cast("list[dict[str, Any]]", gate_job(workflow_data)["steps"])
 
 
 def setup_python_version(workflow_data: dict[str, Any]) -> str:
     setup_step = next(
         step
         for step in gate_steps(workflow_data)
-        if step.get(STEP_NAME_KEY) == PYTHON_SETUP_STEP_NAME
+        if step.get("name") == PYTHON_SETUP_STEP_NAME
     )
-    return cast("str", setup_step[STEP_WITH_KEY]["python-version"])
+    return cast("str", setup_step["with"]["python-version"])
 
 
 def required_python_version() -> str:
@@ -233,9 +159,9 @@ def observe_gate_triggers(workflow_path: Path | None = None) -> GateTriggerObser
 def observe_gate_run_commands(workflow_path: Path | None = None) -> tuple[str, ...]:
     """Return every normalized `run:` body the gate job declares."""
     return tuple(
-        cast("str", step[STEP_RUN_KEY]).strip()
+        cast("str", step["run"]).strip()
         for step in gate_steps(workflow(workflow_path))
-        if STEP_RUN_KEY in step
+        if "run" in step
     )
 
 
@@ -244,56 +170,27 @@ def observe_validation_step_argvs() -> frozenset[tuple[str, ...]]:
     return frozenset(step.argv for step in VALIDATION_STEPS)
 
 
-def _optional_text(section: Mapping[str, object], key: str) -> str | None:
-    """Return the scalar a workflow section writes under ``key``, or None when absent."""
-    value = section.get(key)
-    if value is None or isinstance(value, str):
-        return value
-    raise TypeError(f"workflow key {key!r} holds {type(value).__name__}, not text")
-
-
-def _text_mapping(section: Mapping[str, object], key: str) -> Mapping[str, str]:
-    """Return the name-to-text mapping a workflow section writes under ``key``."""
-    value = section.get(key, {})
-    if not isinstance(value, Mapping):
-        raise TypeError(
-            f"workflow key {key!r} holds {type(value).__name__}, not a mapping"
-        )
-    entries = {
-        name: text
-        for name, text in value.items()
-        if isinstance(name, str) and isinstance(text, str)
-    }
-    if len(entries) != len(value):
-        raise TypeError(f"workflow key {key!r} maps a name or value that is not text")
-    return MappingProxyType(entries)
-
-
-def _environment(section: Mapping[str, object]) -> Mapping[str, str]:
-    return _text_mapping(section, WORKFLOW_ENVIRONMENT_KEY)
-
-
 def observe_ci_toolchain(
     workflow_path: Path | None = None,
 ) -> CiToolchainObservation:
     """Return the workflow surfaces that provision and authenticate gate tools."""
     workflow_data = workflow(workflow_path)
-    env = _environment(gate_job(workflow_data))
+    env = cast("dict[str, str]", gate_job(workflow_data).get("env", {}))
     steps = gate_steps(workflow_data)
-    runs = tuple(
-        cast("str", step[STEP_RUN_KEY]) for step in steps if STEP_RUN_KEY in step
-    )
-    run_environments = tuple(
-        (cast("str", step.get(STEP_RUN_KEY, "")).strip(), _environment(step))
-        for step in steps
-    )
+    runs = tuple(cast("str", step["run"]) for step in steps if "run" in step)
     return CiToolchainObservation(
-        job_environment=env,
+        job_environment=frozenset(env),
         action_references=tuple(
-            cast("str", step[STEP_USES_KEY]) for step in steps if STEP_USES_KEY in step
+            cast("str", step["uses"]) for step in steps if "uses" in step
         ),
         run_commands=runs,
-        run_environments=run_environments,
+        step_environments=tuple(
+            (
+                cast("str", step.get("name", "")),
+                frozenset(cast("dict[str, str]", step.get("env", {}))),
+            )
+            for step in steps
+        ),
     )
 
 
@@ -313,14 +210,14 @@ def observe_gate_steps(
     """Return each gate step's condition, soft-pass surface, and shell body."""
     observations: list[GateStepObservation] = []
     for step in gate_steps(workflow(workflow_path)):
-        run = cast("str", step.get(STEP_RUN_KEY, ""))
+        run = cast("str", step.get("run", ""))
         observations.append(
             GateStepObservation(
-                name=cast("str", step.get(STEP_NAME_KEY, "")),
+                name=cast("str", step.get("name", "")),
                 run=run,
                 shell_lines=tuple(shell_lines(run)),
-                continue_on_error=_optional_text(step, CONTINUE_ON_ERROR_KEY),
-                has_condition=CONDITION_KEY in step,
+                continue_on_error=cast("str | None", step.get("continue-on-error")),
+                has_condition="if" in step,
             )
         )
     return tuple(observations)
@@ -330,9 +227,9 @@ def observe_gate_job(workflow_path: Path | None = None) -> GateJobObservation:
     """Return the gate job's own condition, soft-pass, and completion bound."""
     job = gate_job(workflow(workflow_path))
     return GateJobObservation(
-        has_condition=CONDITION_KEY in job,
-        continue_on_error=_optional_text(job, CONTINUE_ON_ERROR_KEY),
-        timeout_minutes=_optional_text(job, JOB_TIMEOUT_KEY),
+        has_condition="if" in job,
+        continue_on_error=cast("str | None", job.get("continue-on-error")),
+        timeout_minutes=cast("str | None", job.get(JOB_TIMEOUT_KEY)),
     )
 
 
@@ -343,13 +240,13 @@ def observe_workflow_jobs(
     directory = WORKFLOW_DIRECTORY if workflow_directory is None else workflow_directory
     observations: list[WorkflowJobObservation] = []
     for path in workflow_paths(directory):
-        jobs = cast("dict[str, Any]", workflow(path).get(WORKFLOW_JOBS_KEY) or {})
+        jobs = cast("dict[str, Any]", workflow(path).get("jobs") or {})
         observations.extend(
             WorkflowJobObservation(
                 workflow=path.name,
                 job=job_id,
                 calls_reusable_workflow=REUSABLE_WORKFLOW_CALL_KEY in job,
-                timeout_minutes=_optional_text(job, JOB_TIMEOUT_KEY),
+                timeout_minutes=cast("str | None", job.get(JOB_TIMEOUT_KEY)),
             )
             for job_id, job in jobs.items()
         )
@@ -359,14 +256,14 @@ def observe_workflow_jobs(
 def observe_spx_source(workflow_path: Path | None = None) -> SpxSourceObservation:
     """Return the spx commit pin and the (repository, ref) of each checkout step."""
     job = gate_job(workflow(workflow_path))
-    env = _environment(job)
+    env = cast("dict[str, str]", job.get("env", {}))
     checkouts = tuple(
         (
-            _text_mapping(step, STEP_WITH_KEY).get("repository"),
-            _text_mapping(step, STEP_WITH_KEY).get("ref"),
+            cast("dict[str, str]", step.get("with", {})).get("repository"),
+            cast("dict[str, str]", step.get("with", {})).get("ref"),
         )
         for step in gate_steps(workflow(workflow_path))
-        if "actions/checkout@" in cast("str", step.get(STEP_USES_KEY, ""))
+        if "actions/checkout@" in cast("str", step.get("uses", ""))
     )
     return SpxSourceObservation(
         commit_pin=env.get(SPX_COMMIT_ENVIRONMENT), checkouts=checkouts
