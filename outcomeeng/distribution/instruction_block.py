@@ -363,15 +363,15 @@ CODEX_AGENT_REGISTRY_POLICY_REQUIREMENTS: Final = (
 )
 WAIT_FOR_LOAD_STOP_TRIGGER: Final = (
     "🛑 **STOP TRIGGER — Before any resource-intensive command, ALWAYS invoke "
-    "`/wait-for-load` and run its waiter chained ahead of that command on the "
-    "same shell line.**"
+    "`/wait-for-load` and run that command on one shell line in the form its "
+    "lock switch selects.**"
 )
 WAIT_FOR_LOAD_POLICY_HEADING: Final = (
     "### Before a resource-intensive command -> `/wait-for-load`"
 )
 WAIT_FOR_LOAD_READY_REQUIREMENT: Final = (
     "**ALWAYS** let the waiter's zero exit start the selected command unchanged; "
-    "a lost or truncated result re-runs the same line."
+    "a lost or truncated waiter result re-runs the same line."
 )
 WAIT_FOR_LOAD_CLASS_DEFINITION: Final = (
     "A resource-intensive command is a test suite, an eval, a full gate, a "
@@ -379,12 +379,28 @@ WAIT_FOR_LOAD_CLASS_DEFINITION: Final = (
 )
 WAIT_FOR_LOAD_LIGHTWEIGHT_EXEMPTION: Final = (
     "a lightweight command — formatting, a single-file lint, a markdown or link "
-    "validation, an instruction-block render, a status read — runs without the waiter"
+    "validation, an instruction-block render, a status read — runs with neither the "
+    "lock nor the waiter"
+)
+WAIT_FOR_LOAD_LOCK_SWITCH_REQUIREMENT: Final = (
+    "**ALWAYS** read the lock switch from `spx/local/wait-for-load.md`: where that "
+    "overlay holds the line `orchestration-lock: on`, run the command as the "
+    "argument vector of `spx orchestration lock --run-id <id> -- <command>`, so it "
+    "starts only when the host-wide slot admits it; where the overlay is absent or "
+    "leaves the switch off, chain the command behind the waiter with `&&`."
+)
+WAIT_FOR_LOAD_LOCK_RECOVERY_REQUIREMENT: Final = (
+    "**ALWAYS** recover the existing invocation and its matching terminal record "
+    "after a lock record is lost from view; start no new invocation while that "
+    "invocation's state is unresolved, and report the outcome unknown when its "
+    "terminal exit is known but the record is gone."
 )
 WAIT_FOR_LOAD_SCOPE_REQUIREMENT: Final = "**NEVER** use host load to reduce scope, workers, limits, deadlines, or verification."
 WAIT_FOR_LOAD_POLICY_REQUIREMENTS: Final = (
     ("stop trigger", WAIT_FOR_LOAD_STOP_TRIGGER),
+    ("lock switch lines", WAIT_FOR_LOAD_LOCK_SWITCH_REQUIREMENT),
     ("ready command", WAIT_FOR_LOAD_READY_REQUIREMENT),
+    ("lock record recovery", WAIT_FOR_LOAD_LOCK_RECOVERY_REQUIREMENT),
     ("class definition", WAIT_FOR_LOAD_CLASS_DEFINITION),
     ("lightweight exemption", WAIT_FOR_LOAD_LIGHTWEIGHT_EXEMPTION),
     ("scope preservation", WAIT_FOR_LOAD_SCOPE_REQUIREMENT),
@@ -426,7 +442,7 @@ HARNESS_DISPATCH_MECHANICS_MARKERS: Final = {
 WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS: Final = (
     (
         "single chained call",
-        "The chained line is one `functions.exec` call.",
+        "The lock line or the chained line is one `functions.exec` call.",
     ),
     (
         "owned process lifecycle",

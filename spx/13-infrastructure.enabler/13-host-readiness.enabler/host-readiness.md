@@ -1,8 +1,13 @@
+---
+id: 01a173ca-e226-7d04-8019-50121c12ff0e
+malleability: spec
+---
+
 # Host Readiness
 
-PROVIDES bounded host-load readiness through one silent foreground waiter invocation chained ahead of the command it guards
-SO THAT resource-intensive local workflows
-CAN start only when normalized host load is ready, defer while it remains above capacity, and avoid starting together with other waiters on the same host
+PROVIDES each resource-intensive local command one host-wide turn through the `spx orchestration lock` guard where the repository's lock switch is on, and bounded host-load readiness through the waiter where it is off
+SO THAT resource-intensive local workflows from every session on one host
+CAN avoid starting together
 
 ## Assertions
 
@@ -17,6 +22,13 @@ CAN start only when normalized host load is ready, defer while it remains above 
 - Given a host reporting no positive CPU count, when the waiter observes load, then it emits one terminal `unsupported` result with `ready: false` and the `unsupported` exit code ([test](tests/test_host_readiness.scenario.l1.py))
 - Given an interrupt arriving while the waiter sleeps between observations, when the wait is cut short, then it emits one terminal `interrupted` result with `ready: false` and the `interrupted` exit code ([test](tests/test_host_readiness.scenario.l1.py))
 - Given a load reader that fails unexpectedly, when the waiter observes load, then it emits one terminal `error` result with `ready: false` and the `error` exit code ([test](tests/test_host_readiness.scenario.l1.py))
+- Given a guard that reaches its wait cap, when the record reads `started` false and `status` `not_ready` with exit 3, then the skill reports `not_ready`, the command never started, and the skill starts no new attempt without operator direction ([audit])
+- Given a guarded command that exits 3, when the record reads `started` true, `status` `completed`, and `childExitCode` 3, then the skill reports the command's own exit code 3 and never `not_ready` ([audit])
+- Given a guard that started its command, when the record reads `started` true with a `signal` in place of `childExitCode` or a `status` other than `completed`, then the skill reports the `status` and the `signal` or `childExitCode` as the record carries them, never `not_ready` and never success, and starts no new attempt without operator direction ([audit])
+- Given a guard whose standard error ends without a terminal record, when the line exits, then the skill reports `interrupted` with an unknown outcome, never `not_ready` and never success, and starts no new invocation on its own ([audit])
+- Given a terminal record lost from the agent's view by compaction or an output cap, when the agent resumes, then it recovers the existing invocation — its tool or process handle and the terminal record whose `runId` matches — and starts no new invocation while that invocation's state is unresolved; when the invocation's terminal exit is known but its record cannot be recovered, the skill reports the outcome unknown, and a later run follows the recovered outcome's own rule or the operator's direction ([audit])
+- Given a terminal record that reads `started` false with a status other than `not_ready`, such as the guard's unsupported-platform status, when the line ends, then the skill reports that status with the command unstarted and runs no unguarded fallback ([audit])
+- Given a guarded command that runs a nested `/wait-for-load` line, when the nested line ends, then the skill takes the nested command's exit code as that line's result and expects no terminal record from it ([audit])
 
 ### Mappings
 
@@ -28,5 +40,10 @@ CAN start only when normalized host load is ready, defer while it remains above 
 - ALWAYS: the process exit code for each terminal status is `ready` 0, `error` 1, `unsupported` 2, `not_ready` 3, `interrupted` 130 — the contract a calling workflow branches on, declared here and honored by the waiter's exit-code enum ([audit])
 - ALWAYS: a waiter invocation owns every load observation, interval, sleep, settle delay, and confirming observation until it emits its terminal result; the agent never polls an active waiter ([audit])
 - ALWAYS: one invocation owns the whole readiness attempt up to its four-hour bound; a `not_ready` result — load above capacity, or a confirmation still failing, at the bound — is terminal for that attempt and the guarded command does not start ([audit])
-- ALWAYS: the guarded command follows the waiter on the same shell line joined by `&&`, identically on every agent harness, so the waiter's zero exit is the only thing that starts it; a lost or truncated result re-runs the line and never stops for the operator ([audit])
-- NEVER: a guarded command's failure is classified flaky, intermittent, or pre-existing before the waiter's observation for that run is consulted — sustained load above capacity starves short-budgeted operations and produces starvation, not flakiness ([audit])
+- ALWAYS: `/wait-for-load` reads its lock switch from `spx/local/wait-for-load.md` at the repository root; the switch is on only when that overlay holds the line `orchestration-lock: on`, and an absent overlay, an overlay without that line, or any other value leaves it off ([audit])
+- ALWAYS: with the lock switch on, `/wait-for-load` runs a resource-intensive command as the argument vector after `--` in `spx orchestration lock --run-id <id> -- <command>`, with a run id the agent generates for that line, and starts no waiter; the skill carries no slot, load, wait, or result logic of its own for that line ([audit])
+- ALWAYS: with the lock switch off, `/wait-for-load` chains the resource-intensive command behind the host-load waiter on one shell line joined by `&&`, identically on every agent harness, so the waiter's zero exit is the only thing that starts it; a lost or truncated waiter result re-runs the line and never stops for the operator ([audit])
+- NEVER: with the lock switch off, a guarded command's failure is classified flaky, intermittent, or pre-existing before the waiter's observation for that run is consulted — sustained load above capacity starves short-budgeted operations and produces starvation, not flakiness ([audit])
+- ALWAYS: the skill reads the guard's final standard-error line as the terminal record whose `schema` is `spx.orchestration.lock.result.v1` and whose `runId` equals the run id it passed, and decides from `started` and `status` together, never from the exit code alone ([audit])
+- ALWAYS: one guard invocation owns the attempt from launch to terminal exit; the agent may collect that invocation's tool or process handle until its terminal exit, and never polls host load on its own, schedules a replacement timer, launches a duplicate guard for the same command, or re-admits the command while that invocation runs ([audit])
+- ALWAYS: a lightweight command — formatting, a single-file lint, a markdown or link validation, an instruction-block render, a status read — runs with neither the guard nor the waiter, whatever the lock switch ([audit])

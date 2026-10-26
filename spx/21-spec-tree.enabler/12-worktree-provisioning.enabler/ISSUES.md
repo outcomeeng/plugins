@@ -15,7 +15,7 @@ and the plugins product may depend on the resulting capability only once it is
 published to npm and `REQUIRED_SPX_VERSION` advances to it. That sequencing puts
 the fix outside any changeset confined to this repository. The same dependency
 gates the waiter and the instruction-block generator, tracked in
-`spx/13-infrastructure.enabler/13-host-readiness.enabler/ISSUES.md` and
+https://github.com/outcomeeng/changes/issues/796 and
 `spx/21-spec-tree.enabler/43-instruction-block.enabler/ISSUES.md`.
 
 **Resolution shape**: port layout classification and pool provisioning into the
