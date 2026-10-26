@@ -19,14 +19,9 @@ from outcomeeng_testing.generators.gate import (
     l3_fixture_files,
 )
 from outcomeeng_testing.harnesses.l3_collection import (
-    fixture_collection,
+    dispatch_collection,
     justfile_recipe_dispatch,
-    pytest_argument_tail,
-    recipe_dispatch_spawns,
-)
-
-L3_FIXTURE_PATHS = tuple(
-    test_file.path for test_file in l3_fixture_files() if test_file.level == L3_LEVEL
+    l3_fixture_paths,
 )
 
 
@@ -63,15 +58,13 @@ def test_a_direct_target_keeps_every_file_it_names_whatever_its_level(
 
 def test_the_dispatch_collects_exactly_the_l3_files_of_a_repository() -> None:
     fixture = l3_fixture_files()
-    expected = frozenset(
-        test_file.path for test_file in fixture if test_file.level == L3_LEVEL
-    )
+    expected = l3_fixture_paths()
 
-    spawns = recipe_dispatch_spawns((RECIPE_TEST_L3,), (*fixture, *l3_decoy_files()))
-    (pytest_call,) = (
-        call for call in spawns if call[: len(PYTEST_ARGV)] == PYTEST_ARGV
+    dispatched = dispatch_collection(
+        (RECIPE_TEST_L3,), fixture, (*fixture, *l3_decoy_files())
     )
-    collection = fixture_collection(fixture, pytest_argument_tail(pytest_call))
+    pytest_call = dispatched.pytest_argv
+    collection = dispatched.collection
 
     assert expected
     assert frozenset(pytest_call[len(PYTEST_ARGV) :]) == expected
@@ -86,7 +79,7 @@ def test_the_justfile_recipe_runs_the_l3_dispatch() -> None:
     assert dispatch.recipe_words == (RECIPE_TEST_L3,)
 
 
-@pytest.mark.parametrize("named", L3_FIXTURE_PATHS)
+@pytest.mark.parametrize("named", sorted(l3_fixture_paths()))
 def test_the_justfile_test_recipe_forwards_a_named_file_to_the_test_dispatch(
     named: str,
 ) -> None:
@@ -94,11 +87,7 @@ def test_the_justfile_test_recipe_forwards_a_named_file_to_the_test_dispatch(
     dispatch = justfile_recipe_dispatch(RECIPE_TEST, named)
 
     assert dispatch.entry == VALIDATION_ENTRY_COMMAND
-    spawns = recipe_dispatch_spawns(dispatch.recipe_words, fixture)
-    (pytest_call,) = (
-        call for call in spawns if call[: len(PYTEST_ARGV)] == PYTEST_ARGV
-    )
-    collection = fixture_collection(fixture, pytest_argument_tail(pytest_call))
+    collection = dispatch_collection(dispatch.recipe_words, fixture).collection
 
     assert collection.exit_code == 0, collection.output
     assert collection.collected_files == frozenset((named,))

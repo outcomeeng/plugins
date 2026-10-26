@@ -199,6 +199,33 @@ def recipe_dispatch_spawns(
     return tuple(spawner.spawn_calls)
 
 
+@dataclass(frozen=True)
+class DispatchCollection:
+    """The pytest argv a recipe dispatch spawns and what real pytest collects for it."""
+
+    pytest_argv: tuple[str, ...]
+    collection: FixtureCollection
+
+
+def dispatch_collection(
+    argv: Sequence[str],
+    fixture: Sequence[GeneratedTestFile],
+    repository: Sequence[GeneratedTestFile] | None = None,
+) -> DispatchCollection:
+    """Return the single pytest argv the entry point spawns for ``argv`` and its collection.
+
+    The dispatch runs against ``repository`` (``fixture`` when omitted); real
+    pytest then collects the spawned argument tail over ``fixture``.
+    """
+
+    spawns = recipe_dispatch_spawns(argv, fixture if repository is None else repository)
+    (pytest_argv,) = pytest_argvs(spawns)
+    return DispatchCollection(
+        pytest_argv=pytest_argv,
+        collection=fixture_collection(fixture, pytest_argument_tail(pytest_argv)),
+    )
+
+
 def full_gate_skipping_recipe_fixture_path() -> Path:
     """Return the inert `justfile` whose `check-full` recipe skips the full gate."""
 
