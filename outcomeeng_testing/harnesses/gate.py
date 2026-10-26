@@ -40,6 +40,7 @@ from outcomeeng.validation import (
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
     STATIC_ANALYSIS_ARGVS,
+    SUMMARY_PATH_LABEL,
     TEST_STEPS,
     VALIDATION_RECIPE,
     VALIDATION_STEPS,
@@ -540,6 +541,18 @@ class PipelineRunObservation:
     written_outputs: tuple[str, ...]
     retained_logs: tuple[str | None, ...]
     log_paths: tuple[str, ...]
+    summary_path: str
+    summary: dict[str, object]
+
+
+def summary_path_from_output(output: str) -> str:
+    """Return the summary path a run announced on its live output."""
+
+    for line in output.splitlines():
+        if line.startswith(SUMMARY_PATH_LABEL):
+            return line.removeprefix(SUMMARY_PATH_LABEL).strip()
+    msg = "run output announces no summary path"
+    raise GateSummaryShapeError(msg)
 
 
 def pipeline_run_observation(
@@ -553,9 +566,11 @@ def pipeline_run_observation(
     spawner = RecordingSpawner(exit_codes=list(exit_codes), outputs=list(outputs))
     sink = io.StringIO()
     exit_code = run(spawner=spawner, sink=sink, steps=steps)
+    output = sink.getvalue()
+    summary_path = summary_path_from_output(output)
     return PipelineRunObservation(
         exit_code=exit_code,
-        output=sink.getvalue(),
+        output=output,
         spawn_calls=tuple(spawner.spawn_calls),
         written_outputs=tuple(spawner.written_outputs),
         retained_logs=tuple(
@@ -563,6 +578,8 @@ def pipeline_run_observation(
             for path in spawner.output_paths
         ),
         log_paths=tuple(str(path) for path in spawner.output_paths),
+        summary_path=summary_path,
+        summary=read_summary(Path(summary_path)),
     )
 
 

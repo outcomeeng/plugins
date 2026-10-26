@@ -8,23 +8,18 @@ Verifies invariants that must hold across arbitrary step lists:
 
 from __future__ import annotations
 
-import io
-import json
-from pathlib import Path
 import re
 from typing import Final
 
 from outcomeeng.validation import (
     SUMMARY_KEY_DURATION_SECONDS,
-    SUMMARY_KEY_STEPS,
-    SUMMARY_PATH_LABEL,
     Step,
-    run,
 )
 from outcomeeng_testing.harnesses.gate import (
     PASS_EXIT_CODE,
-    RecordingSpawner,
+    pipeline_run_observation,
     step_list_property,
+    summary_steps,
 )
 
 TIMING_ROW_PATTERN: Final = re.compile(r"\s+([0-9]+)s$")
@@ -43,12 +38,11 @@ def _timing_summary_elapsed_values(output: str) -> list[int]:
 
 @step_list_property
 def _spawn_order_matches_step_list_order(steps: tuple[Step, ...]) -> None:
-    spawner = RecordingSpawner(exit_codes=[PASS_EXIT_CODE] * len(steps))
-    sink = io.StringIO()
+    observation = pipeline_run_observation(
+        steps=steps, exit_codes=[PASS_EXIT_CODE] * len(steps)
+    )
 
-    run(spawner=spawner, sink=sink, steps=steps)
-
-    invoked_argvs = spawner.spawn_calls
+    invoked_argvs = list(observation.spawn_calls)
     expected_argvs = [step.argv for step in steps]
     assert invoked_argvs == expected_argvs
 
@@ -62,27 +56,22 @@ def test_spawn_order_matches_step_list_order() -> None:
 def _elapsed_time_is_non_negative_for_completed_steps(
     steps: tuple[Step, ...],
 ) -> None:
-    spawner = RecordingSpawner(exit_codes=[PASS_EXIT_CODE] * len(steps))
-    sink = io.StringIO()
+    observation = pipeline_run_observation(
+        steps=steps, exit_codes=[PASS_EXIT_CODE] * len(steps)
+    )
 
-    run(spawner=spawner, sink=sink, steps=steps)
-
-    output = sink.getvalue()
-    elapsed_values = _timing_summary_elapsed_values(output)
+    elapsed_values = _timing_summary_elapsed_values(observation.output)
     assert len(elapsed_values) == len(steps)
     for elapsed in elapsed_values:
         assert elapsed >= 0
 
-    summary_path = next(
-        Path(line.removeprefix(SUMMARY_PATH_LABEL).strip())
-        for line in output.splitlines()
-        if line.startswith(SUMMARY_PATH_LABEL)
-    )
-    summary = json.loads(summary_path.read_text(encoding="utf-8"))
-    assert summary[SUMMARY_KEY_STEPS], "structured summary must contain step records"
-    for step in summary[SUMMARY_KEY_STEPS]:
-        assert isinstance(step[SUMMARY_KEY_DURATION_SECONDS], int)
-        assert step[SUMMARY_KEY_DURATION_SECONDS] >= 0
+    summary = observation.summary
+    step_records = summary_steps(summary)
+    assert step_records, "structured summary must contain step records"
+    for step in step_records:
+        duration = step[SUMMARY_KEY_DURATION_SECONDS]
+        assert isinstance(duration, int)
+        assert duration >= 0
 
 
 def test_elapsed_time_is_non_negative_for_completed_steps() -> None:
