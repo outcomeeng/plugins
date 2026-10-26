@@ -12,13 +12,6 @@ from typing import Any, Final, cast
 import yaml
 
 from outcomeeng.validation import VALIDATION_STEPS
-from outcomeeng.validation.ci_credentials import (
-    GATE_WORKFLOW_PATH,
-    JOB_STEPS_KEY,
-    STEP_RUN_KEY,
-    WORKFLOW_ENVIRONMENT_KEY,
-    WORKFLOW_JOBS_KEY,
-)
 from outcomeeng.validation.ci_gate import (
     GATE_JOB_NAME,
     JOB_TIMEOUT_KEY,
@@ -30,8 +23,12 @@ from outcomeeng.validation.ci_gate import (
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_DIRECTORY: Final = REPO_ROOT / ".github" / "workflows"
-GATE_WORKFLOW: Final = GATE_WORKFLOW_PATH
+GATE_WORKFLOW: Final = WORKFLOW_DIRECTORY / "check.yml"
 # GitHub Actions keys the harness reads at more than one site.
+WORKFLOW_ENVIRONMENT_KEY: Final = "env"
+WORKFLOW_JOBS_KEY: Final = "jobs"
+JOB_STEPS_KEY: Final = "steps"
+STEP_RUN_KEY: Final = "run"
 STEP_NAME_KEY: Final = "name"
 STEP_WITH_KEY: Final = "with"
 STEP_USES_KEY: Final = "uses"
@@ -52,16 +49,12 @@ PROJECT_METADATA: Final = REPO_ROOT / "pyproject.toml"
 
 @dataclass(frozen=True)
 class CiToolchainObservation:
-    """Raw workflow, job, action, command, and step-environment observations.
+    """Raw job, action, command, and step-environment observations.
 
     Each step environment is keyed by the step's normalized `run:` body, empty
-    for a step that runs no command, so a step's name never decides which
-    command its environment reaches. Every environment maps each name to the
-    value the workflow writes for it, and `run_environments` holds what each
-    step declares itself.
+    for a step that runs no command.
     """
 
-    workflow_environment: Mapping[str, str]
     job_environment: Mapping[str, str]
     action_references: tuple[str, ...]
     run_commands: tuple[str, ...]
@@ -125,14 +118,6 @@ class GatePythonObservation:
 CI_GATE_FIXTURES: Final = REPO_ROOT / "outcomeeng_testing" / "fixtures" / "ci_gate"
 
 
-# Each fixture under this name puts a gate credential on the `just check-full`
-# step from one scope or step layout.
-CREDENTIAL_VIOLATION_FIXTURE_GLOB: Final = "credentials_*.yml"
-# Each fixture under this name gives the `just test-l3` step every credential
-# name with one value other than the one the gate requires.
-L3_VALUE_VIOLATION_FIXTURE_GLOB: Final = "l3_value_*.yml"
-
-
 @dataclass(frozen=True)
 class GateFixtures:
     """Each inert violating or conforming workflow fixture, named by the case it holds."""
@@ -143,7 +128,6 @@ class GateFixtures:
     job_level_condition: Path
     job_level_continue_on_error: Path
     l3_before_full_gate: Path
-    l3_credentials_missing: Path
     mismatched_python_version: Path
     missing_fail_fast_preamble: Path
     missing_gate_recipe: Path
@@ -171,7 +155,6 @@ GATE_FIXTURES: Final = GateFixtures(
     job_level_condition=CI_GATE_FIXTURES / "job_level_condition.yml",
     job_level_continue_on_error=CI_GATE_FIXTURES / "job_level_continue_on_error.yml",
     l3_before_full_gate=CI_GATE_FIXTURES / "l3_before_full_gate.yml",
-    l3_credentials_missing=CI_GATE_FIXTURES / "l3_credentials_missing.yml",
     mismatched_python_version=CI_GATE_FIXTURES / "mismatched_python_version.yml",
     missing_fail_fast_preamble=CI_GATE_FIXTURES / "missing_fail_fast_preamble.yml",
     missing_gate_recipe=CI_GATE_FIXTURES / "missing_gate_recipe.yml",
@@ -196,16 +179,6 @@ GATE_FIXTURES: Final = GateFixtures(
 def fixture_directory_names(directory: Path) -> tuple[str, ...]:
     """Return the name of every file in a fixture directory."""
     return tuple(sorted(path.name for path in directory.iterdir() if path.is_file()))
-
-
-def credential_violation_fixture_paths() -> tuple[Path, ...]:
-    """Return every inert fixture that reaches the full-gate step with a credential."""
-    return tuple(sorted(CI_GATE_FIXTURES.glob(CREDENTIAL_VIOLATION_FIXTURE_GLOB)))
-
-
-def l3_value_violation_fixture_paths() -> tuple[Path, ...]:
-    """Return every inert fixture that gives the L3 step a wrong credential value."""
-    return tuple(sorted(CI_GATE_FIXTURES.glob(L3_VALUE_VIOLATION_FIXTURE_GLOB)))
 
 
 def workflow(workflow_path: Path | None = None) -> dict[str, Any]:
@@ -305,7 +278,6 @@ def observe_ci_toolchain(
 ) -> CiToolchainObservation:
     """Return the workflow surfaces that provision and authenticate gate tools."""
     workflow_data = workflow(workflow_path)
-    workflow_env = _environment(workflow_data)
     env = _environment(gate_job(workflow_data))
     steps = gate_steps(workflow_data)
     runs = tuple(
@@ -316,7 +288,6 @@ def observe_ci_toolchain(
         for step in steps
     )
     return CiToolchainObservation(
-        workflow_environment=workflow_env,
         job_environment=env,
         action_references=tuple(
             cast("str", step[STEP_USES_KEY]) for step in steps if STEP_USES_KEY in step

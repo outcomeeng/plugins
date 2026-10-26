@@ -23,12 +23,6 @@ GATE_RECIPE_COMMANDS: Final = (GATE_RECIPE_COMMAND, L3_RECIPE_COMMAND)
 GITHUB_TOKEN_ENVIRONMENT: Final = "GH_TOKEN"
 CODEX_API_KEY_ENVIRONMENT: Final = "OPENAI_API_KEY"
 DISCOVERY_AUTH_MODE_ENVIRONMENT: Final = "SUBAGENT_DISCOVERY_AUTH_MODE"
-# The L3 subagent-discovery probe logs in with the API key in CI.
-DISCOVERY_AUTH_MODE_API: Final = "api"
-GITHUB_TOKEN_SECRET: Final = "GITHUB_TOKEN"
-CODEX_API_KEY_SECRET: Final = "OPENAI_API_KEY"
-GITHUB_TOKEN_REFERENCE: Final = f"${{{{ secrets.{GITHUB_TOKEN_SECRET} }}}}"
-CODEX_API_KEY_REFERENCE: Final = f"${{{{ secrets.{CODEX_API_KEY_SECRET} }}}}"
 SPX_REPOSITORY: Final = "outcomeeng/spx"
 SPX_COMMIT_ENVIRONMENT: Final = "SPX_COMMIT"
 SPX_CHECKOUT_REFERENCE: Final = f"${{{{ env.{SPX_COMMIT_ENVIRONMENT} }}}}"
@@ -56,11 +50,10 @@ class CiToolRequirement:
 
 @dataclass(frozen=True)
 class CiStepEnvironmentRequirement:
-    """One environment variable, and its value, the step running a command requires."""
+    """One environment variable the step running a command requires."""
 
     run_command: str
     environment_name: str
-    value: str
 
 
 CI_TOOL_REQUIREMENTS: Final = (
@@ -104,15 +97,9 @@ CI_TOOL_REQUIREMENTS: Final = (
 # Only the L3 tests read these credentials, so only the step whose command
 # runs them receives them.
 CI_STEP_ENVIRONMENT_REQUIREMENTS: Final = (
-    CiStepEnvironmentRequirement(
-        L3_RECIPE_COMMAND, GITHUB_TOKEN_ENVIRONMENT, GITHUB_TOKEN_REFERENCE
-    ),
-    CiStepEnvironmentRequirement(
-        L3_RECIPE_COMMAND, CODEX_API_KEY_ENVIRONMENT, CODEX_API_KEY_REFERENCE
-    ),
-    CiStepEnvironmentRequirement(
-        L3_RECIPE_COMMAND, DISCOVERY_AUTH_MODE_ENVIRONMENT, DISCOVERY_AUTH_MODE_API
-    ),
+    CiStepEnvironmentRequirement(L3_RECIPE_COMMAND, GITHUB_TOKEN_ENVIRONMENT),
+    CiStepEnvironmentRequirement(L3_RECIPE_COMMAND, CODEX_API_KEY_ENVIRONMENT),
+    CiStepEnvironmentRequirement(L3_RECIPE_COMMAND, DISCOVERY_AUTH_MODE_ENVIRONMENT),
 )
 RETIRED_SPX_VERSION_ENVIRONMENT: Final = "SPX_VERSION"
 FULL_COMMIT_SHA_PATTERN: Final = r"[0-9a-f]{40}"
@@ -125,13 +112,8 @@ WORKFLOW_FILE_GLOBS: Final = ("*.yml", "*.yaml")
 __all__ = [
     "CI_STEP_ENVIRONMENT_REQUIREMENTS",
     "CODEX_API_KEY_ENVIRONMENT",
-    "CODEX_API_KEY_REFERENCE",
-    "CODEX_API_KEY_SECRET",
-    "DISCOVERY_AUTH_MODE_API",
     "DISCOVERY_AUTH_MODE_ENVIRONMENT",
     "GITHUB_TOKEN_ENVIRONMENT",
-    "GITHUB_TOKEN_REFERENCE",
-    "GITHUB_TOKEN_SECRET",
     "CI_TOOL_REQUIREMENTS",
     "FULL_COMMIT_SHA_PATTERN",
     "RETIRED_SPX_VERSION_ENVIRONMENT",

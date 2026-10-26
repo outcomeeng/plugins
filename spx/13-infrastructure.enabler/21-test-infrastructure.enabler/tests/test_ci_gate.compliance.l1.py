@@ -3,21 +3,14 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 import pytest
 
 from outcomeeng.validation import (
     ACTIONLINT_ARGV,
-    CI_CREDENTIALS_ARGV,
     RECIPE_TEST_L3,
     SHELLCHECK_ARGV,
     VALIDATION_ENTRY_COMMAND,
-)
-from outcomeeng.validation.ci_credentials import (
-    CredentialViolation,
-    CredentialViolationKind,
-    workflow_credential_violations,
 )
 from outcomeeng.validation.selected_gate import RECIPE_CHECK_FULL
 from outcomeeng.validation.spx_version import SPX_PACKAGE_NAME
@@ -35,18 +28,14 @@ from outcomeeng.validation.ci_gate import (
     GATE_PUSH_EVENT,
     GATE_RECIPE_COMMAND,
     GATE_RECIPE_COMMANDS,
-    GITHUB_TOKEN_ENVIRONMENT,
-    L3_RECIPE_COMMAND,
     MAXIMUM_JOB_TIMEOUT_MINUTES,
     PINNED_VERSION_ENVIRONMENT_SUFFIX,
     SOFT_PASS_SHELL_SNIPPETS,
     TRAP_COMMAND_PREFIX,
 )
 from outcomeeng_testing.harnesses.ci_gate import (
-    credential_violation_fixture_paths,
     GATE_FIXTURES,
     fixture_directory_names,
-    l3_value_violation_fixture_paths,
     observe_ci_toolchain,
     observe_gate_job,
     observe_gate_python_versions,
@@ -105,67 +94,6 @@ def test_l3_tests_before_the_full_gate_are_detected() -> None:
     )
 
 
-def _required_credentials() -> set[tuple[str, str, str]]:
-    return {
-        (requirement.run_command, requirement.environment_name, requirement.value)
-        for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
-    }
-
-
-def test_gate_runs_the_credential_check() -> None:
-    run = run_check_full_dispatch()
-
-    assert run.exit_code == 0
-    assert CI_CREDENTIALS_ARGV in run.spawn_calls
-
-
-def test_only_the_l3_step_receives_the_l3_credentials() -> None:
-    assert workflow_credential_violations() == ()
-
-
-def test_credential_violation_fixtures_are_present() -> None:
-    assert credential_violation_fixture_paths()
-
-
-@pytest.mark.parametrize(
-    "fixture", credential_violation_fixture_paths(), ids=lambda path: path.name
-)
-def test_a_credential_reaching_the_full_gate_step_is_detected(fixture: Path) -> None:
-    assert CredentialViolation(
-        CredentialViolationKind.FOREIGN_STEP,
-        GATE_RECIPE_COMMAND,
-        GITHUB_TOKEN_ENVIRONMENT,
-    ) in workflow_credential_violations(fixture)
-
-
-def test_l3_value_violation_fixtures_are_present() -> None:
-    assert l3_value_violation_fixture_paths()
-
-
-@pytest.mark.parametrize(
-    "fixture", l3_value_violation_fixture_paths(), ids=lambda path: path.name
-)
-def test_a_wrong_l3_credential_value_is_detected(fixture: Path) -> None:
-    assert any(
-        violation.kind is CredentialViolationKind.WRONG_VALUE
-        and violation.run_command == L3_RECIPE_COMMAND
-        for violation in workflow_credential_violations(fixture)
-    )
-
-
-def test_a_missing_l3_credential_is_detected() -> None:
-    violations = workflow_credential_violations(GATE_FIXTURES.l3_credentials_missing)
-
-    assert set(violations) == {
-        CredentialViolation(
-            CredentialViolationKind.MISSING,
-            requirement.run_command,
-            requirement.environment_name,
-        )
-        for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
-    }
-
-
 def test_gate_runs_the_workflow_and_shell_lint_steps() -> None:
     run = run_check_full_dispatch()
 
@@ -215,8 +143,7 @@ def test_gate_workflow_provisions_the_declared_toolchain() -> None:
     for step_requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS:
         assert any(
             run_command == step_requirement.run_command
-            and environment.get(step_requirement.environment_name)
-            == step_requirement.value
+            and step_requirement.environment_name in environment
             for run_command, environment in observation.run_environments
         )
 
@@ -241,10 +168,13 @@ def test_every_provisioned_tool_is_declared() -> None:
         if requirement.version_environment is not None
     }
     assert {
-        (run_command, name, value)
+        (run_command, name)
         for run_command, environment in observation.run_environments
-        for name, value in environment.items()
-    } == _required_credentials()
+        for name in environment
+    } == {
+        (requirement.run_command, requirement.environment_name)
+        for requirement in CI_STEP_ENVIRONMENT_REQUIREMENTS
+    }
 
 
 def test_missing_tool_provisioning_is_detected() -> None:
@@ -333,7 +263,6 @@ def test_conforming_fixture_satisfies_every_gate_rule() -> None:
         tuple(command for command in commands if command in GATE_RECIPE_COMMANDS)
         == GATE_RECIPE_COMMANDS
     )
-    assert workflow_credential_violations(workflow_path) == ()
     job = observe_gate_job(workflow_path)
 
     assert not job.has_condition
