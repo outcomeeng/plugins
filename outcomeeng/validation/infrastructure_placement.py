@@ -13,7 +13,7 @@ from pathlib import PurePosixPath
 from typing import Final
 
 TEST_INFRASTRUCTURE_PACKAGE_SUFFIX: Final = "_testing"
-SPEC_TREE_DIRECTORY: Final = "spx"
+PRODUCT_TREE_DIRECTORY: Final = "spx"
 TESTS_DIRECTORY: Final = "tests"
 
 
@@ -28,12 +28,12 @@ def _is_misplaced(path: PurePosixPath) -> bool:
         part.endswith(TEST_INFRASTRUCTURE_PACKAGE_SUFFIX) for part in directories
     )
     return in_package and (
-        directories[:1] == (SPEC_TREE_DIRECTORY,) or TESTS_DIRECTORY in directories
+        directories[:1] == (PRODUCT_TREE_DIRECTORY,) or TESTS_DIRECTORY in directories
     )
 
 
 __all__ = [
-    "SPEC_TREE_DIRECTORY",
+    "PRODUCT_TREE_DIRECTORY",
     "TESTS_DIRECTORY",
     "TEST_INFRASTRUCTURE_PACKAGE_SUFFIX",
     "misplaced_test_infrastructure",

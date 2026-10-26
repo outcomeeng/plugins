@@ -33,7 +33,7 @@ from outcomeeng.validation import (
 from outcomeeng.validation.infrastructure_index import (
     EXECUTED_TEST_PREFIX,
     PYTHON_SUFFIX,
-    SPEC_TREE_ROOT,
+    PRODUCT_TREE_ROOT,
     TESTS_DIRECTORY_NAME,
 )
 from outcomeeng.validation.selected_gate import (
@@ -69,9 +69,9 @@ MAX_TEST_FILES: Final = 12
 # level, in two nested nodes and in the top-level test root, with and without a
 # runner segment.
 L3_FIXTURE_DIRECTORIES: Final = (
-    f"{SPEC_TREE_ROOT}/21-first.enabler",
-    f"{SPEC_TREE_ROOT}/32-second.enabler/21-nested.enabler",
-    f"{SPEC_TREE_ROOT}/43-dotted.{L3_LEVEL}.enabler",
+    f"{PRODUCT_TREE_ROOT}/21-first.enabler",
+    f"{PRODUCT_TREE_ROOT}/32-second.enabler/21-nested.enabler",
+    f"{PRODUCT_TREE_ROOT}/43-dotted.{L3_LEVEL}.enabler",
     TESTS_DIRECTORY_NAME,
 )
 L3_FIXTURE_SUBJECT: Final = "case"

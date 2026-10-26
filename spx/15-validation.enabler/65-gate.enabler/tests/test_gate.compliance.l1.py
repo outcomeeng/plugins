@@ -40,7 +40,7 @@ from outcomeeng.validation import (
     test_recipe as build_test_recipe,
 )
 from outcomeeng.validation.infrastructure_index import (
-    SPEC_TREE_ROOT,
+    PRODUCT_TREE_ROOT,
     TESTS_DIRECTORY_NAME,
 )
 from outcomeeng_testing.generators.gate import l3_fixture_files
@@ -130,7 +130,7 @@ def test_the_test_recipe_leaves_l3_files_out_of_a_directory_and_runs_a_named_one
     assert l3_files
 
     directory = fixture_collection(
-        fixture, _recipe_pytest_arguments((SPEC_TREE_ROOT, TESTS_DIRECTORY_NAME))
+        fixture, _recipe_pytest_arguments((PRODUCT_TREE_ROOT, TESTS_DIRECTORY_NAME))
     )
 
     assert directory.exit_code == 0, directory.output

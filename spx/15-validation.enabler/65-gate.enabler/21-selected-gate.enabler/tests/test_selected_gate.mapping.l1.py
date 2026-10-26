@@ -188,7 +188,8 @@ def test_changed_test_files_of_a_level_are_targeted_exactly_when_the_level_is_no
     paths = tuple(
         test_file.path
         for test_file in l3_fixture_files()
-        if test_file.level == level and test_file.path.startswith(f"{SPEC_TREE_ROOT}/")
+        if test_file.level == level
+        and test_file.path.startswith(f"{PRODUCT_TREE_ROOT}/")
     )
 
     plan = build_selected_gate_plan(paths)

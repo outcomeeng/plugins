@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from outcomeeng.validation import L3_LEVEL
-from outcomeeng.validation.infrastructure_index import SPEC_TREE_ROOT
+from outcomeeng.validation.infrastructure_index import PRODUCT_TREE_ROOT
 from outcomeeng.validation.selected_gate import build_selected_gate_plan
 from outcomeeng_testing.generators.gate import GeneratedTestFile
 from outcomeeng_testing.harnesses.gate import (
@@ -41,7 +41,7 @@ def test_selection_is_deterministic_for_path_order_and_duplicates() -> None:
 def _planned_pytest_targets_lie_outside_the_l3_tests(
     test_files: list[GeneratedTestFile],
 ) -> None:
-    paths = tuple(f"{SPEC_TREE_ROOT}/{test_file.path}" for test_file in test_files)
+    paths = tuple(f"{PRODUCT_TREE_ROOT}/{test_file.path}" for test_file in test_files)
     expected = {
         path
         for path, test_file in zip(paths, test_files, strict=True)

@@ -1,8 +1,8 @@
 """Generated tracked-file placements for the test-infrastructure placement rule.
 
-Every placement composes the source-owned spec-tree directory, tests directory,
+Every placement composes the source-owned Product Tree directory, tests directory,
 and package suffix; the violating placements put a ``*_testing`` package file
-under the spec tree or inside a tests directory, and the compliant placements
+under the Product Tree or inside a tests directory, and the compliant placements
 put it at the root or put a test file in a tests directory without a package.
 """
 
@@ -12,7 +12,7 @@ from typing import Final
 
 import outcomeeng
 from outcomeeng.validation.infrastructure_placement import (
-    SPEC_TREE_DIRECTORY,
+    PRODUCT_TREE_DIRECTORY,
     TEST_INFRASTRUCTURE_PACKAGE_SUFFIX,
     TESTS_DIRECTORY,
 )
@@ -29,10 +29,10 @@ TEST_FILE: Final = "test_example.scenario.l1.py"
 
 
 def misplaced_placements() -> tuple[str, ...]:
-    """Return package files under the spec tree and inside a tests directory."""
+    """Return package files under the Product Tree and inside a tests directory."""
 
-    under_spec_tree = tuple(
-        f"{SPEC_TREE_DIRECTORY}/{node}/{package}/{module}"
+    under_product_tree = tuple(
+        f"{PRODUCT_TREE_DIRECTORY}/{node}/{package}/{module}"
         for node in NODE_DIRECTORIES
         for package in PACKAGES
         for module in MODULES
@@ -43,7 +43,7 @@ def misplaced_placements() -> tuple[str, ...]:
         for package in PACKAGES
         for module in MODULES
     )
-    return under_spec_tree + inside_tests
+    return under_product_tree + inside_tests
 
 
 def allowed_placements() -> tuple[str, ...]:
@@ -53,7 +53,7 @@ def allowed_placements() -> tuple[str, ...]:
         f"{package}/{module}" for package in PACKAGES for module in MODULES
     )
     test_files = tuple(
-        f"{SPEC_TREE_DIRECTORY}/{node}/{TESTS_DIRECTORY}/{TEST_FILE}"
+        f"{PRODUCT_TREE_DIRECTORY}/{node}/{TESTS_DIRECTORY}/{TEST_FILE}"
         for node in NODE_DIRECTORIES
     ) + tuple(f"{parent}{TESTS_DIRECTORY}/{TEST_FILE}" for parent in PARENT_DIRECTORIES)
     return root_packages + test_files
