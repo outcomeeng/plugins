@@ -22,7 +22,7 @@ Standing finding SH-19644-02 on `outcomeeng_testing/harnesses/ci_gate.py`. The h
 
 ## The CI gate test owns a gate-step predicate and a workflow file name
 
-Standing finding on `spx/13-infrastructure.enabler/21-test-infrastructure.enabler/tests/test_ci_gate.compliance.l1.py`. The test stands on main, outside the changeset of https://github.com/outcomeeng/plugins/pull/706: `git diff --stat 39d028747bc38610adb6d74d4bba5488a861b65f...1efe32296f4afdbf35c7f91db0724576f24d3710 -- spx/13-infrastructure.enabler/21-test-infrastructure.enabler/tests/test_ci_gate.compliance.l1.py` prints nothing.
+Standing finding on `spx/13-infrastructure.enabler/21-test-infrastructure.enabler/tests/test_ci_gate.compliance.l1.py`. The changeset of https://github.com/outcomeeng/plugins/pull/706 changes only the test's step-environment checks; `_inlined_gate_steps`, `test_gate_workflow_never_inlines_a_gate_step`, `test_inlined_gate_steps_are_detected`, and `test_yaml_suffixed_workflow_jobs_are_observed` stand as on main.
 
 **Evidence**: the module-level function `_inlined_gate_steps` decides which workflow shell lines count as an inlined gate step, and `test_gate_workflow_never_inlines_a_gate_step` and `test_inlined_gate_steps_are_detected` both call it. `test_yaml_suffixed_workflow_jobs_are_observed` compares the observation with the literal file name `unbounded.yaml`, which the test chooses rather than imports.
 
