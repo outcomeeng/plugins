@@ -11,6 +11,6 @@ CAN choose between ending the turn for a completion notification and collecting 
 
 ## Assertions
 
-- ALWAYS: the Claude rendering of `/task-tracking-standards` tells an agent that a backgrounded shell command or an ordinary background subagent re-invokes the session on its completion, so the agent launches it, ends the turn, and resumes from the completion notification
-- ALWAYS: the Codex rendering of `/task-tracking-standards` tells an agent to run a local command in the foreground with a timeout that covers it and to collect its result within the active turn, or to move the work to the next step boundary, and to collect a subagent launch within the active turn through the native wait capability
-- NEVER: the Codex rendering of `/task-tracking-standards` tells an agent that the harness re-invokes the session when background work ends
+- ALWAYS: the Claude rendering of `/task-tracking-standards` tells an agent that a backgrounded shell command or an ordinary background subagent re-invokes the session on its completion, so the agent launches it, ends the turn, and resumes from the completion notification ([audit])
+- ALWAYS: the Codex rendering of `/task-tracking-standards` tells an agent to run a local command in the foreground with a timeout that covers it and to collect its result within the active turn, or to move the work to the next step boundary, and to collect a subagent launch within the active turn through the native wait capability ([audit])
+- NEVER: the Codex rendering of `/task-tracking-standards` tells an agent that the harness re-invokes the session when background work ends ([audit])
