@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from pathlib import PurePosixPath
 
@@ -94,16 +95,44 @@ def test_an_empty_changeset_selects_no_steps() -> None:
     assert plan.full_gate is False
 
 
+# Assertion design record: selected steps print before the recipes run
+# - Assertion: ALWAYS: the selected gate prints the selected steps and reasons
+#   before running them through the signal-safe recipe orchestrator,
+#   preserving bounded output and structured summaries (universal rule).
+# - Production subject: the plan the selected check writes to its live sink
+#   before the first recipe header, observed through the run's output.
+# - Case provenance: the Python source path from the gate generator; its
+#   planned steps are the complete selected set, and its lint and type steps
+#   share one reason, so a line shared by several steps is a reachable defect.
+# - Oracle owner: the assertion's sentence, read as one plan line per selected
+#   step carrying that step's label as a whole word and its reason; the
+#   expected pairs come from the planner's selected set, never from
+#   render_plan, and label words are runs of the selected labels' characters.
+# - Rejected mutations: the plan line drops its label, the plan omits a
+#   selected step, or the plan prints one line for every step sharing a reason.
+# - Failure observation: a selected step that no plan line or several plan
+#   lines name, or fewer distinct naming lines than selected steps.
 def test_the_plan_prints_before_the_recipes_run() -> None:
     run = run_check_observation(branch_path=SELECTED_GATE_PYTHON_SOURCE_PATH)
 
     selected = build_selected_gate_plan((SELECTED_GATE_PYTHON_SOURCE_PATH,))
-    first_recipe = run.output.index(recipe_header(RECIPE_CHECK))
+    plan_lines = run.output[: run.output.index(recipe_header(RECIPE_CHECK))]
+    label_characters = "".join(
+        sorted({char for item in selected.selected_steps for char in item.step.label})
+    )
+    label_word = re.compile(f"[{re.escape(label_characters)}]+")
+    naming_lines = [
+        [
+            index
+            for index, line in enumerate(plan_lines.splitlines())
+            if item.step.label in label_word.findall(line) and item.reason in line
+        ]
+        for item in selected.selected_steps
+    ]
     assert run.exit_code == 0
     assert selected.selected_steps
-    for item in selected.selected_steps:
-        assert item.reason in run.output
-        assert run.output.index(item.reason) < first_recipe
+    assert all(len(lines) == 1 for lines in naming_lines), naming_lines
+    assert len({lines[0] for lines in naming_lines}) == len(selected.selected_steps)
     assert SUMMARY_PATH_LABEL in run.output
 
 
