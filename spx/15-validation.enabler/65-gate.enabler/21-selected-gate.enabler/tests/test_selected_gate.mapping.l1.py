@@ -20,7 +20,6 @@ from outcomeeng.validation.infrastructure_index import (
 )
 from outcomeeng.validation.selected_gate import (
     PATH_CATEGORY_PATTERNS,
-    VALIDATION_LANES,
     ChangedPath,
     FULL_GATE_REASON,
     InfrastructureIndexRequired,
@@ -39,6 +38,7 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
     category_patterns,
+    declared_lane_steps,
     l3_fixture_files,
     path_from_pattern,
 )
@@ -95,12 +95,11 @@ def _pathspec_categories(path: str) -> frozenset[PathCategory]:
 def _lane_steps(
     categories: frozenset[PathCategory],
 ) -> frozenset[tuple[tuple[str, ...], str]]:
-    # Each lane of a category the path lies in contributes every step it
-    # declares, carrying that lane's reason.
+    # Each spec-declared lane of a category the path lies in contributes every
+    # step it names, carrying that lane's reason.
+    declared = declared_lane_steps()
     return frozenset(
-        (argv, VALIDATION_LANES[category].reason)
-        for category in categories & VALIDATION_LANES.keys()
-        for argv in VALIDATION_LANES[category].argvs
+        step for category in categories & declared.keys() for step in declared[category]
     )
 
 

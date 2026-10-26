@@ -4,20 +4,50 @@ from __future__ import annotations
 
 import re
 import string
+from collections.abc import Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Final
 
 from hypothesis import strategies as st
 from hypothesis.strategies import SearchStrategy
 
-from outcomeeng.validation import EXECUTION_LEVELS, L3_LEVEL, Step
+from outcomeeng.distribution.contracts import INSTRUCTION_BLOCK_ARGV
+from outcomeeng.validation import (
+    ACTIONLINT_ARGV,
+    EVAL_LINKS_ARGV,
+    EVAL_PROMPTS_ARGV,
+    EVAL_TRIGGERS_ARGV,
+    EXECUTION_LEVELS,
+    FMT_CHECK_ARGV,
+    L3_LEVEL,
+    MYPY_ARGV,
+    PYRIGHT_ARGV,
+    RUFF_CHECK_ARGV,
+    RUFF_FORMAT_ARGV,
+    SHELLCHECK_ARGV,
+    SPX_MARKDOWN_ARGV,
+    VALIDATION_STEPS,
+    Step,
+)
 from outcomeeng.validation.infrastructure_index import (
     EXECUTED_TEST_PREFIX,
     PYTHON_SUFFIX,
     SPEC_TREE_ROOT,
     TESTS_DIRECTORY_NAME,
 )
-from outcomeeng.validation.selected_gate import PATH_CATEGORY_PATTERNS, PathCategory
+from outcomeeng.validation.selected_gate import (
+    EVAL_REASON,
+    EVIDENCE_LINK_REASON,
+    INSTRUCTION_BLOCK_REASON,
+    MARKDOWN_REASON,
+    PATH_CATEGORY_PATTERNS,
+    PYTHON_REASON,
+    SKILL_REASON,
+    SKILL_STEP_LABELS,
+    WORKFLOW_REASON,
+    PathCategory,
+)
 
 RECURSIVE_WILDCARD: Final = "**"
 SEGMENT_WILDCARD: Final = "*"
@@ -286,3 +316,48 @@ SELECTED_GATE_MARKDOWN_PATH: Final = category_path(PathCategory.MARKDOWN)
 SELECTED_GATE_SKILL_PATH: Final = category_path(PathCategory.SKILL)
 SELECTED_GATE_WORKFLOW_PATH: Final = category_path(PathCategory.WORKFLOW)
 SELECTED_GATE_FULL_GATE_PATH: Final = category_path(PathCategory.FULL_GATE)
+
+
+LaneSteps = frozenset[tuple[tuple[str, ...], str]]
+
+
+def _lane(argvs: tuple[tuple[str, ...], ...], reason: str) -> LaneSteps:
+    return frozenset((argv, reason) for argv in argvs)
+
+
+def declared_lane_steps() -> Mapping[PathCategory, LaneSteps]:
+    """The validation steps and reason each lane-bearing category selects.
+
+    Each entry transcribes the category-to-step correspondence the selected-gate
+    spec declares, built from the exported step commands and reasons and never
+    from the planner's own lane table, so a changed lane fails the comparison.
+    The skill lane is the set of validation steps the gate names as its skill
+    surface.
+    """
+
+    skill_argvs = tuple(
+        step.argv for step in VALIDATION_STEPS if step.label in SKILL_STEP_LABELS
+    )
+    return MappingProxyType(
+        {
+            PathCategory.MARKDOWN: _lane(
+                (FMT_CHECK_ARGV, SPX_MARKDOWN_ARGV), MARKDOWN_REASON
+            ),
+            PathCategory.WORKFLOW: _lane(
+                (ACTIONLINT_ARGV, SHELLCHECK_ARGV), WORKFLOW_REASON
+            ),
+            PathCategory.PYTHON_FORMAT_LINT: _lane(
+                (RUFF_FORMAT_ARGV, RUFF_CHECK_ARGV), PYTHON_REASON
+            ),
+            PathCategory.PYTHON_TYPECHECK: _lane(
+                (MYPY_ARGV, PYRIGHT_ARGV), PYTHON_REASON
+            ),
+            PathCategory.SKILL: _lane(skill_argvs, SKILL_REASON),
+            PathCategory.INSTRUCTION_BLOCK: _lane(
+                (INSTRUCTION_BLOCK_ARGV,), INSTRUCTION_BLOCK_REASON
+            ),
+            PathCategory.EVAL_TRIGGER: _lane((EVAL_TRIGGERS_ARGV,), EVAL_REASON),
+            PathCategory.EVAL_PROMPT: _lane((EVAL_PROMPTS_ARGV,), EVAL_REASON),
+            PathCategory.EVIDENCE_LINK: _lane((EVAL_LINKS_ARGV,), EVIDENCE_LINK_REASON),
+        }
+    )
