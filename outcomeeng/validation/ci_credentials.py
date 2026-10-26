@@ -184,13 +184,13 @@ def credential_violations(
     return foreign + tuple(
         violation
         for requirement in requirements
-        for violation in _requirement_violations(steps, requirement)
+        if (violation := _requirement_violation(steps, requirement)) is not None
     )
 
 
-def _requirement_violations(
+def _requirement_violation(
     steps: Sequence[StepEnvironment], requirement: CiStepEnvironmentRequirement
-) -> tuple[CredentialViolation, ...]:
+) -> CredentialViolation | None:
     values = [
         environment.get(requirement.environment_name)
         for run_command, environment in steps
@@ -201,11 +201,9 @@ def _requirement_violations(
     elif any(value != requirement.value for value in values):
         kind = CredentialViolationKind.WRONG_VALUE
     else:
-        return ()
-    return (
-        CredentialViolation(
-            kind, requirement.run_command, requirement.environment_name
-        ),
+        return None
+    return CredentialViolation(
+        kind, requirement.run_command, requirement.environment_name
     )
 
 
