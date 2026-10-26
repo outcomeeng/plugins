@@ -78,10 +78,10 @@ from outcomeeng_testing.generators.gate import (
     SELECTED_GATE_SKILL_PATH,
     SELECTED_GATE_WORKFLOW_PATH,
     category_patterns,
+    clock_increments,
     generated_test_file_sets,
     path_from_pattern,
     selected_gate_changed_paths,
-    clock_increments,
     step_lists,
 )
 from outcomeeng_testing.harnesses.changeset_scope import (
@@ -1188,10 +1188,10 @@ class BoundedAdvancingClock:
 
 __all__ = [
     "HangingHandle",
-    "ScriptedMonotonicClock",
     "RecordingGitRunner",
     "RecordingHandle",
     "RecordingSpawner",
+    "ScriptedMonotonicClock",
     "SignalRaisingSpawner",
     "STATIC_ANALYSIS_ARGVS",
     "SpawnFailingSpawner",
