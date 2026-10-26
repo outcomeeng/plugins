@@ -10,7 +10,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **`/wait-for-event` states when a wait may run in the background.** The caller arms one run at a time with one explicit `timeoutSeconds` and collects its line itself. It runs the wait in the background only under an agent harness whose documented contract wakes the session when the process exits; under every other harness it runs the wait in the foreground and collects the line within the active turn, or moves the wait to the next step boundary. The caller arms the next run only after handling the line, and a run never re-arms itself.
+- **`/wait-for-event` states the arming rule for the harness that reads it.** The caller arms one run at a time with one explicit `timeoutSeconds` and collects its line itself. The Claude Code rendering lets the run go to the background, where its exit re-invokes the session and the caller collects the line on the completion notice. The Codex rendering runs the wait in the foreground and collects the line within the active turn, or moves the wait to the next step boundary, and never starts it in the background. The caller arms the next run only after handling the line, and a run never re-arms itself.
 - **`/direct-positions` arms the doorbell and controller passes under the same rule.** It arms each as a bounded background run only under an agent harness whose documented contract wakes the session when the process exits, and otherwise runs it in the foreground, collected within the active turn or moved to the next step boundary. It arms the next pass only after handling the result, and a pass never arms its own successor.
 
 ## 0.16.4
