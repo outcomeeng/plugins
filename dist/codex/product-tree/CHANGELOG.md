@@ -15,6 +15,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 ### Changed
 
 - **`/task-tracking-standards` states the local-work arming rule for the harness that reads it.** The Claude Code rendering tells an agent that a backgrounded shell command or an ordinary background subagent re-invokes the session on its completion, so it launches the work, ends the turn, and resumes from the completion notification. The Codex rendering tells an agent to run a local command in the foreground with a timeout that covers it and to collect the result within the active turn, or to move the work to the next step boundary, to collect a subagent launch within the active turn through the native wait capability, and never to expect the harness to re-invoke the session when background work ends. Before this change, both renderings told an agent that the harness re-invokes the session on a background completion.
+- **`/wait-for-load` states the collection rule for the harness that reads it.** The Claude Code rendering keeps the sentence that a harness moving a long call to the background re-invokes the session when the line exits, and that the re-invocation is the only collection the line needs. The Codex rendering tells an agent to collect the chained line within the active turn through its process handle until its exit code is observed, and never tells it that the harness re-invokes the session. Before this change, both renderings told an agent that the harness re-invokes the session when a backgrounded line exits.
 
 ## 0.109.0
 

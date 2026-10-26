@@ -13,7 +13,7 @@ One terminal result gating the resource-intensive command it guards: the host-wi
 
 1. Read the lock switch from `spx/local/wait-for-load.md` at the repository root. The switch is on only when that overlay holds the line `orchestration-lock: on`. An absent overlay, an overlay without that line, or any other value leaves it off. A nested line reads the same switch as the outer line.
 
-2. Run the guarded command as one shell line in the form the switch selects, identically on every agent harness. Give the call the longest foreground timeout the agent harness allows. A harness that moves a long call to the background when that timeout elapses re-invokes the session when the line exits, and that re-invocation is the only collection the line needs. The line takes its own approval path.
+2. Run the guarded command as one shell line in the form the switch selects, identically on every agent harness. Give the call the longest foreground timeout the agent harness allows. {!% if target == 'claude' %!}A harness that moves a long call to the background when that timeout elapses re-invokes the session when the line exits, and that re-invocation is the only collection the line needs.{!% else %!}Collect the line within the active turn through its process handle until its exit code is observed; the harness does not re-invoke the session when the line exits.{!% endif %!} The line takes its own approval path.
 
    Switch on: pass the command as the argument vector after `--`, with a run id generated for that line, a new UUID each time, and start no waiter:
 
