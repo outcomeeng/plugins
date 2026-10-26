@@ -29,7 +29,9 @@ from outcomeeng_testing.harnesses.product_tree import (
 
 
 def _tracked_files() -> list[str]:
-    return marketplace_tracked_files(marketplace_root_for_product_tree_root_test(__file__))
+    return marketplace_tracked_files(
+        marketplace_root_for_product_tree_root_test(__file__)
+    )
 
 
 class TestHomeIsPlacedAtRoot:
