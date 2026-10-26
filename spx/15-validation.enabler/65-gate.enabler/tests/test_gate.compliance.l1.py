@@ -10,8 +10,10 @@ from outcomeeng.validation import (
     CHECK_RECIPES,
     EVAL_LINKS_ARGV,
     FMT_CHECK_ARGV,
+    FORWARDED_SIGNALS,
     HOOK_SAFETY_ARGV,
     MYPY_ARGV,
+    MYPY_STRICT_FLAG,
     L3_LEVEL,
     POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
@@ -74,7 +76,7 @@ def test_the_full_gate_carries_every_required_step() -> None:
     assert RUFF_FORMAT_ARGV in step_argvs
     assert RUFF_CHECK_ARGV in step_argvs
     assert set(STATIC_ANALYSIS_ARGVS).issubset(step_argvs)
-    assert "--strict" in MYPY_ARGV
+    assert MYPY_STRICT_FLAG in MYPY_ARGV
     assert SPX_MARKDOWN_ARGV in step_argvs
     assert EVAL_LINKS_ARGV in step_argvs
     assert HOOK_SAFETY_ARGV in step_argvs
@@ -188,8 +190,8 @@ def test_subprocess_lives_only_in_the_production_spawner() -> None:
         assert isinstance(preexec_fn, ast.Name)
         assert preexec_fn.id == "_restore_child_signal_mask"
     assert "signal.pthread_sigmask(signal.SIG_UNBLOCK" in source
-    for signal_name in ("SIGTERM", "SIGINT", "SIGHUP"):
-        assert f"signal.{signal_name}" in source
+    for forwarded in FORWARDED_SIGNALS:
+        assert f"signal.{forwarded.name}" in source
 
 
 def test_no_gate_module_polls_with_while_true_sleep() -> None:
