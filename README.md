@@ -263,12 +263,13 @@ Run the Codex steps in this order:
 1. Refresh the marketplace with `codex plugin marketplace upgrade outcomeeng`.
 2. Add the successor with `codex plugin add product-tree@outcomeeng`.
 3. Remove the old plugin with `codex plugin remove spec-tree@outcomeeng`.
-4. Replace `[plugins."spec-tree@outcomeeng"]` with `[plugins."product-tree@outcomeeng"]` in each project's `.codex/config.toml`.
+4. Replace `[plugins."spec-tree@outcomeeng"]` with `[plugins."product-tree@outcomeeng"]` in each project's `.codex/config.toml`. If a project's `.codex/config.toml` names no `spec-tree@outcomeeng` table, skip this step for that project.
 5. Start a new Codex session, so the session loads `product-tree`.
 6. Run the `product-tree-plugin` skill with the `upgrade` verb.
 7. If the skill reports a file as `retained`, delete that file by hand.
+8. Start a new Codex session, so the session discovers the `product-tree` definitions in `$CODEX_HOME/agents`.
 
-Run the `update-instruction-block` skill in the same new session.
+Run the `update-instruction-block` skill in the session of step 6.
 
 ## Plugins
 
