@@ -34,14 +34,12 @@ from hypothesis import given, seed, settings
 
 from outcomeeng import validation as validation_pkg
 from outcomeeng.validation import (
-    MYPY_ARGV,
     POST_KILL_REAP_ATTEMPTS,
     PURPOSE_CONFORMANCE,
     PREFLIGHT_STEPS,
-    PYRIGHT_ARGV,
-    RUFF_CHECK_ARGV,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
+    STATIC_ANALYSIS_ARGVS,
     TEST_STEPS,
     VALIDATION_RECIPE,
     VALIDATION_STEPS,
@@ -103,7 +101,6 @@ STEP_LIST_PROPERTY_SEED = 20261025
 STEP_LIST_PROPERTY_EXAMPLES = 50
 PROPERTY_REPLAY_COMMAND = "just test"
 PATHSPEC_GIT_TIMEOUT_SECONDS = 30
-STATIC_ANALYSIS_ARGVS = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
 PASS_EXIT_CODE = 0
 FAIL_EXIT_CODE = 2
 PASSING_CHILD_OUTPUT = "passing validator output"
@@ -1139,6 +1136,7 @@ __all__ = [
     "RecordingHandle",
     "RecordingSpawner",
     "SignalRaisingSpawner",
+    "STATIC_ANALYSIS_ARGVS",
     "SpawnFailingSpawner",
 ]
 

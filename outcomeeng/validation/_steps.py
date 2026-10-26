@@ -66,6 +66,7 @@ RUFF_CHECK_ARGV: Final = ("uv", "run", "ruff", "check", ".")
 MYPY_STRICT_FLAG: Final = "--strict"
 MYPY_ARGV: Final = ("uv", "run", "mypy", MYPY_STRICT_FLAG, *PYTHON_SOURCE_PATHS)
 PYRIGHT_ARGV: Final = ("uv", "run", "pyright", *PYTHON_SOURCE_PATHS)
+STATIC_ANALYSIS_ARGVS: Final = (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV)
 SPX_MARKDOWN_ARGV: Final = ("uv", "run", "spx", "validation", "markdown")
 # Every `[test]` and `[eval]` link in spec markdown resolves to its evidence
 # file; a dangling link is a coverage gap the gate refuses to carry.
