@@ -24,6 +24,7 @@ import json
 import math
 import os
 import subprocess
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -80,6 +81,7 @@ from outcomeeng_testing.generators.gate import (
     generated_test_file_sets,
     path_from_pattern,
     selected_gate_changed_paths,
+    clock_increments,
     step_lists,
 )
 from outcomeeng_testing.harnesses.changeset_scope import (
@@ -470,6 +472,42 @@ def step_list_property(
     return wrapper
 
 
+def timed_step_list_property(
+    test_func: Callable[[tuple[Step, ...], tuple[float, ...]], None],
+) -> Callable[[], None]:
+    """Run a gate step-list property over generated controlled-clock advances."""
+
+    configured = seed(STEP_LIST_PROPERTY_SEED)(
+        settings(max_examples=STEP_LIST_PROPERTY_EXAMPLES, deadline=None)(
+            given(steps=step_lists(), increments=clock_increments())(test_func)
+        )
+    )
+
+    def wrapper() -> None:
+        run_replayable_property(
+            configured,
+            seed_value=STEP_LIST_PROPERTY_SEED,
+            replay_path=_property_replay_path(test_func),
+        )
+
+    return wrapper
+
+
+@dataclass
+class ScriptedMonotonicClock:
+    """A monotonic clock that advances by the scripted increments on each read."""
+
+    increments: tuple[float, ...]
+    current: float = 0.0
+    reads: int = 0
+
+    def __call__(self) -> float:
+        reading = self.current
+        self.current += self.increments[self.reads % len(self.increments)]
+        self.reads += 1
+        return reading
+
+
 def validation_package_modules() -> list[Path]:
     """Return the gate orchestrator's own modules."""
 
@@ -560,12 +598,13 @@ def pipeline_run_observation(
     steps: tuple[Step, ...],
     exit_codes: Sequence[int],
     outputs: Sequence[str] = (),
+    monotonic: Callable[[], float] = time.monotonic,
 ) -> PipelineRunObservation:
     """Run the ad-hoc pipeline over ``steps`` with scripted children."""
 
     spawner = RecordingSpawner(exit_codes=list(exit_codes), outputs=list(outputs))
     sink = io.StringIO()
-    exit_code = run(spawner=spawner, sink=sink, steps=steps)
+    exit_code = run(spawner=spawner, sink=sink, steps=steps, monotonic=monotonic)
     output = sink.getvalue()
     summary_path = summary_path_from_output(output)
     return PipelineRunObservation(
@@ -1149,6 +1188,7 @@ class BoundedAdvancingClock:
 
 __all__ = [
     "HangingHandle",
+    "ScriptedMonotonicClock",
     "RecordingGitRunner",
     "RecordingHandle",
     "RecordingSpawner",

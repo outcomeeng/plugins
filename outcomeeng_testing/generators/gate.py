@@ -78,6 +78,28 @@ def step_lists() -> SearchStrategy[tuple[Step, ...]]:
     ).map(tuple)
 
 
+# Every interval between two consecutive clock reads spans at least one whole
+# second, so a step's elapsed value stays nonzero after rounding to seconds.
+MIN_CLOCK_INCREMENT_SECONDS: Final = 1.0
+MAX_CLOCK_INCREMENT_SECONDS: Final = 3600.0
+MAX_CLOCK_INCREMENTS: Final = 8
+
+
+def clock_increments() -> SearchStrategy[tuple[float, ...]]:
+    """Positive per-read advances of a controlled monotonic clock."""
+
+    return st.lists(
+        st.floats(
+            min_value=MIN_CLOCK_INCREMENT_SECONDS,
+            max_value=MAX_CLOCK_INCREMENT_SECONDS,
+            allow_nan=False,
+            allow_infinity=False,
+        ),
+        min_size=1,
+        max_size=MAX_CLOCK_INCREMENTS,
+    ).map(tuple)
+
+
 @dataclass(frozen=True)
 class GeneratedTestFile:
     """A generated test-file path and the execution level it was composed at."""

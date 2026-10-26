@@ -17,9 +17,11 @@ from outcomeeng.validation import (
 )
 from outcomeeng_testing.harnesses.gate import (
     PASS_EXIT_CODE,
+    ScriptedMonotonicClock,
     pipeline_run_observation,
     step_list_property,
     summary_steps,
+    timed_step_list_property,
 )
 
 TIMING_ROW_PATTERN: Final = re.compile(r"\s+([0-9]+)s$")
@@ -52,12 +54,32 @@ def test_spawn_order_matches_step_list_order() -> None:
     _spawn_order_matches_step_list_order()
 
 
-@step_list_property
+# Assertion design record: elapsed-time property
+# - Assertion: for any step that exits 0, the elapsed-time value recorded in
+#   the timing summary is a non-negative integer (universal, open domain).
+# - Production subject: the gate engine's per-step elapsed read, observed
+#   through the timing-summary rows and the structured summary durations.
+# - Case provenance: step lists from the gate generator; per-read clock
+#   advances from the gate generator, each at least one second so every step
+#   interval is positive and nonzero after rounding.
+# - Oracle owner: the spec's non-negative-integer relationship; the controlled
+#   clock only supplies readings, the predicate stays in this test.
+# - Rejected mutation: `round(step_start - monotonic())` at the step elapsed
+#   read in the engine.
+# - Failure observation: that mutation records a value of at most -1, which the
+#   timing-row pattern does not match (len(elapsed_values) != len(steps)) and
+#   which fails `duration >= 0` in the structured summary.
+
+
+@timed_step_list_property
 def _elapsed_time_is_non_negative_for_completed_steps(
     steps: tuple[Step, ...],
+    increments: tuple[float, ...],
 ) -> None:
     observation = pipeline_run_observation(
-        steps=steps, exit_codes=[PASS_EXIT_CODE] * len(steps)
+        steps=steps,
+        exit_codes=[PASS_EXIT_CODE] * len(steps),
+        monotonic=ScriptedMonotonicClock(increments=increments),
     )
 
     elapsed_values = _timing_summary_elapsed_values(observation.output)
