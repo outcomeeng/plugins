@@ -63,10 +63,23 @@ def argvs() -> SearchStrategy[tuple[str, ...]]:
     return st.lists(st.text()).map(tuple)
 
 
+# A step label stays on the one status line and timing row the gate prints for
+# it; every character str.splitlines breaks on falls in these categories.
+STEP_LABEL_EXCLUDED_CATEGORIES: Final = ("Cc", "Zl", "Zp")
+
+
 def steps() -> SearchStrategy[Step]:
     """Generated validation step records over the Step model domain."""
 
-    return st.builds(Step, label=st.text(), argv=argvs())
+    return st.builds(
+        Step,
+        label=st.text(
+            alphabet=st.characters(
+                codec="utf-8", exclude_categories=STEP_LABEL_EXCLUDED_CATEGORIES
+            )
+        ),
+        argv=argvs(),
+    )
 
 
 def step_lists() -> SearchStrategy[tuple[Step, ...]]:
