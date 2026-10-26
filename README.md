@@ -236,9 +236,10 @@ claude plugin marketplace update outcomeeng
 claude plugin install product-tree@outcomeeng --scope project
 ```
 
-Codex adds the successor first and then removes the old plugin. After the marketplace refresh, `spec-tree` no longer appears in `codex plugin list`, and `codex plugin remove spec-tree@outcomeeng` still removes it, together with its entry in `$CODEX_HOME/config.toml` and its cache:
+On Codex, refresh the marketplace, add the successor, and then remove the old plugin. After the refresh, `spec-tree` no longer appears in `codex plugin list`, and `codex plugin remove spec-tree@outcomeeng` still removes it, together with its entry in `$CODEX_HOME/config.toml` and its cache:
 
 ```bash
+codex plugin marketplace upgrade outcomeeng
 codex plugin add product-tree@outcomeeng
 codex plugin remove spec-tree@outcomeeng
 ```
@@ -254,6 +255,20 @@ Run the `update-instruction-block` skill of the `product-tree` plugin in each re
 ### The Codex agent registry
 
 Codex reads subagent definitions from `$CODEX_HOME/agents`. Run the `product-tree-plugin` skill in Codex with the `upgrade` verb. It writes the `product-tree_*.toml` definitions and prunes the `spec-tree_*.toml` definitions that the marketplace ownership record lists, while their content still matches the record. A definition you changed, or replaced with a link, stays in place and the step reports it as `retained`: delete that file by hand.
+
+### The Codex order
+
+Run the Codex steps in this order:
+
+1. Refresh the marketplace with `codex plugin marketplace upgrade outcomeeng`.
+2. Add the successor with `codex plugin add product-tree@outcomeeng`.
+3. Remove the old plugin with `codex plugin remove spec-tree@outcomeeng`.
+4. Replace `[plugins."spec-tree@outcomeeng"]` with `[plugins."product-tree@outcomeeng"]` in each project's `.codex/config.toml`.
+5. Start a new Codex session, so the session loads `product-tree`.
+6. Run the `product-tree-plugin` skill with the `upgrade` verb.
+7. If the skill reports a file as `retained`, delete that file by hand.
+
+Run the `update-instruction-block` skill in the same new session.
 
 ## Plugins
 
