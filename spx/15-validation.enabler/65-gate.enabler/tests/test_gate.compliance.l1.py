@@ -190,6 +190,9 @@ def test_subprocess_lives_only_in_the_production_spawner() -> None:
         assert isinstance(preexec_fn, ast.Name)
         assert preexec_fn.id == "_restore_child_signal_mask"
     assert "signal.pthread_sigmask(signal.SIG_UNBLOCK" in source
+    assert sorted(forwarded.name for forwarded in FORWARDED_SIGNALS) == sorted(
+        member.name for member in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
+    )
     for forwarded in FORWARDED_SIGNALS:
         assert f"signal.{forwarded.name}" in source
 
