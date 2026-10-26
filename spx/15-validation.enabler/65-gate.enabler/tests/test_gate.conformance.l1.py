@@ -11,7 +11,6 @@ from outcomeeng.validation import (
     PHASE_PREFLIGHT,
     PRIMITIVE_SUMMARY_SCHEMA,
     RECIPE_AD_HOC,
-    SPAWN_FAILURE_EXIT_CODE,
     SUMMARY_KEY_PHASE,
     SUMMARY_KEY_RECIPE,
     SUMMARY_KEY_SUMMARY_PATH,
@@ -19,13 +18,14 @@ from outcomeeng.validation import (
     assert_json_schema,
 )
 from outcomeeng_testing.harnesses.gate import (
+    FAIL_EXIT_CODE,
     PASS_EXIT_CODE,
     check_run_observation,
     pipeline_run_observation,
     recipe_run_observation,
 )
 
-FAIL = SPAWN_FAILURE_EXIT_CODE
+FAIL = FAIL_EXIT_CODE
 RECIPE_STEP_COUNT = len(VALIDATION_RECIPE.preflight_steps) + len(
     VALIDATION_RECIPE.steps
 )
