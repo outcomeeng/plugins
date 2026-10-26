@@ -38,6 +38,8 @@ _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 TEST_ROOTS: Final = (SPEC_TREE_ROOT, TESTS_DIRECTORY_NAME)
 PYTHON_SOURCE_PATHS: Final = ("outcomeeng", "outcomeeng_testing", "outcomeeng_evals")
 INSTRUCTION_BLOCK_ARGV: Final = _INSTRUCTION_BLOCK_ARGV
+# The command that starts the validation entry point; each recipe word follows it.
+VALIDATION_ENTRY_COMMAND: Final = ("python3", "-m", str(__package__))
 
 RECIPE_VALIDATION: Final = "validation"
 RECIPE_TEST: Final = "test"

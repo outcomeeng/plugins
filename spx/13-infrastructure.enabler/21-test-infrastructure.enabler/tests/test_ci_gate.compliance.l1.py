@@ -12,6 +12,7 @@ from outcomeeng.validation import (
     CI_CREDENTIALS_ARGV,
     RECIPE_TEST_L3,
     SHELLCHECK_ARGV,
+    VALIDATION_ENTRY_COMMAND,
 )
 from outcomeeng.validation.ci_credentials import (
     CredentialViolation,
@@ -79,7 +80,10 @@ def test_gate_workflow_runs_the_full_gate_and_then_the_l3_tests() -> None:
 
 @pytest.mark.parametrize("recipe", (RECIPE_CHECK_FULL, RECIPE_TEST_L3))
 def test_each_gate_recipe_dispatches_its_own_validation_command(recipe: str) -> None:
-    assert justfile_recipe_dispatch(recipe).recipe_words == (recipe,)
+    dispatch = justfile_recipe_dispatch(recipe)
+
+    assert dispatch.entry == VALIDATION_ENTRY_COMMAND
+    assert dispatch.recipe_words == (recipe,)
 
 
 def test_a_gate_job_without_the_l3_tests_is_detected() -> None:

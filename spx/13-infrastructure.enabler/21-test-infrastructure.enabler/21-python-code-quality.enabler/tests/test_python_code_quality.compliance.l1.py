@@ -8,6 +8,7 @@ from outcomeeng.validation import (
     MYPY_ARGV,
     PYRIGHT_ARGV,
     RUFF_CHECK_ARGV,
+    VALIDATION_ENTRY_COMMAND,
 )
 from outcomeeng.validation.selected_gate import RECIPE_CHECK_FULL, build_full_gate_plan
 from outcomeeng_testing.harnesses.l3_collection import (
@@ -32,6 +33,7 @@ def test_static_analysis_steps_are_named_steps_of_the_full_gate() -> None:
         for selected in build_full_gate_plan(()).selected_steps
     }
 
+    assert dispatch.entry == VALIDATION_ENTRY_COMMAND
     assert dispatch.recipe_words == (RECIPE_CHECK_FULL,)
     for argv in (RUFF_CHECK_ARGV, MYPY_ARGV, PYRIGHT_ARGV):
         assert argv in full_gate_steps
@@ -67,6 +69,7 @@ def test_a_check_full_recipe_that_skips_the_full_gate_is_detected() -> None:
         justfile=full_gate_skipping_recipe_fixture_path(),
     )
 
+    assert dispatch.entry == VALIDATION_ENTRY_COMMAND
     assert dispatch.recipe_words != (RECIPE_CHECK_FULL,)
 
 

@@ -27,7 +27,7 @@ from tempfile import TemporaryDirectory
 from typing import Final
 
 from outcomeeng.validation import L3_LEVEL, PREFLIGHT_STEPS, PYTEST_ARGV, TEST_STEPS
-import outcomeeng.validation.__main__ as validation_entry
+from outcomeeng.validation import VALIDATION_ENTRY_COMMAND
 from outcomeeng.validation.__main__ import main as validation_main
 from outcomeeng.validation._steps import PYTEST_NODE_ID_SEPARATOR
 from outcomeeng.validation.selected_gate import SelectedGatePlan
@@ -234,10 +234,10 @@ def justfile_recipe_command(
 
 @dataclass(frozen=True)
 class RecipeDispatch:
-    """A resolved recipe line split after the validation package it runs.
+    """A resolved recipe line split after its first validation-entry-length words.
 
-    `entry` holds the words through the package name, the command that starts
-    the validation entry point; `recipe_words` holds the words it passes on.
+    `entry` holds the words in the position of the command that starts the
+    validation entry point; `recipe_words` holds the words after them.
     """
 
     entry: tuple[str, ...]
@@ -247,8 +247,8 @@ class RecipeDispatch:
 def justfile_recipe_dispatch(
     recipe: str, *arguments: str, justfile: Path | None = None
 ) -> RecipeDispatch:
-    """Return the command a `justfile` resolves ``recipe`` to, split at the validation package."""
+    """Return the command a `justfile` resolves ``recipe`` to, split after the entry position."""
 
     command = justfile_recipe_command(recipe, *arguments, justfile=justfile)
-    split = command.index(str(validation_entry.__package__)) + 1
+    split = len(VALIDATION_ENTRY_COMMAND)
     return RecipeDispatch(entry=command[:split], recipe_words=command[split:])

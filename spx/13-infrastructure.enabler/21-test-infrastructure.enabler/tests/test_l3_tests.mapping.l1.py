@@ -10,6 +10,7 @@ from outcomeeng.validation import (
     PYTEST_ARGV,
     RECIPE_TEST,
     RECIPE_TEST_L3,
+    VALIDATION_ENTRY_COMMAND,
     l3_recipe,
     test_recipe as direct_test_recipe,
 )
@@ -19,7 +20,6 @@ from outcomeeng_testing.generators.gate import (
 )
 from outcomeeng_testing.harnesses.l3_collection import (
     fixture_collection,
-    justfile_recipe_command,
     justfile_recipe_dispatch,
     pytest_argument_tail,
     recipe_dispatch_spawns,
@@ -80,9 +80,10 @@ def test_the_dispatch_collects_exactly_the_l3_files_of_a_repository() -> None:
 
 
 def test_the_justfile_recipe_runs_the_l3_dispatch() -> None:
-    entry = justfile_recipe_dispatch(RECIPE_TEST).entry
+    dispatch = justfile_recipe_dispatch(RECIPE_TEST_L3)
 
-    assert justfile_recipe_command(RECIPE_TEST_L3) == (*entry, RECIPE_TEST_L3)
+    assert dispatch.entry == VALIDATION_ENTRY_COMMAND
+    assert dispatch.recipe_words == (RECIPE_TEST_L3,)
 
 
 @pytest.mark.parametrize("named", L3_FIXTURE_PATHS)
@@ -90,9 +91,10 @@ def test_the_justfile_test_recipe_forwards_a_named_file_to_the_test_dispatch(
     named: str,
 ) -> None:
     fixture = l3_fixture_files()
-    forwarded = justfile_recipe_dispatch(RECIPE_TEST, named).recipe_words
+    dispatch = justfile_recipe_dispatch(RECIPE_TEST, named)
 
-    spawns = recipe_dispatch_spawns(forwarded, fixture)
+    assert dispatch.entry == VALIDATION_ENTRY_COMMAND
+    spawns = recipe_dispatch_spawns(dispatch.recipe_words, fixture)
     (pytest_call,) = (
         call for call in spawns if call[: len(PYTEST_ARGV)] == PYTEST_ARGV
     )

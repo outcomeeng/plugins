@@ -31,6 +31,7 @@ from outcomeeng.validation._steps import (
     RECIPE_TEST,
     RECIPE_TEST_L3,
     RECIPE_VALIDATION,
+    VALIDATION_ENTRY_COMMAND,
     VALIDATION_RECIPE,
     discover_l3_tests,
     l3_recipe,
@@ -39,7 +40,7 @@ from outcomeeng.validation._steps import (
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="python3 -m outcomeeng.validation")
+    parser = argparse.ArgumentParser(prog=" ".join(VALIDATION_ENTRY_COMMAND))
     parser.add_argument(
         "recipe",
         nargs="?",
