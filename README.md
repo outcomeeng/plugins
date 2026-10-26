@@ -526,12 +526,12 @@ Work deliverables: /draw-excalidraw (Excalidraw diagrams), /sanitize-powerpoint 
 
 Skills are distributed as standalone repositories, compatible with any agent that supports the [Agent Skills](https://vercel.com/docs/agent-resources/skills) open standard.
 
-| Repository                                                 | Purpose                                                 | Install                                  |
-| ---------------------------------------------------------- | ------------------------------------------------------- | ---------------------------------------- |
-| [product-tree](https://github.com/outcomeeng/product-tree) | Product Tree methodology skills for Outcome Engineering | `npx skills add outcomeeng/product-tree` |
-| [python](https://github.com/outcomeeng/python)             | Python engineering skills                               | `npx skills add outcomeeng/python`       |
-| [typescript](https://github.com/outcomeeng/typescript)     | TypeScript engineering skills                           | `npx skills add outcomeeng/typescript`   |
-| [foundation](https://github.com/outcomeeng/foundation)     | Foundation skills (prose, plugin development, frontend) | `npx skills add outcomeeng/foundation`   |
+| Repository                                             | Purpose                                                 | Install                                |
+| ------------------------------------------------------ | ------------------------------------------------------- | -------------------------------------- |
+| [spec-tree](https://github.com/outcomeeng/spec-tree)   | Product Tree methodology skills for Outcome Engineering | `npx skills add outcomeeng/spec-tree`  |
+| [python](https://github.com/outcomeeng/python)         | Python engineering skills                               | `npx skills add outcomeeng/python`     |
+| [typescript](https://github.com/outcomeeng/typescript) | TypeScript engineering skills                           | `npx skills add outcomeeng/typescript` |
+| [foundation](https://github.com/outcomeeng/foundation) | Foundation skills (prose, plugin development, frontend) | `npx skills add outcomeeng/foundation` |
 
 ## Documentation
 
