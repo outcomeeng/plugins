@@ -110,7 +110,7 @@ maturity: Framed
 harness: claude
 session: 1eac3860-9961-4a52-b8cf-5172095e5f04
 machine: shz@sibook
-worktree: /Users/shz/Code/outcomeeng/methodology/worktrees/director
+worktree: /Users/dev/repo-executor
 position: Methodology Director
 ```
 
