@@ -355,6 +355,7 @@ def test_repository_declares_exactly_one_spx_revision_pin() -> None:
 
     assert observation.pin_variables == {SPX_COMMIT_ENVIRONMENT}
     assert len(observation.revisions) == 1
+    assert observation.checkout_count == 1
 
 
 def test_gate_workflow_never_installs_spx_from_the_registry() -> None:
@@ -385,6 +386,15 @@ def test_second_spx_checkout_revision_is_detected() -> None:
     )
 
     assert len(observation.revisions) > 1
+
+
+def test_second_spx_checkout_with_the_same_revision_is_detected() -> None:
+    observation = observe_spx_revision_pins(
+        gate_fixture_path("spx_duplicate_literal_pin")
+    )
+
+    assert len(observation.revisions) == 1
+    assert observation.checkout_count > 1
 
 
 def test_second_spx_pin_variable_is_detected() -> None:

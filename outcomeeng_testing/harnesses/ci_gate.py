@@ -118,6 +118,7 @@ class SpxRevisionPinObservation:
 
     revisions: frozenset[str]
     pin_variables: frozenset[str]
+    checkout_count: int
 
 
 @dataclass(frozen=True)
@@ -310,6 +311,7 @@ def observe_spx_revision_pins(
     directory = WORKFLOW_DIRECTORY if workflow_directory is None else workflow_directory
     revisions: set[str] = set()
     variables: set[str] = set()
+    checkout_count = 0
     for path in workflow_paths(directory):
         for job in cast(
             "dict[str, Any]", workflow(path).get(WORKFLOW_JOBS_KEY) or {}
@@ -319,6 +321,7 @@ def observe_spx_revision_pins(
                 inputs = cast("dict[str, str]", step.get(STEP_WITH_KEY, {}))
                 if inputs.get(CHECKOUT_REPOSITORY_KEY) != SPX_REPOSITORY:
                     continue
+                checkout_count += 1
                 reference = inputs.get(CHECKOUT_REF_KEY, "")
                 named = ENV_REFERENCE_PATTERN.fullmatch(reference)
                 if named is None:
@@ -327,5 +330,7 @@ def observe_spx_revision_pins(
                     variables.add(named.group(1))
                     revisions.add(env.get(named.group(1), reference))
     return SpxRevisionPinObservation(
-        revisions=frozenset(revisions), pin_variables=frozenset(variables)
+        revisions=frozenset(revisions),
+        pin_variables=frozenset(variables),
+        checkout_count=checkout_count,
     )
