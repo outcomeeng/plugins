@@ -74,6 +74,16 @@ issue its blockers reach, each read once in breadth-first order with its
 blockers; it reads at most ``BLOCKERS_WALK_MAX_ISSUES`` issues and blocks with
 ``page-bound-reached`` naming that bound when a blocker remains unread.
 
+``read-blockers`` and ``walk-blockers`` start ``gh`` and are tested apart from
+the runs above, in this process over replayed store answers: a read of two
+blockers, one open and one closed, asks for one page of ``BLOCKERS_PAGE_SIZE``
+and returns each blocker's identity and openness; a read whose page holds
+``BLOCKERS_PAGE_SIZE`` blockers blocks with ``page-bound-reached`` naming the
+page and returns no blockers; a walk of three issues reads each issue once in
+breadth-first order and returns its graph; and a walk that meets more than
+``BLOCKERS_WALK_MAX_ISSUES`` issues reads exactly that many, then blocks with
+``page-bound-reached`` naming the bound and returns no graph.
+
 ``count-limits`` reads the candidate and starts no process beyond the
 repository-root lookup; it returns the title's word count and the Intent
 section's word count, labels included, with the limit of each, and lists those
