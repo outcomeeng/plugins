@@ -257,16 +257,6 @@ The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's
 
 **Settlement condition.** A decision states whether an implementation audit executes a shipped executable, and the review's execution of the subject has a named owner. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.
 
-## The script-decomposition ADR's second opening paragraph states a journey, not atemporal truth
-
-The second opening paragraph of [`spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md`](spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md) describes the three helper modules by their place in a migration: it says what they remain, what they still own, what the skill path no longer does, and what holds until a later move.
-
-**Evidence.** The paragraph carries the temporal phrases "remain shipped helper and legacy policy modules during the stop-gap", "still owns the full changeset diff bundle", "no longer exposes them to Claude and no longer depends on `journal_emit.py finding-reported`", "For this local mitigation, finding shape and citation validation move out of the skill path", and "is the authoritative event boundary until review-specific validation moves into SPX". The decision-record audit of the ADR, run during outcomeeng/changes#556, filed one temporal-voice finding on this paragraph, which that Change left unchanged.
-
-**Impact.** A reader of the decision learns the modules' state relative to a past and a future rather than the rule that governs them, and each later decision-record audit of the ADR files the same finding again.
-
-**Settlement condition.** The paragraph states atemporal truth after an operator-reviewed amendment of the ADR.
-
 ## The review prompt's rule citation names a decision file, not the clause the finding rests on
 
 **Evidence.** `<rule_citation>` in `src/plugins/product-tree/skills/review-changes/references/review-prompt.md` accepts an ADR or PDR as `spx/<path>/<n>-<slug>.adr.md` or `spx/<path>/<n>-<slug>.pdr.md` with no clause component, while a spec assertion carries `:<MUST|NEVER|ALWAYS|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|AUDIT>:<n>`. `<finding_validity>` asks `message` to state the violated rule and never to name a clause. The citation grammar is declared by the `Finding.rule` assertions of [`spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md`](spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md), parsed by `src/plugins/product-tree/skills/review-changes/scripts/review_result.py`, and pinned by `tests/test_review_result.mapping.l1.py` and `tests/test_review_result.compliance.l1.py`. Property 7 of [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) makes the class of a finding the rule it cites as the cited standard defines that rule, so a review finding that cites a decision file leaves the clause to the free text of `message`. The CI review of pull request 683 raised it as a debt finding on head `ab243a44ec6b7e75762ad7629b5b6479afeb673b` (comment `issuecomment-6233117818`); the pull request leaves `review-prompt.md` untouched.

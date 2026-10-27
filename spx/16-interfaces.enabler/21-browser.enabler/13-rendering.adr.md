@@ -27,6 +27,6 @@ Interactive affordances are first-class because the interface is a manipulation 
 
 ### Audit
 
-- ALWAYS: render from the SPX CLI's JSON projection — the browser interface never re-parses directory suffixes, assembles hierarchy, or derives node state itself ([audit])
-- ALWAYS: ship the design system as the product's own vendored assets — tokens and components copied into the plugin, with no runtime dependency on another product's design system ([audit])
-- NEVER: add a build-time or runtime dependency for the rendering layer that violates the plugin portability constraints — stdlib Python, static HTML/CSS/JS assets, no Node build, no package fetch — per [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) ([audit])
+- ALWAYS: render from the SPX CLI's JSON projection — the browser interface never re-parses directory suffixes, assembles hierarchy, or derives node state itself ([audit:render-from-projection])
+- ALWAYS: ship the design system as the product's own vendored assets — tokens and components copied into the plugin, with no runtime dependency on another product's design system ([audit:vendored-design-system])
+- NEVER: add a build-time or runtime dependency for the rendering layer that violates the plugin portability constraints — stdlib Python, static HTML/CSS/JS assets, no Node build, no package fetch — per [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) ([audit:rendering-portability])
