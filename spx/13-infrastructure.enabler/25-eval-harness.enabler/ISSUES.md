@@ -8,22 +8,17 @@ The harness supports `--workers` for parallelism within a suite. `run --all` cou
 
 ## CI integration
 
-The CI workflow `.github/workflows/product-tree-evals.yml` runs planned eval
-suites through `outcomeeng-evals ci`. It discovers each `eval.toml` under the
-configured root, filters out `ci_policy = "manual"` suites, and chooses
-full-suite, smoke-case, or skipped execution from the trigger mode and
-changed paths. PRs run smoke cases when a changed file matches a suite's
-`owned_paths`, run a full suite when the suite definition or eval harness
-changed, and skip unrelated suites. `push` to main, the weekly schedule, and
-`workflow_dispatch` run every non-manual suite under the configured root.
-Each selected suite runs through the Python CI executor, which constructs the
+The CI workflow `.github/workflows/product-tree-evals.yml` starts only on
+`workflow_dispatch`. A dispatched run executes the full plan through
+`outcomeeng-evals ci`: it discovers each `eval.toml` under the configured
+root, filters out `ci_policy = "manual"` suites, and runs every remaining
+suite through the Python CI executor, which constructs the
 `outcomeeng-evals run` command using the suite's `plugin_dir` or the workflow
-fallback, and the job gates on the aggregate exit code.
+fallback. The job gates on the aggregate exit code. The `plan` and `ci`
+subcommands still map a changed-path list to suites through each eval's
+`owned_paths` on a developer's machine.
 
-The workflow triggers on PRs touching declared eval ownership surfaces, pushes
-to `main` for the same surfaces, a weekly `schedule`, and `workflow_dispatch`.
-PR execution is gated by collaborator authorization so untrusted PRs never
-receive secrets. The runner follows the auth mode already provisioned in the
+The dispatcher's write access authorizes a run. The runner follows the auth mode already provisioned in the
 inherited environment per `eval-harness.md`: a non-empty `ANTHROPIC_API_KEY`
 selects the `--bare` path, and an absent or empty `ANTHROPIC_API_KEY` keeps the
 non-bare path while preserving the inherited environment, including
@@ -35,7 +30,7 @@ CI owns the canonical appends on main: `product-tree-evals.yml`'s commit-back st
 
 `append_history_row` (in `outcomeeng_evals/history.py`) opens the file in append mode and writes one line. Within a single `outcomeeng-evals run` the GIL serializes the workers, so rows land in case order. But two overlapping `run` invocations against the same eval directory — a CI matrix, or a developer running while CI runs — can interleave their rows in the file (`merge=union` resolves the *git merge*, not the *concurrent write*). `product-tree-evals.yml` serializes its main/schedule runs (concurrency group per ref, `cancel-in-progress: false`), so the workflow's own runs don't interleave their appends. The file lock (`fcntl.flock` or a lockfile) is only needed if a developer runs the same eval while CI runs it, or if the workflow later fans out the same eval across a matrix.
 
-The eval CI workflow (`product-tree-evals.yml`) scopes to trusted triggers: `push` to `main`, `schedule`, and `workflow_dispatch` run unconditionally; `pull_request` runs only after the `authorize` job confirms the PR is same-repo (not a fork) and its author has `admin`/`maintain`/`write` permission. Fork PRs are skipped because GitHub withholds secrets from `pull_request` events triggered by a fork, so the `claude` subprocess would never receive `CLAUDE_CODE_OAUTH_TOKEN`. `_subprocess_env` forwards the full job environment to the `claude` subprocess, so an eval crafted in an untrusted PR could otherwise exfiltrate job secrets; the mitigation is the trigger scoping plus the authorization gate, not env filtering (auth resolution requires the inherited env).
+The eval CI workflow (`product-tree-evals.yml`) starts only on `workflow_dispatch`, which requires write access to the repository. `_subprocess_env` forwards the full job environment to the `claude` subprocess, so an eval crafted in an untrusted PR could otherwise exfiltrate job secrets; the mitigation is that no pull-request, push, or schedule event starts the workflow, not env filtering (auth resolution requires the inherited env).
 
 ## FOLLOW-UP: no PR-time guarantee that `dist/claude/product-tree` matches `src/plugins/product-tree` (RESOLVED)
 
@@ -73,12 +68,6 @@ CommonMark does not treat a line opening with three or more backticks as a fence
 ## Partial-trial evidence in parallel-path errors
 
 `_error_outcome` (in `outcomeeng_evals/suite.py`) replaces all of a case's trials with one synthetic `trial_index=0` failing trial when the worker raises. If trial 1 passed and trial 2 raised, the successful trial's evidence is lost from the report. A richer error outcome — successful trials kept, the error appended as the final trial — would preserve that evidence. Defer; today's runs use `trials_per_case = 1`, so the loss is moot until multi-trial parallel runs are common.
-
-## CI-trigger marker regex lacks line-start anchoring
-
-`outcomeeng_evals/ci_triggers.py` compiles its `# BEGIN eval-trigger-paths` block-matching regex without a `^` anchor or `re.MULTILINE`, so it can match the marker text mid-line, unlike the `^...$`-anchored router and shared-region matchers in the instruction-block module. `spx/local/generated-sources.toml` declares line-start matching for this marker family and notes the deviation; the declared rule governs attribution, per [`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md).
-
-**Resolution shape**: anchor the block pattern to the start of a line and cover the anchoring in the node's ci-trigger tests, then drop the deviation note from `spx/local/generated-sources.toml`.
 
 ## The shipped harness retires its producer-coupling assertions at the cutover
 
