@@ -1,0 +1,19 @@
+{
+  "declared": [],
+  "issues": {
+    "example-org/example-changes#12": {
+      "data": {
+        "repository": {
+          "issue": {
+            "blockedBy": {
+              "pageInfo": { "hasNextPage": true, "endCursor": "cursor-more" },
+              "nodes": [
+                { "number": 7, "state": "OPEN", "repository": { "nameWithOwner": "example-org/example-changes" } }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

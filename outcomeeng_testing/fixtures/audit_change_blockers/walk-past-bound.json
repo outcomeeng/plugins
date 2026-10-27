@@ -1,0 +1,166 @@
+{
+  "declared": [],
+  "issues": {
+    "example-org/example-changes#12": {
+      "data": {
+        "repository": {
+          "issue": {
+            "blockedBy": {
+              "pageInfo": { "hasNextPage": false, "endCursor": "cursor-end" },
+              "nodes": [
+                { "number": 13, "state": "OPEN", "repository": { "nameWithOwner": "example-org/example-changes" } }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "example-org/example-changes#13": {
+      "data": {
+        "repository": {
+          "issue": {
+            "blockedBy": {
+              "pageInfo": { "hasNextPage": false, "endCursor": "cursor-end" },
+              "nodes": [
+                { "number": 14, "state": "OPEN", "repository": { "nameWithOwner": "example-org/example-changes" } }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "example-org/example-changes#14": {
+      "data": {
+        "repository": {
+          "issue": {
+            "blockedBy": {
+              "pageInfo": { "hasNextPage": false, "endCursor": "cursor-end" },
+              "nodes": [
+                { "number": 15, "state": "OPEN", "repository": { "nameWithOwner": "example-org/example-changes" } }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "example-org/example-changes#15": {
+      "data": {
+        "repository": {
+          "issue": {
+            "blockedBy": {
+              "pageInfo": { "hasNextPage": false, "endCursor": "cursor-end" },
+              "nodes": [
+                { "number": 16, "state": "OPEN", "repository": { "nameWithOwner": "example-org/example-changes" } }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "example-org/example-changes#16": {
+      "data": {
+        "repository": {
+          "issue": {
+            "blockedBy": {
+              "pageInfo": { "hasNextPage": false, "endCursor": "cursor-end" },
+              "nodes": [
+                { "number": 17, "state": "OPEN", "repository": { "nameWithOwner": "example-org/example-changes" } }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "example-org/example-changes#17": {
+      "data": {
+        "repository": {
+          "issue": {
+            "blockedBy": {
+              "pageInfo": { "hasNextPage": false, "endCursor": "cursor-end" },
+              "nodes": [
+                { "number": 18, "state": "OPEN", "repository": { "nameWithOwner": "example-org/example-changes" } }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "example-org/example-changes#18": {
+      "data": {
+        "repository": {
+          "issue": {
+            "blockedBy": {
+              "pageInfo": { "hasNextPage": false, "endCursor": "cursor-end" },
+              "nodes": [
+                { "number": 19, "state": "OPEN", "repository": { "nameWithOwner": "example-org/example-changes" } }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "example-org/example-changes#19": {
+      "data": {
+        "repository": {
+          "issue": {
+            "blockedBy": {
+              "pageInfo": { "hasNextPage": false, "endCursor": "cursor-end" },
+              "nodes": [
+                { "number": 20, "state": "OPEN", "repository": { "nameWithOwner": "example-org/example-changes" } }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "example-org/example-changes#20": {
+      "data": {
+        "repository": {
+          "issue": {
+            "blockedBy": {
+              "pageInfo": { "hasNextPage": false, "endCursor": "cursor-end" },
+              "nodes": [
+                { "number": 21, "state": "OPEN", "repository": { "nameWithOwner": "example-org/example-changes" } }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "example-org/example-changes#21": {
+      "data": {
+        "repository": {
+          "issue": {
+            "blockedBy": {
+              "pageInfo": { "hasNextPage": false, "endCursor": "cursor-end" },
+              "nodes": [
+                { "number": 22, "state": "OPEN", "repository": { "nameWithOwner": "example-org/example-changes" } }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "example-org/example-changes#22": {
+      "data": {
+        "repository": {
+          "issue": {
+            "blockedBy": {
+              "pageInfo": { "hasNextPage": false, "endCursor": "cursor-end" },
+              "nodes": [
+                { "number": 23, "state": "OPEN", "repository": { "nameWithOwner": "example-org/example-changes" } }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "example-org/example-changes#23": {
+      "data": {
+        "repository": {
+          "issue": { "blockedBy": { "pageInfo": { "hasNextPage": false, "endCursor": "cursor-end" }, "nodes": [] } }
+        }
+      }
+    }
+  }
+}

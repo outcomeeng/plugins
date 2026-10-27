@@ -1,0 +1,23 @@
+{
+  "declared": [
+    { "identity": "example-org/example-changes#7", "open": true },
+    { "identity": "example-org/example-changes#9", "open": false }
+  ],
+  "issues": {
+    "example-org/example-changes#12": {
+      "data": {
+        "repository": {
+          "issue": {
+            "blockedBy": {
+              "pageInfo": { "hasNextPage": false, "endCursor": "cursor-end" },
+              "nodes": [
+                { "number": 7, "state": "OPEN", "repository": { "nameWithOwner": "example-org/example-changes" } },
+                { "number": 9, "state": "CLOSED", "repository": { "nameWithOwner": "example-org/example-changes" } }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
