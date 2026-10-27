@@ -130,23 +130,10 @@ PYTEST_ARGV: Final = (
     *L3_SKIP_ARGV,
 )
 
-# Generated eval artifacts. Both derive from `eval.toml` definitions and the
-# producers those definitions name; both fail the gate when the committed
-# artifact drifts from what the source now renders.
+# Generated eval artifacts. The prompts derive from `eval.toml` definitions and
+# the producers those definitions name; the gate fails when a committed prompt
+# drifts from what the source now renders.
 EVALS_ROOT: Final = "spx"
-EVAL_TRIGGER_WORKFLOW: Final = ".github/workflows/product-tree-evals.yml"
-EVAL_TRIGGERS_ARGV: Final = (
-    "uv",
-    "run",
-    "outcomeeng-evals",
-    "materialize-ci-triggers",
-    EVALS_ROOT,
-    "--workflow",
-    EVAL_TRIGGER_WORKFLOW,
-    "--repo-root",
-    ".",
-    "--check",
-)
 EVAL_PROMPTS_ARGV: Final = (
     "uv",
     "run",
@@ -332,7 +319,6 @@ VALIDATION_STEPS: Final = (
             "--check",
         ),
     ),
-    Step(label="eval-triggers", argv=EVAL_TRIGGERS_ARGV),
     Step(label="eval-prompts", argv=EVAL_PROMPTS_ARGV),
     Step(label="markdown", argv=SPX_MARKDOWN_ARGV),
     Step(label="eval-links", argv=EVAL_LINKS_ARGV),
