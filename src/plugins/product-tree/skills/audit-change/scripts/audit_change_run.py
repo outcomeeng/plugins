@@ -1466,7 +1466,9 @@ def _issue_blockers(
         node = node.get(key) if isinstance(node, dict) else None
     connection = node.get(StoreField.BLOCKED_BY) if isinstance(node, dict) else None
     nodes = connection.get(StoreField.NODES) if isinstance(connection, dict) else None
-    info = connection.get(StoreField.PAGE_INFO) if isinstance(connection, dict) else None
+    info = (
+        connection.get(StoreField.PAGE_INFO) if isinstance(connection, dict) else None
+    )
     if not isinstance(nodes, list) or not isinstance(info, dict):
         raise Blocked(
             BlockReason.UNREADABLE_OUTPUT,
