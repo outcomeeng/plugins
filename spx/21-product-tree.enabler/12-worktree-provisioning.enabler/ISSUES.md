@@ -11,16 +11,15 @@ into the SPX CLI once the script proves its value; the provisioner has proven
 its value in use, so extraction is what it owes.
 
 The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product,
-and the plugins product may depend on the resulting capability only once it is
-published to npm and `REQUIRED_SPX_VERSION` advances to it. That sequencing puts
-the fix outside any changeset confined to this repository. The same dependency
-gates the waiter and the instruction-block generator, tracked in
-https://github.com/outcomeeng/changes/issues/796 and
-`spx/21-product-tree.enabler/43-instruction-block.enabler/ISSUES.md`.
+and the plugins product may depend on the resulting capability once the
+`SPX_COMMIT` pin in `.github/workflows/check.yml` advances to a commit that
+contains it. That sequencing puts the fix outside any changeset confined to this
+repository.
 
 **Resolution shape**: port layout classification and pool provisioning into the
-SPX CLI, publish it, advance the floor, and reduce the shipped skill to its
-instruction with no script. Revisit when the capability publishes.
+SPX CLI, advance the CI pin to a commit that contains the port, and reduce the
+shipped skill to its instruction with no script. Revisit when the pin carries
+the capability.
 
 ## Four universal Compliance assertions rest on scenario-typed evidence
 
