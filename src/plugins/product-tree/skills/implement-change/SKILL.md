@@ -12,7 +12,7 @@ One product-tree node's implementation in its target language, with every langua
 
 <load_gating>
 
-Use skill `product-tree:wait-for-load` for every resource-intensive command any step below runs: run the waiter and that command as one line in the foreground, and report a result only after every such line has exited.
+Use skill `product-tree:wait-for-load` for every resource-intensive command any step below runs: run each one under that skill's guard line in the foreground, and report a result only after every such line has exited.
 
 </load_gating>
 

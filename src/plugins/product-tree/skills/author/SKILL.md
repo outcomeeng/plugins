@@ -234,7 +234,7 @@ spx/{parent-path}/{NN}-{slug}.{kind}/
 2. Write the spec file
 3. Leave `tests/` absent; the selected test specialist materializes it with the first test file.
 4. If the implementation doesn't exist yet: the node merges as Declared or Specified and the projector derives its state; on a toolchain that has not adopted the status claim, apply the passing-scope list per `/understand` `references/status-claims.md`.
-5. For spec-only authoring, validate the untagged declaration with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline. `/apply` later invokes `/verify`, whose selected specialist owns any evidence path it adds. Use skill `product-tree:wait-for-load` for every resource-intensive command: run the waiter and that command as one line in the foreground, and report a result only after every such line has exited.
+5. For spec-only authoring, validate the untagged declaration with `spx validation markdown` and `spx spec status --format json`; reserve `spx validation all` for changes that touch implementation code, authored tests, validation configuration, or the validation pipeline. `/apply` later invokes `/verify`, whose selected specialist owns any evidence path it adds. Use skill `product-tree:wait-for-load` for every resource-intensive command: run each one under that skill's guard line in the foreground, and report a result only after every such line has exited.
 
 **For decision records:**
 

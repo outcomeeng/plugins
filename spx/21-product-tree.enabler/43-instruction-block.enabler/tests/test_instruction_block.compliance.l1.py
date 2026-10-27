@@ -285,12 +285,12 @@ def test_wait_for_load_stop_trigger_policy() -> None:
     for enabled_languages in harness.template_language_subsets():
         documents = evidence.rendered_instruction_blocks(enabled_languages)
         dist.validate_wait_for_load_policy(documents)
-        for _, requirement in dist.WAIT_FOR_LOAD_POLICY_REQUIREMENTS:
+        for name, requirement in dist.WAIT_FOR_LOAD_POLICY_REQUIREMENTS:
             removed = {
                 agent_harness: document.replace(requirement, "", 1)
                 for agent_harness, document in documents.items()
             }
-            with pytest.raises(dist.WaitForLoadPolicyError):
+            with pytest.raises(dist.WaitForLoadPolicyError, match=name):
                 dist.validate_wait_for_load_policy(removed)
             relocated = {
                 agent_harness: document.replace(
@@ -302,17 +302,17 @@ def test_wait_for_load_stop_trigger_policy() -> None:
                 )
                 for agent_harness, document in documents.items()
             }
-            with pytest.raises(dist.WaitForLoadPolicyError):
+            with pytest.raises(dist.WaitForLoadPolicyError, match=name):
                 dist.validate_wait_for_load_policy(relocated)
         codex_document = documents[harness.HARNESS_CODEX]
         claude_router = dist.managed_router_block(documents[harness.HARNESS_CLAUDE])
-        for _, requirement in dist.WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS:
+        for name, requirement in dist.WAIT_FOR_LOAD_CODEX_POLICY_REQUIREMENTS:
             assert requirement not in claude_router
             removed = {
                 **documents,
                 harness.HARNESS_CODEX: codex_document.replace(requirement, "", 1),
             }
-            with pytest.raises(dist.WaitForLoadPolicyError):
+            with pytest.raises(dist.WaitForLoadPolicyError, match=name):
                 dist.validate_wait_for_load_policy(removed)
         for contradiction in dist.WAIT_FOR_LOAD_POLICY_CONTRADICTIONS:
             contradicted = {
@@ -325,7 +325,7 @@ def test_wait_for_load_stop_trigger_policy() -> None:
                 )
                 for agent_harness, document in documents.items()
             }
-            with pytest.raises(dist.WaitForLoadPolicyError):
+            with pytest.raises(dist.WaitForLoadPolicyError, match=contradiction.name):
                 dist.validate_wait_for_load_policy(contradicted)
 
 

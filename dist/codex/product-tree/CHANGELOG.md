@@ -10,6 +10,32 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.109.4
+
+### Changed
+
+- **`/wait-for-load` runs every resource-intensive command under `spx orchestration lock`.** The skill passes the command as the argument vector after `--` in `spx orchestration lock --run-id <uuid> -- <command>`, with a run id it generates for that line, and reads the guard's final standard-error record, whose `schema` is `spx.orchestration.lock.result.v1` and whose `runId` matches, deciding from `started` and `status` together. The skill reads no lock switch and no repository overlay, so the guard admits every resource-intensive command on every repository, and one host-wide slot admits one heavy run at a time. Before this change, the guard applied only where a repository's `spx/local/wait-for-load.md` held `orchestration-lock: on`, and every other repository chained its command behind a host-load waiter that observed load and held no slot, so sessions that saw the same load dip started their heavy commands together.
+
+- **`/author` runs every resource-intensive command under the lock line.** The spec-only validation step tells the caller to use `/wait-for-load` for each resource-intensive command, to run each one under that skill's guard line in the foreground, and to report a result only after every such line has exited. The skill no longer respells the lock command, so `/wait-for-load` alone owns its form. Before this change, the step told the caller to chain the command behind a host-load waiter.
+
+- **`/verify` runs every resource-intensive command under the lock line.** The skill tells the caller to use `/wait-for-load` for each resource-intensive command, to run each one under that skill's guard line in the foreground, and to report a result only after every such line has exited. The skill no longer respells the lock command, so `/wait-for-load` alone owns its form. Before this change, the skill told the caller to chain the command behind a host-load waiter.
+
+- **`/test` runs every resource-intensive command under the lock line.** The skill tells the caller to use `/wait-for-load` for each resource-intensive command, to run each one under that skill's guard line in the foreground, and to report a result only after every such line has exited. The skill no longer respells the lock command, so `/wait-for-load` alone owns its form. Before this change, the skill told the caller to chain the command behind a host-load waiter.
+
+- **`/implement-change` runs every resource-intensive command under the lock line.** The skill tells the caller to use `/wait-for-load` for each resource-intensive command any step runs, to run each one under that skill's guard line in the foreground, and to report a result only after every such line has exited. The skill no longer respells the lock command, so `/wait-for-load` alone owns its form. Before this change, the skill told the caller to chain the command behind a host-load waiter.
+
+- **`/execute-change` runs every resource-intensive command under the lock line.** The skill tells the caller to use `/wait-for-load` for each resource-intensive command any step runs, to run each one under that skill's guard line in the foreground, and to report a result only after every such line has exited. The skill no longer respells the lock command, so `/wait-for-load` alone owns its form. Before this change, the skill told the caller to chain the command behind a host-load waiter.
+
+- **The Product Tree router names one lock line for every resource-intensive command.** The `/wait-for-load` section of the generated router in each harness's root instruction file tells the caller to run each resource-intensive command as the argument vector of `spx orchestration lock --run-id <id> -- <command>` on one shell line, and the Codex router keeps that line in one `functions.exec` call. The section names no lock switch, no `spx/local/wait-for-load.md` overlay, and no host-load waiter. Before this change, the router had the caller read a lock switch from the overlay and chain the command behind a waiter wherever the switch was off.
+
+### Removed
+
+- **`/wait-for-load` ships no waiter script.** The skill no longer carries `scripts/wait_for_load.py`, its `python3` allowed-tools entry, its terminal-status table, or its waiter-only failure modes. The guard's help declares the exit codes and the terminal record the skill reads. A consumer repository that kept `spx/local/wait-for-load.md` can remove it, because nothing reads it, and one that chained its commands behind the waiter script uses the lock line instead.
+
+### Requires
+
+- **The `spx` CLI provides `orchestration lock`.** The skill invokes it on every repository, so a consumer's `spx` must be a build that ships the command, which `spx` 0.10.0 does and 0.9.0 does not.
+
 ## 0.109.3
 
 ### Changed
