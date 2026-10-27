@@ -301,7 +301,7 @@ Siblings and children enter as published contracts, never subtree internals. `te
 
 A type's verdict mode is fixed, so whoever runs it reaches the same verdict, and a model never judges a deterministic verdict. The type set and the three modes never expand without amending this foundation and its governing decision. Evidence is what verification produces and commits; a test file, eval rule, or probe protocol is the assertion made executable, never evidence. Every attributed result carries a pin naming the declaration, the artifact, and the subject; a change to any pinned path invalidates it — test and evaluate run again, audit receives a new judgment, probe a fresh attested run.
 
-After a mechanical repair, Validate runs and every Test and Evaluate result the repair invalidates runs again; the repair adds no Verifier pass of its own, and the next Verifier pass judges it. An override is a verification run in which the operator's delegate sets aside one Agentic verdict, or the absence of one; no override applies to a Deterministic result.
+After a mechanical repair, Validate runs and every Test and Evaluate result the repair invalidates runs again; the repair adds no Verifier pass of its own, and the next Verifier pass judges it. An override is a verification run in which the operator's delegate sets aside an Audit verdict, a Review rejection, or an audit that reached no verdict; no override applies to a Deterministic result.
 
 </types>
 
