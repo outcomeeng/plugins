@@ -22,6 +22,7 @@ from outcomeeng_testing.harnesses.product_tree import (
     marketplace_tracked_files,
 )
 
+
 def _product_root() -> Path:
     return marketplace_root_for_product_tree_root_test(__file__)
 

@@ -206,7 +206,9 @@ def observe_ci_toolchain(
     workflow_data = workflow(workflow_path)
     env = cast("dict[str, str]", gate_job(workflow_data).get(JOB_ENV_KEY, {}))
     steps = gate_steps(workflow_data)
-    runs = tuple(cast("str", step[STEP_RUN_KEY]) for step in steps if STEP_RUN_KEY in step)
+    runs = tuple(
+        cast("str", step[STEP_RUN_KEY]) for step in steps if STEP_RUN_KEY in step
+    )
     return CiToolchainObservation(
         job_environment=frozenset(env),
         action_references=tuple(
@@ -288,7 +290,9 @@ def observe_spx_source(workflow_path: Path | None = None) -> SpxSourceObservatio
     env = cast("dict[str, str]", job.get(JOB_ENV_KEY, {}))
     checkouts = tuple(
         (
-            cast("dict[str, str]", step.get(STEP_WITH_KEY, {})).get(CHECKOUT_REPOSITORY_KEY),
+            cast("dict[str, str]", step.get(STEP_WITH_KEY, {})).get(
+                CHECKOUT_REPOSITORY_KEY
+            ),
             cast("dict[str, str]", step.get(STEP_WITH_KEY, {})).get(CHECKOUT_REF_KEY),
         )
         for step in gate_steps(workflow(workflow_path))
@@ -307,7 +311,9 @@ def observe_spx_revision_pins(
     revisions: set[str] = set()
     variables: set[str] = set()
     for path in workflow_paths(directory):
-        for job in cast("dict[str, Any]", workflow(path).get(WORKFLOW_JOBS_KEY) or {}).values():
+        for job in cast(
+            "dict[str, Any]", workflow(path).get(WORKFLOW_JOBS_KEY) or {}
+        ).values():
             env = cast("dict[str, str]", job.get(JOB_ENV_KEY, {}))
             for step in cast("list[dict[str, Any]]", job.get(JOB_STEPS_KEY, [])):
                 inputs = cast("dict[str, str]", step.get(STEP_WITH_KEY, {}))
