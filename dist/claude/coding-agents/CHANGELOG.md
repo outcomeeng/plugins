@@ -6,6 +6,18 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## Unreleased
+
+### Changed
+
+- **`/orchestrate-change` grants the Executor session the verification-run write paths and checks them before the session receives the Change.** Before each start and relaunch, the skill obtains from `spx verification run paths` the directories a changeset-scoped `audit` run and `review` run write, and passes each as one `--add-dir` argument in the start's `agentArguments`, leaving the operator's approval policy unchanged. After the session is ready and before the Change's issue reference is sent, a permission preflight reads the session's effective permissions; a denied path stops the start or relaunch with a `configuration-error` result naming each denied path, and the Executor receives no Change. The paths are planned anew for every start, relaunch, and change of verification scope, and the skill holds no store path of its own.
+- **`/direct-positions restart` grants the relaunched position session the verification-run write paths and checks them before the session receives work.** A restart no longer runs through `act`, which relaunched the session with no launch arguments; `act` and its script drop the `restart` operation, so no script path relaunches a session without the write paths; the skill's `restart` step obtains from `spx -C <position working directory> verification run paths`, scoped to `origin/HEAD..HEAD`, the directories a changeset-scoped `audit` run and `review` run write and relaunches the herdr session into the same pane, addressed by its `pane` id, with each as one `--add-dir` argument for a `claude` or a `codex` session, leaving the operator's approval policy unchanged. A session kind outside those two, such as `pi`, whose harness offers no such option stops the restart with a configuration error before the stop. After the relaunch, a permission preflight reads the session's effective permissions; a denied path stops the restart with a configuration error naming each denied path, and the session receives no work. The paths are planned anew for every restart and every change of verification scope, and the skill holds no store path of its own.
+- **`/orchestrate-change` resolves the verification-run write paths before it writes the Claim.** The command runs as `spx -C <worktree root> verification run paths`, scoped to `origin/HEAD..HEAD`, so the paths describe the Executor's worktree and not the Orchestrator's. A failing `spx verification run paths` stops the start, or the restart of an Executor session, with its report verbatim before any Claim is written, so no Change is left Claimed with no Executor running.
+
+### Requires
+
+- **`@outcomeeng/spx` 0.10.0 or newer, any build that reports that version, which carries `spx verification run paths`.**
+
 ## 0.17.0
 
 ### Breaking
@@ -42,18 +54,6 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 ### Changed
 
 - **`/direct-positions` and `/orchestrate-change` name the `product-tree` plugin.** The resume line names `/product-tree:understand`, the Executor start selects the `product-tree` plugin's `change-executor` definition, and the claim runs through `product-tree:claim-change`. Before this change, each named `spec-tree`, which stops resolving once the methodology plugin is installed under its new name.
-
-## Unreleased
-
-### Changed
-
-- **`/orchestrate-change` grants the Executor session the verification-run write paths and checks them before the session receives the Change.** Before each start and relaunch, the skill obtains from `spx verification run paths` the directories a changeset-scoped `audit` run and `review` run write, and passes each as one `--add-dir` argument in the start's `agentArguments`, leaving the operator's approval policy unchanged. After the session is ready and before the Change's issue reference is sent, a permission preflight reads the session's effective permissions; a denied path stops the start or relaunch with a `configuration-error` result naming each denied path, and the Executor receives no Change. The paths are planned anew for every start, relaunch, and change of verification scope, and the skill holds no store path of its own.
-- **`/direct-positions restart` grants the relaunched position session the verification-run write paths and checks them before the session receives work.** A restart no longer runs through `act`, which relaunched the session with no launch arguments; `act` and its script drop the `restart` operation, so no script path relaunches a session without the write paths; the skill's `restart` step obtains from `spx -C <position working directory> verification run paths`, scoped to `origin/HEAD..HEAD`, the directories a changeset-scoped `audit` run and `review` run write and relaunches the herdr session into the same pane, addressed by its `pane` id, with each as one `--add-dir` argument for a `claude` or a `codex` session, leaving the operator's approval policy unchanged. A session kind outside those two, such as `pi`, whose harness offers no such option stops the restart with a configuration error before the stop. After the relaunch, a permission preflight reads the session's effective permissions; a denied path stops the restart with a configuration error naming each denied path, and the session receives no work. The paths are planned anew for every restart and every change of verification scope, and the skill holds no store path of its own.
-- **`/orchestrate-change` resolves the verification-run write paths before it writes the Claim.** The command runs as `spx -C <worktree root> verification run paths`, scoped to `origin/HEAD..HEAD`, so the paths describe the Executor's worktree and not the Orchestrator's. A failing `spx verification run paths` stops the start, or the restart of an Executor session, with its report verbatim before any Claim is written, so no Change is left Claimed with no Executor running.
-
-### Requires
-
-- **`@outcomeeng/spx` 0.10.0 or newer, any build that reports that version, which carries `spx verification run paths`.**
 
 ## 0.16.3
 
