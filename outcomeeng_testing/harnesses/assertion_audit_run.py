@@ -1,4 +1,4 @@
-"""Drive an assertion-audit run through the pinned published SPX release.
+"""Drive an assertion-audit run through the spx build that meets the repository floor.
 
 The payload objects and the selectors come from the ``/audit-assertions`` skill
 text itself, rendered with the run's own values, so the observations describe the
