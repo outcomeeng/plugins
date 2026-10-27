@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /Users/dev/.claude/plugins/cache/outcomeeng/product-tree/0.57.33/scripts/x.py || echo '{}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

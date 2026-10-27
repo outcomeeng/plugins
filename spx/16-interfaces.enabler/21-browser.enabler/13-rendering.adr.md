@@ -1,10 +1,10 @@
 # Browser Interface Rendering
 
-The browser interface renders from the SPX CLI's JSON projection of the spec tree, applies the product's own vendored design system, and produces interactive HTML — drag-drop restructuring, inline commenting, expand/collapse — rather than static read-only output.
+The browser interface renders from the SPX CLI's JSON projection of the Product Tree, applies the product's own vendored design system, and produces interactive HTML — drag-drop restructuring, inline commenting, expand/collapse — rather than static read-only output.
 
 ## Rationale
 
-The spec-tree projection — structure, derived state, and the node and decision categories — is available from the SPX CLI as JSON, so the interface reads it rather than re-deriving it. Re-parsing directory suffixes or deriving state in the interface would duplicate the methodology's own engine and drift from it.
+The product-tree projection — structure, derived state, and the node and decision categories — is available from the SPX CLI as JSON, so the interface reads it rather than re-deriving it. Re-parsing directory suffixes or deriving state in the interface would duplicate the methodology's own engine and drift from it.
 
 The design system is vendored — its tokens and component vocabulary copied into the plugin and owned by this product — because the plugin ships independently into consumer repositories under the portability constraints (stdlib Python, static assets, no Node build step, no runtime package fetch). A runtime dependency on another product's design system would break that independence. A separate product with its own design language shares visual heritage by copy, never by a runtime dependency.
 

@@ -79,11 +79,11 @@ FIXTURES_DIR: Final = REPO_ROOT / "outcomeeng_testing/fixtures/instruction_block
 INSTRUCTION_BLOCK_PROPERTY_EXAMPLES: Final = 50
 INSTRUCTION_BLOCK_PROPERTY_SEED: Final = 20260714
 INSTRUCTION_BLOCK_PROPERTY_REPLAY_PATH: Final = (
-    "just test spx/21-spec-tree.enabler/43-instruction-block.enabler/tests/"
+    "just test spx/21-product-tree.enabler/43-instruction-block.enabler/tests/"
     "test_instruction_block.property.l1.py"
 )
 LANGUAGE_OVERRIDE_PROPERTY_REPLAY_PATH: Final = (
-    "just test spx/21-spec-tree.enabler/43-instruction-block.enabler/tests/"
+    "just test spx/21-product-tree.enabler/43-instruction-block.enabler/tests/"
     "test_language_override.property.l1.py"
 )
 

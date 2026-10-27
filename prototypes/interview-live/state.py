@@ -15,7 +15,7 @@ State document shape::
         "current": Question | None,# the one being asked now
         "settled": [Question],     # answered, each carrying a "choice"
       },
-      "tree": [Node],              # spec-tree nodes, nested
+      "tree": [Node],              # Product Tree nodes, nested
       "updatedAt": str | None,     # ISO-8601 of last mutation
     }
 
@@ -248,7 +248,7 @@ def _h_tree_add(state: dict, event: dict) -> str | None:
             return "missing_node"
         # Node-type nesting rules (e.g. enablers cannot hold outcome children)
         # are intentionally NOT enforced here: that domain constraint belongs to
-        # the spec-tree layer this spike feeds, not to the generic core.
+        # the Product Tree layer this spike feeds, not to the generic core.
         siblings = parent["children"]
     new_node = {
         "id": event["nodeId"],

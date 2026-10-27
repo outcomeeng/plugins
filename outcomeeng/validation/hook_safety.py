@@ -38,6 +38,14 @@ from typing import Final
 
 from outcomeeng.validation.hook_contract import SESSION_START_EVENT
 
+# The hook configuration shape the validator reads: the file it scans for, the
+# directory that file sits in, and the fields of each handler it judges.
+HOOKS_FILENAME: Final = "hooks.json"
+HOOKS_DIRNAME: Final = "hooks"
+HOOKS_FIELD: Final = "hooks"
+COMMAND_FIELD: Final = "command"
+TIMEOUT_FIELD: Final = "timeout"
+
 # Events observational on EVERY runtime the marketplace ships a hook to. The same
 # hooks.json ships byte-identical to dist/claude and dist/codex, so an event is safe
 # only when it is non-blocking on both Claude Code and Codex. The set is the
@@ -52,53 +60,82 @@ SAFE_EVENTS: Final[frozenset[str]] = frozenset(
     }
 )
 
+# Events blocking-capable on Codex alone: Claude Code treats them as non-blocking, but
+# Codex can use each to block continuation. The same hooks.json ships to both runtimes,
+# so each is outside the cross-runtime safe set.
+CODEX_ONLY_BLOCKING_EVENTS: Final[frozenset[str]] = frozenset(
+    {
+        "PostToolUse",
+        "PostToolUseFailure",
+        "PostCompact",
+    }
+)
+
 # Documented blocking-capable events on either runtime: exit 2, a deny/block decision,
 # a timeout, or a ``continue: false`` denies or halts the agent's action. Enforcement
 # flags anything outside SAFE_EVENTS — every event here plus any unrecognized event —
 # so this set sharpens the message and pins the domain the compliance evidence
-# exercises. PostToolUse, PostToolUseFailure, and PostCompact are blocking-capable on
-# Codex even though Claude Code treats them as non-blocking.
-BLOCKING_EVENTS: Final[frozenset[str]] = frozenset(
-    {
-        "PreToolUse",
-        "UserPromptSubmit",
-        "UserPromptExpansion",
-        "PermissionRequest",
-        "PostToolBatch",
-        "PostToolUse",
-        "PostToolUseFailure",
-        "Stop",
-        "SubagentStop",
-        "TeammateIdle",
-        "TaskCreated",
-        "TaskCompleted",
-        "ConfigChange",
-        "PreCompact",
-        "PostCompact",
-        "WorktreeCreate",
-        "Elicitation",
-        "ElicitationResult",
-    }
+# exercises.
+BLOCKING_EVENTS: Final[frozenset[str]] = (
+    frozenset(
+        {
+            "PreToolUse",
+            "UserPromptSubmit",
+            "UserPromptExpansion",
+            "PermissionRequest",
+            "PostToolBatch",
+            "Stop",
+            "SubagentStop",
+            "TeammateIdle",
+            "TaskCreated",
+            "TaskCompleted",
+            "ConfigChange",
+            "PreCompact",
+            "WorktreeCreate",
+            "Elicitation",
+            "ElicitationResult",
+        }
+    )
+    | CODEX_ONLY_BLOCKING_EVENTS
 )
 
-# A reference into the plugin tree by a substituted path, regardless of extension — a
-# ``.py``/``.sh`` script, an extensionless wrapper, or any file whose absence under a
-# drifted plugin root makes a bare invocation fail. The build emits two distributions
-# with different path tokens: dist/claude keeps ``${CLAUDE_PLUGIN_ROOT}`` /
+# The path tokens a hook command substitutes for the plugin tree. The build emits two
+# distributions with different tokens: dist/claude keeps ``${CLAUDE_PLUGIN_ROOT}`` /
 # ``${CLAUDE_SKILL_DIR}``, while dist/codex carries Codex's ``${PLUGIN_ROOT}`` and the
 # rewritten ``${SKILL_DIR}`` (build rewrites ``${CLAUDE_SKILL_DIR}`` → ``${SKILL_DIR}``;
 # ``${CLAUDE_PLUGIN_ROOT}`` is preserved via Codex's alias). All four are matched so a
 # bare invocation is caught in whichever tree it lands.
-_SUBSTITUTED_SCRIPT: Final[re.Pattern[str]] = re.compile(
-    r"\$\{(?:CLAUDE_PLUGIN_ROOT|CLAUDE_SKILL_DIR|PLUGIN_ROOT|SKILL_DIR)\}[\"']?/[^\s|;&]*"
+SUBSTITUTED_PATH_TOKENS: Final[tuple[str, ...]] = (
+    "CLAUDE_PLUGIN_ROOT",
+    "CLAUDE_SKILL_DIR",
+    "PLUGIN_ROOT",
+    "SKILL_DIR",
 )
-# A short-circuit fallback (``||``) following the substituted-path invocation. This is
-# the deterministic, falsifiable half of the contract: a substituted-path command with
-# no ``||`` fallback at all is bare and is flagged. Whether the fallback's floor is a
-# terminal successful empty-result emission is a shell-semantics property no regex
-# verifies — that is the audited inline-guard property of the hook safety contract,
-# not this check.
-_FALLBACK: Final[re.Pattern[str]] = re.compile(r"\|\|")
+# The shell short-circuit operator whose presence after a substituted-path invocation
+# makes the invocation guarded.
+FALLBACK_OPERATOR: Final = "||"
+
+# The rule text of each violation the validator reports, after the ``<event>: `` prefix.
+BLOCKING_EVENT_MESSAGE: Final = (
+    "hook on blocking-capable event — exit 2 or a timeout would deny the agent's action"
+)
+UNKNOWN_EVENT_MESSAGE: Final = "hook on an event outside the known non-blocking set — only observe/inject events are permitted"
+MISSING_TIMEOUT_MESSAGE: Final = "hook handler declares no explicit timeout"
+BARE_SUBSTITUTED_PATH_MESSAGE: Final = "hook command invokes a script at a substituted path with no inline short-circuit fallback"
+PINNED_CACHE_MESSAGE: Final = "hook command names a version-pinned plugin cache path"
+
+# A reference into the plugin tree by a substituted path, regardless of extension — a
+# ``.py``/``.sh`` script, an extensionless wrapper, or any file whose absence under a
+# drifted plugin root makes a bare invocation fail.
+_SUBSTITUTED_SCRIPT: Final[re.Pattern[str]] = re.compile(
+    r"\$\{(?:" + "|".join(SUBSTITUTED_PATH_TOKENS) + r")\}[\"']?/[^\s|;&]*"
+)
+# A short-circuit fallback following the substituted-path invocation. This is the
+# deterministic, falsifiable half of the contract: a substituted-path command with no
+# fallback at all is bare and is flagged. Whether the fallback's floor is a terminal
+# successful empty-result emission is a shell-semantics property no regex verifies —
+# that is the audited inline-guard property of the hook safety contract, not this check.
+_FALLBACK: Final[re.Pattern[str]] = re.compile(re.escape(FALLBACK_OPERATOR))
 # A version-pinned plugin cache path (a semver segment under a cache directory).
 _PINNED_CACHE: Final[re.Pattern[str]] = re.compile(r"/cache/\S*?\d+\.\d+\.\d+")
 
@@ -108,8 +145,8 @@ def _event_violation(event: str) -> str | None:
     if event in SAFE_EVENTS:
         return None
     if event in BLOCKING_EVENTS:
-        return f"{event}: hook on blocking-capable event — exit 2 or a timeout would deny the agent's action"
-    return f"{event}: hook on an event outside the known non-blocking set — only observe/inject events are permitted"
+        return f"{event}: {BLOCKING_EVENT_MESSAGE}"
+    return f"{event}: {UNKNOWN_EVENT_MESSAGE}"
 
 
 def _command_violations(event: str, command: str) -> list[str]:
@@ -121,12 +158,10 @@ def _command_violations(event: str, command: str) -> list[str]:
     for match in _SUBSTITUTED_SCRIPT.finditer(command):
         statement = command[match.end() :].split(";", 1)[0]
         if _FALLBACK.search(statement) is None:
-            found.append(
-                f"{event}: hook command invokes a script at a substituted path with no inline short-circuit fallback"
-            )
+            found.append(f"{event}: {BARE_SUBSTITUTED_PATH_MESSAGE}")
             break
     if _PINNED_CACHE.search(command):
-        found.append(f"{event}: hook command names a version-pinned plugin cache path")
+        found.append(f"{event}: {PINNED_CACHE_MESSAGE}")
     return found
 
 
@@ -139,7 +174,7 @@ def hook_config_violations(config: Mapping[str, object]) -> list[str]:
     cache path.
     """
     violations: list[str] = []
-    hooks = config.get("hooks")
+    hooks = config.get(HOOKS_FIELD)
     if not isinstance(hooks, Mapping):
         return violations
     for raw_event, blocks in hooks.items():
@@ -151,18 +186,16 @@ def hook_config_violations(config: Mapping[str, object]) -> list[str]:
         for block in blocks:
             if not isinstance(block, Mapping):
                 continue
-            handlers = block.get("hooks")
+            handlers = block.get(HOOKS_FIELD)
             if not isinstance(handlers, list):
                 continue
             for handler in handlers:
                 if not isinstance(handler, Mapping):
                     continue
                 saw_handler = True
-                if "timeout" not in handler:
-                    violations.append(
-                        f"{event}: hook handler declares no explicit timeout"
-                    )
-                command = handler.get("command")
+                if TIMEOUT_FIELD not in handler:
+                    violations.append(f"{event}: {MISSING_TIMEOUT_MESSAGE}")
+                command = handler.get(COMMAND_FIELD)
                 if isinstance(command, str):
                     violations.extend(_command_violations(event, command))
         # Report the event-level violation once per event, not once per handler.
@@ -174,8 +207,8 @@ def hook_config_violations(config: Mapping[str, object]) -> list[str]:
 def iter_tree_violations(root: Path) -> list[str]:
     """Scan every ``hooks/hooks.json`` under ``root`` and return located violations."""
     violations: list[str] = []
-    for hooks_file in sorted(root.rglob("hooks.json")):
-        if hooks_file.parent.name != "hooks":
+    for hooks_file in sorted(root.rglob(HOOKS_FILENAME)):
+        if hooks_file.parent.name != HOOKS_DIRNAME:
             continue
         try:
             parsed: object = json.loads(hooks_file.read_text(encoding="utf-8"))

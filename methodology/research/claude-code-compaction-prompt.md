@@ -6,7 +6,7 @@ date: 2026-03-26
 
 ## How compact continuity works
 
-Claude Code's standard compact summary is the sole compact-summary prompt surface. The spec-tree plugin defines no user-scope or product-scope `compactPrompt` override.
+Claude Code's standard compact summary is the sole compact-summary prompt surface. The product-tree plugin defines no user-scope or product-scope `compactPrompt` override.
 
 After compaction, the managed root instruction block requires `/understand` before the next product-content access and `/contextualize` on the governing spec node before any product content it governs is read or modified; the set of contextualized nodes is empty after a compaction, and an operational continuation that touches no product content triggers neither reload. The standard summary carries task reconstruction; the root instruction block carries the reload requirement, and the inline `/understand` foundation is authoritative over this note.
 

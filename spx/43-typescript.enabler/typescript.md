@@ -5,10 +5,10 @@ malleability: spec
 # TypeScript
 
 PROVIDES the complete TypeScript development workflow — architecture, testing, implementation, and review
-SO THAT TypeScript projects using spec-tree
+SO THAT TypeScript projects using product-tree
 CAN produce implementations governed by ADRs, verified by evidence-based tests, and audited for quality
 
-The TypeScript plugin composes foundational methodology with language-specific standards and workflows. The `audit-typescript-{code|test|architecture}` skills carry no language-specific auditor agent; `implementation-auditor` composes all three, `adr-auditor` composes `audit-typescript-architecture`, and `test-evidence-auditor` composes `audit-typescript-test`, per [`spx/21-spec-tree.enabler/17-audit.adr.md`](spx/21-spec-tree.enabler/17-audit.adr.md).
+The TypeScript plugin composes foundational methodology with language-specific standards and workflows. The `audit-typescript-{code|test|architecture}` skills carry no language-specific auditor agent; `implementation-auditor` composes all three, `adr-auditor` composes `audit-typescript-architecture`, and `test-evidence-auditor` composes `audit-typescript-test`, per [`spx/21-product-tree.enabler/17-audit.adr.md`](spx/21-product-tree.enabler/17-audit.adr.md).
 
 ## Assertions
 

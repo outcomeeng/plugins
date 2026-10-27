@@ -39,7 +39,7 @@ Execute the phases in order.
 1. Determine the production files in scope
 2. Read `CLAUDE.md` and `README.md` for review constraints and naming conventions that inform comprehension — read for context, never to run a gate
 3. Read `go.mod` and the linter configuration when present
-4. Identify applicable ADRs and PDRs in the spec hierarchy if the code belongs to a spec-tree node
+4. Identify applicable ADRs and PDRs in the spec hierarchy if the code belongs to a product-tree node
 
 **Phase 1: Code comprehension**
 

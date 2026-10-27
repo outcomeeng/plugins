@@ -36,7 +36,7 @@ The Rust delta is the discriminator in Rust terms: a `pub` item in the product c
 
 ## The Rust node still carries nine compliance assertions
 
-The subtractive reduction removed the restated language-neutral seam assertions from `rust.md`, which cites `test-verification.md` and [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md) for them, and left 9 Compliance assertions where it had 15. That is above the roughly-7 signal in `spx/21-spec-tree.enabler/54-decomposing.enabler/decomposing.md`. Duplication no longer forces a decomposition, and assertion count does not close it. Rust has no test-standards subtree to absorb the residual deltas, unlike its Python and TypeScript siblings.
+The subtractive reduction removed the restated language-neutral seam assertions from `rust.md`, which cites `test-verification.md` and [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md) for them, and left 9 Compliance assertions where it had 15. That is above the roughly-7 signal in `spx/21-product-tree.enabler/54-decomposing.enabler/decomposing.md`. Duplication no longer forces a decomposition, and assertion count does not close it. Rust has no test-standards subtree to absorb the residual deltas, unlike its Python and TypeScript siblings.
 
 **Settlement condition.** A Rust test-standards subtree is warranted and `/decompose` creates it, or a Verifier skips the signal on the grounds this entry records.
 
@@ -58,13 +58,13 @@ A standard begins by loading the matching `/understand` template when one exists
 
 `instructions:skill-auditor` rejects three Rust skills for the `composed_dependency_form` rule. Each states a dependency as a slash mention or as `invoke`/`Invoke`/`Read` instead of ``Use skill `{plugin}:{skill}`.`` naming the exact installed skill. Every listed line is unchanged against `origin/main`:
 
-- `src/plugins/rust/skills/author-rust-architecture/SKILL.md` lines 36 ("Invoke `spec-tree:contextualize`"), 101 ("See `/author` skill"), 119 ("Read `/rust-test-standards`"), 124 ("Read `/author` skill for ADR template"), 153 ("(from `/understand`)") and 213 ("`/rust-test-standards` was loaded"). Line 72 of the same file already uses the exact form for `rust:rust-test-standards`, so the file is inconsistent with itself. Run `run-2026-10-16_23-46-45-343-9c6b28e60df3.jsonl`.
+- `src/plugins/rust/skills/author-rust-architecture/SKILL.md` lines 36 ("Invoke `product-tree:contextualize`"), 101 ("See `/author` skill"), 119 ("Read `/rust-test-standards`"), 124 ("Read `/author` skill for ADR template"), 153 ("(from `/understand`)") and 213 ("`/rust-test-standards` was loaded"). Line 72 of the same file already uses the exact form for `rust:rust-test-standards`, so the file is inconsistent with itself. Run `run-2026-10-16_23-46-45-343-9c6b28e60df3.jsonl`.
 - `src/plugins/rust/skills/simplify-rust-code/SKILL.md` lines 28 (`/understand`), 29 (`/scope-changeset`), 30 (`/contextualize`) and 76 (`/scope-changeset`). Run `run-2026-10-16_23-46-53-896-e4b6c2d39577.jsonl`; run `run-2026-10-16_23-30-17-467-300fe8a25927.jsonl` raised lines 28 to 30 against the same unchanged text.
-- `src/plugins/rust/skills/author-rust-code/SKILL.md` line 96 ("invoke `spec-tree:contextualize` with the full path"). Run `run-2026-10-16_23-46-48-006-fc4c697d67ea.jsonl`.
+- `src/plugins/rust/skills/author-rust-code/SKILL.md` line 96 ("invoke `product-tree:contextualize` with the full path"). Run `run-2026-10-16_23-46-48-006-fc4c697d67ea.jsonl`.
 
 All are blocking verdicts. The dependency form is the one the sibling lines in the same files already use, so the divergence is inside each skill.
 
-**Settlement condition.** Each listed dependency reads ``Use skill `spec-tree:contextualize`.``, ``Use skill `spec-tree:author`.``, ``Use skill `spec-tree:understand`.``, ``Use skill `spec-tree:scope-changeset`.`` or ``Use skill `rust:rust-test-standards`.`` as the dependency requires, and the changeset passes `instructions:skill-auditor` over the three skills.
+**Settlement condition.** Each listed dependency reads ``Use skill `product-tree:contextualize`.``, ``Use skill `product-tree:author`.``, ``Use skill `product-tree:understand`.``, ``Use skill `product-tree:scope-changeset`.`` or ``Use skill `rust:rust-test-standards`.`` as the dependency requires, and the changeset passes `instructions:skill-auditor` over the three skills.
 
 ## `author-rust-code` workflows name bundled references by bare relative path
 

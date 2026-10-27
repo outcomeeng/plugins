@@ -5,10 +5,10 @@ malleability: spec
 # Rust
 
 PROVIDES the complete Rust development workflow — architecture, testing, implementation, review, and unsafe-code auditing
-SO THAT Rust projects using spec-tree
+SO THAT Rust projects using product-tree
 CAN produce implementations governed by ADRs, verified by evidence-based tests, and audited for quality and soundness
 
-The Rust plugin composes foundational methodology with language-specific standards and workflows. The `audit-rust-{code|test|architecture}` skills carry no language-specific auditor agent; `implementation-auditor` composes all three, `adr-auditor` composes `audit-rust-architecture`, and `test-evidence-auditor` composes `audit-rust-test`, per [`spx/21-spec-tree.enabler/17-audit.adr.md`](spx/21-spec-tree.enabler/17-audit.adr.md). Rust `unsafe`/FFI soundness is part of the Rust code audit (`audit-rust-code`).
+The Rust plugin composes foundational methodology with language-specific standards and workflows. The `audit-rust-{code|test|architecture}` skills carry no language-specific auditor agent; `implementation-auditor` composes all three, `adr-auditor` composes `audit-rust-architecture`, and `test-evidence-auditor` composes `audit-rust-test`, per [`spx/21-product-tree.enabler/17-audit.adr.md`](spx/21-product-tree.enabler/17-audit.adr.md). Rust `unsafe`/FFI soundness is part of the Rust code audit (`audit-rust-code`).
 
 ## Assertions
 

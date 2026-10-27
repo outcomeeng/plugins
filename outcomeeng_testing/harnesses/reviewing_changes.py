@@ -1,11 +1,11 @@
 """Harness for review-changes scenario, property, and compliance tests.
 
 Provides the shared scaffolding consumed by every test file under
-``spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/tests/``:
+``spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/tests/``:
 
 - ``SCRIPTS_DIR`` and the per-script paths derived from it. A single source
   keeps every test file from walking ``__file__.parents[...]`` to find the
-  generated ``dist/claude/spec-tree/skills/review-changes/scripts`` tree, which
+  generated ``dist/claude/product-tree/skills/review-changes/scripts`` tree, which
   carries the agent-tokens data file the build renders beside ``review_result.py``.
 - ``run_review_result_with_agent_tokens_file``. Runs a copy of the module beside
   an agent-tokens file in a chosen state, observing the load failure it reports.
@@ -43,6 +43,7 @@ import json
 import os
 import pathlib
 import shutil
+import string
 import subprocess
 import sys
 import traceback
@@ -76,13 +77,13 @@ def _standard_traceback_header() -> str:
 
 TRACEBACK_HEADER = _standard_traceback_header()
 
-SKILL_DIR = REPO_ROOT / "src" / "plugins" / "spec-tree" / "skills" / "review-changes"
+SKILL_DIR = REPO_ROOT / "src" / "plugins" / "product-tree" / "skills" / "review-changes"
 SKILL_FILE = SKILL_DIR / "SKILL.md"
 # The scripts run from the generated tree: the build renders the agent-tokens data file
 # beside the one that reads it, so the authored directory alone cannot load that script.
 SCRIPTS_DIR = (
     DistTreeReader(REPO_ROOT).target_root(Target.CLAUDE)
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "review-changes"
     / "scripts"
@@ -99,24 +100,33 @@ COMPUTE_DIFF_SCRIPT = SCRIPTS_DIR / "compute_diff.py"
 JOURNAL_EMIT_SCRIPT = SCRIPTS_DIR / "journal_emit.py"
 REVIEW_RUN_SCRIPT = SCRIPTS_DIR / "review_run.py"
 
+# The fake ``spx`` journal: the token it issues at ``open`` and the keys of the file in
+# which it records what the runner asked of it.
+FAKE_RUN_TOKEN = "run-001"
+FAKE_JOURNAL_COMMANDS = "commands"
+FAKE_JOURNAL_EVENTS = "events"
+FAKE_JOURNAL_SEALED = "sealed"
+FAKE_JOURNAL_NAMESPACE = "namespace"
+FAKE_JOURNAL_RUN_TOKEN = "runToken"
+
 WRAPPER_AGENT_PATH = (
-    REPO_ROOT / "src" / "plugins" / "spec-tree" / "agents" / "changes-reviewer.md"
+    REPO_ROOT / "src" / "plugins" / "product-tree" / "agents" / "changes-reviewer.md"
 )
 
 # Fixture rule citation: a real path-style citation that satisfies the
 # parser's rule-form check. Points at this verification skill's own spec so the citation
 # is stable and self-contained — no external rule required.
 FIXTURE_RULE_CITATION = (
-    "spx/21-spec-tree.enabler/68-reviewing.enabler/"
+    "spx/21-product-tree.enabler/68-reviewing.enabler/"
     "21-reviewing-changes.enabler/reviewing-changes.md:ALWAYS:1"
 )
 FIXTURE_ADR_RULE_CITATION = (
-    "spx/21-spec-tree.enabler/68-reviewing.enabler/"
+    "spx/21-product-tree.enabler/68-reviewing.enabler/"
     "21-reviewing-changes.enabler/21-script-decomposition.adr.md"
 )
 FIXTURE_AGENTS_RULE_CITATION = "AGENTS.md:critical-rules"
 FIXTURE_SKILL_RULE_CITATION = (
-    "plugins/spec-tree/skills/review-changes/SKILL.md:api-surface"
+    "plugins/product-tree/skills/review-changes/SKILL.md:api-surface"
 )
 FIXTURE_MALFORMED_RULE_CITATION = "record this in ISSUES.md"
 
@@ -331,19 +341,6 @@ def init_repo_with_branch(repo: pathlib.Path) -> str:
     return "main"
 
 
-def init_repo_with_committed_rename(repo: pathlib.Path) -> str:
-    """Create a synthetic repository whose feature branch renames a tracked file."""
-    run_git("init", "-q", "-b", "main", str(repo), cwd=pathlib.Path.cwd())
-    run_git("config", "commit.gpgsign", "false", cwd=repo)
-    (repo / "README.md").write_text("hello\n", encoding="utf-8")
-    run_git("add", "README.md", cwd=repo)
-    run_git("commit", "-q", "-m", "initial", cwd=repo)
-    run_git("switch", "-c", "feature/x", cwd=repo)
-    run_git("mv", "README.md", "RENAMED.md", cwd=repo)
-    run_git("commit", "-q", "-m", "rename readme", cwd=repo)
-    return "main"
-
-
 def isolated_git_env(cwd: pathlib.Path) -> dict[str, str]:
     """Return a subprocess environment whose git reads no workstation config."""
     return {
@@ -387,7 +384,9 @@ def open_scoped_review_run(
     started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
     if started.returncode != 0:
         raise RuntimeError(f"review_run.py start failed: {started.stderr}")
-    state_path = str(json.loads(started.stdout)["statePath"])
+    state_path = str(
+        json.loads(started.stdout)[load_review_run_module().START_STATE_PATH]
+    )
     scoped = run_script(
         REVIEW_RUN_SCRIPT,
         "append-scope",
@@ -450,8 +449,11 @@ def start_review_run_exporting(
     started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
     if started.returncode != 0:
         raise RuntimeError(f"review_run.py start failed: {started.stderr}")
-    state_path = pathlib.Path(json.loads(started.stdout)["statePath"])
-    metadata = json.loads(state_path.read_text(encoding="utf-8"))["metadata"]
+    review_run = load_review_run_module()
+    state_path = pathlib.Path(json.loads(started.stdout)[review_run.START_STATE_PATH])
+    metadata = json.loads(state_path.read_text(encoding="utf-8"))[
+        review_run.STATE_METADATA
+    ]
     return StartedReviewRun(metadata, checked_out_branch, head_commit, exported)
 
 
@@ -480,6 +482,28 @@ def run_script(
     )
 
 
+class FakeJournal(NamedTuple):
+    """What the fake ``spx`` recorded: the verbs issued, the events appended, the run."""
+
+    commands: list[str]
+    events: list[dict[str, Any]]
+    sealed: bool
+    namespace: dict[str, str] | None
+    run_token: str | None
+
+
+def read_fake_journal(journal_path: pathlib.Path) -> FakeJournal:
+    """Return the fake ``spx`` journal file as an observation; it judges nothing."""
+    journal = json.loads(journal_path.read_text(encoding="utf-8"))
+    return FakeJournal(
+        commands=list(journal[FAKE_JOURNAL_COMMANDS]),
+        events=list(journal[FAKE_JOURNAL_EVENTS]),
+        sealed=bool(journal[FAKE_JOURNAL_SEALED]),
+        namespace=journal.get(FAKE_JOURNAL_NAMESPACE),
+        run_token=journal.get(FAKE_JOURNAL_RUN_TOKEN),
+    )
+
+
 def write_fake_spx(bin_dir: pathlib.Path, journal_path: pathlib.Path) -> pathlib.Path:
     """Write a fake ``spx`` executable that enforces journal namespace continuity.
 
@@ -492,7 +516,8 @@ def write_fake_spx(bin_dir: pathlib.Path, journal_path: pathlib.Path) -> pathlib
 
     script = bin_dir / "spx"
     script.write_text(
-        """#!/usr/bin/env python3
+        string.Template(
+            """#!/usr/bin/env python3
 import json
 import os
 import pathlib
@@ -519,7 +544,7 @@ path = pathlib.Path(os.environ["SPX_FAKE_JOURNAL_PATH"])
 if path.is_file():
     state = json.loads(path.read_text(encoding="utf-8"))
 else:
-    state = {"commands": [], "events": [], "sealed": False}
+    state = {$commands: [], $events: [], $sealed: False}
 
 args = sys.argv[1:]
 if len(args) < 2 or args[0] != "journal":
@@ -528,41 +553,49 @@ if len(args) < 2 or args[0] != "journal":
 
 command = args[1]
 current_namespace = namespace()
-state["commands"].append(command)
+state[$commands].append(command)
 if command == "open":
-    state["namespace"] = current_namespace
-    state["runToken"] = "run-001"
+    state[$namespace] = current_namespace
+    state[$run_token_key] = $run_token
     path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps({"runToken": "run-001"}))
-elif option_value(args, "--run") != state.get("runToken"):
+    print(json.dumps({$run_token_key: $run_token}))
+elif option_value(args, "--run") != state.get($run_token_key):
     path.write_text(json.dumps(state), encoding="utf-8")
     sys.stderr.write("journal run not found; open the run before operating on it\\n")
     raise SystemExit(4)
-elif current_namespace != state.get("namespace"):
+elif current_namespace != state.get($namespace):
     path.write_text(json.dumps(state), encoding="utf-8")
     sys.stderr.write("journal run not found; open the run before operating on it\\n")
     raise SystemExit(4)
 elif command == "append":
-    if state["sealed"]:
+    if state[$sealed]:
         sys.stderr.write("run is sealed\\n")
         raise SystemExit(3)
-    state["events"].append(json.load(sys.stdin))
+    state[$events].append(json.load(sys.stdin))
     path.write_text(json.dumps(state), encoding="utf-8")
     print(json.dumps({"ok": True}))
 elif command == "read":
     path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps(state["events"]))
+    print(json.dumps(state[$events]))
 elif command == "seal":
-    state["sealed"] = True
+    state[$sealed] = True
     path.write_text(json.dumps(state), encoding="utf-8")
     print(json.dumps({"ok": True}))
 elif command == "render":
     path.write_text(json.dumps(state), encoding="utf-8")
-    print(json.dumps(state["events"]))
+    print(json.dumps(state[$events]))
 else:
     sys.stderr.write(f"unknown command {command}\\n")
     raise SystemExit(2)
-""",
+"""
+        ).substitute(
+            commands=json.dumps(FAKE_JOURNAL_COMMANDS),
+            events=json.dumps(FAKE_JOURNAL_EVENTS),
+            sealed=json.dumps(FAKE_JOURNAL_SEALED),
+            namespace=json.dumps(FAKE_JOURNAL_NAMESPACE),
+            run_token_key=json.dumps(FAKE_JOURNAL_RUN_TOKEN),
+            run_token=json.dumps(FAKE_RUN_TOKEN),
+        ),
         encoding="utf-8",
     )
     script.chmod(0o755)

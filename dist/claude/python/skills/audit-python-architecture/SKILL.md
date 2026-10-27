@@ -26,7 +26,7 @@ A JSON verdict on a Python architecture scope — `APPROVED`, or `REJECTED` with
 **Inputs.** This audit judges the target it is given, against the governing context already loaded when it runs:
 
 - Complete ADR/PDR hierarchy (product and ancestor decisions at all levels)
-- Target node spec with typed assertions, for a spec-tree work item (enabler/outcome)
+- Target node spec with typed assertions, for a product-tree work item (enabler/outcome)
 - The architecture target: implementation files, a changed-file partition, or an ADR path
 
 **Python review focus:**

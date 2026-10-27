@@ -2,7 +2,7 @@
 name: audit-typescript-test
 description: >-
   TypeScript test-evidence audit methodology — judges the TypeScript tests in
-  scope against the spec-tree and TypeScript-specific evidence properties.
+  scope against the product-tree and TypeScript-specific evidence properties.
 allowed-tools: Read, Grep, Glob, Bash(git diff:*)
 ---
 
@@ -26,16 +26,16 @@ Use skill `typescript:typescript-code-standards`.
 
 Use skill `typescript:typescript-test-standards`.
 
-Use skill `spec-tree:audit-tests`.
+Use skill `product-tree:audit-tests`.
 
-Use skill `spec-tree:test`.
+Use skill `product-tree:test`.
 
 Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
 
 Read `spx/local/typescript.md` if it exists; otherwise apply the loaded skills only.
 Read `spx/local/typescript-tests.md` if it exists; otherwise apply the loaded skills only.
 
-Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
+Use skill `product-tree:contextualize` on the spec node under audit — `<PRODUCT_TREE_CONTEXT>` marker must be present before Gate 1.
 
 This audit runs no deterministic verification — no `spx validation literal`, test, type-check, or coverage command. Cross-file literal laundering is judged by reading.
 
@@ -88,7 +88,7 @@ For each assertion in the spec's Assertions section, execute steps 1–8 in orde
 
 **Step 1 — Challenge the assertion**
 
-- Does the assertion derive from a PDR/ADR claim in the node's ancestors (from `<SPEC_TREE_CONTEXT>`), or is it floating?
+- Does the assertion derive from a PDR/ADR claim in the node's ancestors (from `<PRODUCT_TREE_CONTEXT>`), or is it floating?
 - Is the assertion type (Scenario / Mapping / Conformance / Property / Compliance) the right one for the claim? A behavioral rule is not a Scenario.
 - Does the assertion overlap with another assertion in the same node or a parent (redundancy)?
 
@@ -190,7 +190,7 @@ For every import from `@testing/harnesses/*`, `@testing/fixtures/*`, or `@testin
 6. If a property harness or wrapper owns `numRuns` or seed policy, verify it reports seed and replay details on failure; otherwise REJECT with `missing property seed reporting`, spelled as the base skill spells it.
 7. If the test-infrastructure file imports another test-infrastructure file, trace one level at a time until the chain terminates at a non-test module.
 
-If an executed test imports a local test-adjacent module that carries harness, generator, or fixture behavior outside the canonical `@testing/` path, REJECT with a `noncanonical_test_infrastructure` finding. Spec-tree `tests/` directories contain typed assertion files only.
+If an executed test imports a local test-adjacent module that carries harness, generator, or fixture behavior outside the canonical `@testing/` path, REJECT with a `noncanonical_test_infrastructure` finding. Product Tree `tests/` directories contain typed assertion files only.
 
 The test's own imports look clean when the mock lives in a harness, the hardcoded value lives in a generator, or a fixture masquerades as a module. Always open the test-infrastructure module. When recording audit findings, cite the stable step name `harness_chain` and finding code, not numbered checklist item positions.
 

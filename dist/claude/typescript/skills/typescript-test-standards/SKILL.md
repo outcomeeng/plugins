@@ -297,7 +297,7 @@ Use generators for input domains that vary, compose, shrink, or explore more tha
 // testing/generators/{domain}.ts
 export function arbitraryNodePath(config: Config): fc.Arbitrary<string>;
 export function arbitraryDecisionPath(config: Config): fc.Arbitrary<string>;
-export function arbitrarySpecTree(config: Config): fc.Arbitrary<SpecTreeFixture>;
+export function arbitraryProductTree(config: Config): fc.Arbitrary<ProductTreeFixture>;
 ```
 
 Use `arbitrary*()` generator functions for tests that should search a domain with `assertProperty`. Use `createGenerated*()` functions only as single-sample wrappers around the same arbitrary when a full property loop would make local infrastructure evidence too expensive.
@@ -339,10 +339,10 @@ Use harnesses for tests that interact with external systems — filesystems, bro
 ```typescript
 // testing/harnesses/{domain}.ts
 
-// Filesystem harness: manages a temp product directory for spec-tree operations
+// Filesystem harness: manages a temp product directory for product-tree operations
 export async function withTestEnv(
   config: Config,
-  callback: (env: SpecTreeEnv) => Promise<void>,
+  callback: (env: ProductTreeEnv) => Promise<void>,
 ): Promise<void>;
 
 // Browser harness: wraps Playwright with page lifecycle management
@@ -361,7 +361,7 @@ export const test = withPlaywright(baseTest);
 
 <fixtures>
 
-Fixtures are inert files. Use them for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response payload, a document the parser must handle, a sample TypeScript source file for a linter, or a product tree copied into a temp directory.
+Fixtures are inert files. Use them for real-world data the code under test would encounter: a captured JSONL from a chat session, a saved API response payload, a document the parser must handle, a sample TypeScript source file for a linter, or a Product Tree copied into a temp directory.
 
 Executed tests may read fixtures from disk, copy them into temp projects, or pass their paths to the code or program under test. Executed tests must never import fixture modules, require fixture files, or consume fixture exports. A fixture file can have a `.ts` extension when the test is verifying linters, parsers, pre-commit hooks, or scanners; it remains input data, not a test dependency.
 
@@ -400,7 +400,7 @@ import { createAuditResult } from "@testing/harnesses/factories";
 import { createHugoHarness } from "@testing/harnesses/hugo";
 ```
 
-Reusable setup, context management, generated domains, and inert fixtures live under `testing/`. Spec-tree `tests/` directories contain typed assertion files only.
+Reusable setup, context management, generated domains, and inert fixtures live under `testing/`. Product Tree `tests/` directories contain typed assertion files only.
 
 </test_infrastructure>
 

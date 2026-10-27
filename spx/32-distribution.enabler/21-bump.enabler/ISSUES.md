@@ -20,7 +20,7 @@ Two implementations of one grammar drift. The local regex already had to grow a 
 
 `just bump` writes the next version into every changed plugin's manifests. Nothing requires that plugin's `CHANGELOG.md` to gain a matching entry, and no gate step compares the two. The requirement exists only in each changelog's own preamble — "An entry appears when a change alters what a consumer can rely on, must do, or must know" — which no spec assertion declares and no command checks.
 
-The result is silent: `spec-tree` shipped 0.88.3 through 0.88.6 with the changelog stopping at 0.88.2, and the gap surfaced only because a reviewer noticed one missing entry on one pull request.
+The result is silent: `product-tree` shipped 0.88.3 through 0.88.6 with the changelog stopping at 0.88.2, and the gap surfaced only because a reviewer noticed one missing entry on one pull request.
 
 **Why backfilling is the wrong repair.** A changeset reconstructing another release's entry from commit messages and diffs is guessing at what that release's consumers must know. It also attaches an unbounded obligation to whichever branch is open: each base advance brings another release to document. Git author identity does not bound it either — every bump commit in this repository carries the same author, so "I wrote that release" licenses backfilling any gap at all.
 

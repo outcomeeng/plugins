@@ -1,0 +1,230 @@
+# Issues — Merging
+
+Known follow-ups for the merging node. Coordination note; not spec truth.
+
+## The CLOSE-phase explanation is restated in three skill surfaces
+
+The rule that a receipt never satisfies `CLOSE` and a prior same-conversation Change disposition never accounts for work merged after it lives canonically in `src/plugins/product-tree/skills/merging-standards/references/merge-policy.md` `<close_phase>`, and `src/plugins/product-tree/skills/merge/SKILL.md` (Step 4, Step D5, one failure mode, success criteria) and `src/plugins/product-tree/skills/manage-github-pr/SKILL.md` (Step 7, Failure 4, success criteria) each restate the mechanism and the cheapness rebuttal in their own wording. The `skill-auditor` (finding `f-005`, rule `conciseness`, severity `WARNING`, on the changeset that introduced the rule) proposes keeping the canonical explanation in `<close_phase>` and reducing the transport skills to a citation plus their local signal and avoid-action, because the introducing changeset itself had to hunt one wording drift across three authored files.
+
+**Why it is large**: the consolidation restructures how the rule is taught across three shipped skill surfaces and trades against the same auditor's `keep-these-aspects` rows, which value the self-contained failure-mode narratives; resolving that tension is an editorial pass over the whole CLOSE teaching shape, gated by `skill-auditor`, not a wording fix inside the introducing changeset.
+
+**Revisit condition**: the next changeset that restructures `merging-standards` or either transport skill's CLOSE teaching.
+
+## `merge-policy.md` loads 510 lines for any one of its 24 sections
+
+`src/plugins/product-tree/skills/merging-standards/references/merge-policy.md` spans 24 tagged sections, and `merging-standards`'s `<reference_index>` instructs reading it whole before any detailed merge-lifecycle operation. A composing step that needs only `<branch_hygiene>` or `<review_classification>` pays the full payload. The file carries the `<contents>` index its length requires, so this violates no standard today.
+
+`<review_classification>` is the strongest split candidate: `manage-pr` Step 3 already reaches it independently, and its taxonomy cross-references little else. A split file would hang directly off `SKILL.md`'s index, as `merge-cleanup.md` and `action-tokens.md` already do, so the no-reference-dispatches-a-reference rule holds.
+
+**Why separate**: splitting a shared reference every merge transport loads means re-verifying each composing skill's read path, and the section boundaries need checking against actual cross-references rather than the tag list — work independent of any changeset that edits the file's content.
+
+**Revisit condition**: when a changeset next restructures `merging-standards` rather than editing one of its sections. Surfaced by `skill-auditor` on the release-overlay changeset as finding `f-006`, rule `progressive_disclosure_token_cost`, severity `WARNING` in the `worth-improving` row. That role returns a JSON verdict and no journal run token, so the finding identifier and rule are its whole citable identity.
+
+## The overlay's base-checkout fast-forward has no deterministic coverage
+
+`spx/local/merging.md` declares a deploy-phase fast-forward of the designated main checkout with four outcomes — advanced, `held-by-live-session`, `uncommitted-work`, `not-fast-forwardable` — and no `[test]` or `[eval]` exercises any of them. The behavior reaches the Product Tree through its own `[audit]`-backed assertion in `spx/21-product-tree.enabler/76-merge.enabler/merge.md`, alongside the product-local overlay assertion, so the gap is consistent with its neighbours rather than an unbacked claim.
+
+Deterministic coverage needs a harness that materializes a bare-repository pool with a designated main checkout and drives each outcome — a live claim, a dirty tree, a diverged local `main` — which no existing merging harness models.
+
+**Resolution shape**: fold these outcomes into the eval-coverage sweep the prompt-only-simulation entry below already schedules, since both need the same worktree-state modelling the current merge eval harnesses lack.
+
+**Revisit condition**: when `evals/local-completion-boundary` and `evals/transport-selection` are converted to producer-coupled evals.
+
+## Transport classifier extraction awaits a published SPX CLI capability
+
+`src/plugins/product-tree/skills/merge/scripts/classify_changeset.py` runs to 161 lines — the coordination-note-only classification over the full changed-file set, committed branch scope plus uncommitted working-tree changes, with counts computed over the whole set so a large changeset is never misclassified from a truncated sample. Past fifty lines [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md) makes a shipped script debt whose logic moves into the SPX CLI once the script proves its value; the classifier has proven its value in use, so extraction is what it owes.
+
+The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, and the plugins product may depend on the resulting capability only once it is published to npm and `REQUIRED_SPX_VERSION` advances to it. That sequencing puts the fix outside any changeset confined to this repository.
+
+**Resolution shape**: port the classification into the SPX CLI together with the base-ref and branch-scope derivation it routes through, tracked in `spx/21-product-tree.enabler/14-version-control.enabler/15-changeset-scope.enabler/ISSUES.md`; publish, advance the floor, and reduce the shipped skill to its instruction with no script. Keep whole-set counting across the move — the truncation guard is the classifier's correctness property, not an implementation detail. The transport-selection wording entry below governs how the result is reported, so it applies to the ported surface too. Revisit when the capability publishes.
+
+## Transport-selection status message exposes classifier internals
+
+`/merge` can report the selected transport with raw classifier counts and a mechanical delegation sentence:
+
+```text
+Transport selected: GitHub PR, because the classification has 2 changed files and 2 non-coordination-note files. I'm delegating to /manage-github-pr, which owns branch creation, commit, PR opening, checks, review, and merge.
+```
+
+The status is technically traceable to the transport-selection policy in `spx/21-product-tree.enabler/76-merge.enabler/merge.md`, but it is the wrong operator surface. It leaks count-level classifier implementation detail, over-narrates delegation, and reads as a handoff rather than a lifecycle step the merge skill continues to own. A future merging-skill change should adjust the `/merge` transport-selection wording and eval expectations so the message names the selected transport and the policy reason at the user-facing level: coordination-note-only changes use direct-push, overlay-declared transport wins, otherwise GitHub PR. The message should avoid raw changed-file counts unless the count is itself the decision boundary the operator needs to inspect.
+
+## Generated instruction-block lifecycle vocabulary window
+
+[`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) declares four readiness gates and the lifecycle `VERIFY -> PREVIEW -> MERGE -> DEPLOY -> RELEASE -> CLOSE`, while the generated instruction blocks still teach the installed `merging-standards` vocabulary until the shared methodology PR updates `src/plugins/product-tree/skills/merging-standards/SKILL.md` and regenerates instruction-block output.
+
+Required handling:
+
+- Update `src/plugins/product-tree/skills/merging-standards/SKILL.md` in the shared methodology PR.
+- Run `just build-skills` and `just build-instructions`.
+- Verify the generated instruction blocks in root `CLAUDE.md` and `AGENTS.md` no longer teach the old three-gate or production-readiness lifecycle.
+
+## Merge lifecycle eval suites are prompt-only simulations
+
+`eval-evidence-auditor` runs `019f4219-ac8e-7b92-96db-fefd48bf8b41` and
+`019f421a-01ad-7ac0-b1f8-abc05f458dc7` reported that the
+`local-completion-boundary` and `transport-selection` eval suites do not prove
+the producing merge lifecycle behavior:
+
+- `local-completion-boundary` simulates status assessment in
+  [`prompt.md`](evals/local-completion-boundary/prompt.md); replacing
+  `src/plugins/product-tree/skills/merge/SKILL.md`
+  or [`spx/local/merging.md`](spx/local/merging.md) would not change the
+  evaluated behavior.
+- `local-completion-boundary` covers the local-stop/local-pause branch, but not
+  continuation through default-branch merge, declared deploy/release phases, and
+  closeout.
+- `transport-selection` grades a static prompt/case model without materializing
+  or directly invoking
+  `src/plugins/product-tree/skills/merge/SKILL.md`.
+- Both suites hard-code the policy in the prompt, so the grader can keep passing
+  after the producer changes.
+
+Revisit condition: run `/apply` on
+`spx/21-product-tree.enabler/76-merge.enabler` to convert
+`evals/local-completion-boundary` and `evals/transport-selection` to
+producer-coupled evals, or reclassify/remove the `[eval]` assertions they no
+longer support. Rerun `eval-evidence-auditor` over the repaired eval artifacts.
+
+### PR-lifecycle skills carry no eval trigger
+
+`transport-selection` does not own the `manage-github-pr` or `open-pr` skills.
+Its `prompt.md` names `manage-github-pr` only as the literal `delegation_target`
+string its own decision rule dictates, never loading that skill's content, and
+`open-pr` appears in neither `prompt.md` nor `cases.jsonl`. Replacing either
+skill's `SKILL.md` with unrelated text changes no case outcome, so a CI trigger
+on those paths starts a job that cannot detect the change that started it.
+
+Those four trigger paths therefore carry no `owned_paths` declaration and no
+generated trigger entry. Declaring them would assert a producer coupling the
+suite does not have.
+[`spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md`](spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md)
+requires a skill eval to couple to its real producer through direct invocation,
+harness-mediated invocation, or source-derived prompt materialization, and
+refuses a prompt-only simulation as evidence for that producer. This suite does
+none of those for either skill.
+
+Revisit condition: this resolves with the prompt-only simulation above. Once
+`transport-selection` materializes its prompt from a declared `prompt_source`
+producer, declare the producers the materialized prompt actually reads — then
+the generator derives their trigger paths, and a mutation to those skills
+genuinely changes a case outcome.
+
+## The direct-push lifecycle carries no worked example
+
+`src/plugins/product-tree/skills/merge/SKILL.md` `<direct_push_lifecycle>` governs a push straight to the default branch on origin through named gates and predicates with no concrete trace — a selected transport, an overlay configuration, the push command, the resulting full SHA — that an in-progress run can be compared against before the push completes.
+
+**Resolution shape**: add one worked before/after example to `<direct_push_lifecycle>`, gated by `instructions:skill-auditor`. The example is a content addition to a section the reload-timing changeset does not touch, so it ships as its own change.
+
+**Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/product-tree/skills/merge/SKILL.md` on the post-compaction reload-timing change (finding `abstract_examples`).
+
+## The GitHub-PR lifecycle skill carries no worked mode-to-step example
+
+`src/plugins/product-tree/skills/manage-github-pr/SKILL.md` routes four modes (Open PR, Instructed, Existing changeset, Empty) through a seven-step lifecycle and states how the mode is detected, with no `<examples>` block showing one concrete state signal per mode and the step sequence it produces.
+
+**Resolution shape**: add one short example per mode naming the observed repository state and the resulting step sequence, gated by `instructions:skill-auditor`. The examples are a content addition to the skill's routing surface, separate from the reload-timing rule.
+
+**Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/product-tree/skills/manage-github-pr/SKILL.md` on the post-compaction reload-timing change (finding `no_examples_section`).
+
+## The PR-management skill restates its post-watch re-entry rule twice
+
+`src/plugins/product-tree/skills/manage-pr/SKILL.md` carries the sentence "and immediately return to Step 1 in the same turn. Do not merge or emit a final token from pre-watch state. The post-watch pass must re-read PR state, check rollup, PR-level comments, formal reviews, and review-thread comments before deciding the next action." verbatim at two sites (the wait step and the merge-readiness evaluation).
+
+**Resolution shape**: state the rule once at the merge-readiness evaluation and cross-reference it from the wait step, gated by `instructions:skill-auditor`.
+
+**Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/product-tree/skills/manage-pr/SKILL.md` on the post-compaction reload-timing change (finding `duplicate_content`).
+
+## The merge-readiness decision table carries no worked trace
+
+`src/plugins/product-tree/skills/manage-pr/SKILL.md` `<merge_readiness_decision_table>` enumerates twelve rules over named predicate fields with no example tracing one concrete `gh pr view --json` field set through a matched rule to its emitted guard verdict.
+
+**Resolution shape**: add one worked trace — sample JSON fragment, matched rule number, emitted `guard_verdict` — gated by `instructions:skill-auditor`.
+
+**Evidence.** Surfaced by the `skill-auditor` review of `src/plugins/product-tree/skills/manage-pr/SKILL.md` on the post-compaction reload-timing change (finding `abstract_examples`).
+
+## The readiness record proves one run writer without inspecting the run store
+
+`<verification_dispatch_readiness>` establishes one dispatch owner from the owner's own outstanding dispatches and the passing `<occupancy_preflight>`, and it inspects no persisted run. A store-backed discovery step would additionally catch a writer no dispatch in the current pass accounts for: a run left unsealed by a session that died, or one opened by a Verifier the occupancy proof does not cover.
+
+Building that step needs a listing surface that spans both record kinds. Runs opened through the journal are listed by `spx journal list`; runs recorded through `spx verification run` carry their own locator, and no documented contract or test in this repository states that one listing surfaces the other, nor that either surface exposes writer liveness. Establishing it means confirming the behavior at the project's declared floor, recording the release that introduced it beside the other floor capabilities, and adding evidence that the listing returns a run the other command created.
+
+**Why it is separate.** The confirmation is a capability question about the `spx` CLI across two command families, answered by a floor-version probe and new evidence, not by wording inside a merge-policy paragraph. Four integration-review rounds and one Author-side trace rejected successive attempts to state the mechanism without that evidence.
+
+**Revisit condition.** When a run left unsealed by a dead session is observed to reach a dispatch the owner-state rule cleared, or when the `spx` CLI documents a cross-family listing at or below the pinned floor.
+
+## The merge policy reference is an eager read in practice
+
+`/skill-standards` `<progressive_disclosure>` counts total eagerly loaded content as the cost. `merging-standards` is a 54-line loader, but its `<reference_index>` requires `references/merge-policy.md` before any lifecycle operation and every composing skill (`/merge`, `/apply`) states that the loader alone loads nothing it uses, so the 88,647-code-point reference is read on every invocation, in two reads because it exceeds the Read tool's single-call cap.
+
+**Resolution shape**: factor the sections every pass needs — `<authority_gates>`, `<verification_dispatch_readiness>`, `<review_classification>`, `<base_sync>` — into a bounded always-read reference and leave the phase-specific sections (topology, review inspection, closeout records, overlay topics) in separately named conditional files, or have each composing skill name the tagged section it needs and read only that range through the `<contents>` index.
+
+**Settlement condition**: a management pass loads only the sections its phase reads, and `instructions:skill-auditor` over `merging-standards` raises no eager-payload warning.
+
+**Evidence**: `instructions:skill-auditor` warning f-008 on `src/plugins/product-tree/skills/merging-standards/SKILL.md` at head `604f62878c495e613e39570c1bd197c4f74c3641`.
+
+## DEBT [conciseness]: the merge-lifecycle skills restate rules and grants they do not use
+
+Defect class: `conciseness`.
+
+Finding: one typed skill audit per skill on the Change Lifecycle changeset (head `a28a5be91fc2ea04151c283059caa9cb9a11fd12`) approved `merging-standards`, `merge`, `manage-pr`, and `manage-github-pr` with these worth-improving findings that predate that changeset and lie outside its bounded concern: `merging-standards` — `merge-policy.md` success criteria re-list 29 section rules, the same-class sweep and finding disposition are stated at three sites, and `merge-cleanup.md` prose restates its script comments; `merge` — Step 1 carries six actions in one paragraph, `classify_changeset.py` resolves a sibling skill's directory by walking `parent.parent.parent` with a generic `RuntimeError`, and the sixth success criterion restates Step 1; `manage-pr` — the ordered procedure sits under non-semantic `<step>` names, the post-wait rule and the `gh pr view --json` pair are restated four and three times, and its description shares the trigger term "manage" with `manage-github-pr`; `manage-github-pr` — the default-autonomy rule is stated four times, the final success criterion bundles five properties, and the `git rev-parse` grant names no step that uses it. The relaunch of the `merging-standards` audit on the repaired head added: the mandatory 578-line `merge-policy.md` exceeds one read (f-007), `action-tokens.md` names `/manage-pr` in its authorization rows (f-008), and `merge-policy.md` points into `understand`'s `references/` by file (f-009).
+
+Evidence: `instructions:skill-auditor` verdicts on the four skills, findings f-008 to f-011 (`merging-standards`), f-010 to f-012 (`merge`), f-009, f-011, f-012 (`manage-pr`), f-008 and f-010 (`manage-github-pr`).
+
+The `skill-auditor` run `2026-10-06_17-37-07-566-b107366e081e` on `manage-pr` raised the same class as debt `conciseness`: the `gh pr view --json` command pair stated three times, the post-watch re-inspection sentence twice verbatim, and the clean current-head review predicate four times. Run `2026-10-06_18-23-28-029-1d92c59bd0d9` added the activation guidance restating the description, the heartbeat prohibition stated twice, the reload rule stated three times, and the `VERIFICATION_READINESS` joint-fixpoint predicates restated in the workflow, a failure mode and the success criteria.
+
+Impact: every load of these skills pays for restated payload, and one rule edited in one of its copies drifts from the others.
+
+Successor: a Proposed Change filed after outcomeeng/changes#91 merges, carrying the CLOSE-teaching consolidation entry above as well.
+
+Revisit and settlement condition: each rule stated once with cross-references, semantic tag names in `manage-pr`, distinct trigger terms in the two descriptions, and one typed skill audit per revised skill approving with no `conciseness` finding.
+
+## The lifecycle evals leave four behaviors unmodeled
+
+The deterministic mapping tests cover the declared and absent `DEPLOY` and `RELEASE` decisions, and the `transport-selection` and `local-completion-boundary` eval suites cover transport selection and the completion boundary. Four behaviors have no eval case:
+
+- A declared `PREVIEW` runs after `VERIFICATION_READINESS` holds and before `MERGE_READINESS` advances the lifecycle, and an absent `PREVIEW` is a no-op that never blocks merge, deploy, release or close. `spx/21-product-tree.enabler/76-merge.enabler/merge.md` and [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) declare the phase, and no eval under `evals/` mentions it.
+
+- A declared `DEPLOY` awaits `DEPLOYMENT_READINESS`, an absent `DEPLOY` skips the phase, a declared `RELEASE` awaits `RELEASE_READINESS`, runs after `MERGE` and after any declared `DEPLOY`, an absent `RELEASE` skips the phase, and a flow that stops after `MERGE` fails when `RELEASE` is declared. These are lifecycle eval cases for the subject of skill orchestration rather than the mapping helper.
+- The `transport-selection` eval's ten cases model the selector through `input.overlay_transport_selector` (`none`, `direct-push`, `manage-github-pr`), and the `none` cases cover the default-fallthrough outcome an absent overlay produces. The present-but-silent against file-absent distinction is not modeled. An explicit absent-overlay case needs a new `cases.jsonl` entry, a `prompt.md` change that tells the producing skill the file is absent, and a baseline run in `history.jsonl`. Surfaced by the local `changes-reviewer` on PR #333 as `DEBT [evidence]`.
+- The assigned-worktree discipline in `merge.md` is `[audit]`-backed and anchored by the `[audit]` rule "the agent conducts the changeset's git work in the assigned worktree" in [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md). No `[eval]` case exercises the recovery path: an assigned worktree on the default branch or a detached HEAD, or a branch owned by another worktree, where the lifecycle creates a task branch in the assigned worktree and continues rather than emitting a `STOP`. The case needs an eval that models worktree-state inputs, which the two existing harnesses do not, plus a `prompt.md` and a baseline `history.jsonl` run. Surfaced by the same review.
+
+**Impact.** The outcome of each is covered by another path, and evals are not part of the `just check` or CI gate, so the gap is incremental evidence completeness.
+
+**Settlement condition.** The four eval cases exist with baseline runs in their `history.jsonl`.
+
+## A merging decision governs the apply flow's Verifier dispatches
+
+The dispatch-readiness, repeated-class, finish-before-wait and bounded-projection rules of [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) are realized for the merge lifecycle in `merge.md` and the `merging-standards` skill, and `/merge`, `/open-pr` and `/manage-pr` cite `<verification_dispatch_readiness>` at every Verifier dispatch site they own. `opening-pr.md` declares the readiness record as its own assertion, and `managing-pr.md` declares the readiness record and the finish-before-wait ordering, because `/manage-pr` owns the foreground check wait. The rules bind agentic dispatch, whose natural owner is [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md).
+
+**Settlement condition.** The rules relocate into the verification decision, [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) reduces to the merge-lifecycle specialization that cites them, and the realizing assertions in this node and its two PR-lifecycle children re-point; `merging-standards` keeps the section text its transports read. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.
+
+## `merging-standards` names its callers and leans on a sibling reference
+
+`instructions:skill-auditor` run `2026-10-06_18-43-57-247-9ea41c113e7a` rejected the post-edit audit of `merging-standards` at head `4be7a922d11c27af632039953b5baf36db8b999f` on three `debt` findings, none of them on changed text. The changeset's diff of the bundle is `src/plugins/product-tree/skills/merging-standards/references/merge-policy.md` lines 410-411 and 415-416; `action-tokens.md` is outside it.
+
+- Rule `caller-independence`, `references/action-tokens.md` lines 3 and 12-13: the reference assigns token emission to "The managing flow" and ends the `AWAIT_*` follow-ups at "`/manage-pr` re-inspects state", while `SKILL.md` line 23 declares the lifecycle behavior caller-independent.
+- Rule `reference-one-level-deep`, `references/action-tokens.md` lines 3 and 7-10: the reference directs the reader to `<pr_check_wait>` and `<base_sync>`, tagged sections that exist only in `merge-policy.md`, while `SKILL.md` line 42 says a bundled reference never dispatches another bundled reference.
+- Rule `caller-independence`, `references/merge-policy.md` lines 32, 58, 239, and 344 (`<overlay_safety_checks>`, `<branch_state_closeout>`, `<base_sync>`, `<authority_gates>`): the standard assigns obligations to "the opening flow", "the managing flow", "the GitHub-PR orchestration flow", and `release-change`.
+
+**Impact.** The standard cannot be applied by a caller that names it without also taking on the callers it names, and `action-tokens.md` is incomplete without a read of `merge-policy.md`.
+
+**Settlement condition.** Each obligation states itself against the lifecycle operation it governs without naming a consuming skill, `action-tokens.md` carries the conditions its follow-ups depend on or `SKILL.md`'s `<reference_index>` names the co-required reference, and one typed skill audit of `merging-standards` then raises none of the three findings.
+
+## The merge-gate-selection probe has no fixture for an implementation-only change
+
+The `[probe]` assertion in `spx/21-product-tree.enabler/76-merge.enabler/merge.md` selects the evidence Auditors for each touched implementation-malleable node whose evidence result is missing or invalidated, and its pin reads the node's spec, its `tests/` or `evals/` directory, and the implementation its linked verification reaches. The protocol `spx/21-product-tree.enabler/76-merge.enabler/probes/merge-gate-selection` has no fixture in which only the implementation that a node's linked verification reaches changes for an implementation-malleable node, with no test, eval, or spec file of that node touched. That case is the one the amended assertion adds to the selection.
+
+Its attested run is dated 2026-10-06 against head `45772763e227a276a609f76c455fb64c3286fcbd` and predates the amended assertion, so the pin no longer matches the declaration and the attested result is invalid. Decision 6 of Change https://github.com/outcomeeng/changes/issues/453 settles that the probe gains no fixture and no new attested run before this merge; the node merges in the state it derives, Specified.
+
+**Impact.** The node's status claim carries no attested result for the `[probe]` assertion, and no executed observation shows the selection choosing evidence Auditors for an implementation-only change.
+
+**Evidence.** The attested run of 2026-10-06 against head `45772763e227a276a609f76c455fb64c3286fcbd`, the fixtures under `spx/21-product-tree.enabler/76-merge.enabler/probes/merge-gate-selection`, and the amended `[probe]` assertion in `spx/21-product-tree.enabler/76-merge.enabler/merge.md`.
+
+**Settlement condition.** A later Change adds that fixture and records a new attested run on the then-current head, and the node's status claim then carries the attested result.
+
+## The merge policy reference reads Auditor verdicts in retired vocabulary
+
+**Evidence**: `product-tree:changes-reviewer` run `2026-10-16_10-53-24-065-92fe6cead926`, finding severity `warning`, category consistency, against `src/plugins/product-tree/skills/merging-standards/references/merge-policy.md` line 527 (Loop semantics). The text defines blocking verdicts as `REJECTED` or `UNKNOWN` overall, `FAIL` or `UNKNOWN` row, and `REJECT` finding, and never reads a sealed run's terminal status. `merge.md` and [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) define an Auditor verdict as the terminal status of a sealed run, and a `rejected` run with no finding, such as an incomplete unit, is unresolved work that the reference text does not classify.
+
+**Impact**: a merging flow following the reference classifies a rejected run that carries no finding as nothing, contrary to the governing assertions.
+
+**Settlement condition**: outcomeeng/changes#513 converts the shipped skills, after which the Loop semantics and Verdict handling of `merge-policy.md` read an Auditor verdict from the sealed run's terminal status, and one typed skill audit of `merging-standards` raises no consistency finding against `merge.md`.

@@ -132,5 +132,5 @@ def for_all_plugin_authorization_changes(
 
     run_instruction_block_property(
         generated_assertion,
-        replay_path="just test spx/21-spec-tree.enabler/43-instruction-block.enabler/tests/test_plugin_authorization.property.l1.py",
+        replay_path="just test spx/21-product-tree.enabler/43-instruction-block.enabler/tests/test_plugin_authorization.property.l1.py",
     )

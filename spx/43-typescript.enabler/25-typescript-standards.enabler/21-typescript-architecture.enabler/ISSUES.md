@@ -9,7 +9,7 @@ before acting — a note is a stale-prone input, not authority.
 uses Markdown `#`/`##` headings throughout instead of the semantic XML sections
 `instructions:skill-standards` requires, and at 144 lines it exceeds that skill's
 100-line threshold for a contents list without carrying one.
-`src/plugins/spec-tree/skills/merging-standards/references/merge-policy.md` is the
+`src/plugins/product-tree/skills/merging-standards/references/merge-policy.md` is the
 in-repository model: a hand-maintained `<contents>` block whose entry order matches the
 file's section order.
 

@@ -6,6 +6,7 @@ import re
 import subprocess
 import tomllib
 from string import Formatter
+from collections.abc import Mapping
 from typing import cast
 from pathlib import Path
 
@@ -30,7 +31,7 @@ from outcomeeng.distribution.installation import (
     CODEX_CONFIG_PATH,
     CODEX_EXEC_SUBCOMMAND,
     FIRST_INSTALL_WARNING,
-    SPEC_TREE_PLUGIN,
+    PRODUCT_TREE_PLUGIN,
     Operation,
     UNREADABLE_HEAD_RECORD_WARNING,
     CLAUDE_PROJECT_SCOPE,
@@ -89,6 +90,7 @@ from outcomeeng_testing.harnesses.real_agent_homes import (
 from outcomeeng_testing.harnesses.installation import (
     captured_non_pending_failure_wordings,
     MARKETPLACE,
+    RETIRED_ONLY_FIELD,
     DefinitionPlacement,
     captured_codex_home_refusal,
     observe_catalog_name_read,
@@ -119,6 +121,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_failed_run_restore,
     install_record_fixture_path,
     observe_install_record_rewrite,
+    observe_retired_record_migration,
     observe_racing_install_record_rewrite,
     observe_scope_split,
     skill_enabling_definition,
@@ -183,6 +186,127 @@ def test_plugin_lifecycle_prunes_only_matching_owned_definitions(
     assert (lifecycle.home_agents / current.name).read_bytes() == current.read_bytes()
     assert not (lifecycle.home_agents / retired.name).exists()
     assert foreign.read_bytes() == foreign_content
+
+
+def test_plugin_lifecycle_prunes_the_matching_definitions_of_a_plugin_the_catalog_renames_to_it(
+    tmp_path: Path,
+) -> None:
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
+    module = lifecycle.load_module()
+    current = lifecycle.ship_agent()
+    replaced_name, replaced_content = lifecycle.replaced_definition()
+    replaced = lifecycle.write_home(replaced_name, replaced_content)
+    second_name, second_content = lifecycle.replaced_definition(1)
+    second = lifecycle.write_home(second_name, second_content)
+    other_name, other_content = generated_agent_file()
+    other = lifecycle.write_home(other_name, other_content)
+    other_entry = lifecycle.ownership_entry(
+        other_name,
+        hashlib.sha256(other_content).hexdigest(),
+        plugin=generated_plugin_name(),
+    )
+    lifecycle.write_ownership(
+        lifecycle.ownership_document(
+            lifecycle.ownership_entry(
+                replaced_name,
+                hashlib.sha256(replaced_content).hexdigest(),
+                plugin=lifecycle.replaced_plugins[0],
+            ),
+            lifecycle.ownership_entry(
+                second_name,
+                hashlib.sha256(second_content).hexdigest(),
+                plugin=lifecycle.replaced_plugins[1],
+            ),
+            other_entry,
+        )
+    )
+    before = lifecycle.snapshot(lifecycle.home)
+
+    check = lifecycle.run(check=True)
+    assert check.exit_code == module.EXIT_CHANGES_PENDING
+    assert f"{module.PRUNE_PREFIX}{replaced}" in check.stdout
+    assert f"{module.PRUNE_PREFIX}{second}" in check.stdout
+    assert check.home_snapshot == before
+
+    placed = lifecycle.run()
+    assert placed.exit_code == 0
+    assert not replaced.exists()
+    assert not second.exists()
+    assert module.PARTIAL_MIGRATION_PREFIX not in placed.stdout
+    assert other.read_bytes() == other_content
+    assert (lifecycle.home_agents / current.name).read_bytes() == current.read_bytes()
+    recorded = json.loads(lifecycle.ownership_path.read_text(encoding="utf-8"))
+    destinations = [
+        entry[module.ENTRY_DESTINATION_FIELD]
+        for entry in recorded[module.OWNERSHIP_ENTRIES_FIELD]
+    ]
+    assert lifecycle.destination_of(replaced_name) not in destinations
+    assert other_entry in recorded[module.OWNERSHIP_ENTRIES_FIELD]
+
+
+def test_plugin_lifecycle_retains_and_reports_a_changed_definition_of_a_replaced_plugin(
+    tmp_path: Path,
+) -> None:
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
+    module = lifecycle.load_module()
+    current = lifecycle.ship_agent()
+    replaced_name, replaced_content = lifecycle.replaced_definition()
+    changed_content = generated_definition_edit(replaced_content)
+    changed = lifecycle.write_home(replaced_name, changed_content)
+    recorded_entry = lifecycle.ownership_entry(
+        replaced_name,
+        hashlib.sha256(replaced_content).hexdigest(),
+        plugin=lifecycle.replaced_plugins[0],
+    )
+    lifecycle.write_ownership(lifecycle.ownership_document(recorded_entry))
+
+    placed = lifecycle.run()
+
+    assert placed.exit_code == 0
+    assert f"{module.RETAINED_PREFIX}{changed}" in placed.stdout
+    assert module.PARTIAL_MIGRATION_PREFIX in placed.stdout
+    assert changed.read_bytes() == changed_content
+    assert (lifecycle.home_agents / current.name).read_bytes() == current.read_bytes()
+    recorded = json.loads(lifecycle.ownership_path.read_text(encoding="utf-8"))
+    assert recorded_entry in recorded[module.OWNERSHIP_ENTRIES_FIELD]
+
+    settled = lifecycle.snapshot(lifecycle.home)
+    rechecked = lifecycle.run(check=True)
+
+    assert rechecked.exit_code == module.EXIT_CURRENT
+    assert f"{module.RETAINED_PREFIX}{changed}" in rechecked.stdout
+    assert module.PARTIAL_MIGRATION_PREFIX in rechecked.stdout
+    assert rechecked.home_snapshot == settled
+
+
+def test_plugin_lifecycle_retains_and_reports_a_linked_definition_of_a_replaced_plugin(
+    tmp_path: Path,
+) -> None:
+    lifecycle = PluginLifecycleHarness.create(tmp_path)
+    module = lifecycle.load_module()
+    lifecycle.ship_agent()
+    replaced_name, replaced_content = lifecycle.replaced_definition()
+    external = lifecycle.outside / replaced_name
+    external.write_bytes(replaced_content)
+    lifecycle.home_agents.mkdir(parents=True, exist_ok=True)
+    linked = lifecycle.home_agents / replaced_name
+    linked.symlink_to(external)
+    lifecycle.write_ownership(
+        lifecycle.ownership_document(
+            lifecycle.ownership_entry(
+                replaced_name,
+                hashlib.sha256(replaced_content).hexdigest(),
+                plugin=lifecycle.replaced_plugins[0],
+            )
+        )
+    )
+
+    placed = lifecycle.run()
+
+    assert placed.exit_code == 0
+    assert f"{module.RETAINED_PREFIX}{linked}" in placed.stdout
+    assert linked.is_symlink()
+    assert external.read_bytes() == replaced_content
 
 
 def test_plugin_lifecycle_rejects_an_unrecorded_destination_without_mutation(
@@ -914,12 +1038,12 @@ def test_a_local_scope_record_for_the_checkout_suppresses_the_bootstrap_install(
         for command in claude_commands
     )
     assert [(command.plugin, command.argv[-1], command.cwd) for command in updates] == [
-        (SPEC_TREE_PLUGIN, CLAUDE_LOCAL_SCOPE, observation.plan.roots.checkout)
+        (PRODUCT_TREE_PLUGIN, CLAUDE_LOCAL_SCOPE, observation.plan.roots.checkout)
     ]
     assert FIRST_INSTALL_WARNING.format(
         marketplace=observation.plan.roots.marketplace,
         agent=Target.CLAUDE.value,
-        plugin=SPEC_TREE_PLUGIN,
+        plugin=PRODUCT_TREE_PLUGIN,
     ) not in [warning.message for warning in observation.plan.warnings]
 
 
@@ -1147,6 +1271,71 @@ def test_the_install_record_rewrite_is_atomic_and_preserves_every_other_field(
     )
 
 
+def test_a_retired_plugin_record_in_another_checkout_moves_to_its_successor_by_the_rewrite(
+    tmp_path: Path,
+) -> None:
+    observation = observe_retired_record_migration(
+        install_record_fixture_path(), tmp_path
+    )
+    after = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.document_after[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    before = cast(
+        "dict[str, list[dict[str, str]]]",
+        observation.document_before[CLAUDE_INSTALLED_PLUGINS_FIELD],
+    )
+    moved_fields = {
+        CLAUDE_INSTALLED_RECORD_PATH_FIELD,
+        CLAUDE_INSTALLED_RECORD_VERSION_FIELD,
+        CLAUDE_INSTALLED_RECORD_COMMIT_FIELD,
+    }
+    target_version = observation.target.versions[PRODUCT_TREE_PLUGIN]
+
+    def holding(entry: Mapping[str, object]) -> list[dict[str, str]]:
+        return [
+            candidate
+            for candidate in after[observation.successor_identifier]
+            if (
+                candidate[CLAUDE_PLUGIN_SCOPE_FIELD],
+                candidate[CLAUDE_PLUGIN_PROJECT_PATH_FIELD],
+            )
+            == (
+                entry[CLAUDE_PLUGIN_SCOPE_FIELD],
+                entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD],
+            )
+        ]
+
+    def unset(entry: Mapping[str, object]) -> dict[str, object]:
+        return {k: v for k, v in entry.items() if k not in moved_fields}
+
+    assert observation.warnings == ()
+    for retired in observation.renames:
+        identifier = marketplace_plugin_identifier(retired, MARKETPLACE)
+        assert identifier in before
+        assert identifier not in after
+    contested = holding(observation.contested_entry)
+    assert len(contested) == 1
+    assert unset(contested[0]) == unset(observation.held_entry)
+    assert RETIRED_ONLY_FIELD not in contested[0]
+    first_taken = observation.taken_entries[0]
+    taken = holding(first_taken)
+    assert len(taken) == 1
+    assert unset(taken[0]) == unset(first_taken)
+    for entry in (*contested, *taken):
+        assert entry[CLAUDE_INSTALLED_RECORD_VERSION_FIELD] == target_version
+        assert entry[CLAUDE_INSTALLED_RECORD_COMMIT_FIELD] == (
+            observation.target.commit
+        )
+        assert entry[CLAUDE_INSTALLED_RECORD_PATH_FIELD] == str(
+            observation.cache_root / PRODUCT_TREE_PLUGIN / target_version
+        )
+    for identifier, entries in before.items():
+        plugin = marketplace_plugin_name(identifier, MARKETPLACE)
+        if identifier in after and plugin not in observation.target.versions:
+            assert after[identifier] == entries, identifier
+
+
 def test_a_record_written_between_the_writers_read_and_its_replace_survives(
     tmp_path: Path,
 ) -> None:
@@ -1207,7 +1396,7 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
                 ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(
                     marketplace=MARKETPLACE,
                     agent=agent.value,
-                    plugin=SPEC_TREE_PLUGIN,
+                    plugin=PRODUCT_TREE_PLUGIN,
                 ),
             } in reported
             installs = [

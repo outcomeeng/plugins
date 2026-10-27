@@ -12,7 +12,7 @@ Existing code often needs to change before `l1` evidence is possible. Extract pu
 
 - Call source functions directly.
 - Use Node temp dirs for cheap filesystem state.
-- Use typed Stage 5 doubles only when the spec-tree testing router selected an exception.
+- Use typed Stage 5 doubles only when the product-tree testing router selected an exception.
 - Import source-owned singleton values directly.
 - Use generators for variable inputs such as paths, names, option sets, and file contents.
 

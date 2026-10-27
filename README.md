@@ -1,24 +1,24 @@
 # Outcome Engineering Plugin Marketplace
 
-A combined Codex and Claude Code plugin marketplace for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where a durable map of your product, maintained as a Spec Tree, serves as the authoritative source of truth for all implementation.
+A combined Codex and Claude Code plugin marketplace for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where a durable map of your product, maintained as a Product Tree, serves as the authoritative source of truth for all implementation.
 
 This repository publishes two plugin surfaces from the same source tree:
 
 - `.claude-plugin` packages for Claude Code skills and thin agents
 - `.codex-plugin` packages for Codex skill bundles
 
-`AGENTS.md` and [`CLAUDE.md`](CLAUDE.md) are separate root instruction files that share the product-owned repository guidance and carry harness-specific managed Spec Tree sections.
+`AGENTS.md` and [`CLAUDE.md`](CLAUDE.md) are separate root instruction files that share the product-owned repository guidance and carry harness-specific managed Product Tree sections.
 
-> `/bootstrap` interviews you about your product, then scaffolds a spec tree — the durable map that drives all implementation.
+> `/bootstrap` interviews you about your product, then scaffolds a Product Tree — the durable map that drives all implementation.
 
-![Bootstrapping a spec tree — Claude interviews you about your product's scope](assets/tutorial/bootstrap/60-boostrap-02-questionnaire-02.png)
+![Bootstrapping a Product Tree — Claude interviews you about your product's scope](assets/tutorial/bootstrap/60-boostrap-02-questionnaire-02.png)
 
 ## Philosophy
 
 1. **RTFM:** Follow state-of-the-art (SOTA) model prompting guidance, such as [structured prompts based on XML tags](https://docs.prompts.ag/guidelines)
 2. **KILO:** *Keep It Local and Observable* — the golden source for all specifications lives locally within the product's Git repository
-3. **ABC:** *Always Be Converging* — the spec tree is the desired state; all activities are driven by it, not the other way around
-4. **DCI:** *Deterministic Context Injection* — the spec tree constructs a deterministic context injection plan for the model
+3. **ABC:** *Always Be Converging* — the Product Tree is the desired state; all activities are driven by it, not the other way around
+4. **DCI:** *Deterministic Context Injection* — the Product Tree constructs a deterministic context injection plan for the model
 
 ## Quick Start
 
@@ -28,7 +28,7 @@ This repository publishes two plugin surfaces from the same source tree:
 npm install -g @outcomeeng/spx
 ```
 
-The [spx CLI](https://www.npmjs.com/package/@outcomeeng/spx) is the developer tool for Spec Tree maintenance and validation. Required by all engineering plugins.
+The [spx CLI](https://www.npmjs.com/package/@outcomeeng/spx) is the developer tool for Product Tree maintenance and validation. Required by all engineering plugins.
 
 ### 2. Add the marketplace
 
@@ -51,8 +51,8 @@ Codex registers the marketplace source in the user's `~/.codex/config.toml` and 
 #### Claude Code
 
 ```bash
-# Spec Tree methodology (requires spx CLI)
-claude plugin install spec-tree@outcomeeng
+# Product Tree methodology (requires spx CLI)
+claude plugin install product-tree@outcomeeng
 
 # Language plugins (install per product, require spx CLI)
 claude plugin install python@outcomeeng
@@ -68,7 +68,7 @@ claude plugin install instructions@outcomeeng
 After adding the marketplace, enable only the plugins a product needs in that repo's committed `.codex/config.toml`:
 
 ```toml
-[plugins."spec-tree@outcomeeng"]
+[plugins."product-tree@outcomeeng"]
 enabled = true
 
 [plugins."instructions@outcomeeng"]
@@ -98,13 +98,13 @@ enabled = true
 enabled = true
 ```
 
-### 4. Bootstrap your spec tree
+### 4. Bootstrap your Product Tree
 
 ```text
-> /bootstrap                       # set up a new spec tree
+> /bootstrap                       # set up a new Product Tree
 ```
 
-![Scaffold result — product spec, guides, and nodes created](assets/tutorial/bootstrap/90-boostrap-02-questionnaire-05.png)
+![Scaffold result — product document, guides, and nodes created](assets/tutorial/bootstrap/90-boostrap-02-questionnaire-05.png)
 
 ### 5. Author, implement, commit
 
@@ -135,7 +135,7 @@ codex plugin marketplace upgrade outcomeeng
 Repository maintainers can verify both catalogs with
 `just verify-marketplace-installation`. The command installs each full catalog
 and a generated valid subset through the real Claude Code and Codex CLIs in
-disposable homes. The command also rejects an invalid subset that omits `spec-tree`. It places
+disposable homes. The command also rejects an invalid subset that omits `product-tree`. It places
 each installed plugin's generated Codex agent definitions in the disposable
 home's `agents/` directory and leaves persistent plugin state unchanged.
 
@@ -148,8 +148,9 @@ through the native plugin update, every other such record by rewriting its
 `installed_plugins.json` entry to the head's install path, version, and commit,
 whether or not the record's directory still exists. No command runs with any
 other checkout as its working directory, and no other checkout's settings or
-project directory is inspected. A record outside project and local scope or
-outside the catalog is reported and left unchanged. The invocation checkout's
+project directory is inspected. A record of a plugin id the catalog renames
+moves to the successor plugin's entry; any other record outside project and
+local scope or outside the catalog is reported and left unchanged. The invocation checkout's
 own settings matter only to bootstrap: settings it cannot read stop bootstrap
 and nothing else. The run also refreshes the selected `$CODEX_HOME`, plans from
 one listing read, reads the listing again after execution, reports each record's
@@ -162,7 +163,7 @@ Implementation of this selection and activation-preserving recovery is tracked i
 [Change #48](https://github.com/outcomeeng/changes/issues/48).
 
 Empty state receives
-only `spec-tree` and a warning. The command rejects nonempty state without `spec-tree`.
+only `product-tree` and a warning. The command rejects nonempty state without `product-tree`.
 The command reconciles the selected plugins' generated Codex agent definitions
 into the selected `$CODEX_HOME/agents/` registry under a digest-bound marketplace
 ownership record, leaving foreign and modified files untouched. A checkout
@@ -222,6 +223,54 @@ just build-skills   # uv run python -m outcomeeng.distribution.build src dist
 
 The pre-commit hook runs `build-skills` automatically, and `just check-full`'s `dist-diff` step (`git diff --exit-code dist`) fails when `dist/` is out of sync with `src/`, so each `src/plugins/` change and its regenerated `dist/` commit together. Never hand-edit `dist/`.
 
+## Upgrading from spec-tree
+
+The `spec-tree` plugin is now `product-tree`. Five places in a consumer's setup can still name `spec-tree`, and each takes one step.
+
+### The installed plugin
+
+The marketplace catalog maps `spec-tree` to `product-tree`. After the marketplace refresh, the first Claude Code plugin command rewrites the `spec-tree@outcomeeng` key in `.claude/settings.json` to `product-tree@outcomeeng`, moves the key to the end of the `enabledPlugins` map, and drops `spec-tree` from `claude plugin list`. The rewrite changes a committed file, so commit it. `product-tree` stays enabled and not installed until you install it at the scope that holds the old record:
+
+```bash
+claude plugin marketplace update outcomeeng
+claude plugin install product-tree@outcomeeng --scope project
+```
+
+On Codex, refresh the marketplace, add the successor, and then remove the old plugin. After the refresh, `spec-tree` no longer appears in `codex plugin list`, and `codex plugin remove spec-tree@outcomeeng` still removes it, together with its entry in `$CODEX_HOME/config.toml` and its cache:
+
+```bash
+codex plugin marketplace upgrade outcomeeng
+codex plugin add product-tree@outcomeeng
+codex plugin remove spec-tree@outcomeeng
+```
+
+### Project activation
+
+Claude Code rewrites the `enabledPlugins` key in `.claude/settings.json` as described above. No Codex command edits a project's committed `.codex/config.toml`: replace `[plugins."spec-tree@outcomeeng"]` with `[plugins."product-tree@outcomeeng"]` in that file by hand.
+
+### Repository instruction blocks
+
+Run the `update-instruction-block` skill of the `product-tree` plugin in each repository. It replaces the `SPEC-TREE` router block and shared regions in `CLAUDE.md` and `AGENTS.md` with their `PRODUCT-TREE` forms once.
+
+### The Codex agent registry
+
+Codex reads subagent definitions from `$CODEX_HOME/agents`. Run the `product-tree-plugin` skill in Codex with the `upgrade` verb. It writes the `product-tree_*.toml` definitions and prunes the `spec-tree_*.toml` definitions that the marketplace ownership record lists, while their content still matches the record. A definition you changed, or replaced with a link, stays in place and the step reports it as `retained`: delete that file by hand.
+
+### The Codex order
+
+Run the Codex steps in this order:
+
+1. Refresh the marketplace with `codex plugin marketplace upgrade outcomeeng`.
+2. Add the successor with `codex plugin add product-tree@outcomeeng`.
+3. Remove the old plugin with `codex plugin remove spec-tree@outcomeeng`.
+4. Replace `[plugins."spec-tree@outcomeeng"]` with `[plugins."product-tree@outcomeeng"]` in each project's `.codex/config.toml`. If a project's `.codex/config.toml` names no `spec-tree@outcomeeng` table, skip this step for that project.
+5. Start a new Codex session, so the session loads `product-tree`.
+6. Run the `product-tree-plugin` skill with the `upgrade` verb.
+7. If the skill reports a file as `retained`, delete that file by hand.
+8. Start a new Codex session, so the session discovers the `product-tree` definitions in `$CODEX_HOME/agents`.
+
+Run the `update-instruction-block` skill in the session of step 6.
+
 ## Plugins
 
 Skills are available in both Claude Code and Codex, with generated plugin surfaces carrying the thin agents their target supports. Every skill and thin agent across every plugin is listed in the auto-generated catalog below, sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md` and `agents/*.md`. Run `just docs` to regenerate after touching any of those files; `just check-full` enforces freshness in CI.
@@ -236,7 +285,7 @@ Skills are available in both Claude Code and Codex, with generated plugin surfac
 | **Scope** — what are the major concerns?                               | ![Scope question](assets/tutorial/bootstrap/60-boostrap-02-questionnaire-02.png)        |
 | **Shared infrastructure** — should anything be an enabler?             | ![Shared infrastructure](assets/tutorial/bootstrap/70-boostrap-02-questionnaire-03.png) |
 | **Confirm** — review the scaffold before creating files                | ![Confirm scaffold](assets/tutorial/bootstrap/80-boostrap-02-questionnaire-04.png)      |
-| **Result** — scaffold created with product spec, guides, and nodes     | ![Scaffold result](assets/tutorial/bootstrap/90-boostrap-02-questionnaire-05.png)       |
+| **Result** — scaffold created with product document, guides, and nodes | ![Scaffold result](assets/tutorial/bootstrap/90-boostrap-02-questionnaire-05.png)       |
 
 </details>
 
@@ -324,6 +373,81 @@ Instruction authoring: /author-skill, /author-subagent
 | Agent | `skill-auditor`           | Auditing, reviewing, or evaluating SKILL.md files for best practices compliance, or when the user asks to audit a skill                                                                                                                                                                                             |
 | Agent | `subagent-auditor`        | Claude: Auditing, reviewing, or evaluating subagent configuration files for best practices compliance, or when the user asks to audit a subagent; Codex: Auditing, reviewing, or evaluating custom agent configuration files for best practices compliance, or when the user asks to audit a custom agent           |
 
+### product-tree
+
+Product Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-eval-evidence, /audit-adr, /audit-pdr, /audit-implementation, /audit-specs, /audit-changeset-coherence, /apply, /commit-changes, /claim-change, /release-change, /close-change, /refocus, /diagnose
+
+| Type  | Name                          | Purpose                                                                                                                                                                                                                                                                            |
+| ----- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Skill | `/align`                      | Reviewing, auditing, or checking spec file conformance                                                                                                                                                                                                                             |
+| Skill | `/apply`                      | Implementing any product-tree work item                                                                                                                                                                                                                                            |
+| Skill | `/audit-adr`                  | ADR audit methodology                                                                                                                                                                                                                                                              |
+| Skill | `/audit-assertions`           | Audit-assertion methodology                                                                                                                                                                                                                                                        |
+| Skill | `/audit-change`               | Change record audit methodology                                                                                                                                                                                                                                                    |
+| Skill | `/audit-changeset-coherence`  | Changeset-coherence audit methodology                                                                                                                                                                                                                                              |
+| Skill | `/audit-eval-evidence`        | Eval-evidence audit methodology                                                                                                                                                                                                                                                    |
+| Skill | `/audit-implementation`       | Implementation audit methodology                                                                                                                                                                                                                                                   |
+| Skill | `/audit-pdr`                  | PDR audit methodology                                                                                                                                                                                                                                                              |
+| Skill | `/audit-specs`                | Spec-node audit methodology                                                                                                                                                                                                                                                        |
+| Skill | `/audit-tests`                | Test-evidence audit methodology                                                                                                                                                                                                                                                    |
+| Skill | `/author`                     | Adding, defining, or creating specs, decisions, or nodes                                                                                                                                                                                                                           |
+| Skill | `/author-change`              | Creating, refining, or revising an Outcome Engineering Change record, or when turning a request into one                                                                                                                                                                           |
+| Skill | `/bootstrap`                  | Setting up a new Product Tree in an empty or absent spx/ directory                                                                                                                                                                                                                 |
+| Skill | `/change-standards`           | Change record standards for Intent, maturity, lifecycle, authority, refinement, and continuation                                                                                                                                                                                   |
+| Skill | `/claim-change`               | Claiming an Available Change from the declared Change store to hold it for refinement or execution                                                                                                                                                                                 |
+| Skill | `/close-change`               | A held Change reaches a terminal Lifecycle — Applied or Abandoned — to write the terminal record, remove the holder, and close it in the declared store                                                                                                                            |
+| Skill | `/commit-changes`             | Committing changes or when user says "commit"                                                                                                                                                                                                                                      |
+| Skill | `/confirm-change`             | The Product's Maintainer confirms a Submitted Change — it moves the Change from Submitted to Available and posts no comment                                                                                                                                                        |
+| Skill | `/contextualize`              | Asking about status, progress, or what exists in the Product Tree                                                                                                                                                                                                                  |
+| Skill | `/decompose`                  | Breaking down, splitting, scoping, composing, or structuring Product Tree nodes                                                                                                                                                                                                    |
+| Skill | `/diagnose`                   | Diagnosing the health of a product-tree or spx environment, when checking whether the SessionStart hook fired for the current session, or when troubleshooting a missing session identity, worktree claim, or unreachable spx CLI                                                  |
+| Skill | `/execute-change`             | A session executes one claimed Executable Change as its Executor                                                                                                                                                                                                                   |
+| Skill | `/implement-change`           | Language-implementation workflow for one product-tree node: the target language's installed architect, code, and simplify skills run in one session, invoked with a canonical node path                                                                                            |
+| Skill | `/init-worktrees`             | Setting up a repository's git worktree layout — classifying a checkout as a single tree, a bare-repo worktree pool, or non-compliant, and provisioning the bare-repo pool while pushing every local ref to the remote and carrying a prior checkout's gitignored state across      |
+| Skill | `/inspect-github-actions`     | The user asks about CI failures, workflow logs, GitHub Actions status, pipeline issues, or troubleshooting failed builds                                                                                                                                                           |
+| Skill | `/interview`                  | Requirements interviews, draft approval, or unresolved scope/design questions while creating or modifying an artifact (spec, ADR, PDR, test, code, doc)                                                                                                                            |
+| Skill | `/manage-github-pr`           | The user asks to open or manage a GitHub pull request                                                                                                                                                                                                                              |
+| Skill | `/manage-pr`                  | Composed re-entry protocol for an already open PR: foreground check and review waits, re-entry after compaction or push, the merge-readiness decision, and merge command selection                                                                                                 |
+| Skill | `/merge`                      | The user asks to ship, integrate, or merge a changeset into the default branch on origin, or runs /merge                                                                                                                                                                           |
+| Skill | `/merging-standards`          | Shared merge-lifecycle invariants and routing for detailed preflight, branch, review, authority-gate, delivery, and closeout policy                                                                                                                                                |
+| Skill | `/migrate-3-to-4`             | Converting the decision citations of a 3.x Product Tree product to the tree-absolute Markdown links the 4.0 methodology requires, or when `spx` rejects a decision cited as a code span, a bare path, or a node-local link                                                         |
+| Skill | `/open-pr`                    | PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and the first management pass                                                                                                                                                                      |
+| Skill | `/project-run-journal`        | Verification run-journal protocol                                                                                                                                                                                                                                                  |
+| Skill | `/refactor`                   | Moving nodes, re-scoping content, or extracting shared providers                                                                                                                                                                                                                   |
+| Skill | `/refocus`                    | Running ad hoc commands or writing code without a spec inside a repository whose root contains `spx/`                                                                                                                                                                              |
+| Skill | `/release-change`             | Stopping work on a held Change so another agent can continue it — it writes the Handoff, removes the holder, and returns the Change to Available, or to Submitted when a refined record waits for the Product's Maintainer                                                         |
+| Skill | `/report-changes`             | Listing, reporting, or checking the open Changes in the Change store, such as which Changes are waiting, blocked, or claimed                                                                                                                                                       |
+| Skill | `/review-changes`             | Reviewing working changes on a branch against a base ref                                                                                                                                                                                                                           |
+| Skill | `/scope-changeset`            | Committed changeset endpoint identities and changed paths, resolved through the canonical Git scope capability                                                                                                                                                                     |
+| Skill | `/select-artifacts`           | The registered artifacts and audit skills each changed path selects, resolved through the artifact registry the build renders beside this skill's reader                                                                                                                           |
+| Skill | `/slice`                      | Selecting the next executable slice to implement or deciding which product-tree nodes to build next from an implementation plan                                                                                                                                                    |
+| Skill | `/sync-base`                  | ALWAYS invoke this skill to bring a branch behind its base current — before reading product truth, before verifying, and before every merge push                                                                                                                                   |
+| Skill | `/task-tracking-standards`    | Runtime task-tracking standards for skills that schedule heartbeats or timers                                                                                                                                                                                                      |
+| Skill | `/test`                       | Writing or repairing deterministic tests for a spec assertion, selecting a decision Testing rule's assertion type, or when learning the testing approach                                                                                                                           |
+| Skill | `/test-evidence-standards`    | Shared test-evidence standards — seam, case provenance, oracle independence, execution level, per-assertion-type artifact permissions, and the pre-authoring assertion-design record                                                                                               |
+| Skill | `/understand`                 | The live PRODUCT_TREE_FOUNDATION marker is absent before direct filesystem access under spx/ or before reading, searching, listing, or changing source or test files                                                                                                               |
+| Skill | `/update-instruction-block`   | Manually regenerating, refreshing, or scaffolding the managed Product Tree instruction surface of a product's two root instruction files, AGENTS.md and its sibling, from the installed product-tree template, or reconciling a `shared` region that differs between the two files |
+| Skill | `/verify`                     | Selecting or establishing evidence for spec assertions, decision verification rules, or a product-tree scope                                                                                                                                                                       |
+| Skill | `/wait-for-load`              | Starting a resource-intensive local command or when host load is high                                                                                                                                                                                                              |
+| Agent | `adr-auditor`                 | Verifier running `/audit-adr`: a calling skill launches it by exact name with one ADR path when its gate requires an independent audit of that ADR                                                                                                                                 |
+| Agent | `assertion-auditor`           | Verifier running `/audit-assertions`: a calling skill launches it by exact name with one node spec path when its gate requires an independent verdict on that node's `[audit]` assertions                                                                                          |
+| Agent | `change-auditor`              | Audits one local Outcome Engineering Change record in an isolated verifier context                                                                                                                                                                                                 |
+| Agent | `change-author`               | Round session `/execute-change` launches by exact name when a Mutation row needs product-tree artifacts: decisions, specs, nodes, and notes produced or repaired through `/author`                                                                                                 |
+| Agent | `change-executor`             | ALWAYS select at session start when an agent session executes one claimed Executable Change as its Executor through `/execute-change`                                                                                                                                              |
+| Agent | `change-implementer`          | Round session `/execute-change` launches by exact name when a Mutation row needs a language implementation of one node produced or repaired through `/implement-change`                                                                                                            |
+| Agent | `change-skill-author`         | Round session `/execute-change` launches by exact name when a Mutation row needs a skill surface (a `SKILL.md`, another file in a skill directory, or an authored shared fragment) produced or repaired through `instructions:author-skill`                                        |
+| Agent | `change-subagent-author`      | Round session `/execute-change` launches by exact name when a Mutation row needs a subagent definition produced or repaired through `instructions:author-subagent`                                                                                                                 |
+| Agent | `change-tester`               | Round session `/execute-change` launches by exact name when a Mutation row needs routed `[test]` evidence produced or repaired through `/test`                                                                                                                                     |
+| Agent | `change-verifier`             | Round session `/execute-change` launches by exact name when a Mutation row needs assertions routed to their verification type and evidence produced or repaired through `/verify`                                                                                                  |
+| Agent | `changes-reviewer`            | Reviews working changes against a base ref in an isolated verifier context                                                                                                                                                                                                         |
+| Agent | `changeset-coherence-auditor` | Audits whether one exact committed changeset is one coherent review unit or requires a dependency-ordered split, in an isolated read-only verifier context                                                                                                                         |
+| Agent | `eval-evidence-auditor`       | Verifier running `/audit-eval-evidence`: a calling skill launches it by exact name with one spec node path when its gate requires an independent audit of that node's eval evidence                                                                                                |
+| Agent | `implementation-auditor`      | Verifier running `/audit-implementation`: a calling skill launches it by exact name with one changeset scope selector when its gate requires an independent audit of that changeset's implementation                                                                               |
+| Agent | `instruction-block-updater`   | Updates the managed Product Tree instruction block in a product's root CLAUDE.md and AGENTS.md without operator interaction, in an isolated context                                                                                                                                |
+| Agent | `pdr-auditor`                 | Verifier running `/audit-pdr`: a calling skill launches it by exact name with one PDR path when its gate requires an independent audit of that PDR                                                                                                                                 |
+| Agent | `spec-auditor`                | Verifier running `/audit-specs`: a calling skill launches it by exact name with one node spec path when its gate requires an independent audit of that spec                                                                                                                        |
+| Agent | `test-evidence-auditor`       | Verifier running `/audit-tests`: a calling skill launches it by exact name with one spec node path when its gate requires an independent audit of that node's test evidence                                                                                                        |
+
 ### prose
 
 Prose craft through a matched triple (/author-prose-architecture, /author-prose, /audit-prose) over caller-supplied kind layers: interface, documentation, copy
@@ -370,81 +494,6 @@ Rust engineering: /author-rust-test, /author-rust-code, /audit-rust-code, /audit
 | Skill | `/rust-test-standards`         | Rust test standards enforced across all skills                    |
 | Skill | `/simplify-rust-code`          | Simplifying Rust implementation while preserving behavior         |
 
-### spec-tree
-
-Spec Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /refactor, /align, /interview, /test, /audit-tests, /audit-eval-evidence, /audit-adr, /audit-pdr, /audit-implementation, /audit-specs, /audit-changeset-coherence, /apply, /commit-changes, /claim-change, /release-change, /close-change, /refocus, /diagnose
-
-| Type  | Name                          | Purpose                                                                                                                                                                                                                                                                       |
-| ----- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Skill | `/align`                      | Reviewing, auditing, or checking spec file conformance                                                                                                                                                                                                                        |
-| Skill | `/apply`                      | Implementing any spec-tree work item                                                                                                                                                                                                                                          |
-| Skill | `/audit-adr`                  | ADR audit methodology                                                                                                                                                                                                                                                         |
-| Skill | `/audit-assertions`           | Audit-assertion methodology                                                                                                                                                                                                                                                   |
-| Skill | `/audit-change`               | Change record audit methodology                                                                                                                                                                                                                                               |
-| Skill | `/audit-changeset-coherence`  | Changeset-coherence audit methodology                                                                                                                                                                                                                                         |
-| Skill | `/audit-eval-evidence`        | Eval-evidence audit methodology                                                                                                                                                                                                                                               |
-| Skill | `/audit-implementation`       | Implementation audit methodology                                                                                                                                                                                                                                              |
-| Skill | `/audit-pdr`                  | PDR audit methodology                                                                                                                                                                                                                                                         |
-| Skill | `/audit-specs`                | Spec-node audit methodology                                                                                                                                                                                                                                                   |
-| Skill | `/audit-tests`                | Test-evidence audit methodology                                                                                                                                                                                                                                               |
-| Skill | `/author`                     | Adding, defining, or creating specs, decisions, or nodes                                                                                                                                                                                                                      |
-| Skill | `/author-change`              | Creating, refining, or revising an Outcome Engineering Change record, or when turning a request into one                                                                                                                                                                      |
-| Skill | `/bootstrap`                  | Setting up a new spec tree or when /author detects an empty spx/ directory                                                                                                                                                                                                    |
-| Skill | `/change-standards`           | Change record standards for Intent, maturity, lifecycle, authority, refinement, and continuation                                                                                                                                                                              |
-| Skill | `/claim-change`               | Claiming an Available Change from the declared Change store to hold it for refinement or execution                                                                                                                                                                            |
-| Skill | `/close-change`               | A held Change reaches a terminal Lifecycle — Applied or Abandoned — to write the terminal record, remove the holder, and close it in the declared store                                                                                                                       |
-| Skill | `/commit-changes`             | Committing changes or when user says "commit"                                                                                                                                                                                                                                 |
-| Skill | `/confirm-change`             | The Product's Maintainer confirms a Submitted Change — it moves the Change from Submitted to Available and posts no comment                                                                                                                                                   |
-| Skill | `/contextualize`              | Asking about status, progress, or what exists in the spec tree                                                                                                                                                                                                                |
-| Skill | `/decompose`                  | Breaking down, splitting, scoping, composing, or structuring spec tree nodes                                                                                                                                                                                                  |
-| Skill | `/diagnose`                   | Diagnosing the health of a spec-tree or spx environment, when checking whether the SessionStart hook fired for the current session, or when troubleshooting a missing session identity, worktree claim, or unreachable spx CLI                                                |
-| Skill | `/execute-change`             | A session executes one claimed Executable Change as its Executor                                                                                                                                                                                                              |
-| Skill | `/implement-change`           | Language-implementation workflow for one spec-tree node: the target language's installed architect, code, and simplify skills run in one session, invoked with a canonical node path                                                                                          |
-| Skill | `/init-worktrees`             | Setting up a repository's git worktree layout — classifying a checkout as a single tree, a bare-repo worktree pool, or non-compliant, and provisioning the bare-repo pool while pushing every local ref to the remote and carrying a prior checkout's gitignored state across |
-| Skill | `/inspect-github-actions`     | The user asks about CI failures, workflow logs, GitHub Actions status, pipeline issues, or troubleshooting failed builds                                                                                                                                                      |
-| Skill | `/interview`                  | Requirements interviews, draft approval, or unresolved scope/design questions while creating or modifying an artifact (spec, ADR, PDR, test, code, doc)                                                                                                                       |
-| Skill | `/manage-github-pr`           | The user asks to open or manage a GitHub pull request, or runs /manage-github-pr                                                                                                                                                                                              |
-| Skill | `/manage-pr`                  | Managing, waiting on, or continuing an open pull request lifecycle after a PR exists                                                                                                                                                                                          |
-| Skill | `/merge`                      | The user asks to ship, integrate, or merge a changeset into the default branch on origin, or runs /merge                                                                                                                                                                      |
-| Skill | `/merging-standards`          | Shared merge-lifecycle invariants and routing for detailed preflight, branch, review, authority-gate, transport, and closeout policy                                                                                                                                          |
-| Skill | `/migrate-3-to-4`             | Converting the decision citations of a 3.x Spec Tree product to the tree-absolute Markdown links the 4.0 methodology requires, or when `spx` rejects a decision cited as a code span, a bare path, or a node-local link                                                       |
-| Skill | `/open-pr`                    | PR opening protocol for VERIFICATION_READINESS, branch push, ready PR creation, and the first management pass                                                                                                                                                                 |
-| Skill | `/project-run-journal`        | Verification run-journal projection methodology loaded by audit and review skills when building spx journal events, computing rollups, or rendering verdict surfaces                                                                                                          |
-| Skill | `/refactor`                   | Moving nodes, re-scoping content, or extracting shared providers                                                                                                                                                                                                              |
-| Skill | `/refocus`                    | Running ad hoc commands or writing code without a spec inside a repository whose root contains `spx/`                                                                                                                                                                         |
-| Skill | `/release-change`             | Stopping work on a held Change so another agent can continue it — it writes the Handoff, removes the holder, and returns the Change to Available, or to Submitted when a refined record waits for the Product's Maintainer                                                    |
-| Skill | `/report-changes`             | Listing, reporting, or checking the open Changes in the Change store, such as which Changes are waiting, blocked, or claimed                                                                                                                                                  |
-| Skill | `/review-changes`             | Reviewing working changes on a branch against a base ref                                                                                                                                                                                                                      |
-| Skill | `/scope-changeset`            | Committed changeset endpoint identities and changed paths, resolved through the canonical Git scope capability                                                                                                                                                                |
-| Skill | `/select-artifacts`           | The registered artifacts and audit skills each changed path selects, resolved through the artifact registry the build renders beside this skill's reader                                                                                                                      |
-| Skill | `/slice`                      | Selecting the next executable slice to implement or deciding which spec-tree nodes /apply should build next from an implementation plan                                                                                                                                       |
-| Skill | `/sync-base`                  | ALWAYS invoke this skill to bring a branch behind its base current — before reading product truth, before verifying, and before every merge push                                                                                                                              |
-| Skill | `/task-tracking-standards`    | Runtime task-tracking standards for skills that schedule heartbeats or timers                                                                                                                                                                                                 |
-| Skill | `/test`                       | Writing or repairing deterministic tests for a spec assertion, selecting a decision Testing rule's assertion type, or when learning the testing approach                                                                                                                      |
-| Skill | `/test-evidence-standards`    | Shared test-evidence standards — seam, case provenance, oracle independence, execution level, per-assertion-type artifact permissions, and the pre-authoring assertion-design record                                                                                          |
-| Skill | `/understand`                 | The live SPEC_TREE_FOUNDATION marker is absent before direct filesystem access under spx/ or before reading, searching, listing, or changing source or test files                                                                                                             |
-| Skill | `/update-instruction-block`   | Manually regenerating, refreshing, or scaffolding the managed Spec Tree instruction surface of a product's two root instruction files, AGENTS.md and its sibling, from the installed spec-tree template, or reconciling a `shared` region that differs between the two files  |
-| Skill | `/verify`                     | Selecting or establishing evidence for spec assertions, decision verification rules, or a spec-tree scope                                                                                                                                                                     |
-| Skill | `/wait-for-load`              | Starting a resource-intensive local command or when host load is high                                                                                                                                                                                                         |
-| Agent | `adr-auditor`                 | Verifier running `/audit-adr`: a calling skill launches it by exact name with one ADR path when its gate requires an independent audit of that ADR                                                                                                                            |
-| Agent | `assertion-auditor`           | Verifier running `/audit-assertions`: a calling skill launches it by exact name with one node spec path when its gate requires an independent verdict on that node's `[audit]` assertions                                                                                     |
-| Agent | `change-auditor`              | Auditing one local Outcome Engineering Change record before publication or after refinement                                                                                                                                                                                   |
-| Agent | `change-author`               | Round session `/execute-change` launches by exact name when a Mutation row needs spec-tree artifacts: decisions, specs, nodes, and notes produced or repaired through `/author`                                                                                               |
-| Agent | `change-executor`             | ALWAYS select at session start when an agent session executes one claimed Executable Change as its Executor through `/execute-change`                                                                                                                                         |
-| Agent | `change-implementer`          | Round session `/execute-change` launches by exact name when a Mutation row needs a language implementation of one node produced or repaired through `/implement-change`                                                                                                       |
-| Agent | `change-skill-author`         | Round session `/execute-change` launches by exact name when a Mutation row needs a skill surface (a `SKILL.md`, another file in a skill directory, or an authored shared fragment) produced or repaired through `instructions:author-skill`                                   |
-| Agent | `change-subagent-author`      | Round session `/execute-change` launches by exact name when a Mutation row needs a subagent definition produced or repaired through `instructions:author-subagent`                                                                                                            |
-| Agent | `change-tester`               | Round session `/execute-change` launches by exact name when a Mutation row needs routed `[test]` evidence produced or repaired through `/test`                                                                                                                                |
-| Agent | `change-verifier`             | Round session `/execute-change` launches by exact name when a Mutation row needs assertions routed to their verification type and evidence produced or repaired through `/verify`                                                                                             |
-| Agent | `changes-reviewer`            | Reviewing working changes against a base ref                                                                                                                                                                                                                                  |
-| Agent | `changeset-coherence-auditor` | Deciding whether an exact committed changeset is one coherent review unit or requires a dependency-ordered split                                                                                                                                                              |
-| Agent | `eval-evidence-auditor`       | Verifier running `/audit-eval-evidence`: a calling skill launches it by exact name with one spec node path when its gate requires an independent audit of that node's eval evidence                                                                                           |
-| Agent | `implementation-auditor`      | Verifier running `/audit-implementation`: a calling skill launches it by exact name with one changeset scope selector when its gate requires an independent audit of that changeset's implementation                                                                          |
-| Agent | `instruction-block-updater`   | Applying spec-tree template drift to a product's root CLAUDE.md and AGENTS.md managed instruction block in the background — it regenerates a stale or absent instruction block from the installed template without user interaction                                           |
-| Agent | `pdr-auditor`                 | Verifier running `/audit-pdr`: a calling skill launches it by exact name with one PDR path when its gate requires an independent audit of that PDR                                                                                                                            |
-| Agent | `spec-auditor`                | Verifier running `/audit-specs`: a calling skill launches it by exact name with one node spec path when its gate requires an independent audit of that spec                                                                                                                   |
-| Agent | `test-evidence-auditor`       | Verifier running `/audit-tests`: a calling skill launches it by exact name with one spec node path when its gate requires an independent audit of that node's test evidence                                                                                                   |
-
 ### typescript
 
 TypeScript engineering: /author-typescript-test, /author-typescript-code, /audit-typescript-code, /audit-typescript-test, /audit-typescript-architecture, /author-typescript-architecture, /simplify-typescript-code
@@ -479,7 +528,7 @@ Skills are distributed as standalone repositories, compatible with any agent tha
 
 | Repository                                             | Purpose                                                 | Install                                |
 | ------------------------------------------------------ | ------------------------------------------------------- | -------------------------------------- |
-| [spec-tree](https://github.com/outcomeeng/spec-tree)   | Spec Tree methodology skills for Outcome Engineering    | `npx skills add outcomeeng/spec-tree`  |
+| [spec-tree](https://github.com/outcomeeng/spec-tree)   | Product Tree methodology skills for Outcome Engineering | `npx skills add outcomeeng/spec-tree`  |
 | [python](https://github.com/outcomeeng/python)         | Python engineering skills                               | `npx skills add outcomeeng/python`     |
 | [typescript](https://github.com/outcomeeng/typescript) | TypeScript engineering skills                           | `npx skills add outcomeeng/typescript` |
 | [foundation](https://github.com/outcomeeng/foundation) | Foundation skills (prose, plugin development, frontend) | `npx skills add outcomeeng/foundation` |

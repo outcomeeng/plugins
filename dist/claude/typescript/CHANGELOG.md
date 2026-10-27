@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.28.2
+
+### Changed
+
+- **The TypeScript skills name the `product-tree` plugin and its markers.** `/audit-typescript-test`, `/author-typescript-test`, `/author-typescript-architecture`, and `/author-typescript-code` require `product-tree:test`, `product-tree:audit-tests`, `product-tree:verify`, and `product-tree:contextualize`, `/audit-typescript-test` and `/author-typescript-test` require the `<PRODUCT_TREE_FOUNDATION>` and `<PRODUCT_TREE_CONTEXT>` markers, and the example generators and harness in `/typescript-test-standards` are `arbitraryProductTree`, `ProductTreeFixture`, and `ProductTreeEnv`. `/audit-typescript-test`, `/author-typescript-test`, `/author-typescript-architecture`, and `/author-typescript-code` name `product-tree:contextualize` with the `Use skill` instruction, and `/author-typescript-test` names `product-tree:understand` the same way. Before this change, the skills named `spec-tree:` skills, the `SPEC_TREE` markers, and the `SpecTree` example identifiers.
+
 ## 0.28.1
 
 ### Changed

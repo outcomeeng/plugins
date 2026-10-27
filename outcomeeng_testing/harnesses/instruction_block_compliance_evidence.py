@@ -129,8 +129,8 @@ def former_command_slot_render(tmp_path: pathlib.Path) -> tuple[str, str]:
     repo = tmp_path / "repo"
     repo.mkdir()
     slot_fence = (
-        "<!-- SPEC-TREE:author -->\n\nproduct author command\n\n"
-        "<!-- /SPEC-TREE:author -->\n"
+        "<!-- PRODUCT-TREE:author -->\n\nproduct author command\n\n"
+        "<!-- /PRODUCT-TREE:author -->\n"
     )
     for name in (harness.INSTRUCTION_CLAUDE, harness.INSTRUCTION_AGENTS):
         (repo / name).write_text(slot_fence, encoding="utf-8")

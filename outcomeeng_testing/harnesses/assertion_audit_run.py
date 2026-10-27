@@ -39,16 +39,16 @@ SKILL_PATH: Final = (
     REPO_ROOT
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "audit-assertions"
     / "SKILL.md"
 )
 PLUGIN_MANIFEST_PATH: Final = (
-    REPO_ROOT / "src" / "plugins" / "spec-tree" / ".claude-plugin" / "plugin.json"
+    REPO_ROOT / "src" / "plugins" / "product-tree" / ".claude-plugin" / "plugin.json"
 )
 NODE_SPEC_PATH: Final = (
-    "spx/21-spec-tree.enabler/68-audit.enabler/"
+    "spx/21-product-tree.enabler/68-audit.enabler/"
     "32-audit-assertions.enabler/audit-assertions.md"
 )
 
@@ -62,9 +62,9 @@ FINDING_EXPECTED: Final = "a named subject"
 _RUN_DRIVER: Final = {
     "producerKind": "agent",
     "agentName": ASSERTION_AUDITOR_AGENT_NAME,
-    "agentOwningPluginName": "spec-tree",
+    "agentOwningPluginName": "product-tree",
     "skillName": ASSERTION_AUDIT_SKILL_NAME,
-    "skillOwningPluginName": "spec-tree",
+    "skillOwningPluginName": "product-tree",
     "invocationRole": "run-driver",
 }
 _JSON_BLOCK: Final = re.compile(r"```json\n(.*?)\n```", re.DOTALL)
@@ -76,6 +76,7 @@ _START_SELECTORS: Final = re.compile(
     r"spx verification run start (--verification-type \S+ --scope-type \S+) --scope <path>"
 )
 _PLACEHOLDER: Final = re.compile(r"<([^<>]+)>")
+_OPTIONAL_LOCATION_SUFFIX: Final = re.compile(r"\[; <further-location>\.\.\.\]")
 _EXPECTED_PRODUCER_PLACEHOLDER: Final = (
     "the unit's expectedProducer object, repeated exactly"
 )
@@ -346,7 +347,7 @@ def _bindings(unit_key: str, designator: str) -> Mapping[str, str]:
         "path": NODE_SPEC_PATH,
         "designator": designator,
         "subject-path-and-line-or-section": f"{NODE_SPEC_PATH}:1",
-        "violated-rule-id": FINDING_RULE,
+        "catalog-rule-id": FINDING_RULE,
         "blocking-or-debt": FINDING_SEVERITY,
         "finding-message": FINDING_MESSAGE,
         "observed-state": FINDING_OBSERVED,
@@ -364,12 +365,13 @@ def _provenance_bindings() -> Mapping[str, str]:
     version = manifest["version"]
     if not isinstance(version, str):
         raise TypeError("plugin manifest carries no version string")
-    return {"spec-tree-plugin-version": version}
+    return {"product-tree-plugin-version": version}
 
 
 def _render(value: object, bindings: Mapping[str, str]) -> object:
     if isinstance(value, str):
-        return _PLACEHOLDER.sub(lambda match: bindings[match.group(1)], value)
+        required = _OPTIONAL_LOCATION_SUFFIX.sub("", value)
+        return _PLACEHOLDER.sub(lambda match: bindings[match.group(1)], required)
     if isinstance(value, dict):
         return {key: _render(item, bindings) for key, item in value.items()}
     if isinstance(value, list):

@@ -1,0 +1,1 @@
+Sample `gh` JSON payloads in the field shapes `workflow_inspect.py` requests with `--json` and `--jq`. They are authored samples, not captures from a live `gh` release; the live interaction is covered by the `l3` scenario evidence.

@@ -51,7 +51,7 @@ CHANGESET_SCOPE_SCRIPT: Final = (
     Path(__file__).resolve().parents[2]
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "scope-changeset"
     / "scripts"
@@ -70,7 +70,7 @@ WORKFLOW_REASON: Final = "workflow or shell surface changed"
 SKILL_REASON: Final = "plugin skill, shared fragment, or generated runtime changed"
 INSTRUCTION_BLOCK_REASON: Final = "managed instruction-block source changed"
 EVAL_REASON: Final = "eval definition, producer, or trigger surface changed"
-EVIDENCE_LINK_REASON: Final = "spec-tree evidence link surface changed"
+EVIDENCE_LINK_REASON: Final = "product-tree evidence link surface changed"
 TEST_REASON: Final = "changed python assertion tests"
 REACHED_TESTS_REASON: Final = "tests reaching changed test infrastructure"
 FULL_CHECK_REASON: Final = "explicit full gate"
@@ -103,7 +103,7 @@ SPX_CONFIG_PATH: Final = "spx.config.yaml"
 # than recopying the path.
 CHECK_WORKFLOW_PATH: Final = ".github/workflows/check.yml"
 PYPROJECT_PATH: Final = "pyproject.toml"
-INSTRUCTION_BLOCK_SOURCE_PATH: Final = "src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md"
+INSTRUCTION_BLOCK_SOURCE_PATH: Final = "src/plugins/product-tree/skills/update-instruction-block/templates/instruction-block.md"
 SKILL_STEP_LABELS: Final = (
     "build-skills",
     "dist-diff",
@@ -184,15 +184,15 @@ EVAL_PROMPT_PATTERNS: Final = (
     "src/plugins/**",
 )
 # A `[test]` or `[eval]` link lives only in spec markdown, and its target is a
-# file under the same node, so any changed spec-tree path can dangle one.
+# file under the same node, so any changed product-tree path can dangle one.
 EVIDENCE_LINK_PATTERNS: Final = ("spx/**",)
 INSTRUCTION_BLOCK_PATTERNS: Final = (
     "AGENTS.md",
     "CLAUDE.md",
     INSTRUCTION_BLOCK_SOURCE_PATH,
-    "src/plugins/spec-tree/skills/update-instruction-block/**",
-    "dist/claude/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
-    "dist/codex/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
+    "src/plugins/product-tree/skills/update-instruction-block/**",
+    "dist/claude/product-tree/skills/update-instruction-block/templates/instruction-block.md",
+    "dist/codex/product-tree/skills/update-instruction-block/templates/instruction-block.md",
     "outcomeeng/distribution/instruction_block.py",
 )
 

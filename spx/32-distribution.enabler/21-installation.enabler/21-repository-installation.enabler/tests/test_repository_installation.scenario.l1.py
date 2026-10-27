@@ -22,7 +22,7 @@ from outcomeeng.distribution.installation import (
     PATHLESS_LISTING_ENTRY_WARNING,
     VERSIONLESS_LISTING_ENTRY_WARNING,
     ReportField,
-    SPEC_TREE_PLUGIN,
+    PRODUCT_TREE_PLUGIN,
     STDERR_WARNING_PREFIX,
     UNREADABLE_SETTINGS_WARNING,
     UNREADABLE_HEAD_RECORD_WARNING,
@@ -43,6 +43,7 @@ from outcomeeng_testing.generators.installation import (
     RecordDisposition,
     generated_absent_plugins,
     generated_boolean_states,
+    generated_migration_cases,
 )
 import outcomeeng.validation.__main__ as validation_entry
 from outcomeeng.validation import L3_LEVEL, PYTEST_ARGV
@@ -57,6 +58,7 @@ from outcomeeng_testing.harnesses.real_agent_selection import (
 )
 from outcomeeng_testing.harnesses.installation import (
     observe_unlocated_registry_plan,
+    RETIRED_PLUGIN,
     DECLARED_CLAUDE_SOURCE,
     MARKETPLACE,
     RegistryState,
@@ -66,6 +68,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_inspection_failure,
     observe_invalid_isolated_selection,
     observe_invalid_persistent_selection,
+    observe_migrating_inventory,
     observe_persistent_plan,
     observe_bootstrap_record_drift,
     observe_unreadable_head_record,
@@ -83,7 +86,7 @@ from outcomeeng_testing.harnesses.installation import (
 def _first_install_warning(agent: Target) -> str:
     """The bootstrap warning for one agent, named for this checkout's marketplace."""
     return FIRST_INSTALL_WARNING.format(
-        marketplace=MARKETPLACE, agent=agent.value, plugin=SPEC_TREE_PLUGIN
+        marketplace=MARKETPLACE, agent=agent.value, plugin=PRODUCT_TREE_PLUGIN
     )
 
 
@@ -113,7 +116,7 @@ def _announced_first_installs(
         == FIRST_INSTALL_WARNING.format(
             marketplace=marketplace,
             agent=warning[ReportField.AGENT],
-            plugin=SPEC_TREE_PLUGIN,
+            plugin=PRODUCT_TREE_PLUGIN,
         )
     )
 
@@ -162,7 +165,7 @@ def test_verification_recipe_uses_pytest_discovery_for_the_node() -> None:
     assert collected_files == unfiltered_files - l3_files
 
 
-def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
+def test_first_persistent_run_installs_only_product_tree_and_warns() -> None:
     observation = observe_first_persistent_cli()
     document = json.loads(observation.stdout)
     install_commands = [
@@ -178,11 +181,11 @@ def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
 
     assert observation.exit_code == 0
     assert [command.agent for command in install_commands] == list(Target)
-    assert {command.plugin for command in install_commands} == {SPEC_TREE_PLUGIN}
+    assert {command.plugin for command in install_commands} == {PRODUCT_TREE_PLUGIN}
     assert [command.agent for command in enable_commands] == [Target.CLAUDE]
-    assert {command.plugin for command in enable_commands} == {SPEC_TREE_PLUGIN}
-    assert document[ReportField.CLAUDE_PLUGINS] == [SPEC_TREE_PLUGIN]
-    assert document[ReportField.CODEX_PLUGINS] == [SPEC_TREE_PLUGIN]
+    assert {command.plugin for command in enable_commands} == {PRODUCT_TREE_PLUGIN}
+    assert document[ReportField.CLAUDE_PLUGINS] == [PRODUCT_TREE_PLUGIN]
+    assert document[ReportField.CODEX_PLUGINS] == [PRODUCT_TREE_PLUGIN]
     assert document[ReportField.WARNINGS] == [
         {
             ReportField.AGENT: agent.value,
@@ -198,8 +201,13 @@ def test_first_persistent_run_installs_only_spec_tree_and_warns() -> None:
 def test_invalid_persistent_subset_is_rejected_before_mutation() -> None:
     observation = observe_invalid_persistent_selection()
 
+    assert observation.selected is not None
+    assert all(
+        PRODUCT_TREE_PLUGIN not in selected and RETIRED_PLUGIN not in selected
+        for selected in observation.selected.values()
+    )
     assert observation.error is not None
-    assert SPEC_TREE_PLUGIN in observation.error
+    assert PRODUCT_TREE_PLUGIN in observation.error
     assert observation.attempted
     assert all(
         command.operation in {Operation.MARKETPLACE_INSPECT, Operation.PLUGIN_INSPECT}
@@ -207,11 +215,32 @@ def test_invalid_persistent_subset_is_rejected_before_mutation() -> None:
     )
 
 
+def test_a_former_id_inventory_installs_product_tree_and_uninstalls_the_former_id() -> (
+    None
+):
+    (case, *_) = generated_migration_cases()
+    observation = observe_migrating_inventory(case)
+    operations = [
+        (command.operation, command.plugin, command.scope)
+        for command in observation.plan.commands
+        if command.agent is case.agent
+        and command.operation in {Operation.PLUGIN_INSTALL, Operation.PLUGIN_UNINSTALL}
+    ]
+
+    assert operations == [
+        (Operation.PLUGIN_INSTALL, PRODUCT_TREE_PLUGIN, case.scope),
+        (Operation.PLUGIN_UNINSTALL, RETIRED_PLUGIN, case.scope),
+    ]
+    assert [(record.plugin, record.scope) for record in observation.after] == [
+        (PRODUCT_TREE_PLUGIN, case.scope)
+    ]
+
+
 def test_invalid_isolated_subset_is_rejected_before_mutation() -> None:
     observation = observe_invalid_isolated_selection()
 
     assert observation.error is not None
-    assert SPEC_TREE_PLUGIN in observation.error
+    assert PRODUCT_TREE_PLUGIN in observation.error
     assert observation.attempted == ()
 
 
@@ -495,13 +524,13 @@ def test_a_defective_refresh_scope_entry_is_reported_and_the_run_continues() -> 
 
     assert (
         PATHLESS_LISTING_ENTRY_WARNING.format(
-            plugin=SPEC_TREE_PLUGIN, scope=CLAUDE_PROJECT_SCOPE
+            plugin=PRODUCT_TREE_PLUGIN, scope=CLAUDE_PROJECT_SCOPE
         )
         in observation.warnings
     )
     assert (
         VERSIONLESS_LISTING_ENTRY_WARNING.format(
-            plugin=SPEC_TREE_PLUGIN,
+            plugin=PRODUCT_TREE_PLUGIN,
             scope=CLAUDE_PROJECT_SCOPE,
             project_path=observation.defect_checkout,
         )
@@ -526,7 +555,7 @@ def test_a_defective_refresh_scope_entry_is_reported_and_the_run_continues() -> 
     assert (
         _recorded_version(
             observation.record_file_after,
-            SPEC_TREE_PLUGIN,
+            PRODUCT_TREE_PLUGIN,
             observation.plan.roots.marketplace,
             observation.other_checkout,
         )
@@ -550,20 +579,20 @@ def test_a_defective_entry_leaves_the_invocation_checkouts_native_update_running
 
     assert (
         PATHLESS_LISTING_ENTRY_WARNING.format(
-            plugin=SPEC_TREE_PLUGIN, scope=CLAUDE_PROJECT_SCOPE
+            plugin=PRODUCT_TREE_PLUGIN, scope=CLAUDE_PROJECT_SCOPE
         )
         in observation.warnings
     )
     assert (
         VERSIONLESS_LISTING_ENTRY_WARNING.format(
-            plugin=SPEC_TREE_PLUGIN,
+            plugin=PRODUCT_TREE_PLUGIN,
             scope=CLAUDE_PROJECT_SCOPE,
             project_path=observation.defect_checkout,
         )
         in observation.warnings
     )
     assert [(command.plugin, command.scope) for command in updates] == [
-        (SPEC_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE)
+        (PRODUCT_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE)
     ]
     assert updates[0].cwd == observation.plan.roots.checkout
     assert not any(
@@ -576,7 +605,7 @@ def test_a_defective_entry_leaves_the_invocation_checkouts_native_update_running
     assert (
         _recorded_version(
             observation.record_file_after,
-            SPEC_TREE_PLUGIN,
+            PRODUCT_TREE_PLUGIN,
             observation.plan.roots.marketplace,
             observation.plan.roots.checkout,
         )
@@ -614,13 +643,13 @@ def test_a_bootstrap_run_reports_the_records_it_moved_and_the_records_it_did_not
 
     assert observation.document[ReportField.TARGET] is None
     assert moved == {
-        (SPEC_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE, str(observation.checkout)): (
+        (PRODUCT_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE, str(observation.checkout)): (
             observation.listed_version,
             observation.target_version,
         )
     }
     assert unrefreshed == {
-        (SPEC_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE, str(observation.other_checkout)): (
+        (PRODUCT_TREE_PLUGIN, CLAUDE_PROJECT_SCOPE, str(observation.other_checkout)): (
             observation.listed_version
         )
     }
@@ -779,11 +808,11 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
         # already holds, which the withheld registration takes with it; Codex
         # reaches it only where its own registration stands.
         assert case.document[ReportField.CLAUDE_PLUGINS] == (
-            [SPEC_TREE_PLUGIN] if state.claude and state.recorded else []
+            [PRODUCT_TREE_PLUGIN] if state.claude and state.recorded else []
         ), state
         codex_named = cast("list[str]", case.document[ReportField.CODEX_PLUGINS])
         if state.codex:
-            assert SPEC_TREE_PLUGIN in codex_named, state
+            assert PRODUCT_TREE_PLUGIN in codex_named, state
         else:
             assert codex_named == [], state
 
@@ -815,7 +844,7 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
             assert (
                 _recorded_version(
                     case.record_file_after,
-                    SPEC_TREE_PLUGIN,
+                    PRODUCT_TREE_PLUGIN,
                     marketplace,
                     project_path,
                 )
@@ -850,7 +879,7 @@ def test_unreadable_invocation_settings_stop_bootstrap_and_nothing_else() -> Non
             assert (
                 _recorded_version(
                     case.record_file_after,
-                    SPEC_TREE_PLUGIN,
+                    PRODUCT_TREE_PLUGIN,
                     marketplace,
                     project_path,
                 )

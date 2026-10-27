@@ -1,0 +1,1179 @@
+"""Single command surface for streaming review runs.
+
+The skill invokes only this runner. The runner owns diff-bundle scratch
+storage, journal command invocation, state passing between verbs, and sealing
+the journal run. The sibling-skill modules it imports — the run-journal
+projection and the changeset-scope provider — are reached by the installed
+tree's `__file__`-relative layout, the plugin build's contract for logic one
+provider skill owns and several consumers execute.
+
+Tested with: the stale-base refusal before any journal opens, an unfetchable
+base reported as a diagnostic line rather than a traceback, the
+start/append-scope/append-finding/finish round trip, a finish before every
+changed file has a scope-advanced event, a content-changed rename required at
+its new path only and never at its former path, a declared generated extent
+and a content-unchanged rename listed at `start`, skipped by `finish` without
+a scope-advanced event or an unread mark and recorded on the run-completed
+event, the declaration read at the scope's base ref, a relation flagged when
+the changeset also changes its sources or generator, a changeset that changes
+the declaration exempting no extent, flagging every relation with the changed
+declaration as its reason at `start`, and carrying the changed declaration's path on the run-completed event, `finish --unread-file` reading one
+unread path per line, a finding's optional `unit` and `tracked` fields carried onto the
+finding-reported event and a tracked `debt` finding counted toward `debt`, a
+nonzero `spx journal` exit propagated with its stderr, a finish that marks
+changed files unread sealing `failed` with the unread files named in the
+terminal event, a finish that leaves a changed file neither advanced nor marked
+unread refused, a branch value naming a commit replaced by the checked-out
+branch as the run's branch identity, and scratch cleanup: `start` removes its
+scratch directory on every failure exit and on any exception after creating it,
+and each later verb removes it on every non-zero exit, so a failed verb, a
+coverage refusal included, ends the run, and `finish` removes it on every exit.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import importlib.util
+import json
+import os
+import pathlib
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+from collections.abc import Callable
+from dataclasses import replace
+from datetime import UTC, datetime
+from types import ModuleType
+from typing import Any
+
+_HERE = pathlib.Path(__file__).resolve().parent
+_SKILL_DIR = _HERE.parent
+_SKILLS_DIR = _SKILL_DIR.parent
+_REVIEW_PROMPT = pathlib.Path("references") / "review-prompt.md"
+_STATE_FILENAME = "state.json"
+_MANIFEST_NAME = "review manifest"
+_STATE_NAME = "review runner state"
+_REVIEW_TYPE = "review"
+_DEFAULT_TARGET = "working-diff"
+_PARTICIPANTS = ("review",)
+
+ENV_BRANCH = "SPX_VERIFY_BRANCH"
+ENV_BACKEND = "SPX_VERIFY_BACKEND"
+ENV_TARGET_KIND = "SPX_VERIFY_TARGET_KIND"
+ENV_PULL_REQUEST_NUMBER = "SPX_VERIFY_PULL_REQUEST_NUMBER"
+JOURNAL_ENV_KEYS = (
+    ENV_BACKEND,
+    ENV_BRANCH,
+    ENV_TARGET_KIND,
+    ENV_PULL_REQUEST_NUMBER,
+)
+
+# The verbs the runner issues to ``spx journal --type review``.
+JOURNAL_OPEN = "open"
+JOURNAL_APPEND = "append"
+JOURNAL_READ = "read"
+JOURNAL_SEAL = "seal"
+
+# Keys of the run-scope record inside the run metadata. ``CHANGED_FILES_KEY`` also
+# names the changed-file list in the ``start`` payload.
+SCOPE_BASE_REF = "baseRef"
+SCOPE_HEAD_REF = "headRef"
+CHANGED_FILES_KEY = "changedFiles"
+SCOPE_REVIEW_INPUT_SHA256 = "reviewInputSha256"
+
+# Keys of the ``start`` payload. The runner state file shares every key but
+# ``START_STATE_PATH`` and ``CHANGED_FILES_KEY``; ``START_RUN_TOKEN`` is also the key
+# under which ``spx journal open`` prints the token the payload relays.
+START_RUN_TOKEN = "runToken"
+START_STATE_PATH = "statePath"
+START_DIFF_PATH = "diffPath"
+START_MANIFEST_PATH = "manifestPath"
+START_GENERATED_EXTENTS = "generatedExtents"
+START_RENAMES = "renames"
+# Whether the generated-sources declaration changed: a boolean in the ``start``
+# payload and the runner state, the declaration's path in the review record.
+DECLARATION_CHANGED_KEY = "generatedDeclarationChanged"
+STATE_METADATA = "metadata"
+
+# Keys of the review record the run-completed event's data carries.
+REVIEW_KEY = "review"
+REVIEW_BLOCKING = "blocking"
+REVIEW_DEBT = "debt"
+REVIEW_OVERALL = "overall"
+REVIEW_UNREAD = "unread"
+REVIEW_SKIPPED_GENERATED = "skippedGenerated"
+REVIEW_RENAMED_UNCHANGED = "renamedUnchanged"
+
+
+def _load_module(name: str, path: pathlib.Path) -> ModuleType:
+    cached = sys.modules.get(name)
+    if cached is not None:
+        return cached
+    if not path.is_file():
+        raise RuntimeError(
+            f"cannot load module {name!r}: {path} does not exist. The sibling "
+            "skills (project-run-journal, scope-changeset) must be installed "
+            "beside review-changes under the same skills directory; reinstall "
+            "the product-tree plugin so every skill is present."
+        )
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(
+            f"cannot load module {name!r} from {path}: Python found no import "
+            "loader for the file. Confirm it is a readable .py module and "
+            "reinstall the product-tree plugin if it is damaged."
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+compute_diff = _load_module("compute_diff", _HERE / "compute_diff.py")
+jp = _load_module(
+    "journal_projection",
+    _SKILLS_DIR / "project-run-journal" / "scripts" / "journal_projection.py",
+)
+changeset_scope = _load_module(
+    "changeset_scope",
+    _SKILLS_DIR / "scope-changeset" / "scripts" / "changeset_scope.py",
+)
+
+
+def _utc_now() -> str:
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _json_dumps(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def _digest(value: object, *, length: int | None = None) -> str:
+    digest = hashlib.sha256(_json_dumps(value).encode("utf-8")).hexdigest()
+    if length is None:
+        return digest
+    return digest[:length]
+
+
+def _file_digest(path: pathlib.Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _review_config_digest() -> str:
+    prompt_path = _SKILL_DIR / _REVIEW_PROMPT
+    return _digest(
+        {
+            "skill": "review-changes",
+            "runner": "review_run.py",
+            "projection": "journal_projection",
+            "prompt": {
+                "path": str(_REVIEW_PROMPT),
+                "sha256": _file_digest(prompt_path),
+            },
+        }
+    )
+
+
+def _error_text(exc: BaseException) -> str:
+    """Return the exception's message, naming its type when the message is empty."""
+    return str(exc) or f"{type(exc).__name__} raised with no message"
+
+
+def _read_json_file(path: pathlib.Path, *, name: str) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"{name} {path} is invalid JSON: {exc.msg} at line {exc.lineno} "
+            f"column {exc.colno}. Do not edit the file by hand; start a new "
+            "run with `review_run.py start` to regenerate it."
+        ) from exc
+    except OSError as exc:
+        raise ValueError(
+            f"cannot read {name} at {path}: {_error_text(exc)}. Pass the path "
+            "that `review_run.py start` printed, and confirm the run was not "
+            "already ended by `finish` or a failed verb, which remove its "
+            "scratch directory."
+        ) from exc
+    if not isinstance(value, dict):
+        raise ValueError(
+            f"{name} {path} must be a JSON object, got {type(value).__name__}. "
+            "Start a new run with `review_run.py start` to regenerate it."
+        )
+    return value
+
+
+def _manifest_changed_files(
+    manifest: dict[str, Any], *, path: pathlib.Path
+) -> list[str]:
+    sections = manifest.get(compute_diff.MANIFEST_SECTIONS)
+    if not isinstance(sections, list):
+        raise ValueError(
+            f"review manifest {path} key 'sections' must be a JSON array, got "
+            f"{type(sections).__name__}. Start a new run with "
+            "`review_run.py start` to regenerate the manifest."
+        )
+    changed_files: list[str] = []
+    seen: set[str] = set()
+    for section_index, section in enumerate(sections):
+        if not isinstance(section, dict):
+            raise ValueError(
+                f"review manifest {path} sections[{section_index}] must be a "
+                f"JSON object, got {type(section).__name__}. Start a new run "
+                "with `review_run.py start` to regenerate the manifest."
+            )
+        files = section.get(compute_diff.MANIFEST_SECTION_FILES)
+        if not isinstance(files, list):
+            raise ValueError(
+                f"review manifest {path} sections[{section_index}] key 'files' "
+                f"must be a JSON array, got {type(files).__name__}. Start a "
+                "new run with `review_run.py start` to regenerate the manifest."
+            )
+        for file_index, file_value in enumerate(files):
+            if not isinstance(file_value, str) or file_value == "":
+                raise ValueError(
+                    f"review manifest {path} "
+                    f"sections[{section_index}].files[{file_index}] must be a "
+                    f"non-empty string, got {file_value!r}. Start a new run "
+                    "with `review_run.py start` to regenerate the manifest."
+                )
+            if file_value not in seen:
+                seen.add(file_value)
+                changed_files.append(file_value)
+    return changed_files
+
+
+def _require_manifest_str(
+    manifest: dict[str, Any], key: str, *, path: pathlib.Path
+) -> str:
+    value = manifest.get(key)
+    if not isinstance(value, str) or value == "":
+        raise ValueError(
+            f"review manifest {path} key {key!r} must be a non-empty string, "
+            f"got {value!r}; keys present: {', '.join(sorted(manifest))}. "
+            "Start a new run with `review_run.py start` to regenerate the "
+            "manifest."
+        )
+    return value
+
+
+def _record_list(
+    container: dict[str, Any], key: str, *, path: pathlib.Path, name: str
+) -> list[dict[str, Any]]:
+    """Return ``container[key]`` as a list of JSON objects; absent means empty."""
+    value = container.get(key, [])
+    if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
+        raise ValueError(
+            f"{name} {path} key {key!r} must be a JSON array of objects, got "
+            f"{value!r}. Start a new run with `review_run.py start` to "
+            "regenerate it."
+        )
+    return value
+
+
+def _target_kind() -> object:
+    value = os.environ.get(ENV_TARGET_KIND, "").strip()
+    if value == "":
+        return jp.JournalTargetKind.BRANCH
+    try:
+        return jp.JournalTargetKind(value)
+    except ValueError as exc:
+        accepted = ", ".join(kind.value for kind in jp.JournalTargetKind)
+        raise ValueError(
+            f"{ENV_TARGET_KIND}={value!r} is not a valid target kind; "
+            f"accepted values: {accepted}. Set {ENV_TARGET_KIND} to one of "
+            "them or unset it to default to branch."
+        ) from exc
+
+
+def _pull_request_number(target_kind: object) -> int | None:
+    value = os.environ.get(ENV_PULL_REQUEST_NUMBER, "").strip()
+    if target_kind == jp.JournalTargetKind.PULL_REQUEST:
+        if value == "":
+            raise ValueError(
+                f"{ENV_PULL_REQUEST_NUMBER} is empty while {ENV_TARGET_KIND} is "
+                "pull-request; set it to the positive pull request number, "
+                "for example 123."
+            )
+        try:
+            number = int(value)
+        except ValueError as exc:
+            raise ValueError(
+                f"{ENV_PULL_REQUEST_NUMBER}={value!r} is not an integer; "
+                f"set {ENV_PULL_REQUEST_NUMBER} to the positive pull request "
+                "number, for example 123."
+            ) from exc
+        if number <= 0:
+            raise ValueError(
+                f"{ENV_PULL_REQUEST_NUMBER}={value!r} must be a positive "
+                "integer; set it to the pull request number, for example 123."
+            )
+        return number
+    if value:
+        raise ValueError(
+            f"{ENV_PULL_REQUEST_NUMBER}={value!r} is set while "
+            f"{ENV_TARGET_KIND} is not pull-request; set {ENV_TARGET_KIND} to "
+            f"pull-request or unset {ENV_PULL_REQUEST_NUMBER}."
+        )
+    return None
+
+
+def _journal_env_from_metadata(metadata: dict[str, Any]) -> dict[str, str]:
+    journal_env: dict[str, str] = {}
+    backend = os.environ.get(ENV_BACKEND, "").strip()
+    if backend:
+        journal_env[ENV_BACKEND] = backend
+
+    branch_name = metadata.get(jp.RUN_STATE_BRANCH_NAME)
+    if isinstance(branch_name, str) and branch_name:
+        journal_env[ENV_BRANCH] = branch_name
+
+    target_kind = metadata.get(jp.RUN_STATE_TARGET_KIND)
+    if isinstance(target_kind, str) and target_kind:
+        journal_env[ENV_TARGET_KIND] = target_kind
+
+    pull_request_number = metadata.get(jp.RUN_STATE_PULL_REQUEST_NUMBER)
+    if isinstance(pull_request_number, int):
+        journal_env[ENV_PULL_REQUEST_NUMBER] = str(pull_request_number)
+
+    return journal_env
+
+
+def _journal_env_from_state(
+    state: dict[str, Any], *, path: pathlib.Path
+) -> dict[str, str]:
+    value = state.get("journalEnv")
+    if not isinstance(value, dict):
+        raise ValueError(
+            f"review runner state {path} key 'journalEnv' must be a JSON "
+            f"object, got {type(value).__name__}; keys present: "
+            f"{', '.join(sorted(state))}. Pass the statePath that "
+            "`review_run.py start` printed, or start a new run."
+        )
+    journal_env: dict[str, str] = {}
+    for key, env_value in value.items():
+        if not isinstance(key, str) or not isinstance(env_value, str):
+            raise ValueError(
+                f"review runner state {path} key 'journalEnv' must map "
+                f"strings to strings; entry {key!r} has value {env_value!r} "
+                f"of type {type(env_value).__name__}. Pass the statePath "
+                "that `review_run.py start` printed, or start a new run."
+            )
+        journal_env[key] = env_value
+    return journal_env
+
+
+def _names_commit_not_branch(value: str, repo: pathlib.Path) -> bool:
+    """Whether ``value`` resolves to a commit and names no local or remote branch."""
+    for namespace in ("refs/heads", "refs/remotes"):
+        branch_ref = subprocess.run(  # noqa: S603,S607
+            ["git", "show-ref", "--verify", "--quiet", f"{namespace}/{value}"],
+            cwd=repo,
+            capture_output=True,
+            check=False,
+        )
+        if branch_ref.returncode == 0:
+            return False
+    resolved = subprocess.run(  # noqa: S603,S607
+        ["git", "rev-parse", "--verify", "--quiet", f"{value}^{{commit}}"],
+        cwd=repo,
+        capture_output=True,
+        check=False,
+    )
+    return resolved.returncode == 0
+
+
+def _branch_identity(repo: pathlib.Path) -> str:
+    """The run's branch identity: a branch name, never a commit.
+
+    A branch value in the process environment that names a commit and no
+    branch ref, as a commit-range input supplies, yields the checked-out branch.
+    """
+    exported = os.environ.get(ENV_BRANCH, "").strip()
+    if exported and not _names_commit_not_branch(exported, repo):
+        return exported
+    return str(changeset_scope.detect_current_branch(repo))
+
+
+def _metadata_from_manifest(
+    *, manifest_path: pathlib.Path, started_at: str, target: str
+) -> dict[str, Any]:
+    repo = pathlib.Path.cwd()
+    manifest = _read_json_file(manifest_path, name=_MANIFEST_NAME)
+    base_ref = _require_manifest_str(
+        manifest, compute_diff.MANIFEST_BASE_REF, path=manifest_path
+    )
+    head_ref = _require_manifest_str(
+        manifest, compute_diff.MANIFEST_HEAD_REF, path=manifest_path
+    )
+    scope = {
+        SCOPE_BASE_REF: base_ref,
+        SCOPE_HEAD_REF: head_ref,
+        CHANGED_FILES_KEY: _manifest_changed_files(manifest, path=manifest_path),
+        SCOPE_REVIEW_INPUT_SHA256: _require_manifest_str(
+            manifest, compute_diff.MANIFEST_DIFF_SHA256, path=manifest_path
+        ),
+    }
+    branch_name = _branch_identity(repo)
+    target_kind = _target_kind()
+    metadata: dict[str, Any] = {
+        "target": target,
+        jp.RUN_STATE_SCOPE_HASH: _digest(scope, length=12),
+        jp.RUN_STATE_BRANCH_NAME: branch_name,
+        jp.RUN_STATE_BRANCH_SLUG: str(changeset_scope.branch_slug(branch_name)),
+        jp.RUN_STATE_TARGET_KIND: str(target_kind),
+        jp.RUN_STATE_HEAD_SHA: str(changeset_scope.commit_oid(head_ref, repo=repo)),
+        jp.RUN_STATE_BASE_REF: base_ref,
+        jp.RUN_STATE_BASE_SHA: str(changeset_scope.commit_oid(base_ref, repo=repo)),
+        jp.RUN_STATE_CONFIG_DIGEST: _review_config_digest(),
+        jp.RUN_STATE_PARTICIPANTS: list(_PARTICIPANTS),
+        jp.RUN_STATE_SCOPE: scope,
+        jp.RUN_STATE_STARTED_AT: started_at,
+        jp.RUN_STATE_COMPLETED_AT: started_at,
+        jp.RUN_STATE_OUTPUT_PATHS: [],
+    }
+    pull_request_number = _pull_request_number(target_kind)
+    if pull_request_number is not None:
+        metadata[jp.RUN_STATE_PULL_REQUEST_NUMBER] = pull_request_number
+    return metadata
+
+
+def _run_journal(
+    *args: str, stdin: str | None = None, journal_env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    if journal_env is not None:
+        for key in JOURNAL_ENV_KEYS:
+            env.pop(key, None)
+        env.update(journal_env)
+    return subprocess.run(  # noqa: S603,S607
+        ["spx", "journal", *args],
+        input=stdin,
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+
+def _propagate_failure(result: subprocess.CompletedProcess[str]) -> int | None:
+    if result.returncode == 0:
+        return None
+    sys.stdout.write(result.stdout)
+    sys.stderr.write(result.stderr)
+    if not result.stderr.strip():
+        sys.stderr.write(
+            f"`{shlex.join(str(arg) for arg in result.args)}` exited "
+            f"{result.returncode} and wrote nothing to stderr. Run `spx "
+            "journal --help` to confirm the installed spx supports the verb, "
+            "and rerun the review from `review_run.py start`.\n"
+        )
+    return result.returncode or 1
+
+
+def _journal_json(
+    *args: str, stdin: str | None = None, journal_env: dict[str, str] | None = None
+) -> tuple[int, object | None, str]:
+    result = _run_journal(*args, stdin=stdin, journal_env=journal_env)
+    failed = _propagate_failure(result)
+    if failed is not None:
+        return failed, None, result.stdout
+    try:
+        return 0, json.loads(result.stdout), result.stdout
+    except json.JSONDecodeError as exc:
+        sys.stderr.write(
+            f"`spx journal {shlex.join(args)}` returned invalid JSON on "
+            f"stdout: {exc.msg} at line {exc.lineno} column {exc.colno}. "
+            "Confirm the installed spx supports this journal verb, then "
+            "start a new run with `review_run.py start`.\n"
+        )
+        return 1, None, result.stdout
+
+
+def _append_event(
+    run_token: str, event: dict[str, object], *, journal_env: dict[str, str]
+) -> int:
+    result = _run_journal(
+        JOURNAL_APPEND,
+        "--type",
+        _REVIEW_TYPE,
+        "--run",
+        run_token,
+        stdin=json.dumps(event),
+        journal_env=journal_env,
+    )
+    failed = _propagate_failure(result)
+    if failed is not None:
+        return failed
+    return 0
+
+
+def _state_path(scratch_dir: pathlib.Path) -> pathlib.Path:
+    """The state file inside `scratch_dir`, confined to the temporary-file root.
+
+    The scratch directory is one `start` created under the temporary-file
+    root. The path is normalized and checked against that root before any
+    write, so neither a value read out of a file nor a crafted directory name
+    chooses a destination outside it.
+    """
+    temp_root = os.path.realpath(tempfile.gettempdir())
+    candidate = os.path.normpath(
+        os.path.join(os.path.realpath(scratch_dir), _STATE_FILENAME)
+    )
+    if not candidate.startswith(temp_root + os.sep):
+        raise ValueError(
+            f"review runner state path {candidate} lies outside the temporary "
+            f"root {temp_root}. Start a new run with `review_run.py start`, "
+            "which creates its scratch directory under that root."
+        )
+    return pathlib.Path(candidate)
+
+
+def _write_state(state: dict[str, object], scratch_dir: pathlib.Path) -> pathlib.Path:
+    """Write the run state into the scratch directory `start` created."""
+    path = _state_path(scratch_dir)
+    path.write_text(
+        json.dumps(state, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+    )
+    return path
+
+
+def _read_state(path: pathlib.Path) -> dict[str, Any]:
+    state = _read_json_file(path, name=_STATE_NAME)
+    run_token = state.get(START_RUN_TOKEN)
+    if not isinstance(run_token, str) or run_token == "":
+        raise ValueError(
+            f"review runner state {path} key 'runToken' must be a non-empty "
+            f"string, got {run_token!r}; keys present: "
+            f"{', '.join(sorted(state))}. Pass the statePath that "
+            "`review_run.py start` printed, or start a new run."
+        )
+    metadata = state.get(STATE_METADATA)
+    if not isinstance(metadata, dict):
+        raise ValueError(
+            f"review runner state {path} key 'metadata' must be a JSON "
+            f"object, got {type(metadata).__name__}; keys present: "
+            f"{', '.join(sorted(state))}. Pass the statePath that "
+            "`review_run.py start` printed, or start a new run."
+        )
+    return state
+
+
+def _finding_severity(value: object) -> object:
+    text = str(value)
+    if text == "blocking":
+        return jp.Severity.REJECT
+    if text == "debt":
+        return jp.Severity.WARNING
+    if text in {severity.value for severity in jp.Severity}:
+        return jp.Severity(text)
+    return jp.Severity.UNKNOWN
+
+
+def _optional_str(value: object) -> str | None:
+    if isinstance(value, str) and value:
+        return value
+    return None
+
+
+def _optional_bool(value: object) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    return None
+
+
+def _line_number(value: object) -> int | None:
+    if isinstance(value, int):
+        return value
+    return None
+
+
+def _finding_event_from_stdin(*, now: str, attempt: int) -> dict[str, object]:
+    try:
+        raw = json.loads(sys.stdin.read())
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"finding input on stdin is invalid JSON: {exc.msg} at line "
+            f"{exc.lineno} column {exc.colno}. Supply one JSON object with "
+            "the keys id, concern, severity, file, line, rule, message, and "
+            "action."
+        ) from exc
+    if not isinstance(raw, dict):
+        raise ValueError(
+            "finding input on stdin must be a JSON object, got "
+            f"{type(raw).__name__}. Supply one JSON object with the keys id, "
+            "concern, severity, file, line, rule, message, and action."
+        )
+    finding = jp.Finding(
+        file=str(raw.get("file", "")),
+        line=_line_number(raw.get("line")),
+        rule=str(raw.get("rule", "")),
+        severity=_finding_severity(raw.get("severity", "")),
+        message=str(raw.get("message", "")),
+        identifier=_optional_str(raw.get("id")),
+        concern=_optional_str(raw.get("concern")),
+        action=_optional_str(raw.get("action")),
+        unit=_optional_str(raw.get("unit")),
+        tracked=_optional_bool(raw.get("tracked")),
+    )
+    return jp.finding_reported_event(finding, now=now, attempt=attempt)
+
+
+def _completed_event(
+    *,
+    metadata: dict[str, Any],
+    prefix: list[dict[str, object]],
+    completed_at: str,
+    unread: list[str],
+    skipped_generated: list[dict[str, object]],
+    renamed_unchanged: list[dict[str, object]],
+    declaration_changed: bool,
+) -> dict[str, object]:
+    parsed = jp.run_metadata_from_json(json.dumps(metadata))
+    run = replace(jp.run_from_metadata(parsed), completed_at=completed_at)
+    overall = jp.compute_overall(prefix)
+    # A run that leaves a unit of its scope unread proves no approval.
+    status = jp.JournalRunStatus.FAILED if unread else jp.terminal_status(overall)
+    event = jp.run_completed_event(run, status=status, now=completed_at)
+    data = event.get("data")
+    if isinstance(data, dict):
+        counts = _finding_counts(prefix)
+        review: dict[str, object] = {
+            REVIEW_BLOCKING: counts[REVIEW_BLOCKING],
+            REVIEW_DEBT: counts[REVIEW_DEBT],
+            REVIEW_OVERALL: str(overall),
+        }
+        if unread:
+            review[REVIEW_UNREAD] = list(unread)
+        if declaration_changed:
+            review[DECLARATION_CHANGED_KEY] = str(compute_diff.GENERATED_SOURCES_PATH)
+        if skipped_generated:
+            review[REVIEW_SKIPPED_GENERATED] = skipped_generated
+        if renamed_unchanged:
+            review[REVIEW_RENAMED_UNCHANGED] = renamed_unchanged
+        data[REVIEW_KEY] = review
+    return event
+
+
+def _generated_file_entries(
+    state: dict[str, Any], *, path: pathlib.Path
+) -> list[dict[str, object]]:
+    """One entry per exempt generated extent file and relation, in file order.
+
+    A relation flagged for a changed declaration exempts no file.
+    """
+    entries: list[dict[str, object]] = []
+    for extent in _record_list(
+        state, START_GENERATED_EXTENTS, path=path, name=_STATE_NAME
+    ):
+        if extent.get("flagged_reason"):
+            continue
+        files = extent.get("files")
+        relation = extent.get("relation")
+        regenerate = extent.get("regenerate", "")
+        if (
+            not isinstance(files, list)
+            or not all(isinstance(item, str) and item for item in files)
+            or not isinstance(relation, int)
+            or not isinstance(regenerate, str)
+        ):
+            raise ValueError(
+                f"review runner state {path} key 'generatedExtents' holds an "
+                f"entry with unusable files, relation, or regenerate: "
+                f"{extent!r}. Start a new run with `review_run.py start` to "
+                "regenerate it."
+            )
+        entries.extend(
+            {"file": file, "relation": relation, "regenerate": regenerate}
+            for file in files
+        )
+    return sorted(
+        entries, key=lambda entry: (str(entry["file"]), int(str(entry["relation"])))
+    )
+
+
+def _unchanged_rename_entries(
+    state: dict[str, Any], *, path: pathlib.Path
+) -> list[dict[str, object]]:
+    """One entry per rename whose content is unchanged, in path order."""
+    entries: list[dict[str, object]] = []
+    for record in _record_list(state, START_RENAMES, path=path, name=_STATE_NAME):
+        renamed = record.get("path")
+        former = record.get("former_path")
+        if not isinstance(renamed, str) or not renamed or not isinstance(former, str):
+            raise ValueError(
+                f"review runner state {path} key 'renames' holds an entry "
+                f"with an unusable path or former_path: {record!r}. Start a "
+                "new run with `review_run.py start` to regenerate it."
+            )
+        if record.get("content_unchanged") is True:
+            entries.append({"file": renamed, "formerPath": former})
+    return sorted(entries, key=lambda entry: str(entry["file"]))
+
+
+def _scope_coverage_error(
+    *,
+    metadata: dict[str, Any],
+    prefix: list[dict[str, object]],
+    unread: list[str],
+    exempt: set[str],
+) -> str | None:
+    """Describe why the run's scope coverage is refused, or return None.
+
+    ``exempt`` holds the changed files that need neither a scope-advanced event
+    nor an unread mark: declared generated extents and pure renames. Every
+    refusal ends the run, so each message says so and names a new `start`.
+    """
+    expected = _expected_scope_units(metadata)
+    if isinstance(expected, str):
+        return expected
+    advanced = _advanced_scope_units(prefix)
+    marked_unread = set(unread)
+    contradictory = sorted(advanced & marked_unread)
+    if contradictory:
+        return (
+            f"files both read and marked unread: {', '.join(contradictory)}. "
+            "A file with a scope-advanced event was read. The run is ended; "
+            "start a new run with `review_run.py start` and mark as unread "
+            "only the files the review did not read."
+        )
+    outside = sorted(marked_unread - expected)
+    if outside:
+        return (
+            f"unread files outside changed files: {', '.join(outside)}. "
+            f"--unread and --unread-file name only changed files; the changed "
+            f"files are: {', '.join(sorted(expected))}. The run is ended; "
+            "start a new run with `review_run.py start` and name only files "
+            "from that list."
+        )
+
+    return _scope_unit_delta_message(
+        required=expected - exempt - marked_unread,
+        expected=expected,
+        advanced=advanced,
+    )
+
+
+def _expected_scope_units(metadata: dict[str, Any]) -> set[str] | str:
+    scope = metadata.get(jp.RUN_STATE_SCOPE)
+    if not isinstance(scope, dict):
+        return (
+            "review run metadata key 'scope' must be a JSON object, got "
+            f"{type(scope).__name__}; keys present: "
+            f"{', '.join(sorted(metadata))}. The state file is damaged; "
+            "start a new run with `review_run.py start`."
+        )
+    changed_files = scope.get(CHANGED_FILES_KEY)
+    if not isinstance(changed_files, list) or not all(
+        isinstance(item, str) and item for item in changed_files
+    ):
+        return (
+            "review run metadata scope.changedFiles must be a list of "
+            f"non-empty strings, got {changed_files!r}. The state file is "
+            "damaged; start a new run with `review_run.py start`."
+        )
+
+    return set(changed_files)
+
+
+def _advanced_scope_units(prefix: list[dict[str, object]]) -> set[str]:
+    advanced: set[str] = set()
+    for event in prefix:
+        if event.get("type") != jp.SCOPE_ADVANCED:
+            continue
+        data = event.get("data")
+        if isinstance(data, dict):
+            unit = data.get("unit")
+            if isinstance(unit, str) and unit:
+                advanced.add(unit)
+    return advanced
+
+
+def _scope_unit_delta_message(
+    *, required: set[str], expected: set[str], advanced: set[str]
+) -> str | None:
+    missing = sorted(required - advanced)
+    unexpected = sorted(advanced - expected)
+    parts: list[str] = []
+    if missing:
+        parts.append(
+            f"missing scope-advanced events for: {', '.join(missing)}. The "
+            "run is ended; start a new run with `review_run.py start`, call "
+            "`review_run.py append-scope` for each file after reading it, and "
+            "pass --unread or --unread-file to `finish` for each file the "
+            "review did not read"
+        )
+    if unexpected:
+        parts.append(
+            f"scope-advanced events outside changed files: "
+            f"{', '.join(unexpected)}. `append-scope` accepts only changed "
+            "files; the run is ended, so start a new run with "
+            "`review_run.py start`"
+        )
+    return "; ".join(parts) if parts else None
+
+
+def _finding_counts(events: list[dict[str, object]]) -> dict[str, int]:
+    counts = {REVIEW_BLOCKING: 0, REVIEW_DEBT: 0}
+    for event in events:
+        if event.get("type") != jp.FINDING_REPORTED:
+            continue
+        data = event.get("data")
+        if not isinstance(data, dict):
+            continue
+        if data.get("severity") == jp.Severity.REJECT:
+            counts[REVIEW_BLOCKING] += 1
+        if data.get("severity") == jp.Severity.WARNING:
+            counts[REVIEW_DEBT] += 1
+    return counts
+
+
+def _cleanup_state(state_path: pathlib.Path) -> None:
+    scratch_dir = state_path.resolve().parent
+    temp_root = pathlib.Path(tempfile.gettempdir()).resolve()
+    try:
+        scratch_dir.relative_to(temp_root)
+    except ValueError:
+        return
+    if scratch_dir.name.startswith("review-changes-") and scratch_dir.is_dir():
+        shutil.rmtree(scratch_dir)
+
+
+def _start(args: argparse.Namespace) -> int:
+    started_at = _utc_now()
+    # A head behind the fetched base is refused before any journal exists, so
+    # no run records a review of a tree that cannot merge. Every other
+    # resolution failure reports through the runner's diagnostic line.
+    try:
+        base_ref = compute_diff.resolve_base_ref()
+        head_ref = compute_diff.resolve_head_ref()
+        changeset_scope.require_current_base(
+            base_ref, head_ref, repo=pathlib.Path.cwd()
+        )
+    except changeset_scope.StaleBaseError as exc:
+        json.dump(exc.diagnostic(), sys.stderr, sort_keys=True)
+        sys.stderr.write("\n")
+        return int(changeset_scope.EXIT_STALE_BASE)
+    except subprocess.CalledProcessError as exc:
+        detail = " | ".join(
+            line.strip() for line in (exc.stderr or "").splitlines() if line.strip()
+        )
+        sys.stderr.write(
+            f"{exc}: {detail or 'git wrote nothing to stderr'}. Check that "
+            "the remote is reachable and the base ref exists, then rerun "
+            "`review_run.py start`.\n"
+        )
+        return 1
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        sys.stderr.write(
+            f"start: cannot resolve the review refs in {pathlib.Path.cwd()}: "
+            f"{_error_text(exc)}. Set SPX_VERIFY_BASE_REF and "
+            "SPX_VERIFY_HEAD_REF if the defaults do not apply, then rerun "
+            "`review_run.py start`.\n"
+        )
+        return 1
+    scratch_dir = pathlib.Path(tempfile.mkdtemp(prefix="review-changes-"))
+    started = False
+    try:
+        summary = compute_diff.write_bundle(
+            base_ref=base_ref,
+            head_ref=head_ref,
+            bundle_dir=scratch_dir,
+        )
+        manifest_path = pathlib.Path(str(summary[compute_diff.SUMMARY_MANIFEST_PATH]))
+        metadata = _metadata_from_manifest(
+            manifest_path=manifest_path,
+            started_at=started_at,
+            target=args.target,
+        )
+        journal_env = _journal_env_from_metadata(metadata)
+        code, opened, _raw = _journal_json(
+            JOURNAL_OPEN, "--type", _REVIEW_TYPE, journal_env=journal_env
+        )
+        if code != 0:
+            return code
+        if not isinstance(opened, dict) or not isinstance(
+            opened.get(START_RUN_TOKEN), str
+        ):
+            sys.stderr.write(
+                "`spx journal open --type review` must print a JSON object "
+                "with a string 'runToken', got "
+                f"{opened!r}. Confirm the installed spx supports `spx "
+                "journal open` and rerun `review_run.py start`.\n"
+            )
+            return 1
+        run_token = str(opened[START_RUN_TOKEN])
+        event = jp.scope_entered_event(
+            jp.run_from_metadata(jp.run_metadata_from_json(json.dumps(metadata))),
+            now=started_at,
+        )
+        code = _append_event(run_token, event, journal_env=journal_env)
+        if code != 0:
+            return code
+        manifest = _read_json_file(manifest_path, name=_MANIFEST_NAME)
+        generated_extents = _record_list(
+            manifest,
+            compute_diff.MANIFEST_GENERATED_EXTENTS,
+            path=manifest_path,
+            name=_MANIFEST_NAME,
+        )
+        renames = _record_list(
+            manifest,
+            compute_diff.MANIFEST_RENAMES,
+            path=manifest_path,
+            name=_MANIFEST_NAME,
+        )
+        declaration_changed = (
+            manifest.get(compute_diff.MANIFEST_GENERATED_DECLARATION_CHANGED) is True
+        )
+        diff_path = str(summary[compute_diff.SUMMARY_DIFF_PATH])
+        state: dict[str, object] = {
+            START_RUN_TOKEN: run_token,
+            "startedAt": started_at,
+            "scratchDir": str(scratch_dir),
+            START_DIFF_PATH: diff_path,
+            START_MANIFEST_PATH: str(manifest_path),
+            STATE_METADATA: metadata,
+            "journalEnv": journal_env,
+            START_GENERATED_EXTENTS: generated_extents,
+            DECLARATION_CHANGED_KEY: declaration_changed,
+            START_RENAMES: renames,
+        }
+        state_path = _write_state(state, scratch_dir)
+        output = {
+            START_RUN_TOKEN: run_token,
+            START_STATE_PATH: str(state_path),
+            START_DIFF_PATH: diff_path,
+            START_MANIFEST_PATH: str(manifest_path),
+            CHANGED_FILES_KEY: _manifest_changed_files(manifest, path=manifest_path),
+            START_GENERATED_EXTENTS: generated_extents,
+            DECLARATION_CHANGED_KEY: declaration_changed,
+            START_RENAMES: renames,
+        }
+        json.dump(output, sys.stdout, sort_keys=True)
+        sys.stdout.write("\n")
+        started = True
+        return 0
+    except (
+        OSError,
+        RuntimeError,
+        subprocess.CalledProcessError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        sys.stderr.write(
+            f"start: the review run could not be opened: {_error_text(exc)}. "
+            "The scratch directory was removed; fix the cause and rerun "
+            "`review_run.py start`.\n"
+        )
+        return 1
+    finally:
+        if not started and scratch_dir.is_dir():
+            shutil.rmtree(scratch_dir)
+
+
+def _append_scope(args: argparse.Namespace) -> int:
+    try:
+        state = _read_state(args.state)
+        journal_env = _journal_env_from_state(state, path=args.state)
+        event = jp.scope_advanced_event(args.unit, now=_utc_now())
+    except (OSError, TypeError, ValueError) as exc:
+        sys.stderr.write(
+            f"append-scope: cannot append unit {args.unit!r} using state "
+            f"{args.state}: {_error_text(exc)}. The run is ended; start a new "
+            "one with `review_run.py start`.\n"
+        )
+        return 1
+    code = _append_event(str(state[START_RUN_TOKEN]), event, journal_env=journal_env)
+    if code != 0:
+        return code
+    json.dump({"appended": "scope", "unit": args.unit}, sys.stdout, sort_keys=True)
+    sys.stdout.write("\n")
+    return 0
+
+
+def _append_finding(args: argparse.Namespace) -> int:
+    try:
+        state = _read_state(args.state)
+        journal_env = _journal_env_from_state(state, path=args.state)
+        event = _finding_event_from_stdin(now=_utc_now(), attempt=1)
+    except (OSError, TypeError, ValueError) as exc:
+        sys.stderr.write(
+            f"append-finding: cannot append the finding using state "
+            f"{args.state}: {_error_text(exc)}. The run is ended; start a new "
+            "one with `review_run.py start`.\n"
+        )
+        return 1
+    code = _append_event(str(state[START_RUN_TOKEN]), event, journal_env=journal_env)
+    if code != 0:
+        return code
+    json.dump({"appended": "finding"}, sys.stdout, sort_keys=True)
+    sys.stdout.write("\n")
+    return 0
+
+
+def _unread_from_files(paths: list[pathlib.Path]) -> set[str]:
+    """Read one changed path per line from each file; blank lines name nothing."""
+    unread: set[str] = set()
+    for path in paths:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            raise ValueError(
+                f"cannot read the --unread-file {path}: {_error_text(exc)}. "
+                "Write one changed path per line to a readable UTF-8 file"
+            ) from exc
+        unread.update(
+            line.rstrip("\r") for line in text.split("\n") if line.rstrip("\r")
+        )
+    return unread
+
+
+def _finish(args: argparse.Namespace) -> int:
+    try:
+        state = _read_state(args.state)
+        journal_env = _journal_env_from_state(state, path=args.state)
+        run_token = str(state[START_RUN_TOKEN])
+        code, prefix_value, _raw = _journal_json(
+            JOURNAL_READ,
+            "--type",
+            _REVIEW_TYPE,
+            "--run",
+            run_token,
+            "--from",
+            "0",
+            journal_env=journal_env,
+        )
+        if code != 0:
+            return code
+        if not isinstance(prefix_value, list):
+            sys.stderr.write(
+                f"`spx journal read --type review --run {run_token} --from 0` "
+                "must print a JSON array of events, got "
+                f"{type(prefix_value).__name__}. Confirm the installed spx "
+                "supports `spx journal read`. The run is ended; start a new "
+                "run with `review_run.py start`.\n"
+            )
+            return 1
+        prefix = [event for event in prefix_value if isinstance(event, dict)]
+        unread = sorted(set(args.unread) | _unread_from_files(args.unread_file))
+        skipped_generated = _generated_file_entries(state, path=args.state)
+        skipped_files = {str(entry["file"]) for entry in skipped_generated}
+        renamed_unchanged = [
+            entry
+            for entry in _unchanged_rename_entries(state, path=args.state)
+            if entry["file"] not in skipped_files
+        ]
+        exempt = skipped_files | {str(entry["file"]) for entry in renamed_unchanged}
+        coverage_error = _scope_coverage_error(
+            metadata=state[STATE_METADATA], prefix=prefix, unread=unread, exempt=exempt
+        )
+        if coverage_error is not None:
+            sys.stderr.write(f"{coverage_error}\n")
+            return 1
+        completed_at = _utc_now()
+        event = _completed_event(
+            metadata=state[STATE_METADATA],
+            prefix=prefix,
+            completed_at=completed_at,
+            unread=unread,
+            skipped_generated=skipped_generated,
+            renamed_unchanged=renamed_unchanged,
+            declaration_changed=state.get(DECLARATION_CHANGED_KEY) is True,
+        )
+        code = _append_event(run_token, event, journal_env=journal_env)
+        if code != 0:
+            return code
+        sealed = _run_journal(
+            JOURNAL_SEAL,
+            "--type",
+            _REVIEW_TYPE,
+            "--run",
+            run_token,
+            journal_env=journal_env,
+        )
+        failed = _propagate_failure(sealed)
+        if failed is not None:
+            return failed
+        sys.stdout.write(f"{run_token}\n")
+        return 0
+    except (OSError, TypeError, ValueError) as exc:
+        sys.stderr.write(
+            f"finish: cannot finish the run using state {args.state}: "
+            f"{_error_text(exc)}. The run is ended; start a new one with "
+            "`review_run.py start`.\n"
+        )
+        return 1
+
+
+def _run_run_verb(
+    handler: Callable[[argparse.Namespace], int], args: argparse.Namespace
+) -> int:
+    """Run a verb on an open run and remove the run's scratch on every end.
+
+    `finish` ends the run on every exit; `append-scope` and `append-finding`
+    end it on a non-zero exit or an unhandled exception and leave it open on
+    success.
+    """
+    code = 1
+    try:
+        code = handler(args)
+        return code
+    finally:
+        if args.command == "finish" or code != 0:
+            _cleanup_state(args.state)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    start = subparsers.add_parser("start", help="start a review run")
+    start.add_argument("--target", default=_DEFAULT_TARGET)
+
+    append_scope = subparsers.add_parser(
+        "append-scope", help="append one examined scope unit"
+    )
+    append_scope.add_argument("--state", type=pathlib.Path, required=True)
+    append_scope.add_argument("unit")
+
+    append_finding = subparsers.add_parser(
+        "append-finding", help="append one finding read from stdin"
+    )
+    append_finding.add_argument("--state", type=pathlib.Path, required=True)
+
+    finish = subparsers.add_parser("finish", help="finish and seal the run")
+    finish.add_argument("--state", type=pathlib.Path, required=True)
+    finish.add_argument(
+        "--unread",
+        action="append",
+        default=[],
+        help="a changed file the review did not read; seals the run failed",
+    )
+    finish.add_argument(
+        "--unread-file",
+        action="append",
+        default=[],
+        type=pathlib.Path,
+        help=(
+            "a file listing one unread changed path per line; each path is "
+            "marked unread exactly as one --unread argument marks it"
+        ),
+    )
+
+    args = parser.parse_args(argv)
+    if args.command == "start":
+        return _start(args)
+    handlers = {
+        "append-scope": _append_scope,
+        "append-finding": _append_finding,
+        "finish": _finish,
+    }
+    return _run_run_verb(handlers[args.command], args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

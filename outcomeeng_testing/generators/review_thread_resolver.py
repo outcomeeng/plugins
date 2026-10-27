@@ -17,7 +17,7 @@ SCRIPT = (
     REPO_ROOT
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "manage-pr"
     / "scripts"

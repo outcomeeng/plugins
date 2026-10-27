@@ -29,13 +29,13 @@ from outcomeeng.validation._model import Recipe, Step
 from outcomeeng.validation.infrastructure_index import (
     EXECUTED_TEST_PREFIX,
     PYTHON_SUFFIX,
-    SPEC_TREE_ROOT,
+    PRODUCT_TREE_ROOT,
     TESTS_DIRECTORY_NAME,
 )
 
 _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 # The directories `[tool.pytest.ini_options] testpaths` collects.
-TEST_ROOTS: Final = (SPEC_TREE_ROOT, TESTS_DIRECTORY_NAME)
+TEST_ROOTS: Final = (PRODUCT_TREE_ROOT, TESTS_DIRECTORY_NAME)
 PYTHON_SOURCE_PATHS: Final = ("outcomeeng", "outcomeeng_testing", "outcomeeng_evals")
 INSTRUCTION_BLOCK_ARGV: Final = _INSTRUCTION_BLOCK_ARGV
 # The command that starts the validation entry point; each recipe word follows it.
@@ -134,7 +134,7 @@ PYTEST_ARGV: Final = (
 # producers those definitions name; both fail the gate when the committed
 # artifact drifts from what the source now renders.
 EVALS_ROOT: Final = "spx"
-EVAL_TRIGGER_WORKFLOW: Final = ".github/workflows/spec-tree-evals.yml"
+EVAL_TRIGGER_WORKFLOW: Final = ".github/workflows/product-tree-evals.yml"
 EVAL_TRIGGERS_ARGV: Final = (
     "uv",
     "run",

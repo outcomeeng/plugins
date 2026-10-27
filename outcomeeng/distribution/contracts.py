@@ -96,7 +96,7 @@ AGENT_TOKEN_OWNER_PATH: Final = (
 AGENT_TOKEN_OWNER_MODULE_NAME: Final = "agent_tokens"
 AGENT_TOKEN_ENUM_NAME: Final = "AgentToken"
 AGENT_TOKEN_DATA_FILENAME: Final = "agent-tokens.json"
-AGENT_TOKEN_READING_PLUGIN_NAME: Final = "spec-tree"
+AGENT_TOKEN_READING_PLUGIN_NAME: Final = "product-tree"
 
 
 def declared_agent_tokens() -> dict[str, str]:

@@ -233,7 +233,7 @@ fn valid_gate_statuses() -> impl Strategy<Value = GateStatus> {
 Use harnesses for tests that interact with external systems — filesystems, APIs, binaries, testcontainers. A harness manages setup and teardown; it is not self-contained.
 
 ```rust
-// <product>-testing/src/harnesses/spec_tree.rs
+// <product>-testing/src/harnesses/product_tree.rs
 
 pub struct TestEnv {
     pub root: tempfile::TempDir,
@@ -246,7 +246,7 @@ impl TestEnv {
 }
 ```
 
-Consumers depend on the workspace-member crate via `[dev-dependencies]` and import as `use <product>_testing::harnesses::spec_tree::TestEnv;`.
+Consumers depend on the workspace-member crate via `[dev-dependencies]` and import as `use <product>_testing::harnesses::product_tree::TestEnv;`.
 
 </harness_managed_values>
 

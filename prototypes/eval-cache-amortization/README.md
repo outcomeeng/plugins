@@ -37,7 +37,7 @@ records per trial.
 
 Every call is **metered to the active `claude` auth** (your OAuth subscription
 when `ANTHROPIC_API_KEY` is unset). Use `--dry-run` first — it prints the plan,
-the argv, and the prompt without calling. A 5-rep `spec-tree` sequential run is
+the argv, and the prompt without calling. A 5-rep `product-tree` sequential run is
 roughly one cold write (~$0.30) plus four warm reads (~$0.06) ≈ $0.52, per the
 measured `FINDINGS.md` Result 1.
 
@@ -45,14 +45,14 @@ measured `FINDINGS.md` Result 1.
 
 ```bash
 # Inspect the plan and payload, no calls:
-python3 measure.py --plugin-dir ../../dist/claude/spec-tree --reps 5 --dry-run
+python3 measure.py --plugin-dir ../../dist/claude/product-tree --reps 5 --dry-run
 
 # Amortization curve (metered):
-python3 measure.py --plugin-dir ../../dist/claude/spec-tree --reps 5
+python3 measure.py --plugin-dir ../../dist/claude/product-tree --reps 5
 
 # Counterfactual: alternating prefixes defeat the cache (metered):
 python3 measure.py --mode alternating \
-  --plugin-dir ../../dist/claude/spec-tree \
+  --plugin-dir ../../dist/claude/product-tree \
   --plugin-dir ../../dist/claude/python --reps 6
 ```
 

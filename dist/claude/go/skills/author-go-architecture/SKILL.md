@@ -11,7 +11,7 @@ Use skill `go:go-code-standards`.
 Use skill `go:go-architecture-standards`.
 
 <objective>
-A Go ADR authored to the decision template the `/understand` foundation provides, that preserves spec-tree hierarchy constraints, and encodes testability as `## Verification` `### Audit` rules.
+A Go ADR authored to the decision template the `/understand` foundation provides, that preserves product-tree hierarchy constraints, and encodes testability as `## Verification` `### Audit` rules.
 </objective>
 
 <essential_principles>
@@ -29,15 +29,15 @@ After reading those standards, check for `spx/local/go.md` and `spx/local/go-arc
 </essential_principles>
 
 <context_loading>
-**For spec-tree work items: Load complete context before creating ADRs.**
+**For product-tree work items: Load complete context before creating ADRs.**
 
-When creating ADRs for a spec-tree work item (enabler/outcome), ensure complete hierarchical context is loaded:
+When creating ADRs for a product-tree work item (enabler/outcome), ensure complete hierarchical context is loaded:
 
-1. **Invoke `spec-tree:contextualize`** with the node path
+1. **Use skill `product-tree:contextualize`** with the node path
 2. **Verify all ancestor ADRs/PDRs are loaded** - Must understand and honor all decision records in hierarchy
 3. **Read the node spec** - Requirements, Test Strategy, and Outcomes sections
 
-**The `spec-tree:contextualize` skill provides:**
+**The `product-tree:contextualize` skill provides:**
 
 - Complete ADR/PDR hierarchy (product and ancestor decisions at all levels)
 - Node spec with requirements, test strategy, and outcomes
@@ -50,7 +50,7 @@ When creating ADRs for a spec-tree work item (enabler/outcome), ensure complete 
 - Must include testability constraints in `## Verification` (`### Audit` ALWAYS/NEVER rules for DI, no mocking)
 - Must document trade-offs and consequences
 
-**If NOT working on spec-tree work item**: Proceed directly with ADR creation using provided requirements.
+**If NOT working on product-tree work item**: Proceed directly with ADR creation using provided requirements.
 </context_loading>
 
 <input_context>
@@ -69,7 +69,7 @@ Read these files to understand product structure and workflow:
 
 - `CLAUDE.md` - Product navigation, work item status, sparse integer index dependencies
 
-For evidence routing, use skill `spec-tree:verify`. After test is selected, use skill `go:go-test-standards`, then use skill `go:author-go-test` for Go expression.
+For evidence routing, use skill `product-tree:verify`. After test is selected, use skill `go:go-test-standards`, then use skill `go:author-go-test` for Go expression.
 
 **3. Existing Decisions**
 

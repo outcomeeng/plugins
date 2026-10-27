@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/a.py || echo '{}' ; python3 ${CLAUDE_PLUGIN_ROOT}/b.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

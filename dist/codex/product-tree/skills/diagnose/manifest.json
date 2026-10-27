@@ -1,0 +1,15 @@
+{
+  "spx_floor": "0.8.0",
+  "marketplace": {
+    "name": "outcomeeng",
+    "source": "outcomeeng/plugins"
+  },
+  "expected_plugins": ["product-tree"],
+  "checks": [
+    "session-environment",
+    "spx-reachability",
+    "worktree-pool",
+    "session-store",
+    "marketplace-install"
+  ]
+}

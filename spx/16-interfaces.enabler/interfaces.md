@@ -4,7 +4,7 @@ malleability: spec
 
 # Interfaces
 
-PROVIDES the product's own user-facing surfaces over a spec-tree product
+PROVIDES the product's own user-facing surfaces over a product-tree product
 SO THAT humans and agents working that product
 CAN inspect and manipulate the tree through purpose-built surfaces rather than raw files
 
@@ -12,6 +12,6 @@ CAN inspect and manipulate the tree through purpose-built surfaces rather than r
 
 ### Compliance
 
-- ALWAYS: source spec-tree structure and derived state from the SPX CLI's JSON projection — an interface surface never re-parses directory suffixes, assembles hierarchy, or derives node state itself ([audit])
-- ALWAYS: present the node states and the node and decision categories the spec-tree methodology defines, so every surface reads the tree consistently ([audit])
+- ALWAYS: source product-tree structure and derived state from the SPX CLI's JSON projection — an interface surface never re-parses directory suffixes, assembles hierarchy, or derives node state itself ([audit])
+- ALWAYS: present the node states and the node and decision categories the product-tree methodology defines, so every surface reads the tree consistently ([audit])
 - ALWAYS: interface surfaces that instruct Claude to call external tools pass every payload through a file Claude writes in the scratch directory the harness names for the session, under a file name unique to the agent, through the tool's own file argument or an input redirect and never through a heredoc, a pipe, or an inline form, per [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) ([audit])

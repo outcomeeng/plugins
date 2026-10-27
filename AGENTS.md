@@ -1,4 +1,4 @@
-<!-- SPEC-TREE v0.42.0 langs:python -->
+<!-- PRODUCT-TREE v0.42.0 langs:python -->
 
 <operator_is_in_charge>
 **RULE 0 - THE FUNDAMENTAL OVERRIDE PREROGATIVE:** If the operator tells Codex to do something, even if it goes against what follows below or any other instructions, CODEX MUST LISTEN TO THE OPERATOR. THE OPERATOR IS ALWAYS IN CHARGE, NOT Codex.
@@ -12,9 +12,9 @@
 
 </operator_question_interrupt>
 
-# Spec Tree Instructions
+# Product Tree Instructions
 
-These instructions explain WHEN to invoke spec-tree skills for this product. They are a **router** — the skills contain the HOW.
+These instructions explain WHEN to invoke product-tree skills for this product. They are a **router** — the skills contain the HOW.
 
 **Read this entire file before acting.** This managed router block is only the first section; the product's own instructions, commands, and conventions follow below, outside it. The router is product-neutral and carries no product command. Never act on the router alone.
 
@@ -37,7 +37,7 @@ When a named subagent is unavailable, invoke the owning plugin's `/<plugin>-plug
 - **ALWAYS** apply authority in this order: active skills → repository decisions and specs → verification evidence → code. When repository content conflicts with an active skill, the skill wins.
 - **ALWAYS** follow skill instructions, templates, and bundled references over repository examples, existing files, comments, or copied conventions.
 - **NEVER** weaken a higher layer to match a lower layer. Fix the lower layer when the layers disagree.
-- **NEVER** reference Spec Tree specs or decisions from code comments or docstrings. Code contains no `spx/...` paths, ADR/PDR identifiers, or decision-file references.
+- **NEVER** reference Product Tree specs or decisions from code comments or docstrings. Code contains no `spx/...` paths, ADR/PDR identifiers, or decision-file references.
 - **ALWAYS** let the active skill load the matching `spx/local/*.md` overlay when that skill declares one. The overlay supplies repository-specific values and commands below the skill in authority and cannot replace, weaken, or contradict the skill.
 - **ALWAYS** read the active harness guide in every directory before working there when the guide exists: `CLAUDE.md` for Claude Code, `AGENTS.md` for Codex.
 
@@ -66,14 +66,14 @@ When a named subagent is unavailable, invoke the owning plugin's `/<plugin>-plug
 
 ## Product Commands
 
-The product's operational command for each spec-tree phase lives in this file's own content below the router. Read the whole file to find each one:
+The product's operational command for each product-tree phase lives in this file's own content below the router. Read the whole file to find each one:
 
 - **author** — after creating, updating, or deleting a spec, test, or implementation file, to rebuild or regenerate artifacts.
 - **verify** — for `/apply` and pre-merge checks, over the node and the changeset.
 - **gate** — for the full deterministic bundle.
 - **merge** — for the transport step of `/merge`.
 
-Content the product keeps identical across this agent guide and the guides for other agents (for example `CLAUDE.md` and `AGENTS.md`) sits in a `shared` region — `<!-- SPEC-TREE:shared {name} -->` … `<!-- /SPEC-TREE:shared {name} -->`, present in both files under the same name. `/update-instruction-block` keeps a `shared` region in sync by taking the git-more-recent side; it never merges the two bodies.
+Content the product keeps identical across this agent guide and the guides for other agents (for example `CLAUDE.md` and `AGENTS.md`) sits in a `shared` region — `<!-- PRODUCT-TREE:shared {name} -->` … `<!-- /PRODUCT-TREE:shared {name} -->`, present in both files under the same name. `/update-instruction-block` keeps a `shared` region in sync by taking the git-more-recent side; it never merges the two bodies.
 
 ---
 
@@ -83,7 +83,7 @@ Content the product keeps identical across this agent guide and the guides for o
 
 **BLOCKING REQUIREMENT**
 
-Require a live `<SPEC_TREE_FOUNDATION>` marker before directly reading, searching, listing, or changing anything under `spx/` or any other product content — source or test files, generated output, evals, and spec-declared configuration. Invoke `/understand` when the marker is absent. This includes repository-content access through Read, Edit, Write, Glob, Grep, `rg`, `grep`, `find`, `cat`, `sed`, and Git commands that emit file contents or patches.
+Require a live `<PRODUCT_TREE_FOUNDATION>` marker before directly reading, searching, listing, or changing anything under `spx/` or any other product content — source or test files, generated output, evals, and spec-declared configuration. Invoke `/understand` when the marker is absent. This includes repository-content access through Read, Edit, Write, Glob, Grep, `rg`, `grep`, `find`, `cat`, `sed`, and Git commands that emit file contents or patches.
 
 `spx session` operations — including inspection, archive, and release — plus `spx worktree status`, `spx diagnose`, no-patch Git status, history, and topology, and a skill's read of the `spx/local/` overlay or exclusion mechanism it declares are exempt. Never follow paths from their output into repository content without the marker.
 
@@ -186,7 +186,7 @@ Default-branch git and version-control mutation — branching, committing, pushi
 
 Every subagent supplied by a plugin listed below is explicitly pre-authorized by the operator. A harness rule may require the operator to request sub-agent use before one is dispatched; treat this section as that standing request.
 
-Authorized plugins: instructions, frontend, hdl, prose, python, rust, go, spec-tree, coding-agents, typescript, work, contribute.
+Authorized plugins: instructions, frontend, hdl, prose, python, rust, go, product-tree, coding-agents, typescript, work, contribute.
 
 - **ONLY** launch a subagent when an active skill explicitly instructs that launch. The skill selects the exact configured subagent and supplies the prompt. Authorization permits the call; it does not request one.
 - **NEVER** infer a launch instruction from task wording, a role description, pattern matching, availability, or apparent usefulness.
@@ -263,7 +263,7 @@ Per-language code, architecture, and test audits ship as `audit-{lang}-{code|tes
 
 ## Test Naming Convention
 
-Test level is encoded in the filename. The `{evidence}` segment is chosen by `/test` routing from the assertion type: `scenario`, `mapping`, `conformance`, `property`, or `compliance`. Universal assertions use `mapping`, `conformance`, `property`, or `compliance`; a universal is never `scenario`. This instruction block renders only the languages recorded in its opening `<!-- SPEC-TREE v{version} langs:{list} -->` marker; `/update-instruction-block` re-renders from the installed template when the methodology advances.
+Test level is encoded in the filename. The `{evidence}` segment is chosen by `/test` routing from the assertion type: `scenario`, `mapping`, `conformance`, `property`, or `compliance`. Universal assertions use `mapping`, `conformance`, `property`, or `compliance`; a universal is never `scenario`. This instruction block renders only the languages recorded in its opening `<!-- PRODUCT-TREE v{version} langs:{list} -->` marker; `/update-instruction-block` re-renders from the installed template when the methodology advances.
 
 ### Python
 
@@ -279,21 +279,21 @@ Test level is encoded in the filename. The `{evidence}` segment is chosen by `/t
 
 Work is coordinated through Changes in the store `spx/local/coordination.md` declares. Hold a Change through `/claim-change` before refining or executing it. When the work stops with continuation remaining, `/release-change` writes the Handoff, removes the holder, and returns the Change to Available for any agent to claim; when the Change reaches a terminal Lifecycle, `/close-change <Applied|Abandoned>` writes the terminal record and closes it. A follow-up is a Proposed Change created through `/author-change`. Maturity moves only through `/author-change`; the three Lifecycle skills move Lifecycle and nothing else.
 
-<!-- /SPEC-TREE -->
+<!-- /PRODUCT-TREE -->
 
 # Outcome Engineering Plugin Marketplace
 
-This product is a combined Codex and Claude Code marketplace (`outcomeeng/plugins`) delivering the Spec Tree methodology for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where human-written specifications are the authoritative source of truth.
+This product is a combined Codex and Claude Code marketplace (`outcomeeng/plugins`) delivering the Product Tree methodology for [Outcome Engineering](https://outcome.engineering) — the product engineering paradigm where the human-written Product Tree, the product document with its decisions and specs, is the authoritative source of truth.
 
-`AGENTS.md` and `CLAUDE.md` share product-owned instructions, while each file carries its own harness-specific managed Spec Tree instruction block.
+`AGENTS.md` and `CLAUDE.md` share product-owned instructions, while each file carries its own harness-specific managed Product Tree instruction block.
 
 ## Two audiences, two design surfaces
 
 This repo is two things at once.
 
-It is a **product**, with its own spec tree under `spx/`, its own decision records, its own implementation under `outcomeeng/`, and authored plugin sources under `src/plugins/`. The reader of work in those directories is this product's own developers and agents. You may name this repo's nodes, languages, and conventions directly.
+It is a **product**, with its own Product Tree under `spx/`, its own decision records, its own implementation under `outcomeeng/`, and authored plugin sources under `src/plugins/`. The reader of work in those directories is this product's own developers and agents. You may name this repo's nodes, languages, and conventions directly.
 
-It is also a **methodology shipped as plugins** from generated runtime trees under `dist/claude/` and `dist/codex/`. Those plugins install into hundreds of consumer repositories whose spec trees, languages, layouts, and conventions are unknown at design time. The reader of shipped plugin content is a consumer agent in some other repository. Any design that assumes this repo's tree, this repo's languages, this repo's overlay declarations, or this repo's specific node addresses is wrong for that audience. Authored skill content under `src/plugins/` must render into language-neutral, portable plugin output; never a product-internal node path, never a single-language test filename pattern, never a PDR or ADR specific to this product.
+It is also a **methodology shipped as plugins** from generated runtime trees under `dist/claude/` and `dist/codex/`. Those plugins install into hundreds of consumer repositories whose Product Trees, languages, layouts, and conventions are unknown at design time. The reader of shipped plugin content is a consumer agent in some other repository. Any design that assumes this repo's tree, this repo's languages, this repo's overlay declarations, or this repo's specific node addresses is wrong for that audience. Authored skill content under `src/plugins/` must render into language-neutral, portable plugin output; never a product-internal node path, never a single-language test filename pattern, never a PDR or ADR specific to this product.
 
 Carrying assumptions from one surface to the other is the most common source of wrong design here. Designing a shipped plugin change as if every consumer were this repo, or naming this repo's PDR in a shipped skill body, breaks the change for every consumer that is not this repo. The Plugin Portability Constraints section below deepens the consumer-audience rules; references to specific nodes, languages, and overlays elsewhere in this file apply only when the audience is this repo's own developers.
 
@@ -312,7 +312,7 @@ This file covers repository rules that apply across both agents.
 
 Claude Code-specific methodology — skill structure patterns, testing philosophy, research on skill activation — lives in [`methodology/`](methodology/CLAUDE.md). Read [`methodology/CLAUDE.md`](methodology/CLAUDE.md) when creating or restructuring skills, writing tests, or tuning skill descriptions for reliable activation.
 
-Spec-tree methodology rules (node types, states, assertion types, ordering) live inline in `src/plugins/spec-tree/skills/understand/SKILL.md` and are authoritative over `methodology/`. Each skill owns its templates in that skill's `templates/` directory; the sibling `references/` directory carries conditional operational detail.
+Product tree methodology rules (node types, states, assertion types, ordering) live inline in `src/plugins/product-tree/skills/understand/SKILL.md` and are authoritative over `methodology/`. Each skill owns its templates in that skill's `templates/` directory; the sibling `references/` directory carries conditional operational detail.
 
 ## Critical Rules
 
@@ -328,7 +328,7 @@ Spec-tree methodology rules (node types, states, assertion types, ordering) live
 - 🛑 **STOP TRIGGER — NEVER abbreviate a session ID, or any identity value** - A session ID is `YYYY-MM-DD_HH-MM-SS` and is reproduced **verbatim and in full** every single time — in prose, questions, commits, and tool calls. NEVER shorten it to a fragment (e.g. the `HH-MM-SS` tail, the date, or any substring): a fragment identifies nothing, is ambiguous across sessions, breaks `spx session show/pickup/archive` lookups, and obscures the user's comparison against the source. The same rule binds every agent-surfaced identity value — commit SHA, run ID, `owner/repo`, host account, agent-session ID: copy it exactly from its source, never paraphrase or truncate it (this is the product-level verbatim-identity compliance rule in `spx/outcomeeng.product.md`). If a value is long, paste the whole value; do not "tidy" it.
 
 - ✅ **Use this repo's command surface exactly** - Skills decide when validation, tests, review, audit, merge, and marketplace sync are required. `AGENTS.md` records this repo's concrete command forms and how to pass the file set:
-  - `[test]` evidence: `just test <pytest-target>...`. Pass co-located spec test files, node test directories, or pytest node IDs, for example `just test spx/21-spec-tree.enabler/76-merge.enabler/tests/test_merge_gate_policy.mapping.l1.py`. When a source file under `outcomeeng/`, `outcomeeng_testing/`, `outcomeeng_evals/`, or `src/plugins/` changes, pass the spec test file(s) or node test directory that exercise it; do not pass implementation paths as if they were tests. Never run bare `pytest`.
+  - `[test]` evidence: `just test <pytest-target>...`. Pass co-located spec test files, node test directories, or pytest node IDs, for example `just test spx/21-product-tree.enabler/76-merge.enabler/tests/test_merge_gate_policy.mapping.l1.py`. When a source file under `outcomeeng/`, `outcomeeng_testing/`, `outcomeeng_evals/`, or `src/plugins/` changes, pass the spec test file(s) or node test directory that exercise it; do not pass implementation paths as if they were tests. Never run bare `pytest`.
   - Verbose failing test rerun: `just test-v <same pytest-target>...`.
   - `[eval]` evidence: `just eval <eval-toml>`, `just eval-case <eval-toml> <case-id>`, or `just eval-node <node-path>`. These wrap `uv run outcomeeng-evals run`, read `plugin_dir` from `eval.toml` unless `PLUGIN_DIR` is set, and default to `MAX_BUDGET_USD=0.75`, `WORKERS=1`, and `TIMEOUT_SECONDS=180`. Do not run bare `outcomeeng-evals`; do not raise `MAX_BUDGET_USD`, `WORKERS`, or `TIMEOUT_SECONDS` without structured operator approval.
   - Spec-only or Markdown-instruction-only changes: `spx validation markdown`, `just eval-links`, and `spx spec status --format json`. These commands take no changed-file list; the scope is the markdown/spec lane, and `just eval-links` fails on any `[test]` or `[eval]` link whose evidence file is absent.
@@ -339,11 +339,11 @@ Spec-tree methodology rules (node types, states, assertion types, ordering) live
   - Full deterministic gate: `just check-full`. CI invokes this full gate on `pull_request` and push to `main`; run it locally only when the active skill, `spx/local/merging.md`, the governing node, risk evidence, or the user explicitly requires the full gate.
   - Generated plugin trees after `src/plugins/` edits: `just build-skills`. Do not hand-edit `dist/`.
   - Plugin version bumps: the PR opens without a version commit; `spx/local/merging.md` runs `just bump`, followed by `just build-skills`, as the last commit before the merge, after base synchronization and once review and checks are green on the final content, then `just bump-check` on that head; a later rebase repeats the step. `spx/local/open-pr.md` carries the bump policy. Ordinary commits never initiate or request a bump. NEVER hand-edit a manifest `version` field.
-  - Generated root Spec Tree instruction blocks after instruction-block-template or distribution-render changes: `just build-skills`, then `just build-instructions`. Do not hand-edit the managed instruction blocks in `CLAUDE.md` or `AGENTS.md`; regenerate them from the rendered harness templates in `dist/`, then verify with `just instructions-check`. Several router sections are pinned verbatim: each `*_POLICY_REQUIREMENTS` tuple in `outcomeeng/distribution/instruction_block.py` asserts literal substrings of one template section, so rewording a pinned section without updating its tuple in the same change fails the render with a named missing requirement instead of a wording diff. This coupling is internal to this repository's build; it never ships to consumers.
-  - Generated eval CI trigger paths after an `eval.toml` `owned_paths` edit: `just build-eval-triggers`. Do not hand-edit the marker-delimited `paths:` blocks in `.github/workflows/spec-tree-evals.yml`; the gate's `eval-triggers` step fails on drift.
+  - Generated root Product Tree instruction blocks after instruction-block-template or distribution-render changes: `just build-skills`, then `just build-instructions`. Do not hand-edit the managed instruction blocks in `CLAUDE.md` or `AGENTS.md`; regenerate them from the rendered harness templates in `dist/`, then verify with `just instructions-check`. Several router sections are pinned verbatim: each `*_POLICY_REQUIREMENTS` tuple in `outcomeeng/distribution/instruction_block.py` asserts literal substrings of one template section, so rewording a pinned section without updating its tuple in the same change fails the render with a named missing requirement instead of a wording diff. This coupling is internal to this repository's build; it never ships to consumers.
+  - Generated eval CI trigger paths after an `eval.toml` `owned_paths` edit: `just build-eval-triggers`. Do not hand-edit the marker-delimited `paths:` blocks in `.github/workflows/product-tree-evals.yml`; the gate's `eval-triggers` step fails on drift.
   - Marketplace installation verification before merge: `just verify-marketplace-installation`. The command runs the repository-installation node's evidence other than the L3 tests through pytest discovery, runs none of the node's `l3` files and no real agent CLI, and preserves persistent installation state.
   - L3 tests: `just test-l3` runs every test whose file name carries the execution level `l3`, the real agent CLI installation and discovery evidence among them, and no other test. No gate runs an L3 test: `just check`, `just check-full`, CI, and `just verify-marketplace-installation` skip them all. Locally it is a resource-intensive command chained behind the `/wait-for-load` waiter; it needs the maintainer's own credentials, and a missing or invalid credential fails visibly. Subscription discovery may read and natively refresh the selected saved login.
-  - Marketplace release installation after merged plugin-distribution changes: `just install-marketplace` with the designated main checkout, fast-forwarded to the merge, as its working directory, as directed by `spx/local/merging.md`. The command reads the marketplace's name from the committed catalog and its source from the machine's own registry (`claude plugin marketplace list --json`), refreshes the registered clone, and brings every project- or local-scope Claude Code install record of a cataloged plugin on the machine to the head of that source's default branch: the invocation checkout's own records through the native plugin update, every other such record by rewriting its entry in `installed_plugins.json` to the head's install path, version, and commit, whether or not the record's directory still exists. No command runs with any other checkout as its working directory. A record outside project and local scope or outside the catalog is reported and left unchanged. The run reads the listing once to plan and once after execution, reports each record's version before and after, and exits nonzero when any project- or local-scope record of a cataloged plugin is off the head afterwards, which withholds the release. It bootstraps the invocation checkout's project scope and refreshes the selected `$CODEX_HOME`; empty agent state receives only `spec-tree` with a warning, and nonempty state without `spec-tree` is rejected before mutation.
+  - Marketplace release installation after merged plugin-distribution changes: `just install-marketplace` with the designated main checkout, fast-forwarded to the merge, as its working directory, as directed by `spx/local/merging.md`. The command reads the marketplace's name from the committed catalog and its source from the machine's own registry (`claude plugin marketplace list --json`), refreshes the registered clone, and brings every project- or local-scope Claude Code install record of a cataloged plugin on the machine to the head of that source's default branch: the invocation checkout's own records through the native plugin update, every other such record by rewriting its entry in `installed_plugins.json` to the head's install path, version, and commit, whether or not the record's directory still exists. No command runs with any other checkout as its working directory. A record of a plugin id the catalog renames moves to the successor plugin's entry; any other record outside project and local scope or outside the catalog is reported and left unchanged. The run reads the listing once to plan and once after execution, reports each record's version before and after, and exits nonzero when any project- or local-scope record of a cataloged plugin is off the head afterwards, which withholds the release. It bootstraps the invocation checkout's project scope and refreshes the selected `$CODEX_HOME`; empty agent state receives only `product-tree` with a warning, and nonempty state without `product-tree` is rejected before mutation.
 - 🛑 **STOP TRIGGER — NEVER raise command expense ceilings without explicit operator approval** - Command defaults are authority for cost-bearing and quota-bearing runs. Do not add or increase flags, environment variables, or config values that raise spend, quota use, hosted minutes, paid API usage, token budget, worker parallelism, retry count, timeout, or external-service capacity without structured operator approval in the same turn. Examples include `--max-budget-usd`, model/API budget caps, worker or parallelism counts, retry limits, hosted-runner minutes, and paid-provider switches. If a command fails because the default ceiling is too low, stop and ask through the structured-question tool the router block names, naming the exact failed command, the blocked ceiling, the proposed new ceiling, and a pause/inspect option.
 - ✅ **Use the Justfile as this repo's command interface** - Use `just --list` / `just help` only to confirm exact recipe spelling after a governing instruction has selected the command class; do not use recipe discovery to choose an independent validation strategy. Repository-local Python modules (`python3 -m outcomeeng.*`, `uv run python -m outcomeeng.*`, and similar module invocations) run through `just` recipes only; inside the `Justfile`, those invocations are recipe implementation details. If a needed repository operation exists only as a Python module, add or fix the narrow Just recipe first, then run the recipe. Plugin-shipped skill scripts are different: when an active skill instructs a direct `python3 "${CLAUDE_SKILL_DIR}/scripts/..."` command, run that exact portable skill script. To understand a recipe, inspect `Justfile` and the underlying source with read-only tools; execute through `just`.
 - ✅ **Dog-food platform features in skills** - When you discover an undocumented Claude Code capability (e.g., `skills:` field in subagents), check whether our skills teach it and update them if not
@@ -417,11 +417,11 @@ When documenting XML-like syntax that isn't valid XML (pseudo-XML with text cont
 
 Every skill and thin agent across every plugin is listed in the auto-generated catalog in [`README.md`](README.md#plugins), sourced from `.claude-plugin/marketplace.json` and the YAML frontmatter of each plugin's `SKILL.md` and `agents/*.md`. Run `just docs` to regenerate; `just check-full` enforces freshness in CI. Do not maintain plugin tables in this file.
 
-## Spec Tree Methodology
+## Product Tree Methodology
 
-The Spec Tree methodology for [Outcome Engineering](https://outcome.engineering). Three steps drive the methodology: **declare, spec, apply**. Audit gates operate within each step. See `src/plugins/spec-tree/skills/understand/SKILL.md` for the authoritative inline foundation.
+The Product Tree methodology for [Outcome Engineering](https://outcome.engineering). Three steps drive the methodology: **declare, spec, apply**. Audit gates operate within each step. See `src/plugins/product-tree/skills/understand/SKILL.md` for the authoritative inline foundation.
 
-### Spec-tree navigation: declaration and inverse
+### Product tree navigation: declaration and inverse
 
 The methodology declares forward:
 
@@ -445,7 +445,7 @@ If multiple implementation files in the diff resolve to multiple nodes, take the
 
 An implementation file in the diff that no test imports has no governing spec assertion — a coverage gap the PR is shipping. Specs declare; tests verify; code complies. Surface the gap; do not invent a node to load.
 
-Per-language test conventions live in `spx/15-test-language.adr.md` (this product uses pytest with `test_<subject>.<evidence>.<level>.py`) and in each language plugin's `{language}-test-standards` skill. In a consumer repo, the consumer's spec tree and language plugin determine the conventions; the inverse-navigation procedure is the same.
+Per-language test conventions live in `spx/15-test-language.adr.md` (this product uses pytest with `test_<subject>.<evidence>.<level>.py`) and in each language plugin's `{language}-test-standards` skill. In a consumer repo, the consumer's Product Tree and language plugin determine the conventions; the inverse-navigation procedure is the same.
 
 ## Before Making Changes
 
@@ -474,7 +474,7 @@ Continue through [Git workflow](#git-workflow) when the change is destined for t
 
 - `src/plugins/` — authored skills, thin agents, manifests, and templates. One subdirectory per plugin.
 - `dist/claude/`, `dist/codex/` — generated runtime plugin trees (rebuilt from `src/plugins/` by `just build-skills`) shipped to consumer repos. The plugin catalog in [`README.md`](README.md#plugins) is authoritative for what each plugin contains; this file does not duplicate it.
-- `spx/` — this product's spec tree (durable map). The managed Spec Tree instruction block in this root file is the skill router. `spx/local/` holds the product-specific skill overlays and carries the generated-source declaration `generated-sources.toml`, a verification-scope input distinct from the `*.md` skill overlays.
+- `spx/` — this product's Product Tree (durable map). The managed Product Tree instruction block in this root file is the skill router. `spx/local/` holds the product-specific skill overlays and carries the generated-source declaration `generated-sources.toml`, a verification-scope input distinct from the `*.md` skill overlays.
 - `outcomeeng/`, `outcomeeng_testing/`, `outcomeeng_evals/` — this product's Python toolchain (validation, distribution, eval harness) and its test infrastructure. Not portable to consumer projects; do not import from inside any plugin.
 - `.claude-plugin/marketplace.json` — Claude Code marketplace catalog (one entry per shipped plugin).
 - `.agents/plugins/marketplace.json` — Codex marketplace catalog (mirror of the above).
@@ -491,7 +491,7 @@ For the contents of any plugin or `spx/` subdirectory, run `ls` or read the cata
 
 ### How skill content reaches a session
 
-**Claude Code** uses the project-scoped marketplace the committed catalog names, registered on the machine from the source each checkout's `.claude/settings.json` declares. `just install-marketplace` reads that name from the catalog and the source from `claude plugin marketplace list --json`, refreshes the registered clone to the head of its default branch, inspects the plugins installed for the invocation checkout, adds the registration from the checkout's own declaration when the registry lacks it, and updates the invocation checkout's records natively; every other project- or local-scope install record of a cataloged plugin on the machine has its `installed_plugins.json` entry rewritten to that head's install path, version, and commit, whether or not its directory still exists, so every session on the machine starts and reloads at the head. No command runs with another checkout as its working directory. A record outside project and local scope or outside the catalog is reported and left unchanged. The run is one bounded pass: it plans from one listing read, reads the listing again after execution, reports each record's version before and after, and exits nonzero when any project- or local-scope record of a cataloged plugin is off the head afterwards; it takes no lock and no second pass, and a record installed after the run holds its own version until the next run.
+**Claude Code** uses the project-scoped marketplace the committed catalog names, registered on the machine from the source each checkout's `.claude/settings.json` declares. `just install-marketplace` reads that name from the catalog and the source from `claude plugin marketplace list --json`, refreshes the registered clone to the head of its default branch, inspects the plugins installed for the invocation checkout, adds the registration from the checkout's own declaration when the registry lacks it, and updates the invocation checkout's records natively; every other project- or local-scope install record of a cataloged plugin on the machine has its `installed_plugins.json` entry rewritten to that head's install path, version, and commit, whether or not its directory still exists, so every session on the machine starts and reloads at the head. No command runs with another checkout as its working directory. A record of a plugin id the catalog renames moves to the successor plugin's entry; any other record outside project and local scope or outside the catalog is reported and left unchanged. The run is one bounded pass: it plans from one listing read, reads the listing again after execution, reports each record's version before and after, and exits nonzero when any project- or local-scope record of a cataloged plugin is off the head afterwards; it takes no lock and no second pass, and a record installed after the run holds its own version until the next run.
 
 **Codex** marketplace registration and plugin installation belong to the selected `$CODEX_HOME`. Explicit `codex plugin marketplace add` and `codex plugin add` commands update that selected home. Trusted product `.codex/config.toml` enables chosen skills over disabled home defaults. Home configuration owns the refresh selection, independently of product activation; the selected-home subagent registry remains global. Persistent installation reconciles generated agent definitions into the selected `$CODEX_HOME/agents/` registry under a digest-bound marketplace ownership record, leaving foreign and modified files untouched and maintaining exactly one current canonical subagent definition per authored marketplace agent. A plugin lifecycle skill reconciles only its own recorded definitions; catalog-wide installation owns cross-plugin pruning. A checkout definition is coherent only where that checkout also carries the skill content it invokes. A checkout definition shadowing selected-home skills is a scope split that stops reconciliation: remove a byte-identical generated copy, and inspect a changed or unrecognized copy as a collision. Marketplace installation never requires creating or committing checkout agent definitions.
 
@@ -509,37 +509,37 @@ Work in the checkout whose authored plugin files you are changing:
 
 ## Missing plugins or skills
 
-The operator authorizes `just install-marketplace` standing, so it runs with no operator question: as the release after every merge `spx/local/merging.md` directs, and whenever a plugin or skill is missing, from the intended checkout. The command inspects each agent's installed plugins of the marketplace the committed catalog names, bounds and orders them through that agent's committed catalog, adds an absent registration from the invocation checkout's own declaration and refreshes a present one from the source the registry carries, refreshes exactly that set, brings every project- or local-scope install record of a cataloged plugin on the machine to the head of the registered source's default branch — the invocation checkout's records natively, every other record by rewriting its `installed_plugins.json` entry — and reconciles the selected plugins' generated Codex definitions into the selected home under marketplace ownership. Empty agent state receives only `spec-tree` and a warning. Nonempty state without `spec-tree` is rejected before mutation.
+The operator authorizes `just install-marketplace` standing, so it runs with no operator question: as the release after every merge `spx/local/merging.md` directs, and whenever a plugin or skill is missing, from the intended checkout. The command inspects each agent's installed plugins of the marketplace the committed catalog names, bounds and orders them through that agent's committed catalog, adds an absent registration from the invocation checkout's own declaration and refreshes a present one from the source the registry carries, refreshes exactly that set, brings every project- or local-scope install record of a cataloged plugin on the machine to the head of the registered source's default branch — the invocation checkout's records natively, every other record by rewriting its `installed_plugins.json` entry — and reconciles the selected plugins' generated Codex definitions into the selected home under marketplace ownership. Empty agent state receives only `product-tree` and a warning. Nonempty state without `product-tree` is rejected before mutation.
 
 Claude Code state is every project- or local-scope install record on the machine, keyed by scope and project path; after a run every such record of a cataloged plugin is at the head, or the run exits nonzero naming the records that are not. Codex installation state belongs to the selected `$CODEX_HOME`; trusted product `.codex/config.toml` controls effective skill activation. Use `just verify-marketplace-installation` when the goal is disposable proof rather than a persistent state change.
 
-<!-- SPEC-TREE:shared commands -->
+<!-- PRODUCT-TREE:shared commands -->
 
-## Spec Tree Phase Commands
+## Product Tree Phase Commands
 
 - **author** — Regenerate the generated trees after `src/plugins/` edits: `just build-skills`. Regenerate the root instruction blocks after instruction-template edits: `just build-instructions`.
 - **verify** — Node and changeset tests: `just test <pytest-target>...`. Spec-only or Markdown-only changes: `spx validation markdown`, `just eval-links`, and `spx spec status --format json`. Skill/plugin Markdown: `just check-skills` and `just docs-check`.
 - **gate** — Full local deterministic gate: `just check-full`.
 - **merge** — Ship to the default branch through `/merge`; the GitHub-PR transport merges with `gh pr merge <pr-number> --merge --delete-branch=false`.
 
-<!-- /SPEC-TREE:shared commands -->
+<!-- /PRODUCT-TREE:shared commands -->
 
-<!-- SPEC-TREE:shared generated-sources -->
+<!-- PRODUCT-TREE:shared generated-sources -->
 
 ## Generated Sources in Verification Scope
 
 `spx/local/generated-sources.toml` is the committed declaration of every generated extent in this repository — whole generated files by path pattern and generated regions of authored files by marker pair — with each relation's authored sources, generator, and regeneration command. It is governed by `spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md` and is the single source of generated-source attribution: never infer generated status from path names.
 
-- Agentic verification (review, audit) excludes declared generated extents from judgment and names the skipped extents in its verdict — unless the changeset touches the relation's sources or generator, or the source-to-output contract is the declared verification subject, in which case the generated extents are evidence. Journal-recorded skip evidence arrives with the `spx` verification scope projection; until then the exclusion binds through this instruction alone.
+- Agentic verification (review, audit) excludes declared generated extents from judgment and names the skipped extents in its verdict — unless the changeset touches the relation's sources or generator, or the source-to-output contract is the declared verification subject, in which case the generated extents are evidence. The review runner applies the exclusion for review (see below).
 - Findings about generated content resolve to the relation's sources; never hand-edit a generated extent.
 - Deterministic verification covers the complete changeset; each relation's regeneration command backs regeneration parity — rerunning it leaves the committed generated extents byte-identical.
 - Generation inputs and generator implementations are authored files judged in their generation role — template directives are template syntax, never defective final output.
 
-This section is the interim consumer of the declaration; the `spx` verification scope projection supersedes it when that capability ships.
+The review runner `review_run.py` of the `review-changes` skill is the declaration's consumer for agentic review: `start` lists each declared generated extent under its relation, flags a relation whose sources or generator the changeset also changes, and `finish` records each extent as skipped by declaration with its regeneration command, so every Reviewer receives the exclusion without instruction. The `spx` verification scope projection becomes the consumer for the other agentic verification when that capability ships.
 
-<!-- /SPEC-TREE:shared generated-sources -->
+<!-- /PRODUCT-TREE:shared generated-sources -->
 
-<!-- SPEC-TREE:shared formatter-pin -->
+<!-- PRODUCT-TREE:shared formatter-pin -->
 
 ## Formatter pin
 
@@ -552,4 +552,4 @@ When the host dprint updates:
 3. Push the commit to origin's default branch.
 4. In every other checkout, pull and rebase onto it, and install the same dprint version before the next commit.
 
-<!-- /SPEC-TREE:shared formatter-pin -->
+<!-- /PRODUCT-TREE:shared formatter-pin -->

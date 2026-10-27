@@ -151,12 +151,12 @@ PROFILE_CONFIGURATION_REMEDIATION: Final = (
 # the common-word `term` kind).
 RUNTIME_TOKEN_IGNORE: Final[frozenset[str]] = frozenset(
     {
-        "src/plugins/spec-tree/skills/update-instruction-block/scripts/instruction_block.py",
-        "src/plugins/spec-tree/skills/update-instruction-block/SKILL.md",
-        "src/plugins/spec-tree/agents/instruction-block-updater.md",
-        "src/plugins/spec-tree/skills/update-instruction-block/templates/instruction-block.md",
-        "src/plugins/spec-tree/skills/review-changes/references/review-prompt.md",
-        "src/plugins/spec-tree/skills/review-changes/scripts/review_result.py",
+        "src/plugins/product-tree/skills/update-instruction-block/scripts/instruction_block.py",
+        "src/plugins/product-tree/skills/update-instruction-block/SKILL.md",
+        "src/plugins/product-tree/agents/instruction-block-updater.md",
+        "src/plugins/product-tree/skills/update-instruction-block/templates/instruction-block.md",
+        "src/plugins/product-tree/skills/review-changes/references/review-prompt.md",
+        "src/plugins/product-tree/skills/review-changes/scripts/review_result.py",
     }
 )
 

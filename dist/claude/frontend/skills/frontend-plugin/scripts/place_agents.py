@@ -4,8 +4,10 @@ Tested with: missing/current/stale owned definitions, foreign and modified
 collisions, malformed ownership records, scope splits, check-only runs,
 write and prune destinations changed between preflight and mutation (through
 the injected digest reader), adoption of identical unrecorded destinations an
-interrupted run left behind, and atomic ownership updates with no temporary
-files left behind.
+interrupted run left behind, atomic ownership updates with no temporary
+files left behind, and the pruning of definitions recorded for a plugin id the
+marketplace catalog renames to this plugin, with every retained one reported as
+a partial migration on each run, check-only runs included.
 """
 
 from __future__ import annotations
@@ -21,7 +23,12 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-PLUGIN = "frontend"
+DATA: Any = json.loads(
+    Path(__file__).with_name("place_agents.json").read_text(encoding="utf-8")
+)
+PLUGIN: str = DATA["plugin"]
+REPLACED: tuple[str, ...] = tuple(DATA["replaced"])
+OWNED_PLUGINS = (PLUGIN, *REPLACED)
 SHIPPED = Path(__file__).resolve().parent.parent / "agents"
 OWNERSHIP = ".outcomeeng-marketplace-ownership.json"
 OWNERSHIP_SCHEMA_FIELD = "schema_version"
@@ -33,6 +40,8 @@ ENTRY_DIGEST_FIELD = "digest"
 AGENTS_DIRECTORY = "agents"
 WRITE_PREFIX = "write: "
 PRUNE_PREFIX = "prune: "
+RETAINED_PREFIX = "retained: "
+PARTIAL_MIGRATION_PREFIX = "partial-migration: "
 COLLISION_PREFIX = "collision: "
 SCOPE_SPLIT_REMOVAL_PREFIX = "scope-split directed-removal: "
 SCOPE_SPLIT_COLLISION_PREFIX = "scope-split collision: "
@@ -261,7 +270,10 @@ def main(
     writes: list[tuple[Path, bytes, str | None]] = []
     prunes: list[tuple[Path, str]] = []
     collisions: list[str] = []
-    next_entries = [entry for entry in entries if entry[ENTRY_PLUGIN_FIELD] != PLUGIN]
+    retained: list[str] = []
+    next_entries = [
+        entry for entry in entries if entry[ENTRY_PLUGIN_FIELD] not in OWNED_PLUGINS
+    ]
     for relative, content in desired.items():
         path, recorded = home / relative, by_destination.get(relative)
         present = path.exists() or path.is_symlink()
@@ -283,20 +295,34 @@ def main(
         )
     for entry in entries:
         if (
-            entry[ENTRY_PLUGIN_FIELD] != PLUGIN
+            entry[ENTRY_PLUGIN_FIELD] not in OWNED_PLUGINS
             or entry[ENTRY_DESTINATION_FIELD] in desired
         ):
             continue
         path = home / entry[ENTRY_DESTINATION_FIELD]
         present = path.exists() or path.is_symlink()
         current = current_digest(path)
+        cause = None
         if present and path.is_symlink():
-            collisions.append(f"{COLLISION_PREFIX}{path} ({CAUSE_SYMLINK})")
+            cause = CAUSE_SYMLINK
         elif present and current != entry[ENTRY_DIGEST_FIELD]:
-            collisions.append(f"{COLLISION_PREFIX}{path} ({CAUSE_DIGEST_MISMATCH})")
+            cause = CAUSE_DIGEST_MISMATCH
+        if cause is not None and entry[ENTRY_PLUGIN_FIELD] != PLUGIN:
+            # A definition of a plugin this one replaces stays where it is and
+            # stays recorded, because the consumer owns it now; it blocks no
+            # placement of this plugin's own definitions.
+            retained.append(f"{RETAINED_PREFIX}{path} ({cause})")
+            next_entries.append(entry)
+        elif cause is not None:
+            collisions.append(f"{COLLISION_PREFIX}{path} ({cause})")
         elif present:
             prunes.append((path, entry[ENTRY_DIGEST_FIELD]))
-    _print_each([*splits, *collisions])
+    _print_each([*splits, *collisions, *retained])
+    if retained:
+        print(
+            f"{PARTIAL_MIGRATION_PREFIX}{len(retained)} definition(s) of replaced "
+            "plugins stay in the registry and stay discoverable until resolved"
+        )
     for path, _, _ in writes:
         print(f"{WRITE_PREFIX}{path}")
     for path, _ in prunes:

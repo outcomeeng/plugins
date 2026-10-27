@@ -34,7 +34,7 @@ write for the whole run). At 50% writes, the run pays cold writes pervasively.
 Two causes ruled out:
 
 - **Not prefix divergence.** 23 of 24 suites declare the same `plugin_dir`
-  (`dist/claude/spec-tree`); only `shared-constant-bag` uses `typescript`. The
+  (`dist/claude/product-tree`); only `shared-constant-bag` uses `typescript`. The
   prefix is already shared.
 - **Not parallel cold-start.** CI runs suites sequentially (`for item in plan`
   loop) and `WORKERS` defaults to `1`, so cases run one at a time.
@@ -45,7 +45,7 @@ calls.
 
 ## Measurement 2 — per-case experiment (local, wrapper-protocol, `--workers 1`)
 
-Ran one spec-tree suite sequentially and read per-case cache tokens:
+Ran one product-tree suite sequentially and read per-case cache tokens:
 
 | # | case                      | cache_read | cache_write |
 | - | ------------------------- | ---------- | ----------- |

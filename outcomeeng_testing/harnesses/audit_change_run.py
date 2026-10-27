@@ -75,18 +75,18 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 PLUGINS_DIR: Final = REPO_ROOT / "src" / "plugins"
-SPEC_TREE_DIR: Final = PLUGINS_DIR / "spec-tree"
+PRODUCT_TREE_DIR: Final = PLUGINS_DIR / "product-tree"
 RUNNER_SCRIPT: Final = (
-    SPEC_TREE_DIR / "skills" / "audit-change" / "scripts" / "audit_change_run.py"
+    PRODUCT_TREE_DIR / "skills" / "audit-change" / "scripts" / "audit_change_run.py"
 )
 OBSERVER_SCRIPT: Final = Path(observer.__file__).resolve()
-SPEC_TREE_MANIFEST: Final = SPEC_TREE_DIR / ".claude-plugin" / "plugin.json"
+PRODUCT_TREE_MANIFEST: Final = PRODUCT_TREE_DIR / ".claude-plugin" / "plugin.json"
 #: How many finding rule identifiers one generated audit records.
 RULE_IDENTIFIER_COUNT: Final = 10
 
 #: An author-change record template, a source-owned Change record.
 CHANGE_TEMPLATE: Final = (
-    SPEC_TREE_DIR / "skills" / "author-change" / "templates" / "proposed.md"
+    PRODUCT_TREE_DIR / "skills" / "author-change" / "templates" / "proposed.md"
 )
 _FIXTURES_DIR: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "audit_change_run"
@@ -517,9 +517,9 @@ def run_in_parallel(work: Callable[[_T], _R], items: Sequence[_T]) -> list[_R]:
         return list(pool.map(work, items))
 
 
-def spec_tree_plugin_version() -> str:
-    """Return the authored spec-tree plugin version."""
-    manifest = json.loads(SPEC_TREE_MANIFEST.read_text(encoding="utf-8"))
+def product_tree_plugin_version() -> str:
+    """Return the authored product-tree plugin version."""
+    manifest = json.loads(PRODUCT_TREE_MANIFEST.read_text(encoding="utf-8"))
     return str(manifest[PLUGIN_MANIFEST_VERSION_FIELD])
 
 
@@ -539,7 +539,7 @@ def audit_payloads(*, subject: str, content: str, tool_version: str) -> AuditPay
     """
     runner_field = load_runner().SpxField
     language = implementation_languages(PLUGINS_DIR)[0]
-    version = spec_tree_plugin_version()
+    version = product_tree_plugin_version()
     provenance = implementation_audit_provenance(
         agent_plugin_version=version,
         language_plugin_version=version,

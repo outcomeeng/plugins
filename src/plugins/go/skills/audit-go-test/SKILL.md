@@ -2,7 +2,7 @@
 name: audit-go-test
 description: >-
   Go test-evidence audit methodology — judges the Go tests in scope against
-  the spec-tree and Go-specific evidence properties.
+  the product-tree and Go-specific evidence properties.
 allowed-tools: Read, Grep, Glob, Bash(git diff:*), {{! tool('use_skill') !}}
 ---
 
@@ -24,15 +24,15 @@ This audit is read-only. Produce a verdict over test evidence; never edit tests,
 
 {!% require_skill 'go:go-test-standards' %!}
 
-{!% require_skill 'spec-tree:audit-tests' %!}
+{!% require_skill 'product-tree:audit-tests' %!}
 
-{!% require_skill 'spec-tree:test' %!}
+{!% require_skill 'product-tree:test' %!}
 
 Read local overlay files — each routes skill behavior to the product's governing specs and decisions; overlays supplement skills and do not supersede them:
 
 Read `spx/local/go.md` and `spx/local/go-tests.md` when they exist; otherwise apply the loaded skills only.
 
-Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
+Use skill `product-tree:contextualize` on the spec node under audit — `<PRODUCT_TREE_CONTEXT>` marker must be present before Gate 1.
 
 This audit runs no deterministic verification — no `gofmt`, `go vet`, `go test`, `go test -cover`, or any other project command. Spend the whole audit reading the evidence chain.
 
@@ -66,7 +66,7 @@ For each assertion in the spec's Assertions section, execute steps 1-8 in order.
 <step name="challenge">
 Challenge the assertion:
 
-- Does the assertion derive from an ancestor PDR or ADR claim in `<SPEC_TREE_CONTEXT>`, or is it floating?
+- Does the assertion derive from an ancestor PDR or ADR claim in `<PRODUCT_TREE_CONTEXT>`, or is it floating?
 - Is the assertion type correct for the claim?
 - Does it overlap with another assertion in the same node or parent?
 

@@ -107,7 +107,7 @@ Claude Code: Failed to install plugin "contribute@outcomeeng": Plugin "contribut
 Codex:       Error: plugin `contribute` was not found in marketplace `outcomeeng`
 ```
 
-A constant that drifts from that captured wording now fails the linked tests. The Claude Code **enable** message was never observed: only the Claude plan issues an enable, and only when it bootstraps `spec-tree` into a checkout that records no plugin; the first observation run stopped at the Codex install before that enable ran. The Claude Code **update** that refreshes every recorded install record was never observed against an unpublished plugin either. The fragment also carries no per-agent prefix, unlike `CLAUDE_ALREADY_INSTALLED_FRAGMENT`, so the Claude Code enable and update wordings remain unverified.
+A constant that drifts from that captured wording now fails the linked tests. The Claude Code **enable** message was never observed: only the Claude plan issues an enable, and only when it bootstraps `product-tree` into a checkout that records no plugin; the first observation run stopped at the Codex install before that enable ran. The Claude Code **update** that refreshes every recorded install record was never observed against an unpublished plugin either. The fragment also carries no per-agent prefix, unlike `CLAUDE_ALREADY_INSTALLED_FRAGMENT`, so the Claude Code enable and update wordings remain unverified.
 
 If the enable message or the update message words the absence differently, the carve-out silently never engages for that operation and the run fails where it should report pending.
 
@@ -191,6 +191,8 @@ its own plugin's namespace; the marketplace-scope pass lives in
 `$CODEX_HOME/agents/` carries a definition for a plugin the catalog no longer
 publishes has no shipped path to prune it: the definition stays until the
 consumer removes it by hand.
+
+A plugin the catalog renames to another is the exception: the successor's shipped `place_agents.py` prunes the retired id's recorded definitions while their digest matches. The gap stays for a plugin the catalog retires without a successor.
 
 The retired plan for this node proposed embedding a committed-catalog snapshot,
 stamped with a deterministic catalog revision, in each plugin's shipped tree so
@@ -350,7 +352,7 @@ plus the ADR say failed runs retain changed state without restoring a snapshot."
 
 The node declares no malleability, so it is `implementation`-malleable and every assertion carries exactly one verification tag. Seven assertions under `## Assertions` in [`repository-installation.md`](repository-installation.md) carry none: the catalog-bounded persistent selection, the bootstrap of an invocation checkout with no install record, the trusted product enabling a home-disabled plugin, configured home plugins with an absent snapshot or cache, the activation-preserving refresh of a valid subset, the unexpected selection or activation write, and the globally registered Codex subagent definitions.
 
-**Evidence.** Linking four of them to the tests that exercise them drew test-evidence findings at head `1df1afae8edabfed676d4779069a73615d71e473`: the linked tests leave the bootstrap activation, the activation preservation, the inventory filter, and the global registration without a predicate that fails when each is violated. The `spec-tree:test-evidence-auditor` verdict carries no sealed run token.
+**Evidence.** Linking four of them to the tests that exercise them drew test-evidence findings at head `1df1afae8edabfed676d4779069a73615d71e473`: the linked tests leave the bootstrap activation, the activation preservation, the inventory filter, and the global registration without a predicate that fails when each is violated. The `product-tree:test-evidence-auditor` verdict carries no sealed run token.
 
 **Impact.** The node cannot derive `Passing`: the seven assertions hold no result, and the four existing tests do not yet falsify them.
 
@@ -373,7 +375,7 @@ One finding (REJECT) on test-owned data:
 - f-010 at `tests/test_repository_installation.compliance.l1.py:109` (also 144,
   226, 296): incidental plugin and agent slugs are call-site literals.
 
-The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
+The audit is a `product-tree:test-evidence-auditor` verdict on this node at head
 `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
 token. The existing entry "Lifecycle evidence cases are hand-authored in the
 harness" (f-010) already records it. Its resolution shape and settlement
@@ -410,7 +412,7 @@ WARNING.
   `test_failed_persistent_run_restores_the_committed_selection` evidences a
   restore that the governing decisions forbid.
 
-The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
+The audit is a `product-tree:test-evidence-auditor` verdict on this node at head
 `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
 token. Existing entries already record each: f-016 in "The unresolved
 disposition of a record in another checkout, and both dispositions in the

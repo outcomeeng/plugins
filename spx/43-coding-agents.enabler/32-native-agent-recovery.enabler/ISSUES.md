@@ -95,8 +95,8 @@ the sibling `agent_tokens.py` is absent, fails to execute, or declares no `Agent
 opens with `error:`, but the exception escapes as a traceback. The same changeset makes
 `/update-instruction-block` and `/review-changes` report the equivalent load failure of their
 `agent-tokens.json` as one `error:` line with exit code 2, declares that behavior in
-`spx/21-spec-tree.enabler/43-instruction-block.enabler/instruction-block.md`, tests it in both
-nodes, and records it in the spec-tree changelog. No assertion of this node declares the
+`spx/21-product-tree.enabler/43-instruction-block.enabler/instruction-block.md`, tests it in both
+nodes, and records it in the product-tree changelog. No assertion of this node declares the
 missing-module behavior, no test drives it, and the coding-agents changelog carries no entry for it.
 
 **Impact**: a consumer whose installed coding-agents plugin lacks the module reads a traceback

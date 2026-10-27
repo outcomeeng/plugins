@@ -1,7 +1,7 @@
 """Static-inspection observations for the review-changes shipped scripts.
 
 The compliance evidence under
-``spx/21-spec-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/tests/``
+``spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/tests/``
 asserts two portability boundaries over every script the skill ships:
 
 - no script writes durable review state through direct filesystem primitives,

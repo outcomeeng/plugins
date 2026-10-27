@@ -8,14 +8,14 @@ from outcomeeng_testing.generators.retired_names import (
     joined_retired_name_forms,
     separated_retired_name_forms,
 )
-from outcomeeng_testing.harnesses.spec_tree import (
-    marketplace_root_for_spec_tree_root_test,
+from outcomeeng_testing.harnesses.product_tree import (
+    marketplace_root_for_product_tree_root_test,
     marketplace_tracked_texts,
 )
 
 
 def test_no_tracked_file_carries_the_retired_name() -> None:
-    root = marketplace_root_for_spec_tree_root_test(__file__)
+    root = marketplace_root_for_product_tree_root_test(__file__)
 
     assert retired_name_lines(marketplace_tracked_texts(root)) == ()
 

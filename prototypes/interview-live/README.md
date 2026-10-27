@@ -18,7 +18,7 @@ inspecting the prototype.
 - The browser receives agent-side changes over server-sent events and posts user
   edits to the same localhost server.
 - The left pane keeps chat and interview questions independently scrollable from
-  the spec-tree pane.
+  the product-tree pane.
 - The tree renders SPX projection fields for state, category, and index. Node
   detail waits on a richer SPX CLI projection that carries opener text,
   assertions, and evidence links.
@@ -48,7 +48,7 @@ python3 -m unittest discover -s tests -v
 The integration tests bind an ephemeral localhost port and stop the server before
 the test exits.
 
-## Seed the real spec tree
+## Seed the real Product Tree
 
 ```bash
 cd prototypes/interview-live
@@ -67,7 +67,7 @@ Register the MCP server in project `.mcp.json` or in the future plugin
 ```json
 {
   "mcpServers": {
-    "spec-tree-surface": {
+    "product-tree-surface": {
       "command": "python3",
       "args": [
         "/abs/path/prototypes/interview-live/mcp_server.py",

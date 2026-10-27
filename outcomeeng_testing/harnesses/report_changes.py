@@ -61,7 +61,7 @@ SCRIPT: Final = (
     REPO_ROOT
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "report-changes"
     / "scripts"

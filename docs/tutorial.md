@@ -1,6 +1,6 @@
-# Tutorial: Outcome Engineering with the Spec Tree Methodology
+# Tutorial: Outcome Engineering with the Product Tree Methodology
 
-This tutorial walks through the full workflow — from bootstrapping a spec tree in a new or existing product to authoring specs, implementing code, and committing changes.
+This tutorial walks through the full workflow — from bootstrapping a Product Tree in a new or existing product to authoring specs, implementing code, and committing changes.
 
 ## Prerequisites
 
@@ -10,19 +10,19 @@ npm install -g @outcomeeng/spx
 
 # Add the marketplace and install plugins
 claude plugin marketplace add outcomeeng/plugins
-claude plugin install spec-tree@outcomeeng
+claude plugin install product-tree@outcomeeng
 
 # Install a language plugin for your product
 claude plugin install python@outcomeeng      # or typescript@outcomeeng
 ```
 
-## 1. Bootstrap a spec tree
+## 1. Bootstrap a Product Tree
 
 The `/bootstrap` command works for both **existing projects** (where code already exists) and **blank projects** (starting from scratch). It reads your product's CLAUDE.md and codebase to understand what the product does, then interviews you to fill in the gaps.
 
 ### Existing product
 
-If you have a product with code but no spec tree, `/bootstrap` detects the product from your existing files:
+If you have a product with code but no Product Tree, `/bootstrap` detects the product from your existing files:
 
 ```text
 > /bootstrap
@@ -56,15 +56,15 @@ Before creating any files, the skill presents the full plan and lets you refine 
 
 ### Result
 
-The scaffold creates the product spec, a product guide, and top-level node stubs with the correct directory structure and sparse integer ordering:
+The scaffold creates the product document, a product guide, and top-level node stubs with the correct directory structure and sparse integer ordering:
 
 ![Scaffold result showing created files](../assets/tutorial/bootstrap/90-boostrap-02-questionnaire-05.png)
 
-Your `spx/` directory now has a product spec, CLAUDE.md guide, and enabler/outcome nodes ready to fill in.
+Your `spx/` directory now has a product document, CLAUDE.md guide, and enabler/outcome nodes ready to fill in.
 
 ## 2. Author specs and decisions
 
-Use `/author` to create any spec-tree artifact. It detects what you want from the argument:
+Use `/author` to create any product-tree artifact. It detects what you want from the argument:
 
 ```text
 > /author outcome for search          # create an outcome node
@@ -249,7 +249,7 @@ This stops the current ad hoc work and restarts the proper TDD flow from Step 1.
 | Step           | What you do                                       | Command/Skill                                       |
 | -------------- | ------------------------------------------------- | --------------------------------------------------- |
 | **Setup**      | Install spx CLI, add marketplace, install plugins | `npm install -g @outcomeeng/spx`                    |
-| **Bootstrap**  | Create spec tree for your product                 | `/bootstrap`                                        |
+| **Bootstrap**  | Create Product Tree for your product              | `/bootstrap`                                        |
 | **Author**     | Create specs, decisions, nodes                    | `/author`                                           |
 | **Decompose**  | Break down large nodes                            | `/decompose`                                        |
 | **Align**      | Check consistency and quality                     | `/align`                                            |

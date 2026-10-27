@@ -41,7 +41,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_SOURCE_FIELD,
     InstallationMode,
     Operation,
-    SPEC_TREE_PLUGIN,
+    PRODUCT_TREE_PLUGIN,
     SourceAction,
     marketplace_plugin_identifier,
 )
@@ -84,27 +84,27 @@ def generated_absent_plugins(checkout: Path) -> tuple[str, ...]:
 def generated_catalog_subset(
     catalog: Sequence[str],
     *,
-    include_spec_tree: bool,
+    include_product_tree: bool,
 ) -> frozenset[str]:
     """Select a nontrivial catalog-bounded subset with the requested validity."""
     selected = {
         plugin
         for index, plugin in enumerate(catalog)
-        if index % 2 == 0 and plugin != SPEC_TREE_PLUGIN
+        if index % 2 == 0 and plugin != PRODUCT_TREE_PLUGIN
     }
     if not selected:
-        selected.update(plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN)
-    if include_spec_tree:
-        selected.add(SPEC_TREE_PLUGIN)
+        selected.update(plugin for plugin in catalog if plugin != PRODUCT_TREE_PLUGIN)
+    if include_product_tree:
+        selected.add(PRODUCT_TREE_PLUGIN)
     else:
-        selected.discard(SPEC_TREE_PLUGIN)
+        selected.discard(PRODUCT_TREE_PLUGIN)
     return frozenset(selected)
 
 
 def generated_agent_subsets(
     checkout: Path,
     *,
-    include_spec_tree: bool,
+    include_product_tree: bool,
 ) -> Mapping[Target, frozenset[str]]:
     """Generate one catalog-bounded subset for every supported agent."""
     catalogs = {
@@ -116,7 +116,7 @@ def generated_agent_subsets(
     return {
         agent: generated_catalog_subset(
             catalog,
-            include_spec_tree=include_spec_tree,
+            include_product_tree=include_product_tree,
         )
         for agent, catalog in catalogs.items()
     }
@@ -140,13 +140,13 @@ def generated_valid_catalog_subsets(
     every subset cardinality in the domain while the domain grows linearly with
     the catalog instead of exponentially.
     """
-    if SPEC_TREE_PLUGIN not in catalog:
-        raise ValueError("catalog must contain spec-tree")
-    optional = tuple(plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN)
+    if PRODUCT_TREE_PLUGIN not in catalog:
+        raise ValueError("catalog must contain product-tree")
+    optional = tuple(plugin for plugin in catalog if plugin != PRODUCT_TREE_PLUGIN)
     return (
-        frozenset((SPEC_TREE_PLUGIN,)),
+        frozenset((PRODUCT_TREE_PLUGIN,)),
         *(
-            frozenset((SPEC_TREE_PLUGIN, *_catalog_window(optional, size - 1, size)))
+            frozenset((PRODUCT_TREE_PLUGIN, *_catalog_window(optional, size - 1, size)))
             for size in range(1, len(optional) + 1)
         ),
     )
@@ -156,7 +156,7 @@ def generated_invalid_catalog_subsets(
     catalog: Sequence[str],
 ) -> tuple[frozenset[str], ...]:
     """Generate one nonempty invalid subset per size class over rotating windows."""
-    optional = tuple(plugin for plugin in catalog if plugin != SPEC_TREE_PLUGIN)
+    optional = tuple(plugin for plugin in catalog if plugin != PRODUCT_TREE_PLUGIN)
     return tuple(
         frozenset(_catalog_window(optional, size - 1, size))
         for size in range(1, len(optional) + 1)
@@ -468,7 +468,7 @@ def generated_unresolved_target_records(
     the plugin-wide disposition from the rewrite's.
 
     The resolved plugin is recorded in the invocation checkout, so the
-    selection the plan validates carries `spec-tree`, and in another
+    selection the plan validates carries `product-tree`, and in another
     checkout, so the run that reports the unresolved plugin is observed
     moving another plugin's record through the rewrite beside it.
     """
@@ -735,6 +735,48 @@ def generated_marketplace_registry_entries(
             None,
             SourceAction.ADD,
         ),
+    )
+
+
+def generated_out_of_scope_claude_listing_entries(
+    plugins: Sequence[str],
+    checkout: Path,
+    marketplace: str,
+) -> tuple[dict[str, str], ...]:
+    """Cycle the Claude listing entries the inventory rejects across `plugins`.
+
+    Entries rotate through a foreign project path, user scope, and managed
+    scope, so each rejection rule has a member for every window of plugins.
+    """
+    entries: list[dict[str, str]] = []
+    for index, plugin in enumerate(plugins):
+        entry = {
+            CLAUDE_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin, marketplace),
+            CLAUDE_PLUGIN_SCOPE_FIELD: CLAUDE_PROJECT_SCOPE,
+            CLAUDE_PLUGIN_PROJECT_PATH_FIELD: str(checkout.parent),
+            CLAUDE_PLUGIN_VERSION_FIELD: recorded_version(index),
+        }
+        case = index % 3
+        if case == 1:
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD] = CLAUDE_USER_SCOPE
+            del entry[CLAUDE_PLUGIN_PROJECT_PATH_FIELD]
+        elif case == 2:
+            entry[CLAUDE_PLUGIN_SCOPE_FIELD] = CLAUDE_MANAGED_SCOPE
+        entries.append(entry)
+    return tuple(entries)
+
+
+def generated_out_of_scope_codex_listing_entries(
+    plugins: Sequence[str],
+    marketplace: str,
+) -> tuple[dict[str, str], ...]:
+    """List each of `plugins` under a marketplace the inventory rejects."""
+    return tuple(
+        {
+            CODEX_PLUGIN_ID_FIELD: marketplace_plugin_identifier(plugin, marketplace),
+            CODEX_PLUGIN_MARKETPLACE_FIELD: foreign_marketplace_name(marketplace),
+        }
+        for plugin in plugins
     )
 
 
@@ -1091,6 +1133,8 @@ __all__ = [
     "RegistryShape",
     "UNCATALOGED_PLUGIN",
     "generated_codex_listing_entries",
+    "generated_out_of_scope_claude_listing_entries",
+    "generated_out_of_scope_codex_listing_entries",
     "CONCURRENT_SESSION_CHECKOUT",
     "generated_concurrent_record_entry",
     "generated_failure_classification_cases",
@@ -1099,3 +1143,39 @@ __all__ = [
     "generated_publication_states",
     "generated_valid_catalog_subsets",
 ]
+
+
+class MigrationActivation(StrEnum):
+    """How a former-id install record declares its activation."""
+
+    ENABLED = "enabled"
+    DISABLED = "disabled"
+    UNDECLARED = "undeclared"
+
+
+@dataclass(frozen=True)
+class MigrationCase:
+    """One agent's former-id install record: its scope and declared activation."""
+
+    agent: Target
+    scope: str | None
+    """The install-record scope the record is keyed by; None where the agent keys none."""
+    activation: MigrationActivation
+
+
+def generated_migration_cases() -> tuple[MigrationCase, ...]:
+    """Enumerate the former-id record domain: every scope the harness models per agent.
+
+    Claude Code keys records by the refresh scopes; Codex keys none. Each
+    agent's scopes cross every activation declaration, so the domain grows
+    with the product of the two source-owned sets.
+    """
+    scopes: dict[Target, tuple[str | None, ...]] = {
+        Target.CLAUDE: tuple(sorted(CLAUDE_REFRESH_SCOPES)),
+        Target.CODEX: (None,),
+    }
+    return tuple(
+        MigrationCase(agent=agent, scope=scope, activation=activation)
+        for agent in Target
+        for scope, activation in product(scopes[agent], MigrationActivation)
+    )

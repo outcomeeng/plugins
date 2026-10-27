@@ -1,10 +1,10 @@
 # Python
 
 PROVIDES the complete Python development workflow — architecture, testing, implementation, and review
-SO THAT Python projects using spec-tree
+SO THAT Python projects using product-tree
 CAN produce implementations governed by ADRs, verified by evidence-based tests, and audited for quality
 
-The python plugin contains 9 skills: `/python-code-standards` (reference), `/python-architecture-standards` (reference), `/python-test-standards` (reference), `/author-python-test`, `/author-python-code`, `/audit-python-code`, `/audit-python-test`, `/author-python-architecture`, `/audit-python-architecture`. The `audit-python-{code|test|architecture}` skills carry no Python-specific auditor agent; `implementation-auditor` composes all three, `adr-auditor` composes `audit-python-architecture`, and `test-evidence-auditor` composes `audit-python-test`, per [`spx/21-spec-tree.enabler/17-audit.adr.md`](spx/21-spec-tree.enabler/17-audit.adr.md).
+The python plugin contains 9 skills: `/python-code-standards` (reference), `/python-architecture-standards` (reference), `/python-test-standards` (reference), `/author-python-test`, `/author-python-code`, `/audit-python-code`, `/audit-python-test`, `/author-python-architecture`, `/audit-python-architecture`. The `audit-python-{code|test|architecture}` skills carry no Python-specific auditor agent; `implementation-auditor` composes all three, `adr-auditor` composes `audit-python-architecture`, and `test-evidence-auditor` composes `audit-python-test`, per [`spx/21-product-tree.enabler/17-audit.adr.md`](spx/21-product-tree.enabler/17-audit.adr.md).
 
 ## Assertions
 

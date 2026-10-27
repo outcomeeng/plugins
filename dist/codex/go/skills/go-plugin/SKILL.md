@@ -79,7 +79,7 @@ Run the check form again afterward. Success requires zero remaining drift, colli
 
 <ownership_boundary>
 
-The shared agent home is reconciled through `.outcomeeng-marketplace-ownership.json`. This plugin may create, replace, or prune only entries that record `go` as owner and whose on-disk digest still matches the record. An unrecorded destination, a modified owned file, malformed ownership data, or a destination owned by another plugin is a collision: report it and change nothing.
+The shared agent home is reconciled through `.outcomeeng-marketplace-ownership.json`. This plugin may create, replace, or prune only entries that record `go`, or a plugin id the marketplace catalog renames to `go`, as owner and whose on-disk digest still matches the record. A changed or linked definition of a renamed id is reported as `retained:`, stays in place and recorded, and blocks no placement. An unrecorded destination, a modified owned file, malformed ownership data, or a destination owned by another plugin is a collision: report it and change nothing.
 
 A checkout definition byte-identical to a shipped definition is a scope split with directed removal. A changed checkout definition, or one that claims this plugin by filename prefix or by enabling one of its skills, is a scope-split collision requiring inspection. Either state stops home mutation; never refresh the home skills underneath a shadowing checkout definition.
 
@@ -95,7 +95,7 @@ prune: /Users/dev/.codex/agents/go_verifier.toml
 collision: /Users/dev/.codex/agents/go_notes.toml (unrecorded)
 ```
 
-`write` names a destination whose bytes differ from the shipped definition, `prune` a recorded `go` destination the plugin no longer ships, and `collision` a present file the ownership record does not authorize, with its cause: `symlink`, `unrecorded`, `owned by <plugin>`, `not a regular file`, or `digest mismatch`. A `scope-split directed-removal:` or `scope-split collision:` line names a checkout copy under `.codex/agents/` — matched by shipped bytes, by the `go` filename prefix, or by a `skills.config` entry naming a `go:` skill — and stops mutation. After the mutating form succeeds, the ownership record carries one entry per written destination:
+`write` names a destination whose bytes differ from the shipped definition, `prune` a recorded `go` destination the plugin no longer ships or a recorded destination of an id the catalog renames to it, and `collision` a present file the ownership record does not authorize, with its cause: `symlink`, `unrecorded`, `owned by <plugin>`, `not a regular file`, or `digest mismatch`. A `retained` line names a recorded definition of a plugin id the catalog renames to `go` that was changed or replaced with a link; the run leaves it in place and goes on. Each run that reports a `retained` line, `--check` runs included, also prints a `partial-migration:` line and exits like any other run: the retained definition stays discoverable in the registry until the operator resolves it by hand, so a `0` exit with a `partial-migration:` line is a completed placement and an unfinished migration. A `scope-split directed-removal:` or `scope-split collision:` line names a checkout copy under `.codex/agents/` — matched by shipped bytes, by the `go` filename prefix, or by a `skills.config` entry naming a `go:` skill — and stops mutation. After the mutating form succeeds, the ownership record carries one entry per written destination:
 
 ```json
 { "destination": "agents/go_reviewer.toml", "plugin": "go", "digest": "<sha256 of the installed bytes>" }
@@ -132,8 +132,8 @@ A marketplace source and cache snapshot can diverge. Read only the skill-directo
 - `help` reports the exact changelog lines and paths declared above.
 - `check` writes nothing and reports every drift, collision, and scope split.
 - `init` and `upgrade` mutate only the selected home after a clean preflight and external-write approval.
-- Every replacement or prune is authorized by matching plugin ownership and digest; foreign or modified files remain untouched.
-- A final check reports no drift, collision, or scope split.
+- Every replacement or prune is authorized by matching ownership, this plugin's or that of an id renamed to it, and digest; foreign or modified files remain untouched.
+- A final check reports no drift, collision, or scope split, and the report claims a finished migration only when it prints no `partial-migration:` line.
 - Missing-role repair ends with a harness plugin-index reload or a new session.
 
 </success_criteria>

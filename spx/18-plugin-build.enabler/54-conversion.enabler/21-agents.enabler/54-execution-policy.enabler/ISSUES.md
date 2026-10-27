@@ -17,7 +17,7 @@ Two findings (both REJECT, oracle independence) in
   and `test_tool_classification_matches_the_hand_authored_correspondence`
   compares one author-owned copy to the other.
 
-The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
+The audit is a `product-tree:test-evidence-auditor` verdict on this node at head
 `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
 token; the other entries below refer to this audit and this head.
 

@@ -23,19 +23,23 @@ PLUGIN_SURFACE_PATHS: Final = (
     CLAUDE_DIST_PLUGINS_DIR,
     CODEX_DIST_PLUGINS_DIR,
 )
-SPEC_TREE_PLUGIN_NAME: Final = "spec-tree"
+PRODUCT_TREE_PLUGIN_NAME: Final = "product-tree"
 SKILLS_DIR_NAME: Final = "skills"
 AGENTS_DIR_NAME: Final = "agents"
 SKILL_FILENAME: Final = "SKILL.md"
 IMPLEMENTATION_AUDIT_SKILL_NAME: Final = "audit-implementation"
 IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT: Final = "scripts/resolve_scope.py"
-IMPLEMENTATION_AUDIT_FAILURE_REFERENCE: Final = "references/operational-failures.md"
+IMPLEMENTATION_AUDIT_FAILURE_REFERENCE: Final = "references/failure-modes.md"
+IMPLEMENTATION_AUDIT_RULE_CATALOG_REFERENCE: Final = "references/rule-catalog.md"
+IMPLEMENTATION_AUDIT_RUN_PAYLOADS_REFERENCE: Final = "references/run-payloads.md"
 IMPLEMENTATION_AUDIT_TOUCHED_TEXT_REFERENCE: Final = "references/touched-text.md"
 IMPLEMENTATION_AUDIT_ARTIFACTS: Final = frozenset(
     {
         SKILL_FILENAME,
         IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT,
         IMPLEMENTATION_AUDIT_FAILURE_REFERENCE,
+        IMPLEMENTATION_AUDIT_RULE_CATALOG_REFERENCE,
+        IMPLEMENTATION_AUDIT_RUN_PAYLOADS_REFERENCE,
         IMPLEMENTATION_AUDIT_TOUCHED_TEXT_REFERENCE,
     }
 )
@@ -234,7 +238,7 @@ def check_wrapper_surface(surface: Path) -> list[str]:
     """Return implementation-wrapper violations for one plugin surface."""
     errors: list[str] = []
     wrapper_path = agent_artifact_path(
-        surface, SPEC_TREE_PLUGIN_NAME, IMPLEMENTATION_AUDITOR_STEM
+        surface, PRODUCT_TREE_PLUGIN_NAME, IMPLEMENTATION_AUDITOR_STEM
     )
     if not wrapper_path.is_file():
         errors.append(f"{wrapper_path}: wrapper missing")
@@ -309,7 +313,7 @@ def implementation_audit_runtime_directory(surface: Path) -> Path:
     """Return the implementation-audit runtime directory for ``surface``."""
     return (
         surface
-        / SPEC_TREE_PLUGIN_NAME
+        / PRODUCT_TREE_PLUGIN_NAME
         / SKILLS_DIR_NAME
         / IMPLEMENTATION_AUDIT_SKILL_NAME
     )
@@ -317,7 +321,7 @@ def implementation_audit_runtime_directory(surface: Path) -> Path:
 
 def audit_skill_runtime_directories(surface: Path) -> tuple[Path, ...]:
     """Return generic and language audit skill runtime directories."""
-    skills_dir = surface / SPEC_TREE_PLUGIN_NAME / SKILLS_DIR_NAME
+    skills_dir = surface / PRODUCT_TREE_PLUGIN_NAME / SKILLS_DIR_NAME
     runtime_directories = (
         {
             path

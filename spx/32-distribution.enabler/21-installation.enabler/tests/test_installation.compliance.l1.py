@@ -25,23 +25,28 @@ from outcomeeng.distribution.installation import (
     InstallationMode,
     Operation,
     ReportField,
-    SPEC_TREE_PLUGIN,
+    PRODUCT_TREE_PLUGIN,
     STATE_ENV_NAMES,
+    catalog_renames,
     marketplace_plugin_identifier,
     marketplace_plugin_name,
 )
 from outcomeeng_testing.generators.installation import (
     ClosingDisposition,
+    MigrationActivation,
     RecordDisposition,
     generated_boolean_states,
+    generated_migration_cases,
     UNCACHED_OTHER_CHECKOUT_STATE,
 )
 from outcomeeng_testing.harnesses.installation import (
+    RETIRED_PLUGIN,
     RegistryState,
     absent_from_every_agent,
     captured_non_pending_failure_wordings,
     committed_catalog_plugin_names,
     install_record_fixture_path,
+    invalid_renames_catalog_paths,
     observe_codex_config_independence,
     observe_committed_declarations,
     observe_designated_failure,
@@ -50,6 +55,7 @@ from outcomeeng_testing.harnesses.installation import (
     observe_first_failure,
     observe_inspection_failure,
     observe_invalid_persistent_selections,
+    observe_migrating_inventory,
     observe_missing_codex_home,
     observe_persistent_execution,
     observe_persistent_plan,
@@ -104,7 +110,29 @@ def test_persistent_commands_use_project_scope_and_selected_codex_home() -> None
     bootstrapping = observe_persistent_plan(
         installed={agent: frozenset() for agent in Target},
     )
-    plans = (refreshing.report.plan, registering.plan, bootstrapping.plan)
+    migrating = observe_migrating_inventory(
+        next(
+            case
+            for case in generated_migration_cases()
+            if case.agent is Target.CLAUDE and case.scope == CLAUDE_PROJECT_SCOPE
+        )
+    )
+    disabled_migrating = observe_migrating_inventory(
+        next(
+            case
+            for case in generated_migration_cases()
+            if case.agent is Target.CLAUDE
+            and case.scope == CLAUDE_PROJECT_SCOPE
+            and case.activation is MigrationActivation.DISABLED
+        )
+    )
+    plans = (
+        refreshing.report.plan,
+        registering.plan,
+        bootstrapping.plan,
+        migrating.plan,
+        disabled_migrating.plan,
+    )
     claude_commands = [
         command
         for plan in plans
@@ -285,14 +313,147 @@ def test_a_failed_inspection_stops_before_any_planned_operation() -> None:
 
 def test_invalid_installed_selection_never_reaches_a_state_changing_operation() -> None:
     for observation in observe_invalid_persistent_selections():
+        assert observation.selected is not None
+        omitting = [
+            agent
+            for agent, selected in observation.selected.items()
+            if PRODUCT_TREE_PLUGIN not in selected and RETIRED_PLUGIN not in selected
+        ]
+        assert len(omitting) == 1
         assert observation.error is not None
-        assert SPEC_TREE_PLUGIN in observation.error
+        assert PRODUCT_TREE_PLUGIN in observation.error
+        assert omitting[0].value in observation.error
         assert observation.attempted
         assert all(
             command.operation
             in {Operation.MARKETPLACE_INSPECT, Operation.PLUGIN_INSPECT}
             for command in observation.attempted
         )
+
+
+def test_a_former_id_inventory_migrates_to_product_tree_at_its_scope_and_activation() -> (
+    None
+):
+    for case in generated_migration_cases():
+        observation = observe_migrating_inventory(case)
+        commands = [
+            command
+            for command in observation.plan.commands
+            if command.agent is case.agent
+        ]
+        installs = [
+            command
+            for command in commands
+            if command.operation is Operation.PLUGIN_INSTALL
+            and command.plugin == PRODUCT_TREE_PLUGIN
+        ]
+        uninstalls = [
+            command
+            for command in commands
+            if command.operation is Operation.PLUGIN_UNINSTALL
+            and command.plugin == RETIRED_PLUGIN
+        ]
+
+        assert len(installs) == 1, case
+        assert len(uninstalls) == 1, case
+        assert installs[0].scope == case.scope, case
+        assert uninstalls[0].scope == case.scope, case
+        assert commands.index(installs[0]) < commands.index(uninstalls[0]), case
+        activation = {
+            command.operation
+            for command in commands
+            if command.operation in {Operation.PLUGIN_ENABLE, Operation.PLUGIN_DISABLE}
+            and command.plugin == PRODUCT_TREE_PLUGIN
+            and command.scope == case.scope
+        }
+        if case.agent is Target.CLAUDE:
+            assert (
+                activation
+                == {
+                    MigrationActivation.ENABLED: {Operation.PLUGIN_ENABLE},
+                    MigrationActivation.DISABLED: {Operation.PLUGIN_DISABLE},
+                    MigrationActivation.UNDECLARED: set(),
+                }[case.activation]
+            ), case
+        if case.agent is Target.CODEX:
+            assert (PRODUCT_TREE_PLUGIN in observation.plan.codex_disabled) == (
+                case.activation is not MigrationActivation.ENABLED
+            ), case
+        assert {(record.plugin, record.scope) for record in observation.after} == {
+            (PRODUCT_TREE_PLUGIN, case.scope)
+        }, case
+        assert all(record.plugin != RETIRED_PLUGIN for record in observation.after)
+        assert all(
+            record.plugin != RETIRED_PLUGIN for record in observation.other_agent_after
+        )
+
+
+def test_a_retired_record_the_closing_listing_still_reports_is_off_target() -> None:
+    for case in generated_migration_cases():
+        if case.agent is not Target.CLAUDE:
+            continue
+        observation = observe_migrating_inventory(case, uninstall_retains_record=True)
+
+        assert observation.record_drift is not None, case
+        assert {
+            (record.plugin, record.scope)
+            for record in observation.record_drift.off_target
+        } == {(RETIRED_PLUGIN, case.scope)}, case
+
+
+def test_a_retired_record_the_uninstall_removes_is_not_off_target() -> None:
+    for case in generated_migration_cases():
+        if case.agent is not Target.CLAUDE:
+            continue
+        observation = observe_migrating_inventory(case)
+
+        assert observation.record_drift is not None, case
+        assert not any(
+            record.plugin == RETIRED_PLUGIN
+            for record in observation.record_drift.off_target
+        ), case
+
+
+def test_a_declared_selection_carries_the_retired_keys_boolean_to_the_successor_key() -> (
+    None
+):
+    marketplace = observe_committed_declarations().marketplace
+    retired_key = marketplace_plugin_identifier(RETIRED_PLUGIN, marketplace)
+    current_key = marketplace_plugin_identifier(PRODUCT_TREE_PLUGIN, marketplace)
+    renamed = 0
+
+    for case in generated_migration_cases():
+        if case.agent is not Target.CLAUDE:
+            continue
+        observation = observe_migrating_inventory(case, declare_selection=True)
+        before = observation.selection_before
+        after = observation.selection_after
+
+        assert before is not None, case
+        assert after is not None, case
+        assert retired_key not in after, case
+        if retired_key in before:
+            renamed += 1
+            assert current_key in after, case
+            assert after[current_key] == before[retired_key], case
+
+    assert renamed > 0
+
+
+def test_a_former_id_migration_widens_neither_selection_nor_other_agent() -> None:
+    for case in generated_migration_cases():
+        observation = observe_migrating_inventory(case)
+        installed = {
+            command.plugin
+            for command in observation.plan.commands
+            if command.operation is Operation.PLUGIN_INSTALL
+            and command.agent is case.agent
+        }
+
+        assert installed == {PRODUCT_TREE_PLUGIN}, case
+        assert {record.plugin for record in observation.other_agent_after} == {
+            PRODUCT_TREE_PLUGIN
+        }, case
 
 
 def test_a_codex_operation_failure_reports_the_codex_agent_and_stops() -> None:
@@ -388,7 +549,7 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
                 ReportField.MESSAGE: FIRST_INSTALL_WARNING.format(
                     marketplace=marketplace,
                     agent=agent.value,
-                    plugin=SPEC_TREE_PLUGIN,
+                    plugin=PRODUCT_TREE_PLUGIN,
                 ),
             } in reported
             installs = [
@@ -424,7 +585,7 @@ def test_no_agent_announces_a_first_install_its_plan_does_not_carry() -> None:
     assert announcements > 0
 
 
-def test_an_empty_selection_supplies_only_spec_tree_with_a_warning_and_disabled_codex_activation() -> (
+def test_an_empty_selection_supplies_only_product_tree_with_a_warning_and_disabled_codex_activation() -> (
     None
 ):
     observation = observe_persistent_plan(
@@ -438,22 +599,22 @@ def test_an_empty_selection_supplies_only_spec_tree_with_a_warning_and_disabled_
         if command.operation is Operation.PLUGIN_INSTALL
     ]
 
-    assert plan.claude_plugins == (SPEC_TREE_PLUGIN,)
-    assert plan.codex_plugins == (SPEC_TREE_PLUGIN,)
+    assert plan.claude_plugins == (PRODUCT_TREE_PLUGIN,)
+    assert plan.codex_plugins == (PRODUCT_TREE_PLUGIN,)
     assert {command.agent for command in installs} == set(Target)
-    assert {command.plugin for command in installs} == {SPEC_TREE_PLUGIN}
+    assert {command.plugin for command in installs} == {PRODUCT_TREE_PLUGIN}
     assert {(warning.agent, warning.message) for warning in plan.warnings} == {
         (
             agent,
             FIRST_INSTALL_WARNING.format(
                 marketplace=marketplace,
                 agent=agent.value,
-                plugin=SPEC_TREE_PLUGIN,
+                plugin=PRODUCT_TREE_PLUGIN,
             ),
         )
         for agent in Target
     }
-    assert plan.codex_disabled == (SPEC_TREE_PLUGIN,)
+    assert plan.codex_disabled == (PRODUCT_TREE_PLUGIN,)
 
 
 def test_an_empty_selection_writes_disabled_activation_into_the_selected_codex_home() -> (
@@ -466,7 +627,7 @@ def test_an_empty_selection_writes_disabled_activation_into_the_selected_codex_h
     written = tomllib.loads(observation.codex_config.decode("utf-8"))
     assert (
         written["plugins"][
-            marketplace_plugin_identifier(SPEC_TREE_PLUGIN, marketplace)
+            marketplace_plugin_identifier(PRODUCT_TREE_PLUGIN, marketplace)
         ]["enabled"]
         is False
     )
@@ -567,3 +728,18 @@ def test_a_record_written_after_the_listing_read_survives_the_install_record_wri
     assert surviving == [observation.concurrent_entry]
     assert observation.reads > 1
     assert observation.rewrites
+
+
+def test_a_catalog_renames_field_that_breaks_a_rule_is_rejected_when_the_catalog_is_read() -> (
+    None
+):
+    invalid = invalid_renames_catalog_paths()
+    assert invalid, "no invalid renames catalog exists to reject"
+
+    for catalog in invalid:
+        try:
+            accepted = catalog_renames(catalog)
+        except ValueError as error:
+            assert catalog.name in str(error), f"{catalog.name}: {error}"
+        else:
+            raise AssertionError(f"{catalog.name} was accepted as {accepted}")

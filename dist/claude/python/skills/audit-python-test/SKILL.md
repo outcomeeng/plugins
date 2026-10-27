@@ -2,7 +2,7 @@
 name: audit-python-test
 description: >-
   Python test-evidence audit methodology — judges the Python tests in scope
-  against the spec-tree and Python-specific evidence properties.
+  against the product-tree and Python-specific evidence properties.
 allowed-tools: Read, Grep, Glob, Bash(git diff:*), Skill
 ---
 
@@ -24,13 +24,13 @@ Use skill `python:python-code-standards`.
 
 Use skill `python:python-test-standards`.
 
-Use skill `spec-tree:audit-tests`.
+Use skill `product-tree:audit-tests`.
 
-Use skill `spec-tree:test`.
+Use skill `product-tree:test`.
 
 Read `spx/local/python.md` and `spx/local/python-tests.md` when they exist; otherwise apply the loaded skills only. Each overlay routes behavior to the product's governing specs and decisions, supplements the loaded skills, and does not declare product truth.
 
-Invoke `/contextualize` on the spec node under audit — `<SPEC_TREE_CONTEXT>` marker must be present before Gate 1.
+Use skill `product-tree:contextualize` on the spec node under audit — `<PRODUCT_TREE_CONTEXT>` marker must be present before Gate 1.
 
 </prerequisites>
 
@@ -154,7 +154,7 @@ For each test case, name the source. REJECT against the missing source when:
 - The case's value is a runner-tuning literal at test scope — the harness that owns the resource owns the timeout, retry count, or polling interval.
 - The case's input or expected output is hand-picked by the author with no source the audit can name — REJECT, the case is a tautology regardless of where it sits lexically.
 
-When the missing source is an architectural defect (the Python module that should own the vocabulary does not yet exist), name the module that should be created and the spec-tree node that should govern it.
+When the missing source is an architectural defect (the Python module that should own the vocabulary does not yet exist), name the module that should be created and the product-tree node that should govern it.
 
 A case or value copied from the module under test carries property `source-ownership`, rule `source-ownership`, remediation target `source-contract`; an expected output computed by the same production path that produces the actual output carries property `oracle-independence`, remediation target `independent-oracle`. These are the two base-enum properties this audit judges.
 
@@ -335,7 +335,7 @@ What happened: Claude accepted a hand-copied YAML field name, HCL attribute, or 
 
 Why it failed: Artifacts are downstream of Python; a missing renderer or consumer module is an architecture defect rather than permission to copy vocabulary into evidence.
 
-How to avoid: Name the missing source-of-truth module and the spec-tree node that should govern it; REJECT against the missing module.
+How to avoid: Name the missing source-of-truth module and the product-tree node that should govern it; REJECT against the missing module.
 
 Failure 8: Required restoration of retired deterministic evidence.
 

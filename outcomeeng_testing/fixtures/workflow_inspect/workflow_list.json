@@ -1,0 +1,4 @@
+[
+  { "id": 31, "name": "check", "state": "active", "path": ".github/workflows/check.yml" },
+  { "id": 32, "name": "release", "state": "disabled_manually", "path": ".github/workflows/release.yml" }
+]

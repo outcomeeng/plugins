@@ -1,6 +1,6 @@
 """Marketplace gate: every evidence link resolves to its target file.
 
-Walks the project's spec tree, finds every ``[eval](path)`` and
+Walks the project's Product Tree, finds every ``[eval](path)`` and
 ``[test](path)`` reference in markdown files, and asserts each target
 exists and matches its expected shape (``eval.toml`` for eval links,
 pytest collectable for test links). Exit 0 when all links resolve,
@@ -22,12 +22,12 @@ from outcomeeng.validation.link_integrity import (
 )
 
 
-SPEC_TREE_ROOT = "spx"
+PRODUCT_TREE_ROOT = "spx"
 
 
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
-    root = Path(args[0]) if args else Path(SPEC_TREE_ROOT)
+    root = Path(args[0]) if args else Path(PRODUCT_TREE_ROOT)
     if not root.is_dir():
         print(f"validate_eval_links: directory not found: {root}", file=sys.stderr)
         return 1

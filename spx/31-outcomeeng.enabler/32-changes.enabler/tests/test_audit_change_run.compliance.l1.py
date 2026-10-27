@@ -79,16 +79,13 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
                 }
             )
         )
-    for ordinal, finding in enumerate(
-        payloads.findings, start=runner.MIN_FINDING_ORDINAL
-    ):
+    for finding in payloads.findings:
         calls.append(
             workspace.invoke(
                 {
                     Field.OPERATION: Operation.ADD_FINDING,
                     Field.PATH: relative,
                     Field.RUN_TOKEN: run_token,
-                    Field.ORDINAL: ordinal,
                     Field.PAYLOAD: finding,
                 }
             )
@@ -154,6 +151,15 @@ def test_a_complete_audit_writes_no_file_and_its_journal_reproduces_the_projecti
             call.request[Field.PAYLOAD]
             for call in calls
             if call.request[Field.OPERATION] == Operation.ADD_FINDING
+        ]
+        keyed = [
+            call.result[Result.IDEMPOTENCY_KEY]
+            for call in calls
+            if call.request[Field.OPERATION] == Operation.ADD_FINDING
+        ]
+        assert keyed == [
+            f"{finding[SpxField.UNIT_ID]}{runner.IDEMPOTENCY_KEY_SEPARATOR}{finding[SpxField.RULE]}"
+            for finding in submitted
         ]
         finished = calls[-1].result
         run_fields = finished[Result.RUN]

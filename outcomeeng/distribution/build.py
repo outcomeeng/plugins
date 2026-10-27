@@ -107,6 +107,7 @@ from outcomeeng.distribution.installation import (
     CLAUDE_CATALOG_PATH,
     CODEX_CATALOG_PATH,
     catalog_plugin_names,
+    replaced_plugin_names,
 )
 from outcomeeng.validation.spx_version import REQUIRED_SPX_VERSION
 
@@ -1291,6 +1292,29 @@ def make_jinja_environment(
         return catalog_plugin_names(shared_root.parent.parent / catalog_path)
 
     environment.globals["authorized_plugins"] = authorized_plugins
+
+    def placement_data(plugin: str) -> str:
+        """Render the data file one plugin's agent-placement script reads.
+
+        The file names the plugin and the retired ids the Claude Code catalog
+        renames to it. The Claude Code catalog alone declares renames, and the
+        ids it retires are retired for every target, so a Codex placement
+        script names them too. The catalog is read only when a template
+        requests it.
+        """
+        if shared_root is None:
+            raise TemplateRenderError("plugin renames require a source root")
+        document = {
+            "plugin": plugin,
+            "replaced": list(
+                replaced_plugin_names(
+                    shared_root.parent.parent / CLAUDE_CATALOG_PATH, plugin
+                )
+            ),
+        }
+        return json.dumps(document, indent=2) + "\n"
+
+    environment.globals["placement_data"] = placement_data
     return environment
 
 

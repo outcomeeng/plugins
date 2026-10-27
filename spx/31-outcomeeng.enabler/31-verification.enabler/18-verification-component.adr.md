@@ -1,6 +1,6 @@
 # Verification Component Sourcing
 
-The verification toolchain's runtime machinery — the trace event schema implementation, contract schema, conformance checker, contract inference, run aggregation, eval-harness runners, and coding-agent runtime adapters — is implemented in a separately versioned component outside this repository, released independently and consumed as a pinned third-party dependency. The spec tree under `spx/31-outcomeeng.enabler/31-verification.enabler/` stays authoritative for the semantics; the component complies. The one in-consumer exception is the trace emitter shipped inside plugins, which is standard-library-only Python rendered into the plugin trees because shipped plugin scripts import no third-party package.
+The verification toolchain's runtime machinery — the trace event schema implementation, contract schema, conformance checker, contract inference, run aggregation, eval-harness runners, and coding-agent runtime adapters — is implemented in a separately versioned component outside this repository, released independently and consumed as a pinned third-party dependency. The Product Tree under `spx/31-outcomeeng.enabler/31-verification.enabler/` stays authoritative for the semantics; the component complies. The one in-consumer exception is the trace emitter shipped inside plugins, which is standard-library-only Python rendered into the plugin trees because shipped plugin scripts import no third-party package.
 
 ## Rationale
 

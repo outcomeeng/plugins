@@ -10,7 +10,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, {{! tool('use_skill') !}}, Bash(ca
 
 {!% require_skill 'rust:rust-test-standards' %!}
 
-{!% require_skill 'spec-tree:test' %!}
+{!% require_skill 'product-tree:test' %!}
 
 <objective>
 Rust tests for what the `/test` router selected, at the chosen level.

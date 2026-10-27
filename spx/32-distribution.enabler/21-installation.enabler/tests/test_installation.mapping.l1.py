@@ -4,7 +4,7 @@ from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
     Operation,
     ReportField,
-    SPEC_TREE_PLUGIN,
+    PRODUCT_TREE_PLUGIN,
     SourceAction,
     claude_registered_marketplace,
 )
@@ -43,7 +43,7 @@ def test_each_mode_maps_its_selection_to_catalog_order() -> None:
             assert UNCATALOGED_PLUGIN not in observation.catalog
             assert UNCATALOGED_PLUGIN not in mapping.planned
             if not mapping.selected:
-                assert mapping.planned == (SPEC_TREE_PLUGIN,)
+                assert mapping.planned == (PRODUCT_TREE_PLUGIN,)
             else:
                 assert set(mapping.planned) == set(mapping.selected)
                 positions = [

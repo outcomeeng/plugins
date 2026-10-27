@@ -3,11 +3,11 @@
 This repository uses reusable workflows from [outcomeeng/gh-actions](https://github.com/outcomeeng/gh-actions) for Claude Code integration. The two active callers under `.github/workflows/` are beta-test consumers of the templates from `outcomeeng/gh-actions/examples/caller-workflows/`, pinned to `@main` with an explicit `# BETA TESTER:` marker:
 
 1. **`spec-tree.yml`** — `@spec-tree` mention handler. Wraps the generic `claude.yml` reusable. `use_project_plugins` is controlled by `vars.SPEC_TREE_USE_PROJECT_PLUGINS == 'true'`, so the methodology skills declared in `.claude/settings.json` are installed only when the repository variable opts in.
-2. **`spec-tree-review.yml`** — Automatic PR review on `opened` / `synchronize` / `reopened`. Wraps the `spec-tree-review.yml` reusable, which uses the shipped `review-changes` prompt and the findings-only `blocking` / `debt` taxonomy governed in the spec-tree plugin.
+2. **`spec-tree-review.yml`** — Automatic PR review on `opened` / `synchronize` / `reopened`. Wraps the `spec-tree-review.yml` reusable, which uses the shipped `review-changes` prompt and the findings-only `blocking` / `debt` taxonomy governed in the product-tree plugin.
 
 A separate `distribute-skills.yml` workflow handles plugin distribution and is unrelated to the Claude callers.
 
-The generic `claude.yml` and `claude-code-review.yml` callers are deliberately absent from `.github/workflows/`. Keeping them active alongside the spec-tree callers would run multiple agent workflows on the same issue and pull-request events, spending tokens without adding a distinct product signal. If a copy is needed for reference, keep it outside the active workflow directory or disable it before merge.
+The generic `claude.yml` and `claude-code-review.yml` callers are deliberately absent from `.github/workflows/`. Keeping them active alongside the product-tree callers would run multiple agent workflows on the same issue and pull-request events, spending tokens without adding a distinct product signal. If a copy is needed for reference, keep it outside the active workflow directory or disable it before merge.
 
 ## Configuration
 

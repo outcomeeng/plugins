@@ -7,5 +7,5 @@ decision. It holds the generic runner test helpers — factories, fakes, and
 the CLI harness that exercise the ``outcomeeng_evals`` contract surface —
 alongside marketplace-scoped helpers (Just-recipe assertions and
 producer-prompt materialization) that depend on the marketplace's
-spec-tree layout.
+product-tree layout.
 """

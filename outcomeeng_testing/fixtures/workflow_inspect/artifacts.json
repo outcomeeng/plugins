@@ -1,0 +1,6 @@
+{
+  "artifacts": [
+    { "id": 501, "name": "coverage", "size_in_bytes": 2048, "expired": false },
+    { "id": 502, "name": "logs", "size_in_bytes": 0, "expired": true }
+  ]
+}

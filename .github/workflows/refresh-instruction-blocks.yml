@@ -108,4 +108,4 @@ jobs:
             --base main \
             --head "$branch" \
             --title "Refresh root instruction blocks" \
-            --body "Regenerates root CLAUDE.md and AGENTS.md managed Spec Tree instruction blocks from the committed harness templates."
+            --body "Regenerates root CLAUDE.md and AGENTS.md managed Product Tree instruction blocks from the committed harness templates."

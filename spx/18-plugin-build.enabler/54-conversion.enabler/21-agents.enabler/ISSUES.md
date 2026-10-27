@@ -49,8 +49,8 @@ defect.
 The Change #76 probe on subject
 `6c64464abf07a2e384dabea0d3d0bc19a1b12956` completed installation,
 authenticated through the repository-installation harness, launched exactly
-one generated `spec-tree_implementation-auditor`, and observed the child read
-`spec-tree:audit-implementation` plus the installed Go and Python concern
+one generated `product-tree_implementation-auditor`, and observed the child read
+`product-tree:audit-implementation` plus the installed Go and Python concern
 skills without searching for a dedicated tool named `Skill`.
 
 The child then recorded every one of the changeset's 319 paths as an optional,
@@ -94,7 +94,7 @@ violation rejected:
   outside the declared skill surface, or a manifest that declares an agents
   field, is detected.
 
-The audit is a second `spec-tree:test-evidence-auditor` verdict on this node at
+The audit is a second `product-tree:test-evidence-auditor` verdict on this node at
 head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6`. The verdict carries no sealed
 run token.
 
@@ -129,7 +129,7 @@ Finding f-004 (REJECT, mapping-incomplete-domain) at
 absence only for `ClaudeModel.OPUS`. A regression that lets `SONNET` accept
 `effort=None` would pass.
 
-The audit is the second `spec-tree:test-evidence-auditor` verdict named in the
+The audit is the second `product-tree:test-evidence-auditor` verdict named in the
 entry above, at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6`; the verdict
 carries no sealed run token.
 

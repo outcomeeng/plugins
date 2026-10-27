@@ -26,7 +26,7 @@ Revisit before relying on this node's evidence-audit approval or changing these 
 
 ## DEBT [evidence]: build-orchestration verdicts, violating cases, and case literals live in the harness (f-001, f-002, f-003, f-005, f-007)
 
-Findings (REJECT unless noted) of a `spec-tree:test-evidence-auditor` verdict on
+Findings (REJECT unless noted) of a `product-tree:test-evidence-auditor` verdict on
 this node at head `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict
 carries no sealed run token. Tests are under
 `spx/18-plugin-build.enabler/65-build-orchestration.enabler/tests`; the harness is

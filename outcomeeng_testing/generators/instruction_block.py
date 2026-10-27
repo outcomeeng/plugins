@@ -249,7 +249,7 @@ def build_template(
     )
     parts = [
         "",
-        "# Spec Tree Instructions",
+        "# Product Tree Instructions",
         "",
         f"The root spec is `{cases.illustration_token}.product.md`.",
         "",

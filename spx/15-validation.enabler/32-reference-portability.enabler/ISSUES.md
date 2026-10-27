@@ -40,7 +40,7 @@ Five findings (all REJECT) on the evidence chain of this node:
   `outcomeeng_testing/generators/source_and_templating.py` uninspected, so the
   evidence chain was incomplete.
 
-The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head
+The audit is a `product-tree:test-evidence-auditor` verdict on this node at head
 `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run
 token.
 

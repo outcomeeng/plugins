@@ -216,7 +216,7 @@ Before writing code, confirm:
 </codebase_discovery>
 
 <testing_methodology>
-Use skill `spec-tree:verify` before adding or revising evidence. When it selects test, use skill `typescript:typescript-test-standards` and use skill `typescript:author-typescript-test` for TypeScript expression.
+Use skill `product-tree:verify` before adding or revising evidence. When it selects test, use skill `typescript:typescript-test-standards` and use skill `typescript:author-typescript-test` for TypeScript expression.
 
 Use `/typescript-test-standards` as the canonical source for:
 
@@ -245,13 +245,13 @@ For each `/verify` routing row whose verification type is audit, re-read the rou
 <context_loading>
 **BEFORE ANY IMPLEMENTATION: Load complete specification context.**
 
-**If working on a spec-tree work item** (enabler/outcome):
+**If working on a product-tree work item** (enabler/outcome):
 
-1. **Invoke `spec-tree:contextualize` FIRST** with the node path
+1. **Use skill `product-tree:contextualize` FIRST** with the node path
 2. **If context loading fails**: ABORT - do not proceed until all required documents exist
 3. **If context loading succeeds**: Proceed with implementation using loaded context
 
-**The `spec-tree:contextualize` skill provides:**
+**The `product-tree:contextualize` skill provides:**
 
 - Complete ancestor hierarchy (product → all ancestor nodes → target)
 - All ADRs/PDRs at every level along the path
@@ -260,9 +260,9 @@ For each `/verify` routing row whose verification type is audit, re-read the rou
 
 **Example invocation:** Invoke `/contextualize` with `spx/<node-path>`.
 
-**If `spec-tree:contextualize` returns an error**: The error message will specify which document is missing and how to create it. Create the missing document before proceeding with implementation.
+**If `product-tree:contextualize` returns an error**: The error message will specify which document is missing and how to create it. Create the missing document before proceeding with implementation.
 
-**If NOT working on spec-tree work item**: Proceed directly to implementation mode with provided spec.
+**If NOT working on product-tree work item**: Proceed directly to implementation mode with provided spec.
 </context_loading>
 
 <two_modes>

@@ -52,7 +52,7 @@ Required handling:
 
 ## DEBT [evidence]: profile harness and compliance test hand-write build-token text (f-002, f-003)
 
-A second `spec-tree:test-evidence-auditor` verdict on this node at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6`, recorded after the first audit's debt entries, rejected existing text in the compliance test that drives the profile harness. The verdict carries no sealed run token. Every entry below that cites this audit shares that property.
+A second `product-tree:test-evidence-auditor` verdict on this node at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6`, recorded after the first audit's debt entries, rejected existing text in the compliance test that drives the profile harness. The verdict carries no sealed run token. Every entry below that cites this audit shares that property.
 
 - f-002 (REJECT, source-ownership): `spx/15-validation.enabler/32-runtime-token.enabler/tests/test_profile_configuration.compliance.l1.py:64` hand-writes the build token.
 - f-003 (REJECT, test-owned data): the same test file, line 42, holds the expected violation lines (2, 5) as literals that mirror the harness file layout.
@@ -69,7 +69,7 @@ Invalidation check. The cited text neither cites, restates, nor depends on anyth
 
 ## DEBT [evidence]: native-field mapping tests hand-pick their inputs (f-004, f-005)
 
-The same second `spec-tree:test-evidence-auditor` verdict at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6` rejected two existing assertions in `spx/15-validation.enabler/32-runtime-token.enabler/tests/test_profile_configuration.mapping.l1.py`. The verdict carries no sealed run token.
+The same second `product-tree:test-evidence-auditor` verdict at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6` rejected two existing assertions in `spx/15-validation.enabler/32-runtime-token.enabler/tests/test_profile_configuration.mapping.l1.py`. The verdict carries no sealed run token.
 
 - f-004 (REJECT, test-owned data): line 22, `test_every_native_field_assignment_is_rejected`, hand-picks three assignment shapes and the payload inline.
 - f-005 (REJECT, alignment): line 15 drives only `MODEL_IDENTIFIERS` members; no generated non-member identifier matching `MODEL_IDENTIFIER_PATTERN` is driven, so the assertion cannot show that a non-member identifier passes.
@@ -84,7 +84,7 @@ Invalidation check. The cited text neither cites, restates, nor depends on anyth
 
 ## DEBT [evidence]: runtime-token harness oracle reuses production enumeration (f-006, f-007)
 
-The same second `spec-tree:test-evidence-auditor` verdict at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6` rejected existing text in `outcomeeng_testing/harnesses/runtime_tokens.py`. The verdict carries no sealed run token.
+The same second `product-tree:test-evidence-auditor` verdict at head `7e15b3c437ca8326e0e63dbd0e54d45a62245ba6` rejected existing text in `outcomeeng_testing/harnesses/runtime_tokens.py`. The verdict carries no sealed run token.
 
 - f-006 (REJECT, oracle-independence): line 104, `ignored_files` is computed with production `is_ignored()` and then compared by membership in the same table, so a defect in production is shared by the code and its check.
 - f-007 (REJECT, oracle-independence): line 91, `expected_files` repeats the algorithm of `runtime_token_files()`, and `enforced_roots` is the single root `src` instead of the three roots the assertion names.

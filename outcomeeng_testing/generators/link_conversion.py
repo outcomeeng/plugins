@@ -1,4 +1,4 @@
-"""Variable spec trees for the link-conversion evidence.
+"""Variable Product Trees for the link-conversion evidence.
 
 Each generated tree holds a root decision record, one to three top-level nodes,
 and an optional child node under each. Every spec file carries a drawn mix of
@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 from hypothesis import strategies as st
 
-SPEC_TREE_DIRECTORY = "spx"
+PRODUCT_TREE_DIRECTORY = "spx"
 MIN_NODE_INDEX = 10
 MAX_NODE_INDEX = 99
 MAX_NODES = 3
@@ -77,7 +77,7 @@ def _citation_forms(
             f"See [other](../{sibling.directory}/{sibling.decision})."
         )
         forms["slash_sibling"] = (
-            f"See [other](/{SPEC_TREE_DIRECTORY}/{sibling.directory}/{sibling.decision})."
+            f"See [other](/{PRODUCT_TREE_DIRECTORY}/{sibling.directory}/{sibling.decision})."
         )
     if child is not None:
         forms["descendant"] = f"See [child]({child.directory}/{child.decision})."
@@ -119,12 +119,12 @@ def link_conversion_trees(
         )
     )
     files = {
-        f"{SPEC_TREE_DIRECTORY}/{root_decision}": "# Root decision\n",
+        f"{PRODUCT_TREE_DIRECTORY}/{root_decision}": "# Root decision\n",
     }
     for position, node in enumerate(nodes):
         sibling = nodes[(position + 1) % len(nodes)] if len(nodes) > 1 else None
         child = draw(st.one_of(st.none(), _node(node_kinds, top_level=False)))
-        node_path = f"{SPEC_TREE_DIRECTORY}/{node.directory}"
+        node_path = f"{PRODUCT_TREE_DIRECTORY}/{node.directory}"
         files[f"{node_path}/{node.decision}"] = "# Decision\n"
         files[f"{node_path}/{node.spec}"] = draw(
             _spec_text(node, root_decision, sibling, child)

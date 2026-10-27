@@ -1,0 +1,33 @@
+{
+  "name": "product-tree",
+  "version": "0.109.0",
+  "description": "Product Tree: git-native product structure for Outcome Engineering, with commit workflow, Change coordination, and TDD flows driven by specs",
+  "author": {
+    "name": "Simon Heimlicher",
+    "url": "https://github.com/outcomeeng"
+  },
+  "homepage": "https://github.com/outcomeeng/plugins",
+  "repository": "https://github.com/outcomeeng/plugins",
+  "license": "MIT",
+  "keywords": [
+    "product-tree",
+    "outcome-engineering",
+    "enabler",
+    "outcome",
+    "deterministic-context",
+    "spx",
+    "commit",
+    "change",
+    "verification"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Product Tree",
+    "shortDescription": "Outcome Engineering with Product Tree skills",
+    "longDescription": "Product Tree methodology skills for context loading, authoring, decomposition, implementation, and auditing durable specs.",
+    "developerName": "Outcome Engineering",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://outcome.engineering"
+  }
+}

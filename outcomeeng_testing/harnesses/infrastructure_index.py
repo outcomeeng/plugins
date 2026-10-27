@@ -27,7 +27,7 @@ from outcomeeng.validation.infrastructure_index import (
     EXECUTED_TEST_PREFIX,
     PACKAGE_INIT_FILENAME,
     PYTHON_SUFFIX,
-    SPEC_TREE_ROOT,
+    PRODUCT_TREE_ROOT,
     TEST_INFRASTRUCTURE_PACKAGE,
     TESTS_DIRECTORY_NAME,
     InfrastructureIndex,
@@ -40,8 +40,8 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 HARNESSES_SUBPACKAGE: Final = "harnesses"
 GENERATORS_SUBPACKAGE: Final = "generators"
 FIXTURES_DIRECTORY: Final = "fixtures"
-FIRST_NODE: Final = f"{SPEC_TREE_ROOT}/21-first.enabler"
-SECOND_NODE: Final = f"{SPEC_TREE_ROOT}/32-second.enabler"
+FIRST_NODE: Final = f"{PRODUCT_TREE_ROOT}/21-first.enabler"
+SECOND_NODE: Final = f"{PRODUCT_TREE_ROOT}/32-second.enabler"
 SIDE_EFFECT_MARKER_NAME: Final = "imported.marker"
 
 

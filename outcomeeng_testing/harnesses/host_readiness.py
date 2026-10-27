@@ -39,7 +39,7 @@ HOST_READINESS_MODULE_PATH = (
     REPO_ROOT
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "wait-for-load"
     / "scripts"

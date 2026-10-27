@@ -12,13 +12,13 @@ Known defects and contradictions in the per-plugin template surface. Each entry 
 
 ## The no-single-plugin rule forbids in text what its enforcement permits in fact
 
-`source-and-templating.md` states that a per-plugin template body names no single plugin. `src/templates/plugin/SKILL.md` selects its `<changelogs>` and `<success_criteria>` variants on `{!% if plugin_name == 'spec-tree' %!}`, which is a literal single-plugin identifier in the body's control flow, so the rule's text forbids it. `test_per_plugin_template_body_names_no_single_plugin` does not flag it, because that test matches path-shaped and skill-identity-shaped occurrences rather than a quoted value in a condition.
+`source-and-templating.md` states that a per-plugin template body names no single plugin. `src/templates/plugin/SKILL.md` selects its `<changelogs>` and `<success_criteria>` variants on `{!% if plugin_name == 'product-tree' %!}`, which is a literal single-plugin identifier in the body's control flow, so the rule's text forbids it. `test_per_plugin_template_body_names_no_single_plugin` does not flag it, because that test matches path-shaped and skill-identity-shaped occurrences rather than a quoted value in a condition.
 
-The rule's purpose is satisfied and its text is not. A build-time predicate never reaches a rendered body: no generated non-spec-tree copy contains the identifier, so no consumer reads a name belonging to a plugin it does not have. What the rule protects against is a rendered body naming one plugin, and the enforcement matches that narrower reading while the assertion states the broader one.
+The rule's purpose is satisfied and its text is not. A build-time predicate never reaches a rendered body: no generated non-product-tree copy contains the identifier, so no consumer reads a name belonging to a plugin it does not have. What the rule protects against is a rendered body naming one plugin, and the enforcement matches that narrower reading while the assertion states the broader one.
 
 **Resolution shape**: pick one of two. Bind a capability-scoped render variable — `carries_marketplace_changelog` or similar — in `outcomeeng/distribution/build.py` beside the existing `plugin_name` and `target`, so the branch reads as a capability check and the identifier leaves the template entirely; this needs test coverage for the new variable. Or narrow the assertion in `source-and-templating.md` to the rendered body and record the conditional-predicate pattern as sanctioned, matching what the test already enforces; this is a spec change and needs a spec audit. The first removes the construct, the second legitimizes it.
 
-**Evidence**: raised as `worth-improving` by the skill auditor against the marketplace-changelog relocation, which introduced the conditional in both sections. The same audit confirmed empirically that no rendered non-spec-tree copy contains the identifier.
+**Evidence**: raised as `worth-improving` by the skill auditor against the marketplace-changelog relocation, which introduced the conditional in both sections. The same audit confirmed empirically that no rendered non-product-tree copy contains the identifier.
 
 ## A fixed cross-plugin composition target has no way to satisfy both governing rules
 
@@ -78,7 +78,7 @@ constants — across the seven test files, the harness, and the generator; Chang
 harness observation, the generator and harness import the owned constants, and a
 passing test-evidence audit of this node.
 
-**Evidence**: `spec-tree:test-evidence-auditor` verdict `REJECTED` on head
+**Evidence**: `product-tree:test-evidence-auditor` verdict `REJECTED` on head
 `a65659114b99767b90b4d920550fff5dc0824794` during Change #76; the one finding that changeset caused (`f-018`, a
 restated spec literal in the `require_skill` test) was fixed in the changeset.
 
@@ -98,7 +98,7 @@ Later test-evidence audits of this node found seven defects the entry above does
 
 **Why separate**: every item edits a test file or harness function the seam rewrite also rewrites, and Change #85 owns that rewrite.
 
-**Evidence**: `spec-tree:test-evidence-auditor` verdict `REJECTED` on head `2d144f83ba964be666ca403c6adeef32be04107e`, findings `f-021`, `f-022`, `f-024`, `f-028`, and `f-029`, on head `a2953a83012096ec30d9d99663a342c69024b029`, finding `f-025`, and on head `8d36af1a747353ae9c717236e1005cc63068e6bb`, finding `f-005`. Each verdict's other findings repeat the classes the entries above record. `spec-tree:implementation-auditor` run `2026-09-30_14-24-07-109-aa8eb9a74672` raised the seam, the delimiter self-comparison, and the conforming-only scan as debt on the same head.
+**Evidence**: `product-tree:test-evidence-auditor` verdict `REJECTED` on head `2d144f83ba964be666ca403c6adeef32be04107e`, findings `f-021`, `f-022`, `f-024`, `f-028`, and `f-029`, on head `a2953a83012096ec30d9d99663a342c69024b029`, finding `f-025`, and on head `8d36af1a747353ae9c717236e1005cc63068e6bb`, finding `f-005`. Each verdict's other findings repeat the classes the entries above record. `product-tree:implementation-auditor` run `2026-09-30_14-24-07-109-aa8eb9a74672` raised the seam, the delimiter self-comparison, and the conforming-only scan as debt on the same head.
 
 ## The authored-source predicate admits stray workspace artifacts
 
@@ -110,11 +110,11 @@ The root harness guides name that artifact class together with the Python cache 
 
 **Why separate**: Change #119's Frame settles the absence rule on the predicate the emission walk already applies, keyed on the declared ignored directory names and file suffixes. Adding a class of ignored artifact widens that predicate beyond the attested Frame, so it is a Change of its own rather than work for the changeset that surfaced it.
 
-**Evidence**: `spec-tree:changes-reviewer` run `2026-09-21_16-03-29-169-c48d77290660`, debt finding on `source-and-templating.md`, raised against head `39f60328b985a254743073f95c6d134cc56e0adc`.
+**Evidence**: `product-tree:changes-reviewer` run `2026-09-21_16-03-29-169-c48d77290660`, debt finding on `source-and-templating.md`, raised against head `39f60328b985a254743073f95c6d134cc56e0adc`.
 
 ## The custom-delimiter assertion's evidence compares the source to itself
 
-`source-and-templating.md` declares the Jinja2 environment's custom delimiters as literals and links `tests/test_source_and_templating.compliance.l1.py` for them. The linked evidence compares the environment's configured delimiters against the same constants `outcomeeng/distribution/build.py` declares, so mutating those constants leaves the test passing. A value the spec tree declares and a source complies with is audit evidence, because every oracle for that agreement is a second declaration.
+`source-and-templating.md` declares the Jinja2 environment's custom delimiters as literals and links `tests/test_source_and_templating.compliance.l1.py` for them. The linked evidence compares the environment's configured delimiters against the same constants `outcomeeng/distribution/build.py` declares, so mutating those constants leaves the test passing. A value the Product Tree declares and a source complies with is audit evidence, because every oracle for that agreement is a second declaration.
 
 **Resolution shape**: split the declared delimiter literals onto an `[audit]` assertion and leave the behavior the delimiters govern — a body carrying standard Jinja syntax passing through unchanged, a custom block rendering per target — on its test links. The clean node's spec carries the same split as its worked example.
 
@@ -133,7 +133,7 @@ Six findings (REJECT, predicate ownership) share one class with the entry "Linke
 - f-005 `tests/test_render_text.property.l1.py`, narrowed to `test_chain_of_n_includes_resolves_to_innermost_body`, which asserts `recursive_include_property_holds()`. The verbatim-inlining test at line 12 of the audited head states its own predicate over a harness observation in this changeset and is no longer part of this finding.
 - f-006 `tests/test_source_and_templating.compliance.l1.py:50` (tests at lines 50-75, 85-98, and 117-126).
 
-The audit is a `spec-tree:test-evidence-auditor` verdict on this node at head `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run token; the same holds for the two entries below. The audit composed no Python concern, so Gate 2 was unevaluated.
+The audit is a `product-tree:test-evidence-auditor` verdict on this node at head `6ef55dd4d93b24b8fa701b8779116bbe7c9bbc04`. The verdict carries no sealed run token; the same holds for the two entries below. The audit composed no Python concern, so Gate 2 was unevaluated.
 
 **Resolution shape**: as the cited entry states; the harness returns observations and each linked test states its own predicate.
 

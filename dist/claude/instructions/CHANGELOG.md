@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.22.2
+
+### Changed
+
+- **The reference examples name the `product-tree` plugin.** `/author-subagent`'s reference example invokes `product-tree:audit-specs` under `subagent_name('product-tree', ...)`, `/skill-standards` names the Product Tree in its naming examples, and the finding payload descriptions of `/audit-skill` and `/audit-subagent` say Product Tree. Before this change, each named `spec-tree`, which stops resolving once the methodology plugin is installed under its new name.
+
 ## 0.22.0
 
 ### Breaking

@@ -30,9 +30,10 @@ from __future__ import annotations
 import importlib.util
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 from itertools import islice
@@ -41,6 +42,8 @@ from types import ModuleType
 
 from outcomeeng_testing.generators.changeset_scope import (
     ChangesetScopeCase,
+    RemediationCase,
+    RemediationFailure,
     changeset_scope_cases,
 )
 
@@ -49,7 +52,7 @@ CHANGESET_SCOPE_SCRIPTS_DIR = (
     REPO_ROOT
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "scope-changeset"
     / "scripts"
@@ -62,7 +65,7 @@ MERGE_CLASSIFIER_MODULE_PATH = (
     REPO_ROOT
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "merge"
     / "scripts"
@@ -73,7 +76,7 @@ COHERENCE_SCOPE_MODULE_PATH = (
     REPO_ROOT
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "audit-changeset-coherence"
     / "scripts"
@@ -201,14 +204,14 @@ def _git(repo: pathlib.Path, *args: str, cwd: pathlib.Path | None = None) -> str
     """
     env = {
         **os.environ,
-        "GIT_CONFIG_GLOBAL": "/dev/null",
-        "GIT_CONFIG_SYSTEM": "/dev/null",
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_SYSTEM": os.devnull,
         "GIT_AUTHOR_NAME": "test",
         "GIT_AUTHOR_EMAIL": "test@example.invalid",
         "GIT_COMMITTER_NAME": "test",
         "GIT_COMMITTER_EMAIL": "test@example.invalid",
     }
-    result = subprocess.run(  # noqa: S603 — fixed argv, no shell, args from the harness
+    result = subprocess.run(  # noqa: S603  # fixed argv, no shell, args from the harness
         ["git", *args],
         cwd=cwd if cwd is not None else repo,
         env=env,
@@ -634,11 +637,17 @@ def git_three_dot_scope(repo: pathlib.Path, ref: str) -> tuple[str, ...]:
     return tuple(output.splitlines())
 
 
-def run_merge_classifier(repo: pathlib.Path) -> subprocess.CompletedProcess[str]:
-    """Run the shipped merge classifier and return its observable process result."""
+def run_merge_classifier(
+    repo: pathlib.Path,
+    *,
+    script: pathlib.Path = MERGE_CLASSIFIER_MODULE_PATH,
+    env: Mapping[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run a merge classifier script and return its observable process result."""
     return subprocess.run(
-        (sys.executable, str(MERGE_CLASSIFIER_MODULE_PATH)),
+        (sys.executable, str(script)),
         cwd=repo,
+        env=None if env is None else dict(env),
         text=True,
         capture_output=True,
         check=False,
@@ -722,3 +731,163 @@ def write_branch_state_file(
         encoding="utf-8",
     )
     return path
+
+
+def git_failure_stderr(directory: pathlib.Path, *args: str) -> str:
+    """Run a git command expected to fail and return git's own stripped stderr.
+
+    The observation is the independent oracle for a diagnostic the shipped code
+    relays from git.
+    """
+    result = subprocess.run(  # noqa: S603  # fixed argv, no shell, args from the harness
+        ["git", *args],  # noqa: S607  # git via PATH, as the shipped code runs it
+        cwd=directory,
+        env={
+            **os.environ,
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_CONFIG_SYSTEM": os.devnull,
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode == 0:
+        raise RuntimeError(f"git {' '.join(args)} succeeded in {directory}")
+    return result.stderr.strip()
+
+
+@dataclass(frozen=True)
+class IncompleteClassifierTree:
+    """A copied merge-skill tree whose scope-changeset skill lacks its module.
+
+    ``skills_entries`` names the skills directory's entries, which the
+    classifier's diagnostic is expected to list.
+    """
+
+    classifier: pathlib.Path
+    repo: pathlib.Path
+    skills_dir: pathlib.Path
+    missing_module: pathlib.Path
+    skills_entries: tuple[str, ...]
+
+
+@contextmanager
+def classifier_tree_without_scope_module() -> Iterator[IncompleteClassifierTree]:
+    """Yield a plugin tree whose ``scope-changeset`` skill holds no ``changeset_scope.py``."""
+    with temporary_changeset_scope() as paths:
+        skills_dir = paths.repo.parent.resolve() / "skills"
+        merge_scripts = skills_dir.joinpath(*MERGE_CLASSIFIER_MODULE_PATH.parts[-3:-1])
+        merge_scripts.mkdir(parents=True)
+        for source in MERGE_CLASSIFIER_MODULE_PATH.parent.glob("*.py"):
+            shutil.copy2(source, merge_scripts / source.name)
+        scope_scripts = skills_dir.joinpath(*CHANGESET_SCOPE_MODULE_PATH.parts[-3:-1])
+        scope_scripts.mkdir(parents=True)
+        build_repo_without_origin(paths.repo)
+        yield IncompleteClassifierTree(
+            classifier=merge_scripts / MERGE_CLASSIFIER_MODULE_PATH.name,
+            repo=paths.repo,
+            skills_dir=skills_dir,
+            missing_module=scope_scripts / CHANGESET_SCOPE_MODULE_PATH.name,
+            skills_entries=tuple(
+                sorted(entry.name for entry in skills_dir.iterdir() if entry.is_dir())
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class GitlessEnvironment:
+    """A repository and a process environment whose ``PATH`` holds no ``git``."""
+
+    repo: pathlib.Path
+    env: Mapping[str, str]
+
+
+@contextmanager
+def repo_with_git_absent_from_path() -> Iterator[GitlessEnvironment]:
+    """Yield a repository and an environment whose ``PATH`` is an empty directory."""
+    with temporary_changeset_scope() as paths:
+        build_repo_without_origin(paths.repo)
+        empty_path = paths.repo.parent / "empty-path"
+        empty_path.mkdir()
+        yield GitlessEnvironment(
+            repo=paths.repo,
+            env={**os.environ, "PATH": str(empty_path)},
+        )
+
+
+@contextmanager
+def directory_outside_git_worktree() -> Iterator[pathlib.Path]:
+    """Yield an empty directory that no git working tree contains."""
+    with temporary_changeset_scope() as paths:
+        yield paths.repo
+
+
+@dataclass(frozen=True)
+class RemediationScenario:
+    """One armed failure: the production call that raises it and its placeholders."""
+
+    invoke: Callable[[], object]
+    placeholders: Mapping[str, str]
+
+
+@contextmanager
+def remediation_scenario(case: RemediationCase) -> Iterator[RemediationScenario]:
+    """Arm the real repository state that triggers ``case.failure``.
+
+    Yields the production call to invoke and the placeholder values the case's
+    fragment templates draw on; the linked test invokes, observes, and judges.
+    """
+    scenario = _first_changeset_scope_case()
+    match case.failure:
+        case RemediationFailure.UNSET_ORIGIN_HEAD:
+            with repo_without_origin(scenario) as repo:
+                yield RemediationScenario(
+                    invoke=lambda: CHANGESET_SCOPE.detect_base_ref(repo),
+                    placeholders={"repo": str(repo)},
+                )
+        case RemediationFailure.UNEXPECTED_ORIGIN_HEAD_SHAPE:
+            with repo_without_origin(scenario) as repo:
+                value = f"refs/heads/{scenario.base_branch}"
+                _git(repo, "symbolic-ref", ORIGIN_HEAD_SYMBOLIC_REF, value)
+                yield RemediationScenario(
+                    invoke=lambda: CHANGESET_SCOPE.detect_base_ref(repo),
+                    placeholders={
+                        "repo": str(repo),
+                        "value": value,
+                        "origin_head_prefix": ORIGIN_TRACKING_REF_PREFIX,
+                    },
+                )
+        case RemediationFailure.DETACHED_HEAD:
+            with repo_without_origin(scenario) as repo:
+                detach_head(repo)
+                yield RemediationScenario(
+                    invoke=lambda: CHANGESET_SCOPE.detect_current_branch(repo),
+                    placeholders={"repo": str(repo)},
+                )
+        case RemediationFailure.GIT_FAILURE_WITHOUT_STDERR:
+            with base_advanced_after_branch_repo(scenario) as advanced:
+                selector = (
+                    f"absent/{scenario.feature_branch}"
+                    f"{CHANGESET_SCOPE.RANGE_SEPARATOR}"
+                    f"{CHANGESET_SCOPE_CONTRACT.HEAD_REF}"
+                )
+                yield RemediationScenario(
+                    invoke=lambda: CHANGESET_SCOPE.resolve_committed_scope(
+                        selector, repo=advanced.repo
+                    ),
+                    placeholders={"repo": str(advanced.repo)},
+                )
+        case RemediationFailure.GIT_FAILURE_WITH_STDERR:
+            with base_advanced_after_branch_repo(scenario) as advanced:
+                sever_origin_remote(advanced.repo)
+                yield RemediationScenario(
+                    invoke=lambda: CHANGESET_SCOPE.resolve_committed_scope(
+                        CHANGESET_SCOPE_CONTRACT.HEAD_REF, repo=advanced.repo
+                    ),
+                    placeholders={
+                        "repo": str(advanced.repo),
+                        "stderr": git_failure_stderr(
+                            advanced.repo, "fetch", ORIGIN_REMOTE_NAME
+                        ),
+                    },
+                )

@@ -8,8 +8,7 @@ a path, a ``runToken``, and a payload ``unitId`` carry no NUL character and no
 text without a UTF-8 encoding; every operation except ``resolve-reference``
 names a normalized repository-relative candidate path; a payload is an object
 with a non-empty ``unitId``; a finding ``rule`` is a lowercase hyphenated ID;
-``ordinal`` is an integer within the declared bounds; ``terminalStatus`` is a
-listed terminal status.
+``terminalStatus`` is a listed terminal status.
 
 A request text is also outside the contract when the runner cannot parse it
 as one JSON object: a truncated object, a JSON value of another type, or an
@@ -206,14 +205,6 @@ def _malformed_values(
         return st.one_of(
             _not_non_empty_strings(),
             st.text(min_size=1).filter(lambda text: text not in listed),
-        )
-    if field == fields.ORDINAL:
-        return st.one_of(
-            json_values().filter(
-                lambda value: not isinstance(value, int) or isinstance(value, bool)
-            ),
-            st.integers(max_value=runner.MIN_FINDING_ORDINAL - 1),
-            st.integers(min_value=runner.MAX_FINDING_ORDINAL + 1),
         )
     if field == fields.PAYLOAD:
         return _malformed_payloads(runner, operation)

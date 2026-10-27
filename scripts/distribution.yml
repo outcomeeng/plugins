@@ -17,21 +17,21 @@ repos:
       - develop
       - frontend
 
-  spec-tree:
-    description: "Spec Tree methodology skills for Outcome Engineering"
+  product-tree:
+    description: "Product Tree methodology skills for Outcome Engineering"
     plugins:
-      - spec-tree
+      - product-tree
 
   typescript:
     description: "TypeScript engineering skills"
     prerequisites:
-      - "outcomeeng/spec-tree (for /testing and /auditing-tests)"
+      - "outcomeeng/product-tree (for /testing and /auditing-tests)"
     plugins:
       - typescript
 
   python:
     description: "Python engineering skills"
     prerequisites:
-      - "outcomeeng/spec-tree (for /testing and /auditing-tests)"
+      - "outcomeeng/product-tree (for /testing and /auditing-tests)"
     plugins:
       - python

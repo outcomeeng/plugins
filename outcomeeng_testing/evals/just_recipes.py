@@ -6,6 +6,7 @@ import json
 import os
 import stat
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 from outcomeeng_evals.settings import (
@@ -13,11 +14,13 @@ from outcomeeng_evals.settings import (
     DEFAULT_TIMEOUT_SECONDS_TEXT,
 )
 from outcomeeng_testing.harnesses.eval_workspaces import (
+    temporary_workspace,
     with_temp_workspace,
     with_temp_workspace_under,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+PRODUCER_FIXTURE_SECTION = "pr_wait_and_reentry_policy"
 
 
 @with_temp_workspace
@@ -164,22 +167,33 @@ def assert_eval_node_recipe_runs_all_node_evals_serially(tmp_path: Path) -> None
     assert_printed_command_precedes_suite_result(completed)
 
 
-@with_temp_workspace_under(REPO_ROOT)
-def assert_eval_materialize_prompts_recipe_writes_producer_prompt(
-    tmp_path: Path,
-) -> None:
-    eval_root, prompt_path = write_producer_prompt_fixture(tmp_path)
+@dataclass(frozen=True)
+class MaterializePromptsObservation:
+    """Observed outcome of the materialize-prompts recipe over a producer fixture."""
 
-    completed = run_just_eval(
-        tmp_path,
-        write_fake_claude(tmp_path),
-        "eval-materialize-prompts",
-        str(eval_root),
-    )
+    completed: subprocess.CompletedProcess[str]
+    prompt_path: Path
+    prompt_text: str
 
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert f"materialized: {prompt_path.resolve()}" in completed.stdout
-    assert "pr_wait_and_reentry_policy" in prompt_path.read_text(encoding="utf-8")
+
+def observe_eval_materialize_prompts_recipe() -> MaterializePromptsObservation:
+    """Run the materialize-prompts recipe over a producer-section fixture."""
+
+    with temporary_workspace(REPO_ROOT) as tmp_path:
+        eval_root, prompt_path = write_producer_prompt_fixture(tmp_path)
+
+        completed = run_just_eval(
+            tmp_path,
+            write_fake_claude(tmp_path),
+            "eval-materialize-prompts",
+            str(eval_root),
+        )
+
+        return MaterializePromptsObservation(
+            completed=completed,
+            prompt_path=prompt_path,
+            prompt_text=prompt_path.read_text(encoding="utf-8"),
+        )
 
 
 @with_temp_workspace_under(REPO_ROOT)
@@ -297,6 +311,13 @@ def write_producer_prompt_fixture(tmp_path: Path) -> tuple[Path, Path]:
     eval_root = tmp_path / "node"
     eval_dir = eval_root / "evals" / "producer"
     eval_dir.mkdir(parents=True)
+    producer_path = eval_root / "producer" / "SKILL.md"
+    producer_path.parent.mkdir()
+    producer_path.write_text(
+        f'<step name="{PRODUCER_FIXTURE_SECTION}">\nWait for the checks.\n</step>\n',
+        encoding="utf-8",
+    )
+    producer_repo_path = producer_path.relative_to(REPO_ROOT).as_posix()
     prompt_path = eval_dir / "prompt.md"
     (eval_dir / "prompt.template.md").write_text(
         "Producer: {producer_path}\nSection: {producer_section_name}\n{producer_section}\n",
@@ -311,8 +332,8 @@ def write_producer_prompt_fixture(tmp_path: Path) -> tuple[Path, Path]:
                 "",
                 "[prompt_source]",
                 'kind = "producer-section"',
-                'producer = "src/plugins/spec-tree/skills/manage-pr/SKILL.md"',
-                'section = "pr_wait_and_reentry_policy"',
+                f'producer = "{producer_repo_path}"',
+                f'section = "{PRODUCER_FIXTURE_SECTION}"',
                 'template = "prompt.template.md"',
                 "",
             ]

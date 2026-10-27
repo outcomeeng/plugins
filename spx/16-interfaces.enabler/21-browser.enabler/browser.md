@@ -1,6 +1,6 @@
 # Browser
 
-PROVIDES a local, MCP-backed browser authoring surface that renders a spec-tree projection and live interview state into HTML
+PROVIDES a local, MCP-backed browser authoring surface that renders a product-tree projection and live interview state into HTML
 SO THAT humans and agents
 CAN read, comment on, and restructure the tree directly in a browser while staying in a live conversation loop
 

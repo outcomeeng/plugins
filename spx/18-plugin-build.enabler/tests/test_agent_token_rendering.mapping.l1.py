@@ -1,4 +1,4 @@
-"""Mapping evidence that a build renders the agent tokens beside each spec-tree script that reads them."""
+"""Mapping evidence that a build renders the agent tokens beside each product-tree script that reads them."""
 
 from __future__ import annotations
 

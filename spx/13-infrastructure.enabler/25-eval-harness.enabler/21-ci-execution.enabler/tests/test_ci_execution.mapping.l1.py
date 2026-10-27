@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+from outcomeeng_evals.ci_plan import (
+    ROOT_INSTRUCTION_PATHS,
+    CiMode,
+    EvalPlanItem,
+    build_ci_plan,
+)
 from outcomeeng_testing.evals.factories import (
     assert_changed_paths_file_reads_git_name_status_rows,
     assert_empty_plan_exits_successfully_without_commands,
     assert_failing_suite_fails_aggregate_after_attempting_every_suite,
-    assert_root_instruction_changes_select_full_suites,
+    root_instruction_plan_workspace,
 )
 from outcomeeng_testing.harnesses.evals import (
     assert_multi_case_plan_item_preserves_case_selector_order,
@@ -23,7 +29,21 @@ def test_multi_case_plan_item_preserves_case_selector_order() -> None:
 
 
 def test_root_instruction_changes_select_full_suites() -> None:
-    assert_root_instruction_changes_select_full_suites()
+    with root_instruction_plan_workspace() as workspace:
+        for root_instruction_path in ROOT_INSTRUCTION_PATHS:
+            plan = build_ci_plan(
+                workspace.eval_root,
+                mode=CiMode.PR,
+                changed_paths=(root_instruction_path,),
+            )
+
+            assert plan == [
+                EvalPlanItem(
+                    eval_toml=workspace.eval_toml,
+                    plugin_dir=workspace.plugin_dir,
+                    case_ids=(),
+                )
+            ]
 
 
 def test_changed_paths_file_reads_git_name_status_rows() -> None:

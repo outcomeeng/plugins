@@ -21,7 +21,7 @@ from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng.validation.audit_artifacts import IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT
 from outcomeeng.validation.implementation_audit_contract import (
     IMPLEMENTATION_AUDIT_SKILL_NAME,
-    SPEC_TREE_PLUGIN_NAME,
+    PRODUCT_TREE_PLUGIN_NAME,
     ImplementationAuditConcern,
     implementation_audit_unit_id,
 )
@@ -38,7 +38,7 @@ SCRIPT_PATH = (
     .joinpath(
         DIST_DIR_NAME,
         Target.CLAUDE.value,
-        SPEC_TREE_PLUGIN_NAME,
+        PRODUCT_TREE_PLUGIN_NAME,
         SKILLS_SUBDIR_NAME,
         IMPLEMENTATION_AUDIT_SKILL_NAME,
         IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT,

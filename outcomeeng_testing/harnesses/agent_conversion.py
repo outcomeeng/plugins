@@ -55,11 +55,11 @@ AGENT_CONVERSION_FIXTURES_DIR: Final = (
 LIFECYCLE_COLLISION_SOURCE: Final = (
     AGENT_CONVERSION_FIXTURES_DIR / "lifecycle-collision" / SOURCE_ROOT_NAME
 )
-SPEC_TREE_AGENT_SOURCE_DIR: Final = (
+PRODUCT_TREE_AGENT_SOURCE_DIR: Final = (
     Path(__file__).resolve().parents[2]
     / SOURCE_ROOT_NAME
     / PLUGINS_DIR_NAME
-    / "spec-tree"
+    / "product-tree"
     / AGENT_SOURCE_DIRECTORY_NAME
 )
 SOURCE_AGENT_FIXTURE: Final = "source-agent.md"
@@ -240,11 +240,11 @@ def source_agent(
     )
 
 
-def spec_tree_wrapper_agents() -> tuple[SourceAgent, ...]:
-    """Return every authored Spec Tree wrapper agent."""
+def product_tree_wrapper_agents() -> tuple[SourceAgent, ...]:
+    """Return every authored Product Tree wrapper agent."""
     return tuple(
         parse_agent_markdown(path)
-        for path in sorted(SPEC_TREE_AGENT_SOURCE_DIR.glob("*.md"))
+        for path in sorted(PRODUCT_TREE_AGENT_SOURCE_DIR.glob("*.md"))
     )
 
 

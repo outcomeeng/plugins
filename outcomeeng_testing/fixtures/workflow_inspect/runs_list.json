@@ -1,0 +1,22 @@
+[
+  {
+    "databaseId": 9001,
+    "status": "completed",
+    "conclusion": "success",
+    "workflowName": "check",
+    "headBranch": "main",
+    "headSha": "1111111111111111111111111111111111111111",
+    "createdAt": "2026-10-01T10:00:00Z",
+    "event": "push"
+  },
+  {
+    "databaseId": 9002,
+    "status": "in_progress",
+    "conclusion": "",
+    "workflowName": "check",
+    "headBranch": "feature",
+    "headSha": "2222222222222222222222222222222222222222",
+    "createdAt": "2026-10-02T11:30:00Z",
+    "event": "pull_request"
+  }
+]

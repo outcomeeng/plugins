@@ -1,7 +1,7 @@
 """Enforce that the version the ``spx`` CLI on the path reports meets the floor
 the shipped skills depend on.
 
-The shipped ``spec-tree`` skills (``/diagnose``, the verification wrappers, the
+The shipped ``product-tree`` skills (``/diagnose``, the verification wrappers, the
 ``SessionStart`` hook) and their co-located tests invoke the ``spx`` CLI and assume
 the behavior of a specific version. A skill or test that assumes a capability absent
 from the build the gate runs ships a runtime contract the consumer's installed CLI
@@ -73,7 +73,7 @@ from typing import Final
 # (open/append/seal/read/render over a type-agnostic append-only run journal),
 # the run-journal contract the agentic verification skills bind for their
 # durable run state (0.5.6 introduced `spx hook run session-start`, the
-# host-lifecycle hook runner the spec-tree plugin's SessionStart hook delegates
+# host-lifecycle hook runner the product-tree plugin's SessionStart hook delegates
 # to for session identity, project-dir exports, and worktree occupancy; 0.5.4
 # introduced the explicit work-branch git_ref).
 VERIFICATION_RUN_MINIMUM_SPX_VERSION: Final = "0.6.13"

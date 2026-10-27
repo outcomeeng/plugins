@@ -1,0 +1,9 @@
+{
+  "number": 42,
+  "headRefName": "feature",
+  "title": "unrelated field the script does not surface",
+  "statusCheckRollup": [
+    { "name": "lint", "status": "COMPLETED", "conclusion": "SUCCESS" },
+    { "name": "test", "status": "IN_PROGRESS", "conclusion": "" }
+  ]
+}

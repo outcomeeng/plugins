@@ -10,9 +10,9 @@ Use skill `prose:prose-standards`.
 
 Use skill `prose:prose-architecture-standards`.
 
-Use skill `spec-tree:scope-changeset`.
+Use skill `product-tree:scope-changeset`.
 
-Use skill `spec-tree:project-run-journal`.
+Use skill `product-tree:project-run-journal`.
 
 <objective>
 
@@ -60,7 +60,7 @@ One text carries one kind. Register variation inside it is judged by the `/prose
 
 3. Open the run with the `open` form and `--type audit`; capture the run token and append the scope-entered event carrying the run's identity.
 
-4. Read the text under audit — whatever the dispatch names, pastes, or points to — and read the supplied kind's style layer from `/prose-standards` `<kind_layers>` and structural conventions from `/prose-architecture-standards` `<kind_structures>`, plus the governing prose ADR when the repository's spec tree carries one for the target.
+4. Read the text under audit — whatever the dispatch names, pastes, or points to — and read the supplied kind's style layer from `/prose-standards` `<kind_layers>` and structural conventions from `/prose-architecture-standards` `<kind_structures>`, plus the governing prose ADR when the repository's Product Tree carries one for the target.
 
    The arguments may name a base revision. Without one, every sentence of the text is in scope. With one, read the whole text for context, then derive the in-scope sentences from the target's diff against that base: pass the range `<base revision>...HEAD` to `/scope-changeset` and take its `base` endpoint as `<base-oid>`, because a single ref there resolves to the head against the configured remote base, then run `git diff -U0 <base-oid> -- <path>` for each audited path, and take the new-side line ranges of its hunks as the changed lines. A sentence is in scope when it intersects a changed line. Pasted text and a path new to the changeset have no base counterpart and are in scope whole; a path that exists at the base is in scope only through its changed lines, so one unchanged since the base has no in-scope sentence and yields no finding.
 

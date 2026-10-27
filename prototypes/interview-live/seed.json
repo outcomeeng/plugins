@@ -11,14 +11,14 @@
       {
         "id": "q3",
         "text": "Where should the tree-editing surface live?",
-        "options": ["interview (generic)", "calling spec-tree skill"],
+        "options": ["interview (generic)", "calling Product Tree skill"],
         "choice": null
       }
     ],
     "current": {
       "id": "q1",
       "text": "Which surface should drive the live interview?",
-      "options": ["spec tree", "flat coverage map"],
+      "options": ["Product Tree", "flat coverage map"],
       "choice": null
     },
     "settled": []

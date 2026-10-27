@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MCP transport for the live spec-tree browser surface.
+"""MCP transport for the live Product Tree browser surface.
 
 The host runtime owns the browser-interface server through the plugin's
 ``mcpServers`` config, the agent receives each browser-side interaction through a
@@ -153,7 +153,7 @@ def is_browser_interaction_event(journal_event: dict) -> bool:
 TOOLS = [
     {
         "name": "get_surface_url",
-        "description": "Return the localhost URL of the live spec-tree browser surface. Give it to the user to open; the surface streams agent updates and posts the user's clicks, edits, and notes back over this MCP server.",
+        "description": "Return the localhost URL of the live Product Tree browser surface. Give it to the user to open; the surface streams agent updates and posts the user's clicks, edits, and notes back over this MCP server.",
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
@@ -182,7 +182,7 @@ TOOLS = [
     },
     {
         "name": "present",
-        "description": "Push agent-side state to the surface, which the browser renders live over SSE. Provide `questions` (the interview question set) and/or `tree` (the spec-tree nodes) to render.",
+        "description": "Push agent-side state to the surface, which the browser renders live over SSE. Provide `questions` (the interview question set) and/or `tree` (the Product Tree nodes) to render.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -190,7 +190,10 @@ TOOLS = [
                     "type": "object",
                     "description": "Question set: {current, planned, settled}.",
                 },
-                "tree": {"type": "array", "description": "Spec-tree nodes to render."},
+                "tree": {
+                    "type": "array",
+                    "description": "Product tree nodes to render.",
+                },
             },
         },
     },
@@ -299,7 +302,7 @@ def handle_message(surface: Surface, message: object) -> dict | list[dict] | Non
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="MCP transport for the live spec-tree surface"
+        description="MCP transport for the live Product Tree surface"
     )
     parser.add_argument(
         "--seed",

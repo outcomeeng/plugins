@@ -45,7 +45,7 @@ CONVERSION_SCRIPT_PATH: Final = (
     REPO_ROOT
     / "src"
     / "plugins"
-    / "spec-tree"
+    / "product-tree"
     / "skills"
     / "migrate-3-to-4"
     / "scripts"
@@ -57,9 +57,9 @@ EXPECTED_TREE: Final = FIXTURE_ROOT / "expected"
 EXPECTED_REWRITTEN_FILE: Final = FIXTURE_ROOT / "expected-rewrote.txt"
 EXPECTED_REPORT_FILE: Final = FIXTURE_ROOT / "expected-report.tsv"
 UNTOUCHED_FILES_FILE: Final = FIXTURE_ROOT / "untouched-forms.txt"
-OUTSIDE_SPEC_TREE_FIXTURE: Final = INPUT_TREE / "docs"
+OUTSIDE_PRODUCT_TREE_FIXTURE: Final = INPUT_TREE / "docs"
 CONVERTIBLE_ONLY_TREE: Final = FIXTURE_ROOT / "convertible-only"
-# A fixture tree models a product tree whose nodes carry a `tests/` directory, but the
+# A fixture tree models a Product Tree whose nodes carry a `tests/` directory, but the
 # placement rule bans a `tests/` directory under the test-infrastructure home, so the
 # stored tree names it `test-files` and each copy restores the name the script sees.
 STORED_TESTS_DIRECTORY: Final = "test-files"
@@ -68,7 +68,7 @@ MATERIALIZED_TESTS_DIRECTORY: Final = "tests"
 LINK_CONVERSION_PROPERTY_SEED: Final = 20261006
 LINK_CONVERSION_PROPERTY_EXAMPLES: Final = 25
 LINK_CONVERSION_PROPERTY_REPLAY: Final = (
-    "just test spx/21-spec-tree.enabler/54-migrating.enabler/tests/"
+    "just test spx/21-product-tree.enabler/54-migrating.enabler/tests/"
     "test_migrating.property.l1.py"
 )
 CONVERSION_TIMEOUT_SECONDS: Final = 60
