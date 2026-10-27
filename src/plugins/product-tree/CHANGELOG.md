@@ -26,6 +26,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/execute-change` runs every resource-intensive command under the lock line.** The skill tells the caller to use `/wait-for-load` for each resource-intensive command any step runs, to run each one under that skill's guard line in the foreground, and to report a result only after every such line has exited. The skill no longer respells the lock command, so `/wait-for-load` alone owns its form. Before this change, the skill told the caller to chain the command behind a host-load waiter.
 
+- **The Product Tree router names one lock line for every resource-intensive command.** The `/wait-for-load` section of the generated `CLAUDE.md` and `AGENTS.md` routers tells the caller to run each resource-intensive command as the argument vector of `spx orchestration lock --run-id <id> -- <command>` on one shell line, and the Codex router keeps that line in one `functions.exec` call. The section names no lock switch, no `spx/local/wait-for-load.md` overlay, and no host-load waiter. Before this change, the router had the caller read a lock switch from the overlay and chain the command behind a waiter wherever the switch was off.
+
 ### Removed
 
 - **`/wait-for-load` ships no waiter script.** The skill no longer carries `scripts/wait_for_load.py`, its `python3` allowed-tools entry, its terminal-status table, or its waiter-only failure modes. The guard's help declares the exit codes and the terminal record the skill reads. A consumer repository that kept `spx/local/wait-for-load.md` can remove it, because nothing reads it, and one that chained its commands behind the waiter script uses the lock line instead.
