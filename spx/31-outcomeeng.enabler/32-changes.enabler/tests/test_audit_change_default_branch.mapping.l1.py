@@ -2,11 +2,12 @@
 
 The rule is the spec assertion for the ``audit-change`` runner's
 ``resolve-reference`` operation: ``defaultBranch`` is ``on-default-branch`` when
-origin's default branch holds the named path, ``checkout-only`` when it does not
-and the path resolves to an existing path in the checkout, and ``absent`` for
-every other path, an absolute path and a path outside the repository among
-them. The finite domain is the ``PathCondition`` set the harness builds as real
-Git repositories with a real bare origin. Each situation states what its
+origin's default branch holds the named path as a file, ``checkout-only`` when it
+does not and the path resolves to an existing path in the checkout, and
+``absent`` for every other path, a directory only origin holds, an absolute path
+and a path outside the repository among them. The finite domain is the
+``PathCondition`` set the harness builds as real Git repositories with a real
+bare origin. Each situation states what its
 construction made true about the spelling, and the expected resolution derives
 from those two stated facts under the assertion's rule, so no expected value is
 copied from the runner's branch logic.
@@ -39,7 +40,7 @@ def test_a_named_path_maps_to_the_resolution_its_origin_and_checkout_state_state
 
     if situation.names_file_on_origin_default:
         expected = Resolution.ON_DEFAULT_BRANCH
-    elif situation.names_file_in_checkout:
+    elif situation.names_existing_path_in_checkout:
         expected = Resolution.CHECKOUT_ONLY
     else:
         expected = Resolution.ABSENT

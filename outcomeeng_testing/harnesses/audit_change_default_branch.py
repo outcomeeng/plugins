@@ -10,7 +10,7 @@ that the checkout has deleted are constructed with Git commands, not simulated.
 
 A ``Situation`` states what its construction made true about the named path:
 whether the spelling names a file on origin's default branch and whether it
-names an existing path inside the checkout. Those two facts come from the
+names an existing path of any kind, file or directory, inside the checkout. Those two facts come from the
 construction, never from the runner, and the linked test derives the expected
 ``defaultBranch`` from them.
 
@@ -29,6 +29,7 @@ import errno
 import io
 import json
 import os
+import shutil
 import subprocess
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import chdir, contextmanager
@@ -47,6 +48,7 @@ _WORK_BRANCH: Final = "work"
 _REMOTE: Final = "origin"
 _BASELINE_FILE: Final = "baseline.txt"
 _NAMED_FILE: Final = "records/named.md"
+_NAMED_DIRECTORY: Final = "records"
 _NAMED_FILE_WITH_DOT_SEGMENT: Final = "records/./named.md"
 _OUTSIDE_FILE: Final = "outside.txt"
 _OUTSIDE_SPELLING: Final = f"../{_OUTSIDE_FILE}"
@@ -75,6 +77,11 @@ class PathCondition(StrEnum):
     SPELLED_WITH_DOT_SEGMENT = "spelled-with-dot-segment"
     SPELLED_ABSOLUTE = "spelled-absolute"
     OUTSIDE_REPOSITORY = "outside-repository"
+    DIRECTORY_ON_ORIGIN_DEFAULT_ONLY = "directory-on-origin-default-only"
+    DIRECTORY_IN_CHECKOUT_ONLY = "directory-in-checkout-only"
+    DIRECTORY_IN_CHECKOUT_AND_ORIGIN_DEFAULT = (
+        "directory-in-checkout-and-origin-default"
+    )
 
 
 @dataclass(frozen=True)
@@ -87,8 +94,8 @@ class Situation:
     named: str
     #: The spelling names a file that origin's default branch holds.
     names_file_on_origin_default: bool
-    #: The spelling names an existing path inside the checkout.
-    names_file_in_checkout: bool
+    #: The spelling names an existing path, file or directory, inside the checkout.
+    names_existing_path_in_checkout: bool
 
 
 @dataclass(frozen=True)
@@ -197,6 +204,18 @@ def default_branch_situation(
         elif condition is PathCondition.OUTSIDE_REPOSITORY:
             (base / _OUTSIDE_FILE).write_text(_FILE_TEXT, encoding="utf-8")
             named = _OUTSIDE_SPELLING
+        elif condition is PathCondition.DIRECTORY_ON_ORIGIN_DEFAULT_ONLY:
+            _publish(root)
+            shutil.rmtree(root / _NAMED_DIRECTORY)
+            named = _NAMED_DIRECTORY
+        elif condition is PathCondition.DIRECTORY_IN_CHECKOUT_ONLY:
+            _write(root, _NAMED_FILE)
+            named = _NAMED_DIRECTORY
+            in_checkout = True
+        elif condition is PathCondition.DIRECTORY_IN_CHECKOUT_AND_ORIGIN_DEFAULT:
+            _publish(root)
+            named = _NAMED_DIRECTORY
+            in_checkout = True
         else:
             raise ValueError(f"no construction for condition {condition!r}")
         yield Situation(
@@ -204,7 +223,7 @@ def default_branch_situation(
             root=root,
             named=named,
             names_file_on_origin_default=on_origin,
-            names_file_in_checkout=in_checkout,
+            names_existing_path_in_checkout=in_checkout,
         )
 
 
