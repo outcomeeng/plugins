@@ -45,7 +45,13 @@ def test_main_group_exposes_documented_subcommands() -> None:
     result = invoke_main_help()
 
     assert result.exit_code == EXIT_SUCCESS
-    for subcommand in (
+    _, _, commands_section = result.output.partition("Commands:\n")
+    listed_names = {
+        line.split()[0]
+        for line in commands_section.splitlines()
+        if line.startswith("  ") and not line.startswith("   ") and line.strip()
+    }
+    assert listed_names == {
         "run",
         "history",
         "view",
@@ -53,8 +59,7 @@ def test_main_group_exposes_documented_subcommands() -> None:
         "plan",
         "ci",
         "materialize-prompts",
-    ):
-        assert subcommand in result.output
+    }
 
 
 def test_run_subcommand_requires_eval_toml_path() -> None:
