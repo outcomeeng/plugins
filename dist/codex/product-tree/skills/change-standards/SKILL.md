@@ -135,7 +135,7 @@ A harness, generator, or fixture that a row names and that does not exist is the
 
 <rule id="change-type">
 
-A Change whose record carries a Governance mutations or Spec mutations block is a Leaf, a Change that another Change names in `parent` is a Parent, and a Change with neither is a root. A Change never carries a mutations block while it has a child. The type derives from what the record and the store name and is never stored. A Parent carries neither a Governance mutations nor a Spec mutations block and never reaches Executable.
+A Change whose record carries a Governance mutations or Spec mutations block is a Leaf, a Change that another Change names in `parent` is a Parent, and a Change with neither is a root. A Proposed record carries no mutations block, so it types by lineage: a Leaf until another Change names it in `parent`. A Change never carries a mutations block while it has a child. The type derives from what the record and the store name and is never stored. A Parent carries neither a Governance mutations nor a Spec mutations block and never reaches Executable.
 
 </rule>
 

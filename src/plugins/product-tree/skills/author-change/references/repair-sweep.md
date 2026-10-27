@@ -14,15 +14,16 @@ A same-class site is any location in the candidate, in the front matter or any `
 
 A changed-section dependent is text in another section or in the front matter that cites, quotes, restates, or relies on text the repair changes and now disagrees with it. Check each edit against these dependents:
 
-| Edit                                                                     | Dependents to check                                                                                      |
-| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Changed `## Governance` entry or verdict                                 | The Governance mutations block of the record, and every Spec mutations assertion that cites its decision |
-| Changed Governance mutations decision                                    | Every Spec mutations assertion and every `## Governance` verdict the decision determines                 |
-| Changed Spec mutations block, malleability before, or malleability after | Every other block that names the Node                                                                    |
-| Changed Spec mutations assertion                                         | Every Governance mutations decision that governs it and every `## Slice` check that observes it          |
-| Changed block order or count                                             | Every block that depends on it and every sentence that states the number or order                        |
-| Changed `## Slice` repository or check                                   | Every block, Node, and blocker that lies outside the new slice                                           |
-| Changed `blocked_by` or `predecessors`                                   | Every section that names the blocker or predecessor                                                      |
+| Edit                                                                     | Dependents to check                                                                                                                                     |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Changed `## Governance` entry or verdict                                 | The Governance mutations block of the record, every Spec mutations assertion that cites its decision, and every `## Verification` row for that decision |
+| Changed Governance mutations decision                                    | Every Spec mutations assertion, every `## Governance` verdict the decision determines, and its `## Verification` row                                    |
+| Changed Spec mutations block, malleability before, or malleability after | Every other block that names the Node                                                                                                                   |
+| Changed Spec mutations assertion                                         | Every Governance mutations decision that governs it, every `## Slice` check that observes it, and its `## Verification` row                             |
+| Changed `## Verification` row                                            | The assertion or decision the row names, its Spec mutations block, and the evidence audit its Node's malleability requires                              |
+| Changed block order or count                                             | Every block that depends on it and every sentence that states the number or order                                                                       |
+| Changed `## Slice` repository or check                                   | Every block, Node, and blocker that lies outside the new slice                                                                                          |
+| Changed `blocked_by` or `predecessors`                                   | Every section that names the blocker or predecessor                                                                                                     |
 
 </changed_dependent>
 
