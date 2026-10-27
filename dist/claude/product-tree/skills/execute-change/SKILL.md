@@ -120,7 +120,7 @@ Start every Verifier without this conversation's history, reasoning, summaries, 
 
 <output_format>
 
-Return the result — `closed`, `released`, `release-refused`, `not-held`, or `unavailable` — the Change URL, the final full head SHA, each round's definition, target, and verdict run tokens, the merge commit when integration happened, and the URL of the newest Handoff comment this session posted.
+Return the result — `closed`, `released`, `release-refused`, or `not-held` — the Change URL, the final full head SHA, each round's definition, target, and verdict run tokens, the merge commit when integration happened, and the URL of the newest Handoff comment this session posted.
 
 </output_format>
 

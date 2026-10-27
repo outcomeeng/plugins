@@ -84,7 +84,7 @@ Start every Verifier without this conversation's history, reasoning, summaries, 
 {!% if target == 'codex' %!}
 <codex_surface>
 
-The plugin ships the round definitions this skill launches for Claude Code only. On this surface the skill runs none of its steps: it returns result `unavailable` with the Change reference and this reason, and writes nothing.
+On Codex the skill runs the same steps and returns the same results as on Claude Code. Every launch goes through the native subagent capability by the flat definition name `<plugin>_<authored-name>`, such as `product-tree_change-author`, and by no other name; the names `<definitions>` gives render in that form. A flat name that the session does not list as an installed definition is a failed launch.
 
 </codex_surface>
 {!% endif %!}
@@ -128,7 +128,7 @@ The plugin ships the round definitions this skill launches for Claude Code only.
 
 <output_format>
 
-Return the result — `closed`, `released`, `release-refused`, `not-held`, or `unavailable` — the Change URL, the final full head SHA, each round's definition, target, and verdict run tokens, the merge commit when integration happened, and the URL of the newest Handoff comment this session posted.
+Return the result — `closed`, `released`, `release-refused`, or `not-held` — the Change URL, the final full head SHA, each round's definition, target, and verdict run tokens, the merge commit when integration happened, and the URL of the newest Handoff comment this session posted.
 
 </output_format>
 
