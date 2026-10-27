@@ -148,7 +148,19 @@ A blocked result names exactly one of these reasons:
    `no-execution-status`: a `## Artifacts` section, a link to produced
    content, a Node's state, or a record of progress is a defect, `blocking`
    where the declared Maturity's Definition of Ready names the rule and
-   `filed` otherwise. Then judge each body section against
+   `filed` otherwise. Judge `## Verification` against `verification`,
+   `verification-row`, `verification-assertions-only`, and
+   `verification-infrastructure`: record a finding for a Verification row that
+   names a verification type and no evidence path, for a row whose judgment does
+   not match its type, for a row that names an activity, for a Framed or higher
+   record whose section holds neither a row nor the single row `none` with its
+   reason, for a Parent's record at Sliced or Executable that carries the
+   section, and, from the `blocked_by` front matter and `resolve-reference`
+   results for the harness, generator, and fixture paths the rows name, for a
+   path that fails `verification-infrastructure` at the declared Maturity. An
+   evidence path need not exist before execution, and no resolution of an
+   evidence path yields a finding. A `## Verification` heading is a known
+   section, never an unknown one under `record-shape`. Then judge each body section against
    the loaded rule and criterion inventory, together with every other section
    the declared Maturity requires, and every body line against
    `body-authority`. Judge a record that carries `## Nodes`,
