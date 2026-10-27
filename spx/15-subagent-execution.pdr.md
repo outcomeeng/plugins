@@ -93,6 +93,16 @@ definitions a plugin ships and audits without adding behavior the skills lack.
    decision; it holds for every subagent definition the marketplace ships, and
    an absent native permission field in a rendering is that declaration's
    expected form, never a defect.
+5. A subagent definition that denies a tool enforces the denial through the
+   native tool-denial field of a harness that offers one, and carries the denial
+   as a prompt-level instruction in a harness that offers none. A prompt-level
+   denial states that its assurance is lower than enforced tool exclusion, and
+   no definition, description, or guide presents it as enforced tool exclusion.
+6. Claude Code provides the enforced guarantee, because its `disallowedTools`
+   field withholds the denied tool from the subagent. Codex provides the
+   prompt-level guarantee only, because its custom-agent definition has no field
+   that withholds a named tool: the emitted definition asks the subagent not to
+   call the tool, and the harness does not prevent the call.
 
 ## Verification
 
@@ -118,6 +128,8 @@ definitions a plugin ships and audits without adding behavior the skills lack.
 - ALWAYS: every subagent definition is language-neutral; a language plugin
   ships its language behavior as skills, which a language-neutral definition's
   session composes for the language its target needs ([audit])
+- NEVER: a definition, description, or guide presents a prompt-level tool denial
+  as enforced tool exclusion ([audit])
 - NEVER: a plugin ships a language-specific subagent definition unless a
   decision records that exception and its reason ([audit])
 - ALWAYS: preserve the following standing-request sentence verbatim within
