@@ -51,9 +51,9 @@ The Author and the Fixer use separate agent sessions, whoever calls them. A mech
 
 **Verifier.** The role held by the agent session that produces an agentic verdict: an Auditor for audit, a Reviewer for review.
 
-**Position.** Authority over a scope that its holder keeps across Changes, as `versions/4.0/methodology/application/agent-orchestration.md` of `outcomeeng/methodology` defines it. A position is never a Role: a position holder holds a Role only for a Change it refines, executes, produces, repairs, or verifies.
+**Position.** Authority over a scope that its holder keeps across Changes, as `versions/4.0/methodology/development/agent-orchestration.md` of `outcomeeng/methodology` defines it. A position is never a Role: a position holder holds a Role only for a Change it refines, executes, produces, repairs, or verifies.
 
-**Principal.** The next higher rank in the chain of positions that holds the context of a question, as `versions/4.0/methodology/application/agent-orchestration.md` of `outcomeeng/methodology` states the chain. A position holder answers what lies within its scope and passes every other question to its principal.
+**Principal.** The next higher rank in the chain of positions that holds the context of a question, as `versions/4.0/methodology/development/agent-orchestration.md` of `outcomeeng/methodology` states the chain. A position holder answers what lies within its scope and passes every other question to its principal.
 
 ## Rationale
 
