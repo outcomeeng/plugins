@@ -592,3 +592,32 @@ def test_fenced_policy_requirements_are_rejected() -> None:
             }
             with pytest.raises(source.InstructionBlockRenderError):
                 validation.validator(violating_documents)
+
+
+def test_every_router_states_the_post_compaction_reset_rules() -> None:
+    """Challenge each post-compaction reset requirement across all renders."""
+    for enabled_languages in harness.template_language_subsets():
+        documents = evidence.rendered_instruction_blocks(enabled_languages)
+        source.validate_compaction_reset_policy(documents)
+        for agent_harness, document in documents.items():
+            router = source.managed_router_block(document)
+            section = source._markdown_section(
+                router, source.COMPACTION_RESET_POLICY_HEADING
+            )
+            for _, required_text in source.COMPACTION_RESET_POLICY_REQUIREMENTS:
+                removed = document.replace(
+                    section, section.replace(required_text, "", 1), 1
+                )
+                with pytest.raises(source.CompactionResetPolicyError):
+                    source.validate_compaction_reset_policy({agent_harness: removed})
+                relocated = document.replace(
+                    router,
+                    router.replace(section, section.replace(required_text, "", 1), 1)
+                    + f"\n\n{required_text}\n",
+                    1,
+                )
+                with pytest.raises(source.CompactionResetPolicyError):
+                    source.validate_compaction_reset_policy({agent_harness: relocated})
+            sectionless = document.replace(section, "", 1)
+            with pytest.raises(source.CompactionResetPolicyError):
+                source.validate_compaction_reset_policy({agent_harness: sectionless})
