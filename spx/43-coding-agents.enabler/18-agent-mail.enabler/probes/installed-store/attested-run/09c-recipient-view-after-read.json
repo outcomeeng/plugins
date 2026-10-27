@@ -1,0 +1,12 @@
+{
+  "step": "09c-recipient-view-after-read",
+  "startedUtc": "2026-10-25T07:50:23.789209+00:00",
+  "command": "am acks pending /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/4d58f2f5-4e26-4e2d-aa23-2117c0421768/scratchpad/is-repo5/.git SilverFinch",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/4d58f2f5-4e26-4e2d-aa23-2117c0421768/scratchpad/is-repo5",
+  "request": null,
+  "exitCode": 0,
+  "result": {
+    "text": "ID     FROM         SUBJECT                         IMPORTANCE\n18797  CopperFinch  [fact] outside alphabet record  normal\n18796  CopperFinch  [fact] ack required record      normal\n"
+  },
+  "stderr": ""
+}

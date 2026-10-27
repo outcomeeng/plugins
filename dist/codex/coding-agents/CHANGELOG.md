@@ -6,6 +6,30 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.17.0
+
+### Breaking
+
+- **`/operate-agent-mail` replaces its `inbox` and `receipt` operations with `list`, `read`, and `acknowledge`.** A request naming `inbox` or `receipt` is rejected as `operation-unavailable`, and a `list` request carrying `unreadOnly` is rejected as `invalid-schema`. `list` takes `agent` and the optional `allRecords`, `includeBodies`, and `limit`: it returns the records the recipient has not yet judged, and every record, read or unread, when `allRecords` is true. `read` takes `agent` and `messageId` and records, visibly to the recipient alone, that the recipient judged the message. `acknowledge` takes the same arguments and is a read the sender can observe. Neither stands in for the other, and neither establishes agreement, ownership, authorization, or acceptance of a proposal. A caller that marked a record through `receipt` now names `read` for a private judgment and `acknowledge` only when the sender is meant to see it, and a caller that passed `unreadOnly` drops it, because the unjudged form is the default.
+
+### Added
+
+- **Every mail operation names the repository whose store it acts on.** `/operate-agent-mail` accepts an optional `repository`, an absolute path, in the `arguments` of every operation, and the `project-key` form takes `--repository <absolute-path>`. The operation maps to the same store command under that repository's project key, the result's `projectKey` reports the store the operation acted on, and the `project-key` form answers that repository's key. A request naming none acts on the store of the adapter's working directory, as before. A `repository` that is no absolute path string is rejected as `invalid-schema` before any command runs, and a path that resolves to no repository answers `repository-unresolved` and never the key of the adapter's working directory. The adapter reads no overlay or configuration to select a repository, and it registers no identity on a caller's behalf: a send from a name the named store does not hold returns the store's failure as `command-failed`.
+- **The callers pass the repository they select.** The `/wait-for-event` `mail` source, the message request of `/message-agents`, and the mail channel of `/direct-positions` position direction hand the named repository to the adapter, so one orchestration running in several repositories reads and writes each repository's own store. The five skill surfaces that reach mail document the `repository` they pass.
+
+### Changed
+
+- **Only `read` and `acknowledge` change a record's read state.** A `list` and a `wait` leave every record as they found it, so looking at records no longer judges them. A `wait` lists the requester's records in their complete form, so read and unread records alike reach its selection.
+- **The skills that reach mail move to `list`, `read`, and `acknowledge`.** `/orchestrate-change` looks for its earlier screen and release reports in the principal's complete listing, so a report the principal already read still counts as sent and is not sent again. The `/direct-positions` `inbox` subcommand prints the records the recipient has not judged through `list` and reads or acknowledges none of them. A `/wait-for-event` `mail` source yields an event for any record above its `id`, read or unread. `/message-agents` names the recipient's own `read` and `acknowledge` as the two ways a record is judged after delivery.
+- **Every correlation round-trips through the store.** A correlation the store's thread alphabet rejects is written as an `xc-` escape and read back as the original correlation, and a thread id the adapter did not write reads back verbatim. A send whose written thread id would exceed the store's 128-character limit, and any request text carrying a NUL byte, is rejected as `invalid-schema` before any command runs.
+- **Every validation error names the field, the received value, and the fix.** An over-long correlation reports the written thread id length against the 128-character limit and says to shorten the `correlation`; a NUL byte reports the offending text and its location and says to remove the byte; a wrongly typed, out-of-range, unsupported, or mismatched value reports what was received and what to supply instead.
+- **Every result carries the versioned shape.** Stdin that does not parse now answers with `schemaVersion`, `operation` as `unknown`, `status: "invalid-schema"`, and `detail`, still exiting 2, and a failure of the store command of any class answers `store-unavailable` or `command-failed`. A second terminal handback of the same kind with different content is rejected as a conflicting handback whose detail names the differing fields.
+
+### Fixed
+
+- **A record sent with an acknowledgement required reads back with `ackRequired` true before it is read.** The installed store reports the acknowledgement status `required` for such a record until it is read (`pending`) or acknowledged (`acked`); the adapter now treats all three as an acknowledgement requirement.
+- **Every failure detail names the failing command, the cause, and what to check.** One constructor builds each failure text, so no failure path emits a message without a cause and a fix. A Git or `am` invocation that cannot run or times out, an `am` response the adapter cannot parse, a working directory that is no repository, stdin that is not JSON, and every validation error report the exception class and message or the received value, then the fix. A store's own nonzero-exit message still reaches `detail` verbatim; only a store that exits nonzero with no output receives a constructed detail.
+
 ## 0.16.5
 
 ### Changed

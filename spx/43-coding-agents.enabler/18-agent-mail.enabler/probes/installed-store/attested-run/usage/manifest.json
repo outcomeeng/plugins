@@ -1,0 +1,27 @@
+{
+  "tool": "am",
+  "version": "am 0.3.36",
+  "sourceCommit": null,
+  "fixtures": {
+    "agents-register": {
+      "command": "am agents register --help",
+      "exitCode": 0
+    },
+    "mail-send": {
+      "command": "am mail send --help",
+      "exitCode": 0
+    },
+    "robot-inbox": {
+      "command": "am robot inbox --help",
+      "exitCode": 0
+    },
+    "mail-read": {
+      "command": "am mail read --help",
+      "exitCode": 0
+    },
+    "mail-ack": {
+      "command": "am mail ack --help",
+      "exitCode": 0
+    }
+  }
+}

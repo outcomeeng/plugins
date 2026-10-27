@@ -96,6 +96,47 @@ def coordination_references() -> st.SearchStrategy[str]:
     return st.uuids(version=4).map(str)
 
 
+# A correlation of at most this many characters writes at most four escaped
+# bytes of three characters each plus the three-character prefix, so its
+# written form stays inside the store's 128-character thread limit.
+FITTING_CORRELATION_MAXIMUM_CHARACTERS = 10
+SURROGATE_CATEGORY: Literal["Cs"] = "Cs"
+NUL_CHARACTER = "\x00"
+ESCAPE_PREFIX_SUFFIX_PATTERN = r"[A-Za-z0-9._-]{0,20}"
+
+
+def _text_characters(minimum_codepoint: int = 0) -> st.SearchStrategy[str]:
+    return st.characters(
+        min_codepoint=minimum_codepoint,
+        exclude_categories=(SURROGATE_CATEGORY,),
+        exclude_characters=NUL_CHARACTER,
+    )
+
+
+def fitting_correlations() -> st.SearchStrategy[str]:
+    """Any text, spaces, underscores, and non-ASCII included, short enough that
+    its written form fits the store's thread length."""
+    return st.text(
+        alphabet=_text_characters(),
+        min_size=1,
+        max_size=FITTING_CORRELATION_MAXIMUM_CHARACTERS,
+    )
+
+
+def escape_prefixed_correlations(prefix: str) -> st.SearchStrategy[str]:
+    """Alphabet-valid text that begins with the escape prefix the caller names."""
+    return st.from_regex(ESCAPE_PREFIX_SUFFIX_PATTERN, fullmatch=True).map(
+        lambda suffix: f"{prefix}{suffix}"
+    )
+
+
+def thread_alphabet_thread_ids(maximum_length: int) -> st.SearchStrategy[str]:
+    """Thread ids another writer may have created inside the store's alphabet."""
+    return st.from_regex(
+        r"[A-Za-z0-9][A-Za-z0-9._-]{0,%d}" % (maximum_length - 1), fullmatch=True
+    )
+
+
 def store_message_ids() -> st.SearchStrategy[int]:
     return st.integers(min_value=1, max_value=1_000_000)
 
@@ -150,6 +191,8 @@ def message_record_input(
 def _request_argument_value(
     module: ModuleType, field_name: str, ordinal: int
 ) -> object:
+    if field_name == module.REPOSITORY_FIELD:
+        return f"/generated/repository-{ordinal}"
     if field_name in module.TEXT_ARGUMENT_FIELDS:
         return f"generated-{field_name}-{ordinal}"
     if field_name in module.INTEGER_BOUNDS:
@@ -216,6 +259,30 @@ def project_key_paths() -> st.SearchStrategy[str]:
     """
     return st.from_regex(
         r"/[a-z0-9]{1,12}(?:/[a-z0-9][a-z0-9._-]{0,15}){0,5}", fullmatch=True
+    )
+
+
+def relative_repository_texts() -> st.SearchStrategy[str]:
+    """Strings no absolute path is: every string that does not open with a
+    separator, the empty string among them. NUL is outside the domain because
+    a NUL-bearing text argument is rejected by its own rule, and surrogates
+    because they cannot cross a process boundary."""
+    return st.text(alphabet=_text_characters(), max_size=40).filter(
+        lambda text: not text.startswith("/")
+    )
+
+
+def non_path_repository_values() -> st.SearchStrategy[object]:
+    """Values a request's `repository` must reject: any value that is not an
+    absolute path string — relative strings and every other JSON value type."""
+    return st.one_of(
+        relative_repository_texts(),
+        st.integers(),
+        st.booleans(),
+        st.none(),
+        st.floats(allow_nan=False),
+        st.lists(st.text(max_size=8), max_size=3),
+        st.dictionaries(st.text(max_size=8), st.text(max_size=8), max_size=2),
     )
 
 

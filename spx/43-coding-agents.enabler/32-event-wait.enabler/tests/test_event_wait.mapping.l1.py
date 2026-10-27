@@ -57,6 +57,26 @@ def test_mail_wait_result_maps_to_an_event_a_timeout_or_an_unreadable_source() -
     run_single_source_worlds("mail", check)
 
 
+def test_mail_source_repository_maps_to_the_wait_request_repository() -> None:
+    def check(observed: WorldObservation) -> None:
+        am = observed.contracts.agent_mail
+        repository = observed.case.repository
+        expected = {} if repository is None else {am.REPOSITORY_FIELD: repository}
+        assert observed.mail_requests
+        for request in observed.mail_requests:
+            arguments = request[am.ARGUMENTS_FIELD]
+            carried = {
+                name: value
+                for name, value in arguments.items()
+                if name == am.REPOSITORY_FIELD
+            }
+            assert request[am.OPERATION_FIELD] == am.Operation.WAIT
+            assert carried == expected
+        assert observed.calls[0].argv == am.common_dir_command(repository)
+
+    run_single_source_worlds("mail", check)
+
+
 def test_pane_source_maps_the_first_changed_session_or_an_unreadable_source() -> None:
     def check(observed: WorldObservation) -> None:
         c = observed.contracts

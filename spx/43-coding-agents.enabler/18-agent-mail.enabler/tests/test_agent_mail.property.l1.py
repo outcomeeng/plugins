@@ -3,6 +3,7 @@ from typing import cast
 
 from outcomeeng_testing.harnesses.agent_mail import (
     RecordingRunner,
+    run_correlation_encoding_property,
     run_delegation_chain_property,
     run_record_roundtrip_property,
     run_terminal_property,
@@ -29,6 +30,29 @@ def test_message_records_round_trip_through_the_store_fields() -> None:
         )
 
     run_record_roundtrip_property(assert_roundtrip)
+
+
+def test_every_correlation_round_trips_inside_the_thread_alphabet() -> None:
+    def assert_encoding(
+        module: ModuleType, correlation: str, foreign_thread_id: str
+    ) -> None:
+        thread_id = module.encode_correlation(correlation)
+
+        assert module.THREAD_ID_PATTERN.fullmatch(thread_id)
+        assert module.decode_correlation(thread_id) == correlation
+        if thread_id != correlation:
+            # An escaped form carries the prefix, which no unencoded write does.
+            assert thread_id.startswith(module.CORRELATION_ESCAPE_PREFIX)
+        else:
+            assert not correlation.startswith(module.CORRELATION_ESCAPE_PREFIX)
+
+        # A thread id another writer created reads back verbatim unless it is a
+        # form the adapter writes, which decodes to the correlation it encodes.
+        read_back = module.decode_correlation(foreign_thread_id)
+        if read_back != foreign_thread_id:
+            assert module.encode_correlation(read_back) == foreign_thread_id
+
+    run_correlation_encoding_property(assert_encoding)
 
 
 def test_an_order_its_delegation_request_and_its_handback_are_delivered() -> None:
@@ -125,3 +149,44 @@ def test_terminal_handbacks_reduce_to_exactly_one_result() -> None:
             )
 
     run_terminal_property(assert_terminal)
+
+
+def test_a_second_handback_of_one_kind_with_different_content_is_a_named_conflict() -> (
+    None
+):
+    def assert_conflict(
+        module: ModuleType,
+        reference: str,
+        first_kind: object,
+        second_kind: object,
+        content: dict[str, str],
+    ) -> None:
+        body = content[module.BODY_FIELD]
+        other_body = content[module.RECORD_SUBJECT_FIELD]
+        if body == other_body:
+            return
+        first = module.terminal_handback(
+            kind=first_kind,
+            correlation=reference,
+            sender=content[module.SENDER_FIELD],
+            recipient=content[module.RECIPIENT_FIELD],
+            subject=content[module.RECORD_SUBJECT_FIELD],
+            body=body,
+        )
+        second = {**first, module.BODY_FIELD: other_body}
+
+        try:
+            module.reduce_terminal(first, second)
+        except module.AgentMailError as error:
+            assert error.status == module.ExecutionStatus.INVALID_SCHEMA
+            assert module.BODY_FIELD in str(error)
+            assert [
+                field_name
+                for field_name in first
+                if field_name != module.BODY_FIELD
+                and field_name in str(error).split("differ in")[-1]
+            ] == []
+        else:
+            raise AssertionError("a conflicting same-kind handback was accepted")
+
+    run_terminal_property(assert_conflict)

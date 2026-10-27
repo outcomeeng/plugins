@@ -2,6 +2,7 @@ from typing import cast
 
 from outcomeeng_testing.generators.coding_agents import (
     mail_record_input,
+    mail_repository,
     unrenderable_labels,
 )
 from outcomeeng_testing.harnesses.agent_mail import load_agent_mail
@@ -98,6 +99,38 @@ def test_checked_send_results_map_to_delivery_results() -> None:
     assert failed_statuses == set(capability.ExecutionStatus) - {
         capability.ExecutionStatus.SUCCEEDED
     }
+
+
+def test_mail_request_repository_maps_to_the_send_request_repository() -> None:
+    message = load_agent_message()
+    capability = load_agent_mail()
+
+    for ordinal, kind in enumerate(message.RecordKind, start=1):
+        request = mail_record_input(message, ordinal, kind)
+        repository = mail_repository(ordinal)
+
+        named = message.mail_request({**request, message.REPOSITORY_FIELD: repository})
+        unnamed = message.mail_request({**request})
+
+        named_arguments = cast(
+            dict[str, object],
+            cast(dict[str, object], named[message.CAPABILITY_FIELD])[
+                message.ARGUMENTS_FIELD
+            ],
+        )
+        unnamed_arguments = cast(
+            dict[str, object],
+            cast(dict[str, object], unnamed[message.CAPABILITY_FIELD])[
+                message.ARGUMENTS_FIELD
+            ],
+        )
+
+        assert named_arguments[capability.REPOSITORY_FIELD] == repository
+        assert capability.REPOSITORY_FIELD not in unnamed_arguments
+        assert message.REPOSITORY_FIELD not in cast(
+            dict[str, object], named[message.RECORD_FIELD]
+        )
+        assert named[message.RECORD_FIELD] == unnamed[message.RECORD_FIELD]
 
 
 def test_send_result_label_maps_to_the_doorbell_form() -> None:

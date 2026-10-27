@@ -1,0 +1,12 @@
+{
+  "step": "01-build",
+  "startedUtc": "2026-10-25T07:50:11.495113+00:00",
+  "executableOnPath": "/Users/shz/.local/bin/am",
+  "amVersion": "am 0.3.36",
+  "capabilitiesVersion": "0.3.36",
+  "capabilitiesSchema": "am.capabilities.v1",
+  "sourceCommit": null,
+  "sourceCommitNote": "Neither am --version nor am capabilities reports a source commit.",
+  "sha256": null,
+  "sha256Note": "Not taken: the executable resolves into a directory outside the boundary the run may read."
+}

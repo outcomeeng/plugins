@@ -1,0 +1,5 @@
+"""Violating shipped-script payload for shell-string store command detection."""
+
+import subprocess
+
+subprocess.run("am mail inbox --json", shell=True, check=True)

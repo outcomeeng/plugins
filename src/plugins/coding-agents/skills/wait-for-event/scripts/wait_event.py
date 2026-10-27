@@ -4,7 +4,7 @@
 A request is one JSON object on standard input. The run prints exactly one JSON
 line and exits: an event line, an unreadable-source line, a timeout line, or an
 invalid-request line. It keeps no cursor, state file, or lock, sends nothing,
-marks nothing read, starts no background process, and never outlives its timeout.
+reads and acknowledges no record, starts no background process, and never outlives its timeout.
 """
 
 from __future__ import annotations
@@ -40,6 +40,7 @@ DETAIL_FIELD = "detail"
 # Fields of a source in the request.
 MAIL_AGENT_FIELD = "agent"
 MAIL_ID_FIELD = "id"
+MAIL_REPOSITORY_FIELD = "repository"
 PANE_ENVIRONMENT_FIELD = "environment"
 PANE_SESSIONS_FIELD = "sessions"
 PANE_SESSION_FIELD = "session"
@@ -104,6 +105,7 @@ class MonotonicClock:
 class MailSource:
     agent: str
     after_id: int
+    repository: str | None = None
 
 
 @dataclass(frozen=True)
@@ -186,8 +188,13 @@ def _source(raw: object, location: str) -> Source:
                 f"{location}.{MAIL_ID_FIELD} must be the whole-number id of the last record handled, "
                 f"0 for none; received {_received(after_id)}"
             )
+        repository = raw.get(MAIL_REPOSITORY_FIELD)
+        if repository is not None:
+            repository = _text(repository, f"{location}.{MAIL_REPOSITORY_FIELD}")
         return MailSource(
-            _text(raw.get(MAIL_AGENT_FIELD), f"{location}.{MAIL_AGENT_FIELD}"), after_id
+            _text(raw.get(MAIL_AGENT_FIELD), f"{location}.{MAIL_AGENT_FIELD}"),
+            after_id,
+            repository,
         )
     if kind == SOURCE_PANE:
         environment = raw.get(PANE_ENVIRONMENT_FIELD, ENVIRONMENT_HERDR)
@@ -340,17 +347,20 @@ def _poll_mail(
     clock: Any,
 ) -> Event | Unreadable | None:
     identity = {MAIL_AGENT_FIELD: source.agent}
+    arguments: dict[str, Any] = {
+        "agent": source.agent,
+        "afterId": source.after_id,
+        "timeoutSeconds": seconds,
+    }
+    if source.repository is not None:
+        arguments[MAIL_REPOSITORY_FIELD] = source.repository
     try:
         adapter = _adapter(ADAPTER_MAIL)
         result = adapter.execute(
             {
                 "schemaVersion": adapter.SCHEMA_VERSION,
                 "operation": "wait",
-                "arguments": {
-                    "agent": source.agent,
-                    "afterId": source.after_id,
-                    "timeoutSeconds": seconds,
-                },
+                "arguments": arguments,
             },
             adapter.SubprocessRunner() if runner is None else runner,
             clock,
@@ -370,7 +380,7 @@ def _poll_mail(
     if outcome == "unreachable":
         return Unreadable(
             SOURCE_MAIL,
-            f"the inbox listing does not reach back to id {source.after_id}",
+            f"the complete listing of {source.agent} does not reach back to id {source.after_id}",
             {**identity, STATUS_FIELD: "unreachable"},
         )
     record = data["record"]

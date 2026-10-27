@@ -60,6 +60,11 @@ def mail_record_input(
     }
 
 
+def mail_repository(ordinal: int) -> str:
+    """One absolute repository path a mail request names, distinct per ordinal."""
+    return f"/generated/mail-repository-{ordinal}"
+
+
 def delegation_authority(module: ModuleType, owner: str) -> dict[str, object]:
     """One conforming same-worktree authority for the named owner: no write
     scope, no Git mutation."""

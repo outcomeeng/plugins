@@ -1,29 +1,51 @@
+import io
 import json
+import subprocess
 from types import ModuleType
 from typing import cast
 
 from outcomeeng_testing.generators.agent_mail import operation_requests
+from outcomeeng_testing.harnesses.cli_usage import read_argv
 from outcomeeng_testing.harnesses.agent_mail import (
+    ROOT,
+    NamedRepositoryCase,
+    RecordingRunner,
     ScriptedClock,
     captured_inbox_responses_with_bodies,
     common_dir_seeded_absent_store_runner,
     common_dir_seeded_runner,
+    decoy_workspace,
+    failed_command_result,
     git_project_key_violation_source,
     label_collision_variant,
     load_agent_mail,
     mail_command_source_texts,
+    mail_pool,
+    nul_tainted_requests,
+    raw_mail_qualified_shell_violation_sources,
+    raw_mail_shell_violation_source,
     raw_mail_violation_source,
+    request_naming_repository,
     requests_over_every_operation,
+    run_cli_project_key,
+    run_cli_project_key_recording_opens,
     run_cli_with_only_adapter_programs,
     run_cli_without_executables,
     run_generated_identities,
     run_hung_command_under_bound,
+    run_invalid_repository_cases,
     run_label_targeting_cases,
+    run_named_repository_cases,
+    run_operation_mapping,
     run_wait_cases,
+    unresolved_then_fallback_runner,
+    store_error_runner,
     store_program_names,
     store_response_payload,
     store_response_result,
     store_response_text,
+    text_command_result,
+    usage_contract_for,
     wait_request,
     wait_requests_without_valid_timeout,
     wait_store_runner,
@@ -62,6 +84,148 @@ def test_unavailable_results_admit_no_fallback() -> None:
             ]
 
     run_generated_identities(assert_case)
+
+
+def test_a_repository_that_is_no_absolute_path_string_never_reaches_a_command() -> None:
+    def assert_case(module: ModuleType, value: object) -> None:
+        for request in requests_over_every_operation(module):
+            operation = module.Operation(request[module.OPERATION_FIELD])
+            runner = RecordingRunner([])
+
+            result = module.execute(
+                request_naming_repository(module, request, value), runner
+            )
+
+            assert result[module.STATUS_FIELD] == (
+                module.ExecutionStatus.INVALID_SCHEMA
+            ), (operation, value)
+            assert module.PROJECT_KEY_FIELD not in result, (operation, value)
+            assert runner.calls == [], (operation, value)
+
+        if isinstance(value, str):
+            exit_code, payload = run_cli_project_key(ROOT, repository=value)
+            assert exit_code != 0, value
+            assert payload[module.STATUS_FIELD] == (
+                module.ExecutionStatus.INVALID_SCHEMA
+            ), value
+            assert module.PROJECT_KEY_FIELD not in payload, value
+
+    run_invalid_repository_cases(assert_case)
+
+
+def test_a_named_path_that_resolves_to_no_repository_admits_no_fallback() -> None:
+    def assert_case(module: ModuleType, case: NamedRepositoryCase) -> None:
+        for request in requests_over_every_operation(module):
+            operation = module.Operation(request[module.OPERATION_FIELD])
+            arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+            runner = unresolved_then_fallback_runner(
+                module, case, store_response_result(module, operation, arguments)
+            )
+
+            result = module.execute(
+                request_naming_repository(module, request, case.repository), runner
+            )
+
+            assert result[module.STATUS_FIELD] == (
+                module.ExecutionStatus.REPOSITORY_UNRESOLVED
+            ), operation
+            assert module.PROJECT_KEY_FIELD not in result, operation
+            assert case.other_key not in json.dumps(result), operation
+            # The failed lookup is the only command: no second lookup answers
+            # from the working directory and no store command follows.
+            assert len(runner.calls) == 1, (operation, runner.calls)
+
+    run_named_repository_cases(assert_case)
+
+    module = load_agent_mail()
+    with mail_pool() as pool:
+        unresolved = {
+            "directory that is no repository": run_cli_project_key(
+                pool.main_checkout, repository=pool.outside
+            ),
+            "path that does not exist": run_cli_project_key(
+                pool.main_checkout, repository=pool.outside / "absent-checkout"
+            ),
+        }
+
+    # The working directory is a repository, so a key that fell back to it
+    # would resolve; each named path instead resolves nothing.
+    for case, (exit_code, payload) in unresolved.items():
+        assert exit_code != 0, (case, payload)
+        assert payload[module.STATUS_FIELD] == (
+            module.ExecutionStatus.REPOSITORY_UNRESOLVED
+        ), (case, payload)
+        assert module.PROJECT_KEY_FIELD not in payload, (case, payload)
+
+
+def test_a_send_from_a_name_the_store_does_not_hold_registers_nobody() -> None:
+    def assert_case(module: ModuleType, case: NamedRepositoryCase) -> None:
+        send = module.Operation.SEND
+        register = module.Operation.REGISTER
+        send_path = (module.AM_COMMAND, *usage_contract_for(module, send).command_path)
+        register_path = (
+            module.AM_COMMAND,
+            *usage_contract_for(module, register).command_path,
+        )
+        sends = [
+            request
+            for request in requests_over_every_operation(module)
+            if request[module.OPERATION_FIELD] == send
+        ]
+        assert len(sends) == 1
+
+        for request in (
+            sends[0],
+            request_naming_repository(module, sends[0], case.repository),
+        ):
+            runner = common_dir_seeded_runner(
+                module,
+                case.project_key,
+                failed_command_result(module, case.exit_code, case.detail),
+            )
+
+            result = module.execute(request, runner)
+
+            assert result[module.STATUS_FIELD] == (
+                module.ExecutionStatus.COMMAND_FAILED
+            )
+            assert result[module.DETAIL_FIELD] == case.detail
+            assert result[module.COMMAND_EXIT_CODE_FIELD] == case.exit_code
+            # The lookup and the send are the only commands: the store's
+            # refusal ends the operation, and no registration precedes a retry.
+            assert len(runner.calls) == 2, runner.calls
+            sent = runner.calls[1][0]
+            assert sent[: len(send_path)] == send_path
+            assert all(
+                argv[: len(register_path)] != register_path for argv, _ in runner.calls
+            )
+
+    run_named_repository_cases(assert_case)
+
+
+def test_the_adapter_reads_no_overlay_or_configuration_to_select_a_repository() -> None:
+    module = load_agent_mail()
+
+    with mail_pool() as pool, decoy_workspace(pool) as workspace:
+        roots = (workspace, pool.outside)
+        named = run_cli_project_key_recording_opens(
+            workspace, pool.main_checkout, roots
+        )
+        standing = run_cli_project_key_recording_opens(pool.main_checkout, None, roots)
+        expected_key = str(pool.bare)
+        decoy_key = str(pool.foreign)
+
+    # The decoys sit beside the working directory and at and above the named
+    # repository, each naming another repository: a reader that selected a
+    # repository from one would report that key or open the file.
+    for case, (exit_code, payload, opened) in {
+        "named from a working directory beside decoys": named,
+        "standing in a checkout holding decoys": standing,
+    }.items():
+        assert exit_code == 0, (case, payload)
+        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (case, payload)
+        assert payload[module.PROJECT_KEY_FIELD] != decoy_key, (case, payload)
+        assert opened == [], (case, opened)
 
 
 def test_registration_result_carries_no_token() -> None:
@@ -157,6 +321,13 @@ def test_no_other_shipped_script_constructs_mail_commands_or_git_keys() -> None:
 
     raw_path, raw_source = raw_mail_violation_source()
     assert module.raw_mail_command_violations(raw_source) == [raw_path]
+    shell_path, shell_source = raw_mail_shell_violation_source()
+    assert module.raw_mail_command_violations(shell_source) == [shell_path]
+    for (
+        qualified_path,
+        qualified_source,
+    ) in raw_mail_qualified_shell_violation_sources():
+        assert module.raw_mail_command_violations(qualified_source) == [qualified_path]
     git_path, git_source = git_project_key_violation_source()
     assert module.git_project_key_violations(git_source) == [git_path]
 
@@ -205,12 +376,18 @@ def test_a_label_in_a_target_position_is_passed_as_the_identity_never_resolved()
                 module.PUBLIC_AM_RECORD_OPTIONS[module.RECIPIENT_FIELD],
             ),
             (
-                module.operation_request(module.Operation.INBOX, agent=label),
+                module.operation_request(module.Operation.LIST, agent=label),
                 module.PUBLIC_AM_ARGUMENT_OPTIONS[module.AGENT_FIELD],
             ),
             (
                 module.operation_request(
-                    module.Operation.RECEIPT, agent=label, message_id=message_id
+                    module.Operation.READ, agent=label, message_id=message_id
+                ),
+                module.PUBLIC_AM_ARGUMENT_OPTIONS[module.AGENT_FIELD],
+            ),
+            (
+                module.operation_request(
+                    module.Operation.ACKNOWLEDGE, agent=label, message_id=message_id
                 ),
                 module.PUBLIC_AM_ARGUMENT_OPTIONS[module.AGENT_FIELD],
             ),
@@ -251,12 +428,12 @@ def test_a_store_label_never_selects_the_sender_or_recipient_of_a_record() -> No
         # The sender label is another agent's stable name, the shape a label
         # that selected by name would be fooled by.
         inbox_request = module.operation_request(
-            module.Operation.INBOX, agent=recipient, include_bodies=True
+            module.Operation.LIST, agent=recipient, include_bodies=True
         )
         inbox_arguments = cast(dict[str, object], inbox_request[module.ARGUMENTS_FIELD])
         inbox_variant = label_collision_variant(
             module,
-            module.Operation.INBOX,
+            module.Operation.LIST,
             inbox_arguments,
             sender_label=collision,
             recipient_label=label,
@@ -442,3 +619,176 @@ def test_a_wait_keeps_no_state_and_issues_only_inbox_listings() -> None:
                     assert argv[: len(listing)] == listing, argv
 
     run_wait_cases(assert_case)
+
+
+def test_a_text_argument_carrying_a_nul_byte_never_reaches_a_store_command() -> None:
+    def assert_operation(
+        module: ModuleType, request: dict[str, object], project_key: str
+    ) -> None:
+        tainted = nul_tainted_requests(module, request)
+        assert tainted
+        for variant in tainted:
+            runner = common_dir_seeded_runner(module, project_key)
+            result = module.execute(variant, runner)
+
+            assert (
+                result[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
+            ), variant
+            assert runner.calls == []
+
+    run_operation_mapping(assert_operation)
+
+
+def test_an_over_long_thread_id_never_reaches_a_store_command() -> None:
+    module = load_agent_mail()
+    limit = module.THREAD_ID_MAXIMUM_LENGTH
+
+    def assert_operation(
+        module: ModuleType, request: dict[str, object], project_key: str
+    ) -> None:
+        if module.Operation(request[module.OPERATION_FIELD]) is not (
+            module.Operation.SEND
+        ):
+            return
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        record = cast(dict[str, object], arguments[module.RECORD_FIELD])
+
+        def sent_with(correlation: str) -> dict[str, object]:
+            return {
+                **request,
+                module.ARGUMENTS_FIELD: {
+                    **arguments,
+                    module.RECORD_FIELD: {
+                        **record,
+                        module.CORRELATION_FIELD: correlation,
+                    },
+                },
+            }
+
+        refused = common_dir_seeded_runner(module, project_key)
+        result = module.execute(sent_with("a" * (limit + 1)), refused)
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
+        assert refused.calls == []
+
+        escaped = common_dir_seeded_runner(module, project_key)
+        result = module.execute(sent_with("\u00e9" * limit), escaped)
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
+        assert escaped.calls == []
+
+        at_limit = common_dir_seeded_runner(
+            module,
+            project_key,
+            store_response_result(module, module.Operation.SEND, arguments),
+        )
+        result = module.execute(sent_with("a" * limit), at_limit)
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+        assert len(at_limit.calls) == 2
+
+    run_operation_mapping(assert_operation)
+
+
+def test_every_result_carries_the_versioned_shape_and_a_runner_error_is_named() -> None:
+    module = load_agent_mail()
+
+    def assert_operation(
+        module: ModuleType, request: dict[str, object], project_key: str
+    ) -> None:
+        for error, status in (
+            (FileNotFoundError("absent"), module.ExecutionStatus.STORE_UNAVAILABLE),
+            (PermissionError("denied"), module.ExecutionStatus.STORE_UNAVAILABLE),
+            (
+                subprocess.TimeoutExpired(module.AM_COMMAND, 1),
+                module.ExecutionStatus.COMMAND_FAILED,
+            ),
+            (RuntimeError("broken"), module.ExecutionStatus.COMMAND_FAILED),
+            (ValueError("odd"), module.ExecutionStatus.COMMAND_FAILED),
+        ):
+            result = module.execute(
+                request,
+                store_error_runner(module, project_key, error),
+                ScriptedClock(),
+            )
+
+            assert result[module.STATUS_FIELD] == status, (request, error)
+            assert module.validate_operation_result(result) == result
+            assert result[module.SCHEMA_VERSION_FIELD] == module.SCHEMA_VERSION
+
+    run_operation_mapping(assert_operation)
+
+    unparsed = io.StringIO()
+    code = module.main(
+        [module.CliOperation.RUN.value],
+        stdin=io.StringIO("{"),
+        stdout=unparsed,
+    )
+    emitted = json.loads(unparsed.getvalue())
+    assert code != 0
+    assert emitted[module.STATUS_FIELD] == module.ExecutionStatus.INVALID_SCHEMA
+    assert module.validate_operation_result(emitted) == emitted
+
+
+def test_no_operation_derives_liveness_from_the_stores_activity_timestamp() -> None:
+    module = load_agent_mail()
+    register = module.Operation.REGISTER
+    request = next(
+        candidate
+        for candidate in requests_over_every_operation(module)
+        if candidate[module.OPERATION_FIELD] == register
+    )
+    arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+    payload = cast(
+        dict[str, object], store_response_payload(module, register, arguments)
+    )
+    activity_fields = [name for name in payload if "active" in name]
+    assert activity_fields
+    other_instant = cast(
+        dict[str, object],
+        store_response_payload(
+            module,
+            module.Operation.SEND,
+            {},
+        ),
+    )["created_ts"]
+
+    def assert_operation(
+        module: ModuleType, _request: dict[str, object], project_key: str
+    ) -> None:
+        data: list[object] = []
+        for variant in (
+            payload,
+            {**payload, **{name: other_instant for name in activity_fields}},
+            {**payload, **{name: None for name in activity_fields}},
+        ):
+            runner = common_dir_seeded_runner(
+                module, project_key, text_command_result(module, json.dumps(variant))
+            )
+            result = module.execute(request, runner)
+            assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+            data.append(result[module.DATA_FIELD])
+        assert data[0] == data[1] == data[2]
+
+    run_operation_mapping(assert_operation)
+
+
+def test_only_read_and_acknowledge_reach_a_command_that_changes_read_state() -> None:
+    module = load_agent_mail()
+    judging = {module.Operation.READ, module.Operation.ACKNOWLEDGE}
+    judging_paths = {
+        usage_contract_for(module, operation).command_path for operation in judging
+    }
+    seen: set[object] = set()
+
+    def assert_operation(
+        module: ModuleType, request: dict[str, object], project_key: str
+    ) -> None:
+        operation = module.Operation(request[module.OPERATION_FIELD])
+        contract = usage_contract_for(module, operation)
+        reading = read_argv(contract, module.command_for(request, project_key))
+        seen.add(operation)
+        assert (reading.command_path[1:] in judging_paths) is (operation in judging)
+        if operation not in judging:
+            assert reading.positionals == ()
+
+    run_operation_mapping(assert_operation)
+
+    assert seen == set(module.Operation)

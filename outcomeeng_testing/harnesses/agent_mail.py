@@ -18,7 +18,8 @@ from tempfile import TemporaryDirectory
 from types import ModuleType
 from typing import Protocol, cast
 
-from hypothesis import given, seed, settings
+from hypothesis import assume, given, seed, settings
+from hypothesis import strategies as st
 
 from outcomeeng_testing.generators.agent_mail import (
     COMMON_DIR_EXACT,
@@ -27,11 +28,15 @@ from outcomeeng_testing.generators.agent_mail import (
     common_dir_output,
     capture_row_ordinals,
     distinct_stable_names,
+    escape_prefixed_correlations,
+    fitting_correlations,
+    thread_alphabet_thread_ids,
     position_labels,
     coordination_references,
     expected_project_key,
     message_records,
     message_texts,
+    non_path_repository_values,
     operation_requests,
     program_names,
     project_key_paths,
@@ -66,6 +71,11 @@ USAGE_FIXTURE_ROOT = FIXTURE_ROOT / "usage"
 # the resolver is read against.
 RESPONSE_FIXTURE_ROOT = FIXTURE_ROOT / "responses"
 RAW_MAIL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_command.py.txt"
+RAW_MAIL_SHELL_VIOLATION_FIXTURE = FIXTURE_ROOT / "raw_am_shell_command.py.txt"
+RAW_MAIL_QUALIFIED_SHELL_VIOLATION_FIXTURES = (
+    FIXTURE_ROOT / "raw_am_absolute_shell_command.py.txt",
+    FIXTURE_ROOT / "raw_am_relative_shell_command.py.txt",
+)
 GIT_PROJECT_KEY_VIOLATION_FIXTURE = FIXTURE_ROOT / "git_project_key.py.txt"
 RECORD_ROUNDTRIP_SEED = 2026091801
 RECORD_ROUNDTRIP_EXAMPLES = 60
@@ -73,6 +83,8 @@ RECORD_ROUNDTRIP_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.property.l1.py"
 )
+CORRELATION_ENCODING_SEED = 2026102502
+CORRELATION_ENCODING_EXAMPLES = 200
 DELEGATION_CHAIN_SEED = 2026092201
 DELEGATION_CHAIN_EXAMPLES = 20
 TERMINAL_PROPERTY_SEED = 2026091802
@@ -96,6 +108,16 @@ STORE_RESPONSE_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
 INBOX_ROW_SEED = 2026091807
 INBOX_ROW_EXAMPLES = 10
 INBOX_ROW_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+ACK_STATUS_SEED = 2026102501
+ACK_STATUS_EXAMPLES = 5
+ACK_STATUS_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
+# The installed-store probe's committed attested run: whole-payload store
+# responses captured from the installed `am` through the adapter.
+ATTESTED_RUN_ROOT = (
+    ROOT
+    / "spx/43-coding-agents.enabler/18-agent-mail.enabler"
+    / "probes/installed-store/attested-run"
+)
 WAIT_SEED = 2026101601
 WAIT_EXAMPLES = 10
 WAIT_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
@@ -107,6 +129,10 @@ LABEL_RESPONSE_EXAMPLES = 5
 LABEL_RESPONSE_REPLAY_PATH = PROJECT_KEY_MAPPING_REPLAY_PATH
 LABEL_TARGETING_SEED = 2026100902
 LABEL_TARGETING_EXAMPLES = 10
+NAMED_REPOSITORY_SEED = 2026102601
+NAMED_REPOSITORY_EXAMPLES = 10
+INVALID_REPOSITORY_SEED = 2026102602
+INVALID_REPOSITORY_EXAMPLES = 40
 COMPLIANCE_REPLAY_PATH = (
     "spx/43-coding-agents.enabler/18-agent-mail.enabler/tests/"
     "test_agent_mail.compliance.l1.py"
@@ -158,6 +184,17 @@ class CapturedInboxResponse:
     """One captured inbox response, or a named variant of one, replayable by path."""
 
     capture: str
+    result: CommandResultContract
+    payload: dict[str, object]
+
+
+@dataclass(frozen=True)
+class AttestedListing:
+    """One attested-run listing: the request the adapter ran, the store's reply
+    to it, and the capture's path."""
+
+    capture: str
+    request: dict[str, object]
     result: CommandResultContract
     payload: dict[str, object]
 
@@ -331,7 +368,7 @@ def _inbox_captures_with_bodies(module: ModuleType) -> list[Path]:
     order: the store answered the same command while a receipt was pending and
     again after it was recorded."""
     base = _response_fixture_path(
-        module, module.Operation.INBOX, {module.INCLUDE_BODIES_FIELD: True}
+        module, module.Operation.LIST, {module.INCLUDE_BODIES_FIELD: True}
     )
     return sorted(RESPONSE_FIXTURE_ROOT.glob(f"{base.stem}*.json"))
 
@@ -495,6 +532,43 @@ def run_record_roundtrip_property(
     run_replayable_property(
         generated_roundtrip,
         seed_value=RECORD_ROUNDTRIP_SEED,
+        replay_path=RECORD_ROUNDTRIP_REPLAY_PATH,
+    )
+
+
+def run_correlation_encoding_property(
+    assert_encoding: Callable[[ModuleType, str, str], None],
+) -> None:
+    """Drive correlations the store's thread alphabet rejects and ones it admits,
+    plus thread ids another writer created, while the linked test owns the
+    round-trip, alphabet, and collision predicates.
+
+    The linked test receives the correlation and a store thread id drawn from
+    the thread alphabet.
+    """
+    module = _load()
+
+    @seed(CORRELATION_ENCODING_SEED)
+    @settings(
+        max_examples=CORRELATION_ENCODING_EXAMPLES, deadline=None, print_blob=True
+    )
+    @given(
+        correlation=st.one_of(
+            fitting_correlations(),
+            escape_prefixed_correlations(module.CORRELATION_ESCAPE_PREFIX),
+            coordination_references(),
+        ),
+        foreign_thread_id=st.one_of(
+            thread_alphabet_thread_ids(module.THREAD_ID_MAXIMUM_LENGTH),
+            escape_prefixed_correlations(module.CORRELATION_ESCAPE_PREFIX),
+        ),
+    )
+    def generated_encoding(correlation: str, foreign_thread_id: str) -> None:
+        assert_encoding(module, correlation, foreign_thread_id)
+
+    run_replayable_property(
+        generated_encoding,
+        seed_value=CORRELATION_ENCODING_SEED,
         replay_path=RECORD_ROUNDTRIP_REPLAY_PATH,
     )
 
@@ -664,11 +738,90 @@ def inbox_request_with_bodies(module: ModuleType) -> dict[str, object]:
     for request in operation_requests(module):
         arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
         if (
-            module.Operation(request[module.OPERATION_FIELD]) is module.Operation.INBOX
+            module.Operation(request[module.OPERATION_FIELD]) is module.Operation.LIST
             and arguments.get(module.INCLUDE_BODIES_FIELD) is True
         ):
             return request
     raise CaptureError("the registry declares no inbox request with bodies")
+
+
+def _attested_artifacts() -> list[tuple[str, dict[str, object]]]:
+    return [
+        (
+            str(path.relative_to(ROOT)),
+            cast(dict[str, object], json.loads(path.read_text(encoding="utf-8"))),
+        )
+        for path in sorted(ATTESTED_RUN_ROOT.glob("*.json"))
+    ]
+
+
+def attested_store_ack_requirements(module: ModuleType) -> dict[int, bool]:
+    """The store's own acknowledgement requirement per message id, read from the
+    attested run's raw store inbox listings, which carry `ack_required`."""
+    requirements: dict[int, bool] = {}
+    for _, artifact in _attested_artifacts():
+        rows = artifact.get("result")
+        if not isinstance(rows, list):
+            continue
+        for row in cast(list[object], rows):
+            if isinstance(row, dict) and module.STORE_ACK_REQUIRED_FIELD in row:
+                requirements[cast(int, row[module.STORE_ID_FIELD])] = cast(
+                    bool, row[module.STORE_ACK_REQUIRED_FIELD]
+                )
+    if not requirements:
+        raise CaptureError("the attested run holds no raw store inbox listing")
+    return requirements
+
+
+def attested_listings(module: ModuleType) -> list[AttestedListing]:
+    """Every attested-run list operation whose store response lists inbox rows,
+    replayable as the store's reply."""
+    listings: list[AttestedListing] = []
+    for capture, artifact in _attested_artifacts():
+        request = artifact.get("request")
+        outcome = artifact.get("result")
+        if not isinstance(request, dict) or not isinstance(outcome, dict):
+            continue
+        if request.get(module.OPERATION_FIELD) != module.Operation.LIST.value:
+            continue
+        response = cast(dict[str, object], outcome[module.RESPONSE_FIELD])
+        listings.append(
+            AttestedListing(
+                capture,
+                cast(dict[str, object], request),
+                cast(
+                    CommandResultContract,
+                    module.CommandResult(0, json.dumps(response), ""),
+                ),
+                response,
+            )
+        )
+    if not listings:
+        raise CaptureError("the attested run holds no list operation")
+    return listings
+
+
+def run_attested_ack_mapping(
+    assert_listing: Callable[[ModuleType, str, AttestedListing, dict[int, bool]], None],
+) -> None:
+    """Replay every attested-run listing as the store's reply under generated
+    project keys, with the store's own per-id acknowledgement requirement."""
+    module = _load()
+    requirements = attested_store_ack_requirements(module)
+    listings = attested_listings(module)
+
+    @seed(ACK_STATUS_SEED)
+    @settings(max_examples=ACK_STATUS_EXAMPLES, deadline=None, print_blob=True)
+    @given(project_key=project_key_paths())
+    def generated_listings(project_key: str) -> None:
+        for listing in listings:
+            assert_listing(module, project_key, listing, requirements)
+
+    run_replayable_property(
+        generated_listings,
+        seed_value=ACK_STATUS_SEED,
+        replay_path=ACK_STATUS_REPLAY_PATH,
+    )
 
 
 def run_inbox_row_mapping(
@@ -724,7 +877,7 @@ def _first_request(
         arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
         if module.Operation(request[module.OPERATION_FIELD]) is not operation:
             continue
-        if operation is module.Operation.INBOX:
+        if operation is module.Operation.LIST:
             if (arguments.get(module.INCLUDE_BODIES_FIELD) is True) is include_bodies:
                 return request
         elif operation is module.Operation.REGISTER:
@@ -757,12 +910,12 @@ def captured_label_responses(module: ModuleType) -> list[CapturedLabelResponse]:
             _response_fixture_path(module, module.Operation.SEND, None),
         ),
         (
-            module.Operation.INBOX,
+            module.Operation.LIST,
             False,
-            _response_fixture_path(module, module.Operation.INBOX, None),
+            _response_fixture_path(module, module.Operation.LIST, None),
         ),
         *(
-            (module.Operation.INBOX, True, path)
+            (module.Operation.LIST, True, path)
             for path in _inbox_captures_with_bodies(module)
         ),
     ]
@@ -779,7 +932,7 @@ def captured_label_responses(module: ModuleType) -> list[CapturedLabelResponse]:
     senders = [
         cast(dict[str, object], row).get(module.STORE_SENDER_DISPLAY_NAME_FIELD)
         for response in responses
-        if response.operation is module.Operation.INBOX
+        if response.operation is module.Operation.LIST
         for row in _label_rows(module, response.payload)
     ]
     if not any(label is None for label in senders) or not any(
@@ -1058,6 +1211,22 @@ def raw_mail_violation_source() -> tuple[str, dict[str, str]]:
     )
 
 
+def raw_mail_shell_violation_source() -> tuple[str, dict[str, str]]:
+    return (
+        str(RAW_MAIL_SHELL_VIOLATION_FIXTURE.relative_to(ROOT)),
+        _source_texts((RAW_MAIL_SHELL_VIOLATION_FIXTURE,)),
+    )
+
+
+def raw_mail_qualified_shell_violation_sources() -> tuple[
+    tuple[str, dict[str, str]], ...
+]:
+    return tuple(
+        (str(fixture.relative_to(ROOT)), _source_texts((fixture,)))
+        for fixture in RAW_MAIL_QUALIFIED_SHELL_VIOLATION_FIXTURES
+    )
+
+
 def git_project_key_violation_source() -> tuple[str, dict[str, str]]:
     return (
         str(GIT_PROJECT_KEY_VIOLATION_FIXTURE.relative_to(ROOT)),
@@ -1167,16 +1336,27 @@ def mail_pool() -> Iterator[MailPool]:
 def run_cli_project_key(
     working_directory: Path,
     environment: Mapping[str, str] | None = None,
+    repository: Path | str | None = None,
 ) -> tuple[int, dict[str, object]]:
     """Run the shipped CLI's project-key operation in ``working_directory``.
 
     ``environment`` names variables to add to the inherited environment for
     this run, so the variables a caller could answer a location question from
-    are carried into the process the way a hook carries them.
+    are carried into the process the way a hook carries them. ``repository``
+    names the repository whose key is asked for; the attached form carries a
+    value that opens with a dash.
     """
     module = _load()
+    repository_arguments = (
+        [] if repository is None else [f"{module.REPOSITORY_OPTION}={repository}"]
+    )
     completed = subprocess.run(
-        [sys.executable, str(AGENT_MAIL_PATH), module.CliOperation.PROJECT_KEY],
+        [
+            sys.executable,
+            str(AGENT_MAIL_PATH),
+            module.CliOperation.PROJECT_KEY,
+            *repository_arguments,
+        ],
         cwd=working_directory,
         capture_output=True,
         text=True,
@@ -1470,7 +1650,7 @@ def store_project_fallback_variable(module: ModuleType) -> str:
     adapter, and a capture whose wording drifts fails the read.
     """
     capture = USAGE_FIXTURE_ROOT / (
-        f"{_command_fixture_name(module, module.Operation.INBOX)}.txt"
+        f"{_command_fixture_name(module, module.Operation.LIST)}.txt"
     )
     names = {
         match.group(1)
@@ -1742,3 +1922,282 @@ def wait_workspace() -> Iterator[Path]:
 def workspace_entries(workspace: Path) -> list[str]:
     """Every path under the workspace, relative to it, in sorted order."""
     return sorted(str(path.relative_to(workspace)) for path in workspace.rglob("*"))
+
+
+@dataclass
+class StoreErrorRunner:
+    """Failure-simulation collaborator: the repository lookup answers with the
+    generated project key and every store command raises the supplied error."""
+
+    reply: CommandResultContract
+    error: BaseException
+    calls: list[tuple[tuple[str, ...], str | None]] = field(default_factory=list)
+
+    def run(
+        self,
+        argv: tuple[str, ...],
+        stdin: str | None = None,
+        env: Mapping[str, str] | None = None,
+        timeout_seconds: float | None = None,
+    ) -> CommandResultContract:
+        self.calls.append((argv, stdin))
+        if len(self.calls) == 1:
+            return self.reply
+        raise self.error
+
+
+def store_error_runner(
+    module: ModuleType, project_key: str, error: BaseException
+) -> StoreErrorRunner:
+    return StoreErrorRunner(
+        text_command_result(module, common_dir_output(COMMON_DIR_EXACT, project_key)),
+        error,
+    )
+
+
+def nul_tainted_requests(
+    module: ModuleType, request: dict[str, object]
+) -> list[dict[str, object]]:
+    """One copy of the request per text value it carries, that value followed
+    by the NUL character the source declares."""
+
+    def taint(
+        value: object, paths: list[tuple[object, ...]], prefix: tuple[object, ...]
+    ) -> None:
+        if isinstance(value, str):
+            paths.append(prefix)
+        elif isinstance(value, dict):
+            for key, item in value.items():
+                taint(item, paths, (*prefix, key))
+
+    def replaced(value: object, path: tuple[object, ...]) -> object:
+        if not path:
+            return f"{value}{module.NUL_CHARACTER}"
+        copy = dict(cast(dict[object, object], value))
+        copy[path[0]] = replaced(copy[path[0]], path[1:])
+        return copy
+
+    paths: list[tuple[object, ...]] = []
+    taint(request[module.ARGUMENTS_FIELD], paths, ())
+    return [
+        {
+            **request,
+            module.ARGUMENTS_FIELD: replaced(request[module.ARGUMENTS_FIELD], path),
+        }
+        for path in paths
+    ]
+
+
+@dataclass(frozen=True)
+class NamedRepositoryCase:
+    """One generated naming of a repository.
+
+    ``repository`` is the path a request names, ``project_key`` the key its
+    lookup answers, and ``other_key`` the key the adapter's own working
+    directory would answer, so a call that followed the working directory
+    rather than the named path is told apart by the key it reports. The store
+    reply a case needs, if any, is ``exit_code`` with its ``detail``.
+    """
+
+    repository: str
+    project_key: str
+    other_key: str
+    exit_code: int
+    detail: str
+
+
+def run_named_repository_cases(
+    assert_case: Callable[[ModuleType, NamedRepositoryCase], None],
+) -> None:
+    """Drive generated repository namings through a linked predicate."""
+    module = _load()
+
+    @seed(NAMED_REPOSITORY_SEED)
+    @settings(max_examples=NAMED_REPOSITORY_EXAMPLES, deadline=None, print_blob=True)
+    @given(
+        repository=project_key_paths(),
+        project_key=project_key_paths(),
+        other_key=project_key_paths(),
+        exit_code=store_exit_codes(),
+        detail=message_texts(),
+    )
+    def generated_case(
+        repository: str,
+        project_key: str,
+        other_key: str,
+        exit_code: int,
+        detail: str,
+    ) -> None:
+        assume(len({repository, project_key, other_key}) == 3)
+        assert_case(
+            module,
+            NamedRepositoryCase(
+                repository=repository,
+                project_key=project_key,
+                other_key=other_key,
+                exit_code=exit_code,
+                detail=detail,
+            ),
+        )
+
+    run_replayable_property(
+        generated_case,
+        seed_value=NAMED_REPOSITORY_SEED,
+        replay_path=COMPLIANCE_REPLAY_PATH,
+    )
+
+
+def run_invalid_repository_cases(
+    assert_case: Callable[[ModuleType, object], None],
+) -> None:
+    """Drive generated values that are no absolute path string through a linked
+    predicate."""
+    module = _load()
+
+    @seed(INVALID_REPOSITORY_SEED)
+    @settings(max_examples=INVALID_REPOSITORY_EXAMPLES, deadline=None, print_blob=True)
+    @given(value=non_path_repository_values())
+    def generated_case(value: object) -> None:
+        assert_case(module, value)
+
+    run_replayable_property(
+        generated_case,
+        seed_value=INVALID_REPOSITORY_SEED,
+        replay_path=COMPLIANCE_REPLAY_PATH,
+    )
+
+
+def request_naming_repository(
+    module: ModuleType, request: dict[str, object], repository: object
+) -> dict[str, object]:
+    """The request with its optional ``repository`` set to ``repository``,
+    built without the request builder's own check so an invalid value reaches
+    the adapter as a caller could send it."""
+    arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+    return {
+        **request,
+        module.ARGUMENTS_FIELD: {**arguments, module.REPOSITORY_FIELD: repository},
+    }
+
+
+def unresolved_then_fallback_runner(
+    module: ModuleType,
+    case: NamedRepositoryCase,
+    store_result: CommandResultContract,
+) -> RecordingRunner:
+    """A runner whose first reply is the failed lookup of the named path.
+
+    The replies after it are what a fallback would consume: the working
+    directory's own lookup naming ``case.other_key``, then the store's reply.
+    An adapter that answered the unresolved path from anywhere else would
+    consume them and succeed.
+    """
+    return RecordingRunner(
+        [
+            failed_command_result(module, case.exit_code, case.detail),
+            text_command_result(
+                module, common_dir_output(COMMON_DIR_EXACT, case.other_key)
+            ),
+            store_result,
+        ]
+    )
+
+
+# Overlay and configuration files a repository-selecting reader could consult,
+# each placed where such a reader would look: beside the working directory and
+# at and above the named repository.
+DECOY_RELATIVE_PATHS = (
+    Path("spx/local/agent-mail.md"),
+    Path("spx.config.yaml"),
+    Path(".claude/settings.json"),
+    Path(".codex/config.toml"),
+    Path(".mcp.json"),
+    Path(".env"),
+)
+
+# Runs the adapter's script with every file open recorded, so a read the
+# adapter makes shows as an observation rather than being inferred from its
+# source. The recorded paths are absolute against the process's working
+# directory.
+OPEN_AUDIT_SOURCE = """
+import json, os, runpy, sys
+opened = []
+def record(event, arguments):
+    if event == "open" and arguments and isinstance(arguments[0], (str, bytes, os.PathLike)):
+        opened.append(os.path.abspath(os.fsdecode(arguments[0])))
+sys.addaudithook(record)
+script, report = sys.argv[1], sys.argv[2]
+sys.argv = [script] + sys.argv[3:]
+code = 0
+try:
+    runpy.run_path(script, run_name="__main__")
+except SystemExit as request:
+    code = request.code if isinstance(request.code, int) else 0
+with open(report, "w", encoding="utf-8") as stream:
+    json.dump({"code": code, "opened": opened}, stream)
+sys.exit(code)
+"""
+
+
+@contextmanager
+def decoy_workspace(pool: MailPool) -> Iterator[Path]:
+    """Yield a working directory that is no repository, with overlay and
+    configuration decoys in it, in the pool's main checkout, and in the pool's
+    parent directory, each naming the pool's foreign repository."""
+    with TemporaryDirectory(ignore_cleanup_errors=True) as raw:
+        workspace = Path(raw).resolve()
+        for root in (workspace, pool.main_checkout, pool.outside):
+            for relative in DECOY_RELATIVE_PATHS:
+                decoy = root / relative
+                decoy.parent.mkdir(parents=True, exist_ok=True)
+                decoy.write_text(f"repository: {pool.foreign}\n", encoding="utf-8")
+        yield workspace
+
+
+def run_cli_project_key_recording_opens(
+    working_directory: Path,
+    repository: Path | None,
+    roots: tuple[Path, ...],
+) -> tuple[int, dict[str, object], list[str]]:
+    """Run the shipped CLI's project-key operation under the open recorder.
+
+    Returns the exit code, the emitted payload, and every file the process
+    opened that lies at or below one of ``roots``.
+    """
+    module = _load()
+    repository_arguments = (
+        [] if repository is None else [f"{module.REPOSITORY_OPTION}={repository}"]
+    )
+    with TemporaryDirectory(ignore_cleanup_errors=True) as raw:
+        report = Path(raw) / "opened.json"
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                OPEN_AUDIT_SOURCE,
+                str(AGENT_MAIL_PATH),
+                str(report),
+                module.CliOperation.PROJECT_KEY,
+                *repository_arguments,
+            ],
+            cwd=working_directory,
+            capture_output=True,
+            text=True,
+            timeout=CLI_TIMEOUT_SECONDS,
+            check=False,
+        )
+        opened = cast(
+            list[str], json.loads(report.read_text(encoding="utf-8"))["opened"]
+        )
+    inside = [
+        path
+        for path in opened
+        if any(
+            path == str(root) or path.startswith(f"{root}{os.sep}") for root in roots
+        )
+    ]
+    return (
+        completed.returncode,
+        cast(dict[str, object], json.loads(completed.stdout)),
+        inside,
+    )

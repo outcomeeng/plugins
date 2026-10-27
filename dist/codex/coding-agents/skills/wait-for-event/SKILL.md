@@ -14,16 +14,17 @@ One JSON line naming the first event any requested source yielded, every source 
 
 A request is one JSON object naming a required `timeoutSeconds`, a positive number, and a non-empty `sources` array. Each source is an object whose `kind` selects its form:
 
-| Kind    | Fields                                                      | Yields an event when                                                                       |
-| ------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `mail`  | `agent`, `id`                                               | a record in the inbox of `agent` has a store id above `id`                                 |
-| `pane`  | `sessions`, each `{session, state}`; optional `environment` | the state of a named hosted agent session differs from its `state`                         |
-| `spend` | `after`; optional `root`                                    | the consumption-control detector recorded an alert after the instant `after`               |
-| `clock` | `at`                                                        | the instant `at`, an ISO 8601 instant ending in `Z` that falls before the timeout, arrives |
+| Kind    | Fields                                                      | Yields an event when                                                                        |
+| ------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `mail`  | `agent`, `id`; optional `repository`                        | the complete listing of `agent`, read and unread records alike, holds a store id above `id` |
+| `pane`  | `sessions`, each `{session, state}`; optional `environment` | the state of a named hosted agent session differs from its `state`                          |
+| `spend` | `after`; optional `root`                                    | the consumption-control detector recorded an alert after the instant `after`                |
+| `clock` | `at`                                                        | the instant `at`, an ISO 8601 instant ending in `Z` that falls before the timeout, arrives  |
 
 Each value comes from the last event handled:
 
 - `id` is the store id of the last mail record handled, `0` for none, so a run that ends at any point loses no record.
+- `repository` is the absolute path of the repository whose mail project holds `agent`'s records. A mail source that omits it reads the project of the working directory the wait runs in; one that names it reads that repository's project, and a named path that resolves to no repository, or is not an absolute path, appears as an `unreadable-source` line with no fallback to the working directory's project. Pass `repository` whenever the wait runs in a different repository than the one that registered `agent`.
 - `state` is the last agent state handled for that session, one of the states `/operate-herdr` projects. `session` is the agent name or pane id herdr reports. `environment` defaults to `herdr`; any other environment projects no agent session state and is reported as unreadable.
 - `after` and `at` are ISO 8601 instants ending in `Z`. `root` names the detector state root and defaults to the one `/control-token-spend` uses.
 
@@ -31,7 +32,7 @@ Each value comes from the last event handled:
 {
   "timeoutSeconds": 600,
   "sources": [
-    { "kind": "mail", "agent": "AmberGull", "id": 41 },
+    { "kind": "mail", "agent": "AmberGull", "id": 41, "repository": "/work/product.git" },
     { "kind": "pane", "sessions": [{ "session": "executor-288", "state": "working" }] },
     { "kind": "spend", "after": "2026-10-16T09:00:00Z" },
     { "kind": "clock", "at": "2026-10-16T10:00:00Z" }
@@ -89,7 +90,7 @@ python3 "${SKILL_DIR}/scripts/wait_event.py" < <request-file>
 - ALWAYS hold a wait to one invocation and re-arm it from the event handled; the script loops only inside its timeout and prints one line.
 - NEVER pass a request through a heredoc, a pipe, or an inline argument, and NEVER remove the request file.
 - NEVER run `am`, `herdr`, or a consumption-control read to reproduce a wait; the script reads mail through `/operate-agent-mail`, session states through `/operate-herdr`, and alerts through `/control-token-spend`, and builds no command of its own.
-- NEVER rely on the wait to acknowledge a record, mark mail read, or prompt a pane; it keeps no cursor, state file, or lock and changes nothing. Record a receipt with `/operate-agent-mail` and steer a pane with `/operate-herdr`.
+- NEVER rely on the wait to read or acknowledge a record or to prompt a pane; it keeps no cursor, state file, or lock and changes nothing. Judge a record with the `read` or `acknowledge` operation of `/operate-agent-mail` and steer a pane with `/operate-herdr`.
 - ALWAYS follow the arming rule `bounded-background-wait`: a wait has one explicit deadline, one result, and one owner that collects its termination, and the owner arms the next wait only after handling the line.
 - NEVER start the wait in the background, keep it as a standing watcher, or let a run re-arm itself.
 
@@ -97,7 +98,7 @@ python3 "${SKILL_DIR}/scripts/wait_event.py" < <request-file>
 
 <testing>
 
-The script is covered over generated requests and controlled command runners and clocks at the adapters' command boundaries: the four line forms and their exit codes, a request without a positive timeout rejected before any source is read, each source's mapping from the capability result to an event, an unreadable-source line, or no event, the first-event order across sources, and the absence of any state, mail, receipt, or pane write.
+The script is covered over generated requests and controlled command runners and clocks at the adapters' command boundaries: the four line forms and their exit codes, a request without a positive timeout rejected before any source is read, each source's mapping from the capability result to an event, an unreadable-source line, or no event, the first-event order across sources, and the absence of any state write, mail send, record read or acknowledgement, or pane write.
 
 </testing>
 

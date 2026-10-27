@@ -1,23 +1,23 @@
 {
   "step": "05-doorbell-labelled",
-  "startedUtc": "2026-10-09T17:42:56.353408+00:00",
-  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/message-agents/scripts/agent_message.py mail-result",
-  "cwd": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project",
+  "startedUtc": "2026-10-25T07:50:37.067925+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-4/src/plugins/coding-agents/skills/message-agents/scripts/agent_message.py mail-result",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/4d58f2f5-4e26-4e2d-aa23-2117c0421768/scratchpad/pl-repo2",
   "request": {
     "capabilityResult": {
       "schemaVersion": 1,
       "operation": "send",
       "status": "succeeded",
       "commandExitCode": 0,
-      "projectKey": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project/.git",
+      "projectKey": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/4d58f2f5-4e26-4e2d-aa23-2117c0421768/scratchpad/pl-repo2/.git",
       "response": {
-        "id": 19,
+        "id": 18803,
         "subject": "[fact] label surfaces check",
         "body_md": "Body for the labelled send.",
         "importance": "normal",
         "ack_required": false,
         "thread_id": "position-labels-probe",
-        "created_ts": "2026-10-09T17:42:51.408873Z",
+        "created_ts": "2026-10-25T07:50:36.974521Z",
         "from": "CopperFinch",
         "sender_display_name": "Probe Sender",
         "to": [
@@ -37,11 +37,10 @@
           "recipient": "SilverFinch",
           "subject": "label surfaces check",
           "body": "Body for the labelled send.",
-          "id": 19
+          "id": 18803
         }
       }
-    },
-    "doorbellTransport": null
+    }
   },
   "exitCode": 0,
   "result": {
@@ -54,7 +53,7 @@
           "ackRequired": false,
           "body": "Body for the labelled send.",
           "correlation": "position-labels-probe",
-          "id": 19,
+          "id": 18803,
           "kind": "fact",
           "recipient": "SilverFinch",
           "schema": 1,
@@ -63,13 +62,13 @@
         }
       },
       "operation": "send",
-      "projectKey": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project/.git",
+      "projectKey": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/4d58f2f5-4e26-4e2d-aa23-2117c0421768/scratchpad/pl-repo2/.git",
       "response": {
         "ack_required": false,
         "body_md": "Body for the labelled send.",
-        "created_ts": "2026-10-09T17:42:51.408873Z",
+        "created_ts": "2026-10-25T07:50:36.974521Z",
         "from": "CopperFinch",
-        "id": 19,
+        "id": 18803,
         "importance": "normal",
         "sender_display_name": "Probe Sender",
         "subject": "[fact] label surfaces check",
@@ -88,9 +87,9 @@
     "correlation": "position-labels-probe",
     "doorbell": {
       "submitted": false,
-      "text": "[Probe Sender <CopperFinch>] mail 19"
+      "text": "[Probe Sender <CopperFinch>] mail 18803"
     },
-    "id": 19,
+    "id": 18803,
     "kind": "fact",
     "ownershipEstablished": false,
     "recipient": "SilverFinch",

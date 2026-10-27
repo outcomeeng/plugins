@@ -9,7 +9,6 @@ invocation; the skill re-arms the next pass.
 from __future__ import annotations
 
 import argparse
-import contextlib
 import json
 import sys
 from pathlib import Path
@@ -178,38 +177,29 @@ def _mail_execute(
 ) -> dict[str, Any]:
     """Run one mail adapter request against the mail project `mail.channel` names.
 
-    The adapter derives its project key from the common Git directory of its own
-    working directory, so a configured channel is the adapter's working directory
-    for the call; an unset channel leaves the invocation checkout.
+    A configured channel is the adapter's `repository` argument; an unset
+    channel leaves the argument absent and the adapter resolves the invocation
+    checkout's repository. The working directory never changes.
     """
     directory = config["mailDirectory"]
     if directory is None:
         return mail.execute(request)
-    with contextlib.ExitStack() as stack:
-        try:
-            stack.enter_context(contextlib.chdir(directory))
-        except OSError as error:
-            raise DirectionError(
-                f"mail.channel {directory!r} cannot be entered: {error}; set "
-                f"mail.channel in the [mail] table of {config['overrideFile']['path']} "
-                "to the path of the repository whose mail project to use, or remove "
-                "the key to use the invocation checkout's repository."
-            ) from error
-        return mail.execute(request)
+    arguments = {**request["arguments"], "repository": directory}
+    return mail.execute({**request, "arguments": arguments})
 
 
-def _unread(
+def _unjudged(
     mail: Any, config: Mapping[str, Any], mail_name: str
 ) -> list[dict[str, Any]]:
     request = {
         "schemaVersion": ADAPTER_SCHEMA_VERSION,
-        "operation": "inbox",
-        "arguments": {"agent": mail_name, "unreadOnly": True, "limit": MAIL_LIMIT},
+        "operation": "list",
+        "arguments": {"agent": mail_name, "limit": MAIL_LIMIT},
     }
     result = _mail_execute(mail, config, request)
     if result["status"] != "succeeded":
         raise DirectionError(
-            f"mail inbox for {mail_name} failed with status {result.get('status')!r}: "
+            f"mail list for {mail_name} failed with status {result.get('status')!r}: "
             f"{result.get('detail')}; confirm the mail name is registered through "
             "coding-agents:operate-agent-mail."
         )
@@ -289,8 +279,8 @@ def _ring(
     if pane is None:
         return "skipped", {"label": position["name"], "detail": target["detail"]}
     try:
-        unread = _unread(mail, config, position["mail_name"])
-        newest = max((int(r["id"]) for r in unread), default=0)
+        unjudged = _unjudged(mail, config, position["mail_name"])
+        newest = max((int(r["id"]) for r in unjudged), default=0)
         if newest <= int(rungs.get(position["name"], 0)):
             return None
         screen = envs.read(pane)
@@ -629,7 +619,7 @@ def _inbox(args, config, mail) -> dict[str, Any]:
             "status": "unavailable",
             "detail": "inbox received no --recipient, and " + _mail_agent_unset(config),
         }
-    return {"records": _unread(mail, config, recipient)}
+    return {"records": _unjudged(mail, config, recipient)}
 
 
 def _roster(config, envs) -> dict[str, Any]:

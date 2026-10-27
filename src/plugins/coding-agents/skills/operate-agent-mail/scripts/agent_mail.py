@@ -17,8 +17,8 @@ from typing import Final, Mapping, Protocol, TextIO, cast
 SCHEMA_VERSION = 1
 RECORD_SCHEMA_VERSION = 1
 COMMAND_TIMEOUT_SECONDS = 30
-# A wait lists the requester's inbox at this interval until a record arrives or
-# its timeout passes, and each listing reads at most this many records.
+# A wait lists the requester's records at this interval until a record arrives
+# or its timeout passes, and each listing reads at most this many records.
 WAIT_POLL_INTERVAL_SECONDS = 2
 WAIT_LISTING_LIMIT = 1_000
 WAIT_TIMEOUT_MAXIMUM_SECONDS = 3_600
@@ -32,6 +32,7 @@ REGISTER_COMMAND = "register"
 MAIL_COMMAND = "mail"
 SEND_COMMAND = "send"
 ACK_COMMAND = "ack"
+READ_COMMAND = "read"
 ROBOT_COMMAND = "robot"
 INBOX_COMMAND = "inbox"
 REV_PARSE_COMMAND = "rev-parse"
@@ -49,11 +50,16 @@ BODY_OPTION = "--body"
 ACK_REQUIRED_OPTION = "--ack-required"
 AGENT_OPTION = "--agent"
 UNREAD_OPTION = "--unread"
+ALL_OPTION = "--all"
 INCLUDE_BODIES_OPTION = "--include-bodies"
 LIMIT_OPTION = "--limit"
 JSON_OPTION = "--json"
 PATH_FORMAT_ABSOLUTE_OPTION = "--path-format=absolute"
 GIT_COMMON_DIR_OPTION = "--git-common-dir"
+# Git runs as if started in the directory this option names, so a named
+# repository is read as Git's working directory without moving the process.
+GIT_DIRECTORY_OPTION = "-C"
+REPOSITORY_OPTION = "--repository"
 
 # Every variable that can make Git answer the location question from something
 # other than the invoking working directory. Git exports GIT_DIR into every hook
@@ -93,14 +99,35 @@ STORE_SENDER_DISPLAY_NAME_FIELD = "sender_display_name"
 STORE_TO_DISPLAY_NAMES_FIELD = "to_display_names"
 STORE_ACK_REQUIRED_FIELD = "ack_required"
 STORE_ACK_STATUS_FIELD = "ack_status"
-# The two states of a required acknowledgement on the store's inbox surface;
+# The three states of a required acknowledgement on the store's inbox surface:
+# required (sent, not yet judged), pending (read, not acknowledged), and acked;
 # every other status the store reports reads as no acknowledgement required.
+STORE_ACK_STATUS_REQUIRED = "required"
 STORE_ACK_STATUS_PENDING = "pending"
 STORE_ACK_STATUS_ACKED = "acked"
 STORE_ACK_REQUIRED_STATUSES = frozenset(
-    {STORE_ACK_STATUS_PENDING, STORE_ACK_STATUS_ACKED}
+    {
+        STORE_ACK_STATUS_REQUIRED,
+        STORE_ACK_STATUS_PENDING,
+        STORE_ACK_STATUS_ACKED,
+    }
 )
 STORE_INBOX_FIELD = "inbox"
+# The store's thread alphabet: an alphanumeric first character, then letters,
+# digits, `.`, `_`, or `-`, at most this many characters in all. A correlation
+# outside it, or beginning with the escape prefix, is written as the prefix
+# followed by its UTF-8 bytes, each byte outside letters, digits, `.`, and `-`
+# spelled as `_` and two lowercase hex digits.
+THREAD_ID_MAXIMUM_LENGTH = 128
+THREAD_ID_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"[A-Za-z0-9][A-Za-z0-9._-]{0,%d}" % (THREAD_ID_MAXIMUM_LENGTH - 1)
+)
+CORRELATION_ESCAPE_PREFIX = "xc-"
+CORRELATION_UNESCAPED_BYTES = frozenset(
+    b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-"
+)
+CORRELATION_ESCAPE_MARK = "_"
+NUL_CHARACTER = "\x00"
 # The store reads `--to` as a list joined by this separator, so a recipient
 # that carries it names several agents and no longer maps back to one record.
 STORE_RECIPIENT_SEPARATOR = ","
@@ -130,9 +157,11 @@ MESSAGE_ID_FIELD = "messageId"
 AFTER_ID_FIELD = "afterId"
 TIMEOUT_SECONDS_FIELD = "timeoutSeconds"
 OUTCOME_FIELD = "outcome"
-UNREAD_ONLY_FIELD = "unreadOnly"
+ALL_RECORDS_FIELD = "allRecords"
 INCLUDE_BODIES_FIELD = "includeBodies"
 LIMIT_FIELD = "limit"
+# The optional absolute path of the repository whose store an operation acts on.
+REPOSITORY_FIELD = "repository"
 
 # Fields of a message record.
 RECORD_SCHEMA_FIELD = "schema"
@@ -192,8 +221,9 @@ RECORD_TEXT_FIELDS = (
 class Operation(StrEnum):
     REGISTER = "register"
     SEND = "send"
-    INBOX = "inbox"
-    RECEIPT = "receipt"
+    LIST = "list"
+    READ = "read"
+    ACKNOWLEDGE = "acknowledge"
     WAIT = "wait"
 
 
@@ -274,36 +304,65 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
         (
             RequestShape(
                 frozenset({AGENT_FIELD, PROGRAM_FIELD, MODEL_FIELD}),
-                frozenset({TASK_FIELD, DISPLAY_NAME_FIELD}),
+                frozenset({TASK_FIELD, DISPLAY_NAME_FIELD, REPOSITORY_FIELD}),
             ),
         )
     ),
-    Operation.SEND: OperationContract((RequestShape(frozenset({RECORD_FIELD})),)),
-    Operation.INBOX: OperationContract(
+    Operation.SEND: OperationContract(
+        (RequestShape(frozenset({RECORD_FIELD}), frozenset({REPOSITORY_FIELD})),)
+    ),
+    Operation.LIST: OperationContract(
         (
             RequestShape(
                 frozenset({AGENT_FIELD}),
-                frozenset({UNREAD_ONLY_FIELD, INCLUDE_BODIES_FIELD, LIMIT_FIELD}),
+                frozenset(
+                    {
+                        ALL_RECORDS_FIELD,
+                        INCLUDE_BODIES_FIELD,
+                        LIMIT_FIELD,
+                        REPOSITORY_FIELD,
+                    }
+                ),
             ),
         )
     ),
-    Operation.RECEIPT: OperationContract(
-        (RequestShape(frozenset({AGENT_FIELD, MESSAGE_ID_FIELD})),)
+    Operation.READ: OperationContract(
+        (
+            RequestShape(
+                frozenset({AGENT_FIELD, MESSAGE_ID_FIELD}),
+                frozenset({REPOSITORY_FIELD}),
+            ),
+        )
+    ),
+    Operation.ACKNOWLEDGE: OperationContract(
+        (
+            RequestShape(
+                frozenset({AGENT_FIELD, MESSAGE_ID_FIELD}),
+                frozenset({REPOSITORY_FIELD}),
+            ),
+        )
     ),
     Operation.WAIT: OperationContract(
-        (RequestShape(frozenset({AGENT_FIELD, AFTER_ID_FIELD, TIMEOUT_SECONDS_FIELD})),)
+        (
+            RequestShape(
+                frozenset({AGENT_FIELD, AFTER_ID_FIELD, TIMEOUT_SECONDS_FIELD}),
+                frozenset({REPOSITORY_FIELD}),
+            ),
+        )
     ),
 }
 PUBLIC_AM_COMMAND_PREFIXES: Final[Mapping[Operation, tuple[str, ...]]] = {
     Operation.REGISTER: (AM_COMMAND, AGENTS_COMMAND, REGISTER_COMMAND),
     Operation.SEND: (AM_COMMAND, MAIL_COMMAND, SEND_COMMAND),
-    Operation.INBOX: (AM_COMMAND, ROBOT_COMMAND, INBOX_COMMAND),
-    Operation.RECEIPT: (AM_COMMAND, MAIL_COMMAND, ACK_COMMAND),
+    Operation.LIST: (AM_COMMAND, ROBOT_COMMAND, INBOX_COMMAND),
+    Operation.READ: (AM_COMMAND, MAIL_COMMAND, READ_COMMAND),
+    Operation.ACKNOWLEDGE: (AM_COMMAND, MAIL_COMMAND, ACK_COMMAND),
     Operation.WAIT: (AM_COMMAND, ROBOT_COMMAND, INBOX_COMMAND),
 }
-# Operations whose public command emits JSON on `--json`; receipt prints text.
+# Operations whose public command emits JSON on `--json`; read and acknowledge
+# print text.
 JSON_OPERATIONS = frozenset(
-    {Operation.REGISTER, Operation.SEND, Operation.INBOX, Operation.WAIT}
+    {Operation.REGISTER, Operation.SEND, Operation.LIST, Operation.WAIT}
 )
 PUBLIC_AM_ARGUMENT_OPTIONS: Final[Mapping[str, str]] = {
     AGENT_FIELD: AGENT_OPTION,
@@ -311,7 +370,7 @@ PUBLIC_AM_ARGUMENT_OPTIONS: Final[Mapping[str, str]] = {
     MODEL_FIELD: MODEL_OPTION,
     TASK_FIELD: TASK_OPTION,
     DISPLAY_NAME_FIELD: DISPLAY_NAME_OPTION,
-    UNREAD_ONLY_FIELD: UNREAD_OPTION,
+    ALL_RECORDS_FIELD: ALL_OPTION,
     INCLUDE_BODIES_FIELD: INCLUDE_BODIES_OPTION,
     LIMIT_FIELD: LIMIT_OPTION,
 }
@@ -335,7 +394,7 @@ INTEGER_BOUNDS: Final[Mapping[str, tuple[int, int]]] = {
     AFTER_ID_FIELD: (0, 1_000_000_000),
     TIMEOUT_SECONDS_FIELD: (1, WAIT_TIMEOUT_MAXIMUM_SECONDS),
 }
-BOOLEAN_ARGUMENT_FIELDS = frozenset({UNREAD_ONLY_FIELD, INCLUDE_BODIES_FIELD})
+BOOLEAN_ARGUMENT_FIELDS = frozenset({ALL_RECORDS_FIELD, INCLUDE_BODIES_FIELD})
 TEXT_ARGUMENT_FIELDS = frozenset(
     {AGENT_FIELD, PROGRAM_FIELD, MODEL_FIELD, TASK_FIELD, DISPLAY_NAME_FIELD}
 )
@@ -349,12 +408,17 @@ ARGUMENT_NAMES: Final[Mapping[str, str]] = {
     "message_id": MESSAGE_ID_FIELD,
     "after_id": AFTER_ID_FIELD,
     "timeout_seconds": TIMEOUT_SECONDS_FIELD,
-    "unread_only": UNREAD_ONLY_FIELD,
+    "all_records": ALL_RECORDS_FIELD,
     "include_bodies": INCLUDE_BODIES_FIELD,
     "limit": LIMIT_FIELD,
+    "repository": REPOSITORY_FIELD,
 }
+# The argument-vector form of a raw `am` command, and its shell-string form: the
+# executable, bare or qualified by a path, followed by one of the store's command
+# groups inside a string.
 RAW_MAIL_COMMAND_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"\bAM_COMMAND\b|[\[(]['\"]am['\"]"),
+    re.compile(r"(?<![\w.-])am\s+(?:mail|agents|robot)\b"),
 )
 GIT_PROJECT_KEY_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"[\[(]['\"]git['\"]\s*,"),
@@ -397,9 +461,38 @@ class MonotonicClock:
         time.sleep(seconds)
 
 
+def failure_detail(command: str, cause: BaseException | str, check: str) -> str:
+    """Return the one failure text: the failing command, its cause, and what to check.
+
+    An exception cause is written as its class name and message. Every part must
+    be non-blank, so no failure text exists without a cause and a fix.
+    """
+    cause_text = (
+        f"{type(cause).__name__}: {cause}"
+        if isinstance(cause, BaseException)
+        else cause
+    ).strip()
+    for part_name, part in (
+        ("command", command),
+        ("cause", cause_text),
+        ("check", check),
+    ):
+        if not part.strip():
+            raise ValueError(f"A failure detail needs a non-blank {part_name}.")
+    return f"{command} failed: {cause_text.rstrip('. ')}. {check}"
+
+
 class AgentMailError(RuntimeError):
-    def __init__(self, status: ExecutionStatus, message: str) -> None:
-        super().__init__(message)
+    """A failure whose message is always built by `failure_detail`."""
+
+    def __init__(
+        self,
+        status: ExecutionStatus,
+        command: str,
+        cause: BaseException | str,
+        check: str,
+    ) -> None:
+        super().__init__(failure_detail(command, cause, check))
         self.status = status
 
 
@@ -436,7 +529,10 @@ class SubprocessRunner:
 def _object(value: object, location: str) -> dict[str, object]:
     if not isinstance(value, dict):
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"Expected an object at {location}."
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Reading {location}",
+            f"expected an object, received {type(value).__name__}",
+            "Supply a JSON object there.",
         )
     return cast(dict[str, object], value)
 
@@ -444,7 +540,10 @@ def _object(value: object, location: str) -> dict[str, object]:
 def _array(value: object, location: str) -> list[object]:
     if not isinstance(value, list):
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"Expected an array at {location}."
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Reading {location}",
+            f"expected an array, received {type(value).__name__}",
+            "Supply a JSON array there.",
         )
     return cast(list[object], value)
 
@@ -452,7 +551,10 @@ def _array(value: object, location: str) -> list[object]:
 def _text(value: object, location: str) -> str:
     if not isinstance(value, str) or not value:
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"Expected non-empty text at {location}."
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Reading {location}",
+            f"expected non-empty text, received {value!r}",
+            "Supply a non-empty string there.",
         )
     return value
 
@@ -460,7 +562,10 @@ def _text(value: object, location: str) -> str:
 def _string(value: object, location: str) -> str:
     if not isinstance(value, str):
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"Expected text at {location}."
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Reading {location}",
+            f"expected text, received {type(value).__name__}",
+            "Supply a string there.",
         )
     return value
 
@@ -468,7 +573,10 @@ def _string(value: object, location: str) -> str:
 def _boolean(value: object, location: str) -> bool:
     if not isinstance(value, bool):
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"Expected a boolean at {location}."
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Reading {location}",
+            f"expected a boolean, received {value!r}",
+            "Supply true or false there.",
         )
     return value
 
@@ -476,12 +584,17 @@ def _boolean(value: object, location: str) -> bool:
 def _integer(value: object, location: str, *, minimum: int, maximum: int) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"Expected an integer at {location}."
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Reading {location}",
+            f"expected an integer, received {value!r}",
+            "Supply a whole number there.",
         )
     if not minimum <= value <= maximum:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Expected an integer between {minimum} and {maximum} at {location}.",
+            f"Reading {location}",
+            f"expected an integer between {minimum} and {maximum}, received {value}",
+            "Supply a value inside that range.",
         )
     return value
 
@@ -493,7 +606,9 @@ def _operation(value: object) -> Operation:
         valid = ", ".join(sorted(operation.value for operation in Operation))
         raise AgentMailError(
             ExecutionStatus.OPERATION_UNAVAILABLE,
-            f"Unsupported agent-mail operation: {value!r}. Valid operations: {valid}.",
+            f"Selecting the agent-mail operation {value!r}",
+            error,
+            f"Use one of: {valid}.",
         ) from error
 
 
@@ -504,12 +619,16 @@ def _record_kind(value: object, location: str, *, sent: bool) -> RecordKind:
         valid = ", ".join(sorted(member.value for member in SENT_KINDS))
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Unsupported record kind at {location}. Valid kinds: {valid}.",
+            f"Reading {location}",
+            error,
+            f"Use one of the kinds: {valid}.",
         ) from error
     if sent and kind not in SENT_KINDS:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"A {kind.value} record is derived on read and is never sent.",
+            f"Reading {location}",
+            f"a {kind.value} record is derived on read and is never sent",
+            f"Send a record of kind {', '.join(sorted(m.value for m in SENT_KINDS))}.",
         )
     return kind
 
@@ -540,12 +659,16 @@ def validate_record(
             details.append(f"missing: {', '.join(missing)}")
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Record fields at {location} are invalid ({'; '.join(details)}).",
+            f"Checking the record at {location}",
+            f"its fields are invalid ({'; '.join(details)})",
+            "Supply exactly the fields of the record contract.",
         )
     if value.get(RECORD_SCHEMA_FIELD) != RECORD_SCHEMA_VERSION:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Record schema at {location} must be {RECORD_SCHEMA_VERSION}.",
+            f"Checking the record at {location}",
+            f"its schema is {value.get(RECORD_SCHEMA_FIELD)!r}, not {RECORD_SCHEMA_VERSION}",
+            "Set the schema field to that value.",
         )
     validated: dict[str, object] = {
         RECORD_SCHEMA_FIELD: RECORD_SCHEMA_VERSION,
@@ -569,8 +692,10 @@ def validate_record(
     if STORE_RECIPIENT_SEPARATOR in recipient:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"A record names one recipient; {location}.{RECIPIENT_FIELD} carries "
-            f"the store's {STORE_RECIPIENT_SEPARATOR!r} separator: {recipient!r}.",
+            f"Checking {location}.{RECIPIENT_FIELD}",
+            f"a record names one recipient, but {recipient!r} carries the store's "
+            f"{STORE_RECIPIENT_SEPARATOR!r} separator",
+            "Name one recipient and send one record per recipient.",
         )
     validated[BODY_FIELD] = _string(value.get(BODY_FIELD), f"{location}.{BODY_FIELD}")
     if with_id:
@@ -630,7 +755,9 @@ def terminal_handback(
     if record[KIND_FIELD] not in TERMINAL_KINDS:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"{record[KIND_FIELD]} is not a terminal handback kind.",
+            "Building a terminal handback",
+            f"{record[KIND_FIELD]} is not a terminal handback kind",
+            f"Use one of: {', '.join(sorted(kind.value for kind in TERMINAL_KINDS))}.",
         )
     return record
 
@@ -643,7 +770,9 @@ def reduce_terminal(current: object | None, incoming: object) -> dict[str, objec
     if terminal[KIND_FIELD] not in TERMINAL_KINDS:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"{terminal[KIND_FIELD]} is not a terminal handback kind.",
+            "Reducing a terminal handback",
+            f"{terminal[KIND_FIELD]} is not a terminal handback kind",
+            f"Use one of: {', '.join(sorted(kind.value for kind in TERMINAL_KINDS))}.",
         )
     if current is None:
         return terminal
@@ -651,15 +780,94 @@ def reduce_terminal(current: object | None, incoming: object) -> dict[str, objec
     if existing[CORRELATION_FIELD] != terminal[CORRELATION_FIELD]:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            "A terminal handback names a different coordination reference.",
+            "Reducing a terminal handback",
+            f"it names coordination reference {terminal[CORRELATION_FIELD]!r}, "
+            f"not the current {existing[CORRELATION_FIELD]!r}",
+            "Reduce only handbacks that share one reference.",
         )
     if existing == terminal:
         return existing
+    if existing[KIND_FIELD] == terminal[KIND_FIELD]:
+        differing = sorted(
+            field_name
+            for field_name in existing
+            if existing[field_name] != terminal[field_name]
+        )
+        raise AgentMailError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Reducing the handbacks for {terminal[CORRELATION_FIELD]}",
+            f"the {terminal[KIND_FIELD]} handbacks differ in {', '.join(differing)}",
+            "Keep the first handback, or send the second under a new reference.",
+        )
     raise AgentMailError(
         ExecutionStatus.INVALID_SCHEMA,
-        f"Conflicting terminal handbacks for {terminal[CORRELATION_FIELD]}: "
-        f"{existing[KIND_FIELD]} then {terminal[KIND_FIELD]}.",
+        f"Reducing the handbacks for {terminal[CORRELATION_FIELD]}",
+        f"a {existing[KIND_FIELD]} handback and then a {terminal[KIND_FIELD]} handback conflict",
+        "Send one terminal kind per reference.",
     )
+
+
+def encode_correlation(correlation: str) -> str:
+    """Return the thread id the store receives for a correlation.
+
+    A correlation inside the store's thread alphabet that does not begin with the
+    escape prefix is written unchanged; every other correlation is written as the
+    prefix and its escaped UTF-8 bytes. The written form lies inside the alphabet
+    or exceeds its length, and an over-long form is refused before any command.
+    """
+    if THREAD_ID_PATTERN.fullmatch(correlation) and not correlation.startswith(
+        CORRELATION_ESCAPE_PREFIX
+    ):
+        return correlation
+    spelled = "".join(
+        chr(byte)
+        if byte in CORRELATION_UNESCAPED_BYTES
+        else f"{CORRELATION_ESCAPE_MARK}{byte:02x}"
+        for byte in correlation.encode("utf-8", errors="surrogatepass")
+    )
+    thread_id = f"{CORRELATION_ESCAPE_PREFIX}{spelled}"
+    if len(thread_id) > THREAD_ID_MAXIMUM_LENGTH:
+        raise AgentMailError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Writing the {CORRELATION_FIELD} field",
+            f"it encodes to a {len(thread_id)}-character thread id, over the "
+            f"store's {THREAD_ID_MAXIMUM_LENGTH}-character limit",
+            f"Shorten the {CORRELATION_FIELD} so its written form fits.",
+        )
+    return thread_id
+
+
+def decode_correlation(thread_id: str) -> str:
+    """Return the correlation a thread id encodes, or the thread id verbatim.
+
+    Only a form `encode_correlation` writes decodes; any other thread id, the
+    escape prefix included, reads back unchanged.
+    """
+    if not thread_id.startswith(CORRELATION_ESCAPE_PREFIX):
+        return thread_id
+    spelled = thread_id[len(CORRELATION_ESCAPE_PREFIX) :]
+    raw = bytearray()
+    index = 0
+    while index < len(spelled):
+        character = spelled[index]
+        if character == CORRELATION_ESCAPE_MARK:
+            digits = spelled[index + 1 : index + 3]
+            if len(digits) != 2 or not re.fullmatch(r"[0-9a-f]{2}", digits):
+                return thread_id
+            raw.append(int(digits, 16))
+            index += 3
+        elif ord(character) < 128 and ord(character) in CORRELATION_UNESCAPED_BYTES:
+            raw.append(ord(character))
+            index += 1
+        else:
+            return thread_id
+    try:
+        correlation = raw.decode("utf-8", errors="surrogatepass")
+        if encode_correlation(correlation) != thread_id:
+            return thread_id
+    except (UnicodeDecodeError, AgentMailError):
+        return thread_id
+    return correlation
 
 
 def store_fields_for(record: object) -> dict[str, object]:
@@ -669,7 +877,9 @@ def store_fields_for(record: object) -> dict[str, object]:
     return {
         STORE_FROM_FIELD: validated[SENDER_FIELD],
         STORE_TO_FIELD: validated[RECIPIENT_FIELD],
-        STORE_THREAD_ID_FIELD: validated[CORRELATION_FIELD],
+        STORE_THREAD_ID_FIELD: encode_correlation(
+            cast(str, validated[CORRELATION_FIELD])
+        ),
         STORE_SUBJECT_FIELD: (
             f"{KIND_PREFIX_OPEN}{kind.value}{KIND_PREFIX_CLOSE}"
             f"{validated[RECORD_SUBJECT_FIELD]}"
@@ -700,13 +910,15 @@ def record_from_inbox_item(item: object, *, recipient: str) -> dict[str, object]
     A row another sender wrote reads back rather than failing the read: a row
     without a thread reads as an unclassified record with no correlation and
     its subject verbatim, and an acknowledgement status outside the ones that
-    require a receipt reads as not required. A row without the store's id,
+    require an acknowledgement reads as not required. A row without the store's id,
     sender, or subject key is a malformed store response and fails the read.
     """
     value = _object(item, STORE_INBOX_FIELD)
     location = f"{STORE_INBOX_FIELD}[]"
     thread = value.get(STORE_THREAD_FIELD)
-    correlation = thread if isinstance(thread, str) and thread else None
+    correlation = (
+        decode_correlation(thread) if isinstance(thread, str) and thread else None
+    )
     subject_text = _string(
         value.get(STORE_SUBJECT_FIELD), f"{location}.{STORE_SUBJECT_FIELD}"
     )
@@ -749,7 +961,9 @@ def project_key_from_common_dir(text: str) -> str:
     if not candidate.startswith(PATH_SEPARATOR):
         raise AgentMailError(
             ExecutionStatus.REPOSITORY_UNRESOLVED,
-            "The repository reports no absolute common Git directory.",
+            "Resolving the repository's common Git directory",
+            f"the repository reports no absolute directory, received {text!r}",
+            "Run the operation from a directory inside a Git repository.",
         )
     normalized = os.path.normpath(candidate)
     return PATH_SEPARATOR + normalized.lstrip(PATH_SEPARATOR)
@@ -774,28 +988,72 @@ def repository_lookup_environment() -> dict[str, str]:
     }
 
 
-def resolve_project_key(runner: CommandRunner) -> str:
-    """Return the invoking working directory's repository key, or raise."""
-    try:
-        result = runner.run(
-            PUBLIC_GIT_COMMON_DIR_COMMAND, env=repository_lookup_environment()
+def repository_path(value: object, location: str) -> str:
+    """Return a named repository, which must be an absolute path string."""
+    if (
+        not isinstance(value, str)
+        or not value.startswith(PATH_SEPARATOR)
+        or NUL_CHARACTER in value
+    ):
+        raise AgentMailError(
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Reading {location}",
+            f"expected an absolute path string, received {value!r}",
+            "Name the repository by an absolute path.",
         )
+    return value
+
+
+def common_dir_command(repository: str | None) -> tuple[str, ...]:
+    """The lookup command: the adapter's own working directory, or the named path."""
+    if repository is None:
+        return PUBLIC_GIT_COMMON_DIR_COMMAND
+    return (
+        GIT_COMMAND,
+        GIT_DIRECTORY_OPTION,
+        repository,
+        *PUBLIC_GIT_COMMON_DIR_COMMAND[1:],
+    )
+
+
+def resolve_project_key(runner: CommandRunner, repository: str | None = None) -> str:
+    """Return the repository's key, or raise.
+
+    A named repository is read as Git's working directory; none named reads the
+    adapter's own. A named path that resolves no repository is unresolved and is
+    never answered from the adapter's working directory.
+    """
+    lookup = common_dir_command(repository)
+    try:
+        result = runner.run(lookup, env=repository_lookup_environment())
     except FileNotFoundError as error:
         raise AgentMailError(
             ExecutionStatus.REPOSITORY_UNRESOLVED,
-            f"{GIT_COMMAND} is unavailable on this machine.",
+            " ".join(lookup),
+            error,
+            f"Install {GIT_COMMAND} and put it on PATH.",
         ) from error
     except subprocess.TimeoutExpired as error:
         raise AgentMailError(
             ExecutionStatus.REPOSITORY_UNRESOLVED,
-            f"{GIT_COMMAND} exceeded its bound: "
-            f"{' '.join(PUBLIC_GIT_COMMON_DIR_COMMAND)}",
+            " ".join(lookup),
+            error,
+            f"Check that {GIT_COMMAND} answers within its bound, then retry.",
         ) from error
-    if result.returncode != 0:
-        detail = result.stderr.strip() or "no command detail"
+    except Exception as error:
         raise AgentMailError(
             ExecutionStatus.REPOSITORY_UNRESOLVED,
-            f"The working directory resolves to no repository: {detail}",
+            " ".join(lookup),
+            error,
+            f"Check that {GIT_COMMAND} is executable by this user and that the "
+            f"working directory is readable, then retry.",
+        ) from error
+    if result.returncode != 0:
+        raise AgentMailError(
+            ExecutionStatus.REPOSITORY_UNRESOLVED,
+            " ".join(lookup),
+            result.stderr.strip() or f"exit code {result.returncode} with no output",
+            "Run from inside a Git repository or one of its worktrees.",
         )
     return project_key_from_common_dir(result.stdout)
 
@@ -805,6 +1063,25 @@ def _describe_shapes(contract: OperationContract) -> str:
         f"required {sorted(shape.required_fields)}, optional {sorted(shape.optional_fields)}"
         for shape in contract.request_shapes
     )
+
+
+def _reject_nul(value: object, location: str) -> None:
+    """Refuse a NUL byte in any text of the request, key or value."""
+    if isinstance(value, str):
+        if NUL_CHARACTER in value:
+            raise AgentMailError(
+                ExecutionStatus.INVALID_SCHEMA,
+                f"Reading {location}",
+                f"text {value!r} carries a NUL byte, which cannot cross a process boundary",
+                "Remove the NUL byte from that text.",
+            )
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            _reject_nul(key, location)
+            _reject_nul(item, f"{location}.{key}")
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            _reject_nul(item, f"{location}[{index}]")
 
 
 def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
@@ -819,29 +1096,37 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
             details.append(f"missing: {', '.join(missing)}")
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Operation request fields are invalid ({'; '.join(details)}).",
+            "Checking the operation request",
+            f"its fields are invalid ({'; '.join(details)})",
+            "Supply exactly the request fields.",
         )
     if value.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Operation request schema version must be {SCHEMA_VERSION}.",
+            "Checking the operation request",
+            f"its schema version is {value.get(SCHEMA_VERSION_FIELD)!r}, not {SCHEMA_VERSION}",
+            "Set the schema version field to that value.",
         )
     operation = _operation(value.get(OPERATION_FIELD))
     arguments = _object(value.get(ARGUMENTS_FIELD), f"request.{ARGUMENTS_FIELD}")
+    _reject_nul(arguments, f"request.{ARGUMENTS_FIELD}")
     contract = OPERATION_CONTRACTS[operation]
     unexpected_arguments = sorted(set(arguments) - contract.allowed_fields)
     if unexpected_arguments:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"{operation.value} contains unsupported arguments: {', '.join(unexpected_arguments)}.",
+            f"Checking the {operation.value} arguments",
+            f"unsupported arguments: {', '.join(unexpected_arguments)}",
+            f"Remove them; allowed arguments: {', '.join(sorted(contract.allowed_fields))}.",
         )
     if not any(
         shape.accepts(frozenset(arguments)) for shape in contract.request_shapes
     ):
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"{operation.value} arguments do not match a source-owned request shape; "
-            f"accepted shapes: {_describe_shapes(contract)}.",
+            f"Checking the {operation.value} arguments",
+            "they do not match a source-owned request shape",
+            f"Supply one accepted shape: {_describe_shapes(contract)}.",
         )
     for field_name in TEXT_ARGUMENT_FIELDS:
         if field_name in arguments:
@@ -850,6 +1135,10 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
                 _string(arguments[field_name], location)
             else:
                 _text(arguments[field_name], location)
+    if REPOSITORY_FIELD in arguments:
+        repository_path(
+            arguments[REPOSITORY_FIELD], f"request.{ARGUMENTS_FIELD}.{REPOSITORY_FIELD}"
+        )
     for field_name in BOOLEAN_ARGUMENT_FIELDS:
         if field_name in arguments:
             _boolean(arguments[field_name], f"request.{ARGUMENTS_FIELD}.{field_name}")
@@ -863,12 +1152,14 @@ def _validated_request(request: object) -> tuple[Operation, dict[str, object]]:
             )
     if operation is Operation.SEND:
         arguments = {
+            **arguments,
             RECORD_FIELD: validate_record(
                 arguments[RECORD_FIELD],
                 location=f"request.{ARGUMENTS_FIELD}.{RECORD_FIELD}",
                 with_id=False,
-            )
+            ),
         }
+        store_fields_for(arguments[RECORD_FIELD])
     return operation, arguments
 
 
@@ -883,7 +1174,9 @@ def operation_request(
             valid = ", ".join(sorted(ARGUMENT_NAMES))
             raise AgentMailError(
                 ExecutionStatus.INVALID_SCHEMA,
-                f"Unsupported operation-request argument {name!r}. Valid arguments: {valid}.",
+                "Building the operation request",
+                f"unsupported argument {name!r}",
+                f"Use one of: {valid}.",
             )
         if value is not None:
             arguments[ARGUMENT_NAMES[name]] = value
@@ -946,15 +1239,20 @@ def command_for(request: object, project_key: str) -> tuple[str, ...]:
         if operation is Operation.WAIT:
             command.extend(
                 (
+                    ALL_OPTION,
                     PUBLIC_AM_ARGUMENT_OPTIONS[INCLUDE_BODIES_FIELD],
                     PUBLIC_AM_ARGUMENT_OPTIONS[LIMIT_FIELD],
                     str(WAIT_LISTING_LIMIT),
                 )
             )
-        elif operation is Operation.INBOX:
-            for field_name in (UNREAD_ONLY_FIELD, INCLUDE_BODIES_FIELD):
-                if arguments.get(field_name) is True:
-                    command.append(PUBLIC_AM_ARGUMENT_OPTIONS[field_name])
+        elif operation is Operation.LIST:
+            command.append(
+                ALL_OPTION
+                if arguments.get(ALL_RECORDS_FIELD) is True
+                else UNREAD_OPTION
+            )
+            if arguments.get(INCLUDE_BODIES_FIELD) is True:
+                command.append(INCLUDE_BODIES_OPTION)
             if LIMIT_FIELD in arguments:
                 command.extend(
                     (
@@ -991,7 +1289,9 @@ def validate_operation_result(result: object) -> dict[str, object]:
     if value.get(SCHEMA_VERSION_FIELD) != SCHEMA_VERSION:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Operation result schema version must be {SCHEMA_VERSION}.",
+            "Checking the operation result",
+            f"its schema version is {value.get(SCHEMA_VERSION_FIELD)!r}, not {SCHEMA_VERSION}",
+            "Regenerate the result with this script.",
         )
     operation_value = _text(value.get(OPERATION_FIELD), OPERATION_FIELD)
     try:
@@ -999,13 +1299,18 @@ def validate_operation_result(result: object) -> dict[str, object]:
     except ValueError as error:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Unsupported operation result status: {value.get(STATUS_FIELD)!r}.",
+            "Checking the operation result",
+            error,
+            f"Use one of the statuses: {', '.join(sorted(m.value for m in ExecutionStatus))}.",
         ) from error
     if status is ExecutionStatus.SUCCEEDED:
         if set(value) != SUCCESS_RESULT_FIELDS:
             raise AgentMailError(
                 ExecutionStatus.INVALID_SCHEMA,
-                "Successful operation result fields do not match the source-owned schema.",
+                "Checking the successful operation result",
+                f"its fields {sorted(value)} do not match the source-owned schema "
+                f"{sorted(SUCCESS_RESULT_FIELDS)}",
+                "Emit exactly those fields.",
             )
         return {
             SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
@@ -1025,7 +1330,11 @@ def validate_operation_result(result: object) -> dict[str, object]:
     if not FAILURE_RESULT_REQUIRED_FIELDS <= set(value) or set(value) - allowed:
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
-            "Failed operation result fields do not match the source-owned schema.",
+            "Checking the failed operation result",
+            f"its fields {sorted(value)} do not match the source-owned schema "
+            f"(required {sorted(FAILURE_RESULT_REQUIRED_FIELDS)}, "
+            f"optional {sorted(FAILURE_RESULT_OPTIONAL_FIELDS)})",
+            "Emit only those fields.",
         )
     validated: dict[str, object] = {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
@@ -1041,6 +1350,37 @@ def validate_operation_result(result: object) -> dict[str, object]:
             maximum=1_000_000,
         )
     return validated
+
+
+def _store_failure_detail(command: tuple[str, ...], result: CommandResult) -> str:
+    """Return the store's own message verbatim, or the failure detail when it said nothing."""
+    return (
+        result.stderr.strip()
+        or result.stdout.strip()
+        or failure_detail(
+            " ".join(command),
+            f"exit code {result.returncode} with no output",
+            f"Check that {AM_COMMAND} runs for this project, then retry.",
+        )
+    )
+
+
+def _run_error_detail(command: tuple[str, ...], error: Exception) -> str:
+    return failure_detail(
+        " ".join(command),
+        error,
+        f"Check that {AM_COMMAND} is installed, on PATH, and executable by this "
+        f"user, and that its working directory is readable, then retry.",
+    )
+
+
+def _response_error_detail(command: tuple[str, ...], error: Exception) -> str:
+    return failure_detail(
+        " ".join(command),
+        error,
+        f"Check that the installed {AM_COMMAND} is a version this skill supports "
+        f"and that its output is the JSON the operation expects, then retry.",
+    )
 
 
 def _failure_result(
@@ -1086,7 +1426,7 @@ def _data_for(
                 with_id=True,
             )
         }
-    if operation is Operation.INBOX:
+    if operation is Operation.LIST:
         recipient = str(arguments[AGENT_FIELD])
         items = _array(response.get(STORE_INBOX_FIELD), STORE_INBOX_FIELD)
         return {
@@ -1135,8 +1475,8 @@ def _execute_wait(
 ) -> dict[str, object]:
     """Poll the requester's inbox until a later record arrives or the timeout passes.
 
-    The wait holds no cursor, state file, or lock, marks nothing read, and
-    records no receipt: it only lists. Every listing is bounded by the time
+    The wait holds no cursor, state file, or lock, and neither reads nor
+    acknowledges a record: it only lists. Every listing is bounded by the time
     that remains.
     """
     operation = Operation.WAIT.value
@@ -1159,26 +1499,32 @@ def _execute_wait(
             return _wait_result(WaitOutcome.TIMEOUT, project_key, response, {})
         try:
             result = runner.run(command, timeout_seconds=remaining)
-        except FileNotFoundError:
+        except OSError as error:
             return _failure_result(
                 operation,
                 ExecutionStatus.STORE_UNAVAILABLE,
-                f"{AM_COMMAND} is unavailable on this machine.",
+                _run_error_detail(command, error),
             )
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as error:
             if deadline - clock.now() <= 0:
                 return _wait_result(WaitOutcome.TIMEOUT, project_key, response, {})
             return _failure_result(
                 operation,
                 ExecutionStatus.COMMAND_FAILED,
-                f"{AM_COMMAND} exceeded its bound: {' '.join(command)}",
+                _run_error_detail(command, error),
+            )
+        except Exception as error:
+            return _failure_result(
+                operation,
+                ExecutionStatus.COMMAND_FAILED,
+                _run_error_detail(command, error),
             )
         if result.returncode != 0:
-            detail = (
-                result.stderr.strip() or result.stdout.strip() or "no command detail"
-            )
             return _failure_result(
-                operation, ExecutionStatus.COMMAND_FAILED, detail, result.returncode
+                operation,
+                ExecutionStatus.COMMAND_FAILED,
+                _store_failure_detail(command, result),
+                result.returncode,
             )
         try:
             response = _object(json.loads(result.stdout), RESPONSE_FIELD)
@@ -1188,7 +1534,7 @@ def _execute_wait(
             return _failure_result(
                 operation,
                 ExecutionStatus.INVALID_SCHEMA,
-                f"{AM_COMMAND} returned an unexpected response: {error}",
+                _response_error_detail(command, error),
                 result.returncode,
             )
         if not reaches:
@@ -1233,7 +1579,10 @@ def execute(
         if isinstance(candidate, str) and candidate:
             operation_value = candidate
         operation, arguments = _validated_request(request)
-        project_key = resolve_project_key(runner)
+        repository = arguments.get(REPOSITORY_FIELD)
+        project_key = resolve_project_key(
+            runner, None if repository is None else str(repository)
+        )
     except AgentMailError as error:
         return _failure_result(operation_value, error.status, str(error))
     if operation is Operation.WAIT:
@@ -1243,22 +1592,30 @@ def execute(
     command = command_for(request, project_key)
     try:
         result = runner.run(command)
-    except FileNotFoundError:
+    except OSError as error:
         return _failure_result(
             operation.value,
             ExecutionStatus.STORE_UNAVAILABLE,
-            f"{AM_COMMAND} is unavailable on this machine.",
+            _run_error_detail(command, error),
         )
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as error:
         return _failure_result(
             operation.value,
             ExecutionStatus.COMMAND_FAILED,
-            f"{AM_COMMAND} exceeded its bound: {' '.join(command)}",
+            _run_error_detail(command, error),
+        )
+    except Exception as error:
+        return _failure_result(
+            operation.value,
+            ExecutionStatus.COMMAND_FAILED,
+            _run_error_detail(command, error),
         )
     if result.returncode != 0:
-        detail = result.stderr.strip() or result.stdout.strip() or "no command detail"
         return _failure_result(
-            operation.value, ExecutionStatus.COMMAND_FAILED, detail, result.returncode
+            operation.value,
+            ExecutionStatus.COMMAND_FAILED,
+            _store_failure_detail(command, result),
+            result.returncode,
         )
     if operation in JSON_OPERATIONS:
         try:
@@ -1267,7 +1624,7 @@ def execute(
             return _failure_result(
                 operation.value,
                 ExecutionStatus.INVALID_SCHEMA,
-                f"{AM_COMMAND} returned an unexpected response: {error}",
+                _response_error_detail(command, error),
                 result.returncode,
             )
     else:
@@ -1299,13 +1656,17 @@ def _json_input(stream: TextIO, location: str) -> dict[str, object]:
         return _object(json.load(stream), location)
     except json.JSONDecodeError as error:
         raise AgentMailError(
-            ExecutionStatus.INVALID_SCHEMA, f"{location} is not valid JSON: {error.msg}"
+            ExecutionStatus.INVALID_SCHEMA,
+            f"Parsing {location} from stdin",
+            error,
+            "Supply one complete JSON object on stdin.",
         ) from error
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="agent_mail")
     parser.add_argument("cli_operation", choices=[op.value for op in CliOperation])
+    parser.add_argument(REPOSITORY_OPTION, dest="repository", default=None)
     return parser
 
 
@@ -1324,8 +1685,13 @@ def main(
     cli_operation = CliOperation(arguments.cli_operation)
     if cli_operation is CliOperation.PROJECT_KEY:
         try:
+            repository = (
+                None
+                if arguments.repository is None
+                else repository_path(arguments.repository, REPOSITORY_OPTION)
+            )
             payload: dict[str, object] = {
-                PROJECT_KEY_FIELD: resolve_project_key(runner)
+                PROJECT_KEY_FIELD: resolve_project_key(runner, repository)
             }
         except AgentMailError as error:
             payload = {STATUS_FIELD: error.status, DETAIL_FIELD: str(error)}
@@ -1335,7 +1701,7 @@ def main(
     try:
         request = _json_input(stdin, "request")
     except AgentMailError as error:
-        json.dump({STATUS_FIELD: error.status, DETAIL_FIELD: str(error)}, stdout)
+        json.dump(_failure_result("unknown", error.status, str(error)), stdout)
         stdout.write("\n")
         return 2
     result = execute(request, runner, clock)

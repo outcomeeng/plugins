@@ -1,0 +1,5 @@
+"""Violating shipped-script payload for a relative-path shell-string store command."""
+
+import subprocess
+
+subprocess.run("./am mail send", shell=True, check=True)

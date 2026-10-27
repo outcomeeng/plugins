@@ -1,23 +1,23 @@
 {
   "step": "17-doorbell-unlabeled",
-  "startedUtc": "2026-10-09T17:43:22.929579+00:00",
-  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/message-agents/scripts/agent_message.py mail-result",
-  "cwd": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project",
+  "startedUtc": "2026-10-25T07:50:39.137042+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-4/src/plugins/coding-agents/skills/message-agents/scripts/agent_message.py mail-result",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/4d58f2f5-4e26-4e2d-aa23-2117c0421768/scratchpad/pl-repo2",
   "request": {
     "capabilityResult": {
       "schemaVersion": 1,
       "operation": "send",
       "status": "succeeded",
       "commandExitCode": 0,
-      "projectKey": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project/.git",
+      "projectKey": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/4d58f2f5-4e26-4e2d-aa23-2117c0421768/scratchpad/pl-repo2/.git",
       "response": {
-        "id": 22,
-        "subject": "[fact] unlabeled send",
-        "body_md": "Send from a position with no label.",
+        "id": 18806,
+        "subject": "[fact] unlabeled",
+        "body_md": "Body from the unlabeled sender.",
         "importance": "normal",
         "ack_required": false,
         "thread_id": "position-labels-probe",
-        "created_ts": "2026-10-09T17:43:22.842231Z",
+        "created_ts": "2026-10-25T07:50:39.068820Z",
         "from": "CopperWren",
         "sender_display_name": null,
         "to": [
@@ -35,13 +35,12 @@
           "correlation": "position-labels-probe",
           "sender": "CopperWren",
           "recipient": "SilverFinch",
-          "subject": "unlabeled send",
-          "body": "Send from a position with no label.",
-          "id": 22
+          "subject": "unlabeled",
+          "body": "Body from the unlabeled sender.",
+          "id": 18806
         }
       }
-    },
-    "doorbellTransport": null
+    }
   },
   "exitCode": 0,
   "result": {
@@ -52,27 +51,27 @@
       "data": {
         "record": {
           "ackRequired": false,
-          "body": "Send from a position with no label.",
+          "body": "Body from the unlabeled sender.",
           "correlation": "position-labels-probe",
-          "id": 22,
+          "id": 18806,
           "kind": "fact",
           "recipient": "SilverFinch",
           "schema": 1,
           "sender": "CopperWren",
-          "subject": "unlabeled send"
+          "subject": "unlabeled"
         }
       },
       "operation": "send",
-      "projectKey": "/Users/shz/.local/state/mcp-agent-mail/automatic-labels/20261009-1f309419/demo/project/.git",
+      "projectKey": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/4d58f2f5-4e26-4e2d-aa23-2117c0421768/scratchpad/pl-repo2/.git",
       "response": {
         "ack_required": false,
-        "body_md": "Send from a position with no label.",
-        "created_ts": "2026-10-09T17:43:22.842231Z",
+        "body_md": "Body from the unlabeled sender.",
+        "created_ts": "2026-10-25T07:50:39.068820Z",
         "from": "CopperWren",
-        "id": 22,
+        "id": 18806,
         "importance": "normal",
         "sender_display_name": null,
-        "subject": "[fact] unlabeled send",
+        "subject": "[fact] unlabeled",
         "thread_id": "position-labels-probe",
         "to": [
           "SilverFinch"
@@ -88,9 +87,9 @@
     "correlation": "position-labels-probe",
     "doorbell": {
       "submitted": false,
-      "text": "[CopperWren] mail 22"
+      "text": "[CopperWren] mail 18806"
     },
-    "id": 22,
+    "id": 18806,
     "kind": "fact",
     "ownershipEstablished": false,
     "recipient": "SilverFinch",

@@ -1,0 +1,30 @@
+{
+  "step": "12b-reject-long-thread",
+  "startedUtc": "2026-10-25T07:50:30.173751+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-4/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/4d58f2f5-4e26-4e2d-aa23-2117c0421768/scratchpad/is-repo5",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "arguments": {
+      "record": {
+        "schema": 1,
+        "kind": "fact",
+        "correlation": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "sender": "CopperFinch",
+        "recipient": "SilverFinch",
+        "subject": "long thread",
+        "body": "Body of long thread",
+        "ackRequired": false
+      }
+    }
+  },
+  "exitCode": 1,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "send",
+    "status": "invalid-schema",
+    "detail": "The correlation field encodes to a 132-character thread id, over the store's 128-character limit. Shorten the correlation so its written form fits."
+  },
+  "stderr": ""
+}

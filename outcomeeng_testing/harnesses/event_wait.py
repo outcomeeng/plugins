@@ -6,6 +6,7 @@ exposes observations. The linked tests own every predicate.
 
 from __future__ import annotations
 
+import copy
 import datetime as dt
 import io
 import json
@@ -217,6 +218,32 @@ def source_kinds() -> tuple[str, ...]:
     return tuple(load_wait_event().SOURCE_KINDS)
 
 
+@contextmanager
+def recorded_mail_requests(c: Contracts) -> Iterator[list[dict[str, Any]]]:
+    """Observability spy on the agent-mail adapter the shipped script loads.
+
+    The wait request a mail source builds is consumed inside the script and
+    leaves no trace the run prints. The spy records an unchanged copy of each
+    request handed to the adapter's `execute` and delegates to the real
+    adapter, so the run behaves exactly as without it. The adapter's original
+    `execute` is restored on exit.
+    """
+    we = c.wait_event
+    adapter = we._adapter(we.ADAPTER_MAIL)
+    real = adapter.execute
+    requests: list[dict[str, Any]] = []
+
+    def recording(request: Any, runner: Any, clock: Any = None) -> Any:
+        requests.append(copy.deepcopy(request))
+        return real(request, runner, clock)
+
+    adapter.execute = recording
+    try:
+        yield requests
+    finally:
+        adapter.execute = real
+
+
 @dataclass(frozen=True)
 class Execution:
     """One run of the shipped entry point."""
@@ -239,6 +266,7 @@ class WorldObservation(Execution):
     state_after: dict[str, bytes]
     mail_after_id: int | None
     mail_oracle: dict[str, Any] | None
+    mail_requests: tuple[dict[str, Any], ...]
     pane_requested: tuple[tuple[str, str], ...]
     pane_oracle: dict[str, Any] | None
     spend_stored: tuple[tuple[str, dt.datetime, str, dict[str, Any]], ...]
@@ -300,11 +328,14 @@ def _arrange_mail(
     arrangement.reactions[am.GIT_COMMAND] = reply(common_dir_reply(am))
     arrangement.reactions[am.AM_COMMAND] = inbox
     arrangement.mail_after_id = after_id
-    return {
+    source: dict[str, Any] = {
         we.KIND_FIELD: we.SOURCE_MAIL,
         we.MAIL_AGENT_FIELD: case.agent,
         we.MAIL_ID_FIELD: after_id,
     }
+    if case.repository is not None:
+        source[we.MAIL_REPOSITORY_FIELD] = case.repository
+    return source
 
 
 def _arrange_pane(
@@ -444,9 +475,10 @@ def observe(case: WorldCase) -> WorldObservation:
         arrangement = _arrange(c, case, parent)
         root = arrangement.spend_root
         before = _state_files(root) if root is not None else {}
-        execution, _ = _execute(
-            c, json.dumps(arrangement.request), arrangement.reactions
-        )
+        with recorded_mail_requests(c) as mail_requests:
+            execution, _ = _execute(
+                c, json.dumps(arrangement.request), arrangement.reactions
+            )
         after = _state_files(root) if root is not None else {}
         mail_oracle = None
         if case.mail is not None:
@@ -487,6 +519,7 @@ def observe(case: WorldCase) -> WorldObservation:
             after,
             arrangement.mail_after_id,
             mail_oracle,
+            tuple(mail_requests),
             arrangement.pane_requested,
             pane_oracle,
             arrangement.spend_stored,

@@ -6,8 +6,10 @@ from typing import cast
 from outcomeeng_testing.generators.agent_mail import operation_requests
 from outcomeeng_testing.harnesses.agent_mail import (
     AbsentExecutableRunner,
+    AttestedListing,
     CapturedInboxResponse,
     CapturedLabelResponse,
+    NamedRepositoryCase,
     RecordingRunner,
     ScriptedClock,
     captured_inbox_responses_with_bodies,
@@ -19,9 +21,13 @@ from outcomeeng_testing.harnesses.agent_mail import (
     inbox_response_with_ids,
     load_agent_mail,
     mail_pool,
+    request_naming_repository,
+    requests_over_every_operation,
     run_cli_project_key,
+    run_attested_ack_mapping,
     run_inbox_row_mapping,
     run_label_response_mapping,
+    run_named_repository_cases,
     run_operation_mapping,
     run_project_key_mapping,
     run_recipient_boundary,
@@ -118,7 +124,7 @@ def test_agent_mail_operation_mappings() -> None:
                         in argv
                     )
         else:
-            if operation is module.Operation.RECEIPT:
+            if operation in (module.Operation.READ, module.Operation.ACKNOWLEDGE):
                 assert reading.positionals == (str(arguments[module.MESSAGE_ID_FIELD]),)
             if operation is module.Operation.WAIT:
                 bodies_option = module.PUBLIC_AM_ARGUMENT_OPTIONS[
@@ -126,9 +132,8 @@ def test_agent_mail_operation_mappings() -> None:
                 ]
                 limit_option = module.PUBLIC_AM_ARGUMENT_OPTIONS[module.LIMIT_FIELD]
                 assert bodies_option in reading.options_seen
-                assert module.PUBLIC_AM_ARGUMENT_OPTIONS[
-                    module.UNREAD_ONLY_FIELD
-                ] not in (reading.options_seen)
+                assert module.ALL_OPTION in reading.options_seen
+                assert module.UNREAD_OPTION not in reading.options_seen
                 assert argv[argv.index(limit_option) + 1] == str(
                     module.WAIT_LISTING_LIMIT
                 )
@@ -147,14 +152,14 @@ def test_agent_mail_operation_mappings() -> None:
         result = module.execute(request, runner)
 
         assert runner.calls == [
-            (module.PUBLIC_GIT_COMMON_DIR_COMMAND, None),
+            (module.common_dir_command(arguments.get(module.REPOSITORY_FIELD)), None),
             (argv, None),
         ]
         assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
         assert result[module.PROJECT_KEY_FIELD] == project_key
         response = cast(dict[str, object], result[module.RESPONSE_FIELD])
         data = cast(dict[str, object], result[module.DATA_FIELD])
-        if operation is module.Operation.RECEIPT:
+        if operation in (module.Operation.READ, module.Operation.ACKNOWLEDGE):
             assert response[module.OUTPUT_FIELD] == payload
             assert data[module.MESSAGE_ID_FIELD] == arguments[module.MESSAGE_ID_FIELD]
             return
@@ -174,7 +179,7 @@ def test_agent_mail_operation_mappings() -> None:
             assert record[module.RECORD_ID_FIELD] == first[module.STORE_ID_FIELD]
             (bound,) = cast(list[float], runner.timeouts[1:])
             assert 0 < bound <= cast(int, arguments[module.TIMEOUT_SECONDS_FIELD])
-        elif operation is module.Operation.INBOX:
+        elif operation is module.Operation.LIST:
             items = cast(list[dict[str, object]], store[module.STORE_INBOX_FIELD])
             records = cast(list[dict[str, object]], data[module.RECORDS_FIELD])
             assert response == store
@@ -189,11 +194,6 @@ def test_agent_mail_operation_mappings() -> None:
             ]
             assert [record[module.BODY_FIELD] for record in records] == [
                 item.get(module.STORE_BODY_FIELD, "") for item in items
-            ]
-            assert [record[module.ACK_REQUIRED_FIELD] for record in records] == [
-                item[module.STORE_ACK_STATUS_FIELD]
-                in module.STORE_ACK_REQUIRED_STATUSES
-                for item in items
             ]
         elif operation is module.Operation.SEND:
             assert response == store
@@ -291,10 +291,6 @@ def test_inbox_rows_map_totally_onto_records() -> None:
             assert record[module.RECORD_ID_FIELD] == item[module.STORE_ID_FIELD]
             assert record[module.SENDER_FIELD] == item[module.STORE_FROM_FIELD]
             assert record[module.BODY_FIELD] == item[module.STORE_BODY_FIELD]
-            assert record[module.ACK_REQUIRED_FIELD] is (
-                item[module.STORE_ACK_STATUS_FIELD]
-                in module.STORE_ACK_REQUIRED_STATUSES
-            )
             thread = item.get(module.STORE_THREAD_FIELD)
             if thread:
                 assert record[module.CORRELATION_FIELD] == thread
@@ -307,6 +303,44 @@ def test_inbox_rows_map_totally_onto_records() -> None:
                 )
 
     run_inbox_row_mapping(assert_rows)
+
+
+def test_store_acknowledgement_status_maps_to_the_stores_own_ack_requirement() -> None:
+    observed: dict[bool, set[str]] = {True: set(), False: set()}
+
+    def assert_listing(
+        module: ModuleType,
+        project_key: str,
+        listing: AttestedListing,
+        requirements: dict[int, bool],
+    ) -> None:
+        result = module.execute(
+            listing.request,
+            common_dir_seeded_runner(module, project_key, listing.result),
+        )
+
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED, (
+            listing.capture
+        )
+        items = cast(list[dict[str, object]], listing.payload[module.STORE_INBOX_FIELD])
+        data = cast(dict[str, object], result[module.DATA_FIELD])
+        records = cast(list[dict[str, object]], data[module.RECORDS_FIELD])
+        assert len(records) == len(items), listing.capture
+        for record, item in zip(records, items, strict=True):
+            message_id = cast(int, item[module.STORE_ID_FIELD])
+            status = cast(str, item[module.STORE_ACK_STATUS_FIELD])
+            assert record[module.RECORD_ID_FIELD] == message_id
+            assert record[module.ACK_REQUIRED_FIELD] is requirements[message_id], (
+                listing.capture,
+                message_id,
+                status,
+            )
+            observed[requirements[message_id]].add(status)
+
+    run_attested_ack_mapping(assert_listing)
+
+    assert observed[True] == set(load_agent_mail().STORE_ACK_REQUIRED_STATUSES)
+    assert observed[False]
 
 
 def test_send_rejects_a_recipient_the_store_reads_as_several_agents() -> None:
@@ -342,7 +376,7 @@ def test_project_key_mapping() -> None:
         agent: str,
     ) -> None:
         runner = RecordingRunner([text_command_result(module, output)])
-        request = module.operation_request(module.Operation.INBOX, agent=agent)
+        request = module.operation_request(module.Operation.LIST, agent=agent)
         if expected_key is None:
             try:
                 module.project_key_from_common_dir(output)
@@ -452,6 +486,107 @@ def test_git_location_variables_leave_the_project_key_on_its_own_repository() ->
     assert set(redirections) <= set(module.GIT_LOCATION_VARIABLES), redirections
 
 
+def test_a_named_repository_maps_every_operation_to_the_same_command_under_its_key() -> (
+    None
+):
+    def assert_case(module: ModuleType, case: NamedRepositoryCase) -> None:
+        for request in requests_over_every_operation(module):
+            operation = module.Operation(request[module.OPERATION_FIELD])
+            arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+            store_result = store_response_result(module, operation, arguments)
+            unnamed = common_dir_seeded_runner(module, case.project_key, store_result)
+            named = common_dir_seeded_runner(module, case.project_key, store_result)
+
+            unnamed_result = module.execute(request, unnamed)
+            named_result = module.execute(
+                request_naming_repository(module, request, case.repository), named
+            )
+
+            # The named path is the working directory Git is asked from.
+            lookup = named.calls[0][0]
+            assert lookup[lookup.index(module.GIT_DIRECTORY_OPTION) + 1] == (
+                case.repository
+            ), operation
+            assert case.repository not in unnamed.calls[0][0], operation
+            # Every store command is the one the unnamed request runs, under
+            # the key the lookup answered, and the result reports that key.
+            assert named.calls[1:] == unnamed.calls[1:], operation
+            assert named_result[module.STATUS_FIELD] == (
+                module.ExecutionStatus.SUCCEEDED
+            ), operation
+            assert named_result[module.PROJECT_KEY_FIELD] == case.project_key
+            assert named_result == unnamed_result, operation
+
+    run_named_repository_cases(assert_case)
+
+
+def test_a_named_repository_resolves_the_key_every_checkout_of_its_pool_shares() -> (
+    None
+):
+    module = load_agent_mail()
+
+    with mail_pool() as pool:
+        shapes = pool.checkout_shapes
+        standing = {name: run_cli_project_key(shape) for name, shape in shapes.items()}
+        named = {
+            (working_directory.name, name): run_cli_project_key(
+                working_directory, repository=shape
+            )
+            for working_directory in (pool.foreign, pool.outside, pool.main_checkout)
+            for name, shape in shapes.items()
+        }
+        foreign_from_pool = run_cli_project_key(
+            pool.main_checkout, repository=pool.foreign
+        )
+        expected_key = str(pool.bare)
+        foreign_key = str(pool.foreign)
+
+    # Standing in any shape, the adapter derives the pool's key; naming any
+    # shape from any working directory reports the same key, so a named
+    # checkout equals the key the adapter derives when it stands in it.
+    for name, (exit_code, payload) in standing.items():
+        assert exit_code == 0, (name, payload)
+        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (name, payload)
+    for case, (exit_code, payload) in named.items():
+        assert exit_code == 0, (case, payload)
+        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (case, payload)
+
+    # A named repository other than the working directory's own answers its own
+    # key, never the working directory's.
+    assert foreign_from_pool[0] == 0, foreign_from_pool
+    assert foreign_from_pool[1][module.PROJECT_KEY_FIELD] == foreign_key
+    assert foreign_key != expected_key
+
+
+def test_git_location_variables_leave_a_named_repository_on_its_own_key() -> None:
+    module = load_agent_mail()
+
+    with mail_pool() as pool:
+        confirmed = git_location_variables(pool)
+        every_variable = {
+            variable: value
+            for probe in confirmed
+            for variable, value in probe.environment.items()
+        }
+        environments = {probe.variable: probe.environment for probe in confirmed}
+        environments["every-confirmed-variable"] = every_variable
+        named = {
+            (case, str(working_directory)): run_cli_project_key(
+                working_directory, environment, repository=pool.main_checkout
+            )
+            for case, environment in environments.items()
+            for working_directory in (pool.outside, pool.foreign)
+        }
+        expected_key = str(pool.bare)
+
+    # The variables are the ones Git itself confirms move its answer, so a
+    # value that names another repository, or that bounds discovery above the
+    # named checkout, still leaves the named repository on its own key.
+    for case, (exit_code, payload) in named.items():
+        assert exit_code == 0, (case, payload)
+        assert payload[module.PROJECT_KEY_FIELD] == expected_key, (case, payload)
+
+
 def test_store_responses_map_to_results_without_rewriting() -> None:
     def assert_case(
         module: ModuleType,
@@ -462,7 +597,7 @@ def test_store_responses_map_to_results_without_rewriting() -> None:
         malformed_text: str,
         unsupported_name: str,
     ) -> None:
-        request = module.operation_request(module.Operation.INBOX, agent=agent)
+        request = module.operation_request(module.Operation.LIST, agent=agent)
 
         failed = module.execute(
             request,
@@ -685,3 +820,75 @@ def test_wait_names_a_listing_that_cannot_reach_back_to_the_id() -> None:
             assert record[module.RECORD_ID_FIELD] == after_id + 1, reaching.capture
 
     run_wait_cases(assert_case)
+
+
+def test_list_maps_to_the_non_marking_listing_in_its_unjudged_or_complete_form() -> (
+    None
+):
+    module = load_agent_mail()
+    contract = usage_contract_for(module, module.Operation.LIST)
+    assert {module.UNREAD_OPTION, module.ALL_OPTION} <= set(contract.options)
+    forms: set[bool] = set()
+
+    def assert_list(
+        module: ModuleType, request: dict[str, object], project_key: str
+    ) -> None:
+        if module.Operation(request[module.OPERATION_FIELD]) is not (
+            module.Operation.LIST
+        ):
+            return
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        reading = read_argv(contract, module.command_for(request, project_key))
+        complete = arguments.get(module.ALL_RECORDS_FIELD) is True
+        forms.add(complete)
+
+        assert reading.command_path == (module.AM_COMMAND, *contract.command_path)
+        assert reading.unknown_options == ()
+        assert (module.ALL_OPTION in reading.options_seen) is complete
+        assert (module.UNREAD_OPTION in reading.options_seen) is not complete
+        assert reading.positionals == ()
+
+    run_operation_mapping(assert_list)
+
+    assert forms == {False, True}
+
+
+def test_read_and_acknowledge_each_map_to_their_own_command_for_one_message_id() -> (
+    None
+):
+    module = load_agent_mail()
+    read = usage_contract_for(module, module.Operation.READ)
+    acknowledge = usage_contract_for(module, module.Operation.ACKNOWLEDGE)
+    assert read.command_path != acknowledge.command_path
+    contracts = {
+        module.Operation.READ: read,
+        module.Operation.ACKNOWLEDGE: acknowledge,
+    }
+    seen: set[object] = set()
+
+    def assert_judgment(
+        module: ModuleType, request: dict[str, object], project_key: str
+    ) -> None:
+        operation = module.Operation(request[module.OPERATION_FIELD])
+        if operation not in contracts:
+            return
+        seen.add(operation)
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        argv = module.command_for(request, project_key)
+        reading = read_argv(contracts[operation], argv)
+
+        assert reading.command_path == (
+            module.AM_COMMAND,
+            *contracts[operation].command_path,
+        )
+        assert reading.unknown_options == ()
+        assert reading.positionals == (str(arguments[module.MESSAGE_ID_FIELD]),)
+        other = acknowledge if operation is module.Operation.READ else read
+        assert argv[: len(other.command_path) + 1] != (
+            module.AM_COMMAND,
+            *other.command_path,
+        )
+
+    run_operation_mapping(assert_judgment)
+
+    assert seen == set(contracts)
