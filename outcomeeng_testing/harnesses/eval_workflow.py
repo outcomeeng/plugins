@@ -26,13 +26,27 @@ class EvalWorkflowDefaults:
     runtime_timeout_seconds: str
 
 
-def observe_eval_workflow_defaults() -> EvalWorkflowDefaults:
-    """Return the defaults the committed eval workflow declares."""
+_DEFAULT_FIXTURES = (
+    Path(__file__).resolve().parents[1] / "fixtures" / "eval_workflow_defaults"
+)
 
-    workflow = yaml.load(
-        _EVAL_WORKFLOW.read_text(encoding="utf-8"),
-        Loader=yaml.BaseLoader,
-    )
+
+def violating_default_workflow_paths() -> tuple[Path, ...]:
+    """Return the inert workflow files that each declare a drifted default."""
+
+    return tuple(sorted(_DEFAULT_FIXTURES.glob("*.yml")))
+
+
+def observe_eval_workflow_defaults(
+    workflow_path: Path | None = None,
+) -> EvalWorkflowDefaults:
+    """Return the defaults a workflow file declares.
+
+    Without an argument the committed eval workflow is read.
+    """
+
+    path = _EVAL_WORKFLOW if workflow_path is None else workflow_path
+    workflow = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
     inputs = workflow["on"]["workflow_dispatch"]["inputs"]
     env = workflow["jobs"]["evals"]["env"]
     return EvalWorkflowDefaults(
