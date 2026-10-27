@@ -137,9 +137,10 @@ A blocked result names exactly one of these reasons:
    mutable blockers. Request `count-limits` and record one `record-limits`
    finding per entry of `violations`, naming the entry's `section`, `limit`,
    and `count`, with severity `filed`. Judge `change-type` from the candidate's `## Governance
-   mutations` and `## Spec mutations` blocks, its Maturity, and the
+   mutations` and `## Spec mutations` blocks, its `## Verification` section, its Maturity, and the
    `read-relations` result: record a finding when the candidate carries a
    Governance mutations or Spec mutations block while `children` is not
+   empty, when it is Sliced or Executable and carries a `## Verification` section while `children` is not
    empty, and when it is Executable while `children` is not empty. A Parent
    and its children may carry different Products, so no Product comparison
    yields a finding. Judge every Governance entry for its verdict `in line`,
