@@ -35,7 +35,7 @@ Product Tree assertion tests and decision Testing rules that are canonically ass
 - Name tests by subject, assertion type, execution level, and optional runner.
 - Derive the assertion type from the assertion's quantifier and evidence shape, never from the section containing the rule.
 - Verification routing selects the verification type. This test specialist owns assertion-type selection, execution-level selection, and controlled-implementation exceptions after test evidence is selected.
-- Use skill `product-tree:wait-for-load` for every resource-intensive command: run the waiter and that command as one line in the foreground, and report a result only after every such line has exited.
+- Use skill `product-tree:wait-for-load` for every resource-intensive command: run that command as the argument vector of `spx orchestration lock --run-id <id> -- <command>` on one line in the foreground, and report a result only after every such line has exited.
 - For property evidence, generate product-owned variable behavior. Keep filesystem, Git, and full CLI work outside each generated case when it only supplies boundary wiring, and exercise that real boundary through a separately typed finite assertion.
 
 </non_negotiable_rules>
