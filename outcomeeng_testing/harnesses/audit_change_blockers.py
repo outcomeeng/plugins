@@ -5,9 +5,9 @@ one page per issue, returns each blocker's canonical identity and whether it is
 open, reads at most a stated number of issues when it walks the blockers' own
 blockers, and blocks naming the bound when a read fills it. The runner reaches
 the store only through its injected command seam, so the harness passes the
-runner a recording collaborator that answers each ``gh api graphql`` call with
-the ``blockedBy`` connection of the issue the call names, under the
-interaction-protocol exception of the test methodology.
+runner a recording collaborator that answers each ``gh api`` call for
+``dependencies/blocked_by`` with the list of blockers of the issue the call
+names, under the interaction-protocol exception of the test methodology.
 
 Every replayed scenario is an inert fixture file under
 ``outcomeeng_testing/fixtures/audit_change_blockers``, written with invented
@@ -44,11 +44,10 @@ WALK_PAST_BOUND: Final = _FIXTURES_DIR / "walk-past-bound.json"
 
 _PAGE_PHRASE: Final = re.compile(r"native blockers one page of (\d+) per issue")
 _ISSUE_PHRASE: Final = re.compile(r"reads at most (\d+) issues when it walks")
-_OWNER_PREFIX: Final = "o="
-_REPOSITORY_PREFIX: Final = "r="
-_NUMBER_PREFIX: Final = "n="
-_AFTER_PREFIX: Final = "after="
-_QUERY_PREFIX: Final = "query="
+_PAGE_SIZE_PREFIX: Final = "per_page="
+_DEPENDENCIES_PATH: Final = re.compile(
+    r"repos/([^/]+)/([^/]+)/issues/(\d+)/dependencies/blocked_by"
+)
 
 _runner = load_runner()
 
@@ -64,22 +63,13 @@ class BlockersObservation:
     #: The issue identity each store call named, in call order.
     issues_asked: tuple[str, ...]
 
-    def queries(self) -> tuple[str, ...]:
-        """The query text of every store call."""
+    def page_sizes(self) -> tuple[str, ...]:
+        """The page size every store call asked for."""
         return tuple(
-            arg.removeprefix(_QUERY_PREFIX)
+            arg.removeprefix(_PAGE_SIZE_PREFIX)
             for call in self.store_calls
             for arg in call
-            if arg.startswith(_QUERY_PREFIX)
-        )
-
-    def cursors(self) -> tuple[str, ...]:
-        """Every ``after`` cursor any store call passed."""
-        return tuple(
-            arg.removeprefix(_AFTER_PREFIX)
-            for call in self.store_calls
-            for arg in call
-            if arg.startswith(_AFTER_PREFIX)
+            if arg.startswith(_PAGE_SIZE_PREFIX)
         )
 
 
@@ -131,27 +121,30 @@ def declared_graph(fixture: Path) -> list[dict[str, object]]:
     ]
 
 
+def answered_blocker_count(fixture: Path) -> int:
+    """How many blockers a fixture's store answers for the invented Change."""
+    issues = json.loads(fixture.read_text(encoding="utf-8"))["issues"]
+    return len(issues[BLOCKERS_ISSUE])
+
+
 class _StoreReplay:
-    """Answer each store call with the ``blockedBy`` answer of the issue it names."""
+    """Answer each store call with the blocker list of the issue it names."""
 
     def __init__(self, issues: dict[str, object]) -> None:
         self._issues = issues
         self.calls: list[tuple[str, ...]] = []
         self.asked: list[str] = []
 
-    @staticmethod
-    def _value(argv: Sequence[str], prefix: str) -> str:
-        return next(arg.removeprefix(prefix) for arg in argv if arg.startswith(prefix))
-
     def __call__(
         self, argv: Sequence[str], /, *, cwd: Path, stdin: str | None
     ) -> object:
         del cwd, stdin
-        identity = (
-            f"{self._value(argv, _OWNER_PREFIX)}/"
-            f"{self._value(argv, _REPOSITORY_PREFIX)}#"
-            f"{self._value(argv, _NUMBER_PREFIX)}"
+        path = next(
+            found
+            for arg in argv
+            if (found := _DEPENDENCIES_PATH.fullmatch(arg)) is not None
         )
+        identity = f"{path.group(1)}/{path.group(2)}#{path.group(3)}"
         self.calls.append(tuple(argv))
         self.asked.append(identity)
         # The CLI prints an answer as one line of JSON.

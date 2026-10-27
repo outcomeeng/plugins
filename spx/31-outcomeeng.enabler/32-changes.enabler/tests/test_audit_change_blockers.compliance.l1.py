@@ -7,8 +7,8 @@ open, a walk of the blockers' own blockers reads at most a stated number of
 issues, and a read that fills a bound returns a blocked result naming it. The
 page size and the issue bound come from that assertion's text, and the store
 answers come from replayed fixture files, so no expected value is chosen here
-and no call reaches the network. The violating cases are a blocker connection
-that reports a further page, which no read may follow, and a chain of blockers
+and no call reaches the network. The violating cases are a blocker page that
+fills the page size, which no read may follow, and a chain of blockers
 longer than the walk may read, which no walk may follow to its end.
 """
 
@@ -19,6 +19,7 @@ from outcomeeng_testing.harnesses.audit_change_blockers import (
     OPEN_AND_CLOSED,
     WALK_PAST_BOUND,
     WALK_WITHIN_BOUND,
+    answered_blocker_count,
     declared_blockers,
     declared_graph,
     request_blockers,
@@ -46,12 +47,12 @@ def test_a_read_returns_each_blocker_with_its_identity_and_openness_in_one_page(
     assert observed.result[Result.STATUS] == Status.OK
     assert observed.result[Result.BLOCKERS] == declared_blockers(OPEN_AND_CLOSED)
     assert len(observed.store_calls) == 1
-    assert f"first:{page_size}" in observed.queries()[0]
-    assert observed.cursors() == ()
+    assert observed.page_sizes() == (str(page_size),)
 
 
-def test_a_blocker_connection_with_a_further_page_blocks_naming_the_page_size() -> None:
+def test_a_blocker_page_that_fills_the_page_size_blocks_naming_the_page_size() -> None:
     page_size = spec_page_size()
+    assert answered_blocker_count(BLOCKERS_UNFINISHED) == page_size
 
     observed = request_blockers(BLOCKERS_UNFINISHED, Operation.READ_BLOCKERS)
 
@@ -61,7 +62,6 @@ def test_a_blocker_connection_with_a_further_page_blocks_naming_the_page_size() 
     assert str(page_size) in str(observed.result[Result.BOUND])
     assert Result.BLOCKERS not in observed.result
     assert len(observed.store_calls) == 1
-    assert observed.cursors() == ()
 
 
 def test_a_walk_within_the_bound_returns_each_issue_with_its_blockers() -> None:

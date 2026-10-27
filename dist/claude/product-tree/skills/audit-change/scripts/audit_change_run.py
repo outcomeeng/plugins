@@ -66,7 +66,7 @@ within the same page bound as ``read-authority``.
 
 ``read-blockers`` starts ``gh`` once and returns the issue's native blockers, one
 page of ``BLOCKERS_PAGE_SIZE``, each with its canonical identity and whether it
-is open; a connection that reports a further page blocks with
+is open; a page that holds ``BLOCKERS_PAGE_SIZE`` blockers blocks with
 ``page-bound-reached`` naming the page.
 
 ``walk-blockers`` starts ``gh`` once per issue and returns the issue and every
@@ -276,9 +276,8 @@ class StoreField(StrEnum):
     NUMBER = "number"
     VALUE = "value"
     ISSUE_FIELD_VALUES = "issueFieldValues"
-    BLOCKED_BY = "blockedBy"
     STATE = "state"
-    NAME_WITH_OWNER = "nameWithOwner"
+    REPOSITORY_URL = "repository_url"
 
 
 NOT_STARTED: Final = "not-started"
@@ -350,14 +349,9 @@ _RELATIONS_QUERY: Final = (
 BLOCKERS_PAGE_SIZE: Final = 100
 #: A walk of the blockers' own blockers reads at most this many issues.
 BLOCKERS_WALK_MAX_ISSUES: Final = 10
-OPEN_STATE: Final = "OPEN"
-_BLOCKERS_QUERY: Final = (
-    "query($o:String!,$r:String!,$n:Int!)"
-    f"{{repository(owner:$o,name:$r){{issue(number:$n){{{StoreField.BLOCKED_BY}"
-    f"(first:{BLOCKERS_PAGE_SIZE})"
-    "{pageInfo{hasNextPage endCursor} nodes{number state repository{nameWithOwner}}}"
-    "}}}"
-)
+OPEN_STATE: Final = "open"
+#: The REST path prefix a blocker's ``repository_url`` carries before ``<owner>/<repository>``.
+_REPOSITORY_URL_MARKER: Final = "repos/"
 PRODUCT_FIELD: Final = "Product"
 PARENT_FIELD: Final = "Parent"
 PREDECESSORS_FIELD: Final = "Predecessors"
@@ -1421,24 +1415,21 @@ def _read_relations(
 
 def _blocker_entry(node: object) -> dict[str, object]:
     """Return one native blocker as its canonical identity and whether it is open."""
-    repository = node.get(StoreField.REPOSITORY) if isinstance(node, dict) else None
-    owner_name = (
-        repository.get(StoreField.NAME_WITH_OWNER)
-        if isinstance(repository, dict)
-        else None
-    )
+    url = node.get(StoreField.REPOSITORY_URL) if isinstance(node, dict) else None
     numbered = node.get(StoreField.NUMBER) if isinstance(node, dict) else None
     state = node.get(StoreField.STATE) if isinstance(node, dict) else None
     if (
-        not isinstance(owner_name, str)
+        not isinstance(url, str)
+        or _REPOSITORY_URL_MARKER not in url
         or not isinstance(numbered, int)
         or isinstance(numbered, bool)
         or not isinstance(state, str)
     ):
         raise Blocked(
             BlockReason.UNREADABLE_OUTPUT,
-            f"blockers page holds an entry with no repository, issue number, and state{_STORE_HINT}",
+            f"blockers page holds an entry with no repository_url, issue number, and state{_STORE_HINT}",
         )
+    owner_name = url.rsplit(_REPOSITORY_URL_MARKER, 1)[-1]
     return {
         ResultField.IDENTITY: f"{owner_name}#{numbered}",
         ResultField.OPEN: state == OPEN_STATE,
@@ -1451,37 +1442,35 @@ def _issue_blockers(
     """Read one page of an issue's native blockers, or block when it is not the whole list."""
     owner, repository, number = identity
     argv = [
-        *_GRAPHQL,
-        "-f",
-        f"query={_BLOCKERS_QUERY}",
-        "-f",
-        f"o={owner}",
-        "-f",
-        f"r={repository}",
+        GH_EXECUTABLE,
+        "api",
+        f"repos/{owner}/{repository}/issues/{number}/dependencies/blocked_by",
+        "--method",
+        "GET",
         "-F",
-        f"n={number}",
+        f"per_page={BLOCKERS_PAGE_SIZE}",
     ]
-    node: object = _json_lines(_command(context, argv, cwd=context.cwd), argv=argv)[-1]
-    for key in (StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUE):
-        node = node.get(key) if isinstance(node, dict) else None
-    connection = node.get(StoreField.BLOCKED_BY) if isinstance(node, dict) else None
-    nodes = connection.get(StoreField.NODES) if isinstance(connection, dict) else None
-    info = (
-        connection.get(StoreField.PAGE_INFO) if isinstance(connection, dict) else None
-    )
-    if not isinstance(nodes, list) or not isinstance(info, dict):
+    stdout = _command(context, argv, cwd=context.cwd)
+    try:
+        entries: object = json.loads(stdout)
+    except ValueError as exc:
         raise Blocked(
             BlockReason.UNREADABLE_OUTPUT,
-            f"blockers page carries no nodes array and pageInfo object{_STORE_HINT}",
+            f"blockers page is not JSON{_STORE_HINT}",
+        ) from exc
+    if not isinstance(entries, list):
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"blockers page is not a JSON array{_STORE_HINT}",
         )
-    if info.get(StoreField.HAS_NEXT_PAGE) is True:
+    if len(entries) >= BLOCKERS_PAGE_SIZE:
         bound = f"{BLOCKERS_PAGE_SIZE} blockers, one page"
         raise Blocked(
             BlockReason.PAGE_BOUND_REACHED,
             f"the blockers read is not complete at {bound}{_BOUND_HINT}",
             evidence={ResultField.BOUND: bound},
         )
-    return [_blocker_entry(entry) for entry in nodes]
+    return [_blocker_entry(entry) for entry in entries]
 
 
 def _identity_parts(identity: str) -> tuple[str, str, str]:
