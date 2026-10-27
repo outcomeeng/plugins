@@ -17,6 +17,7 @@ from __future__ import annotations
 from outcomeeng_testing.harnesses.audit_change_blockers import (
     BLOCKERS_UNFINISHED,
     OPEN_AND_CLOSED,
+    WALK_CYCLE,
     WALK_PAST_BOUND,
     WALK_WITHIN_BOUND,
     answered_blocker_count,
@@ -75,6 +76,18 @@ def test_a_walk_within_the_bound_returns_each_issue_with_its_blockers() -> None:
     assert observed.result[Result.STATUS] == Status.OK
     assert observed.result[Result.GRAPH] == graph
     assert list(observed.issues_asked) == [entry[Result.ISSUE] for entry in graph]
+
+
+def test_a_walk_over_blockers_that_loop_back_reads_each_issue_once_and_ends() -> None:
+    graph = declared_graph(WALK_CYCLE)
+
+    observed = request_blockers(WALK_CYCLE, Operation.WALK_BLOCKERS)
+
+    assert observed.exit_code == ExitCode.OK
+    assert observed.result[Result.STATUS] == Status.OK
+    assert observed.result[Result.GRAPH] == graph
+    assert list(observed.issues_asked) == [entry[Result.ISSUE] for entry in graph]
+    assert len(observed.store_calls) == len(graph)
 
 
 def test_a_walk_that_fills_the_issue_bound_blocks_naming_it_and_reads_no_further() -> (

@@ -41,6 +41,7 @@ OPEN_AND_CLOSED: Final = _FIXTURES_DIR / "open-and-closed.json"
 BLOCKERS_UNFINISHED: Final = _FIXTURES_DIR / "blockers-unfinished.json"
 WALK_WITHIN_BOUND: Final = _FIXTURES_DIR / "walk-within-bound.json"
 WALK_PAST_BOUND: Final = _FIXTURES_DIR / "walk-past-bound.json"
+WALK_CYCLE: Final = _FIXTURES_DIR / "walk-cycle.json"
 
 _PAGE_PHRASE: Final = re.compile(r"native blockers one page of (\d+) per issue")
 _ISSUE_PHRASE: Final = re.compile(r"reads at most (\d+) issues when it walks")
