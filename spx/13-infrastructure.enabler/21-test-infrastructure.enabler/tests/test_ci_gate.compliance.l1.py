@@ -14,6 +14,7 @@ from outcomeeng.validation.ci_gate import (
     FULL_COMMIT_SHA_PATTERN,
     RETIRED_SPX_VERSION_ENVIRONMENT,
     SPX_CHECKOUT_REFERENCE,
+    SPX_COMMIT_ENVIRONMENT,
     SPX_REPOSITORY,
     FAIL_FAST_PREAMBLE,
     GATE_PULL_REQUEST_EVENT,
@@ -33,6 +34,7 @@ from outcomeeng_testing.harnesses.ci_gate import (
     observe_gate_run_commands,
     observe_gate_steps,
     observe_gate_triggers,
+    observe_spx_revision_pins,
     observe_spx_source,
     observe_validation_step_argvs,
     observe_workflow_jobs,
@@ -348,6 +350,14 @@ def test_gate_workflow_checks_out_spx_at_the_pinned_commit() -> None:
     assert (SPX_REPOSITORY, SPX_CHECKOUT_REFERENCE) in observe_spx_source().checkouts
 
 
+def test_repository_declares_exactly_one_spx_revision_pin() -> None:
+    observation = observe_spx_revision_pins()
+
+    assert observation.pin_variables == {SPX_COMMIT_ENVIRONMENT}
+    assert len(observation.revisions) == 1
+    assert observation.checkout_count == 1
+
+
 def test_gate_workflow_never_installs_spx_from_the_registry() -> None:
     observation = observe_ci_toolchain()
 
@@ -368,6 +378,31 @@ def test_registry_installed_spx_is_detected() -> None:
         for surface in (*observation.action_references, *observation.run_commands)
     )
     assert observe_spx_source(workflow_path).commit_pin is None
+
+
+def test_second_spx_checkout_revision_is_detected() -> None:
+    observation = observe_spx_revision_pins(
+        gate_fixture_path("spx_second_checkout_revision")
+    )
+
+    assert len(observation.revisions) > 1
+
+
+def test_second_spx_checkout_with_the_same_revision_is_detected() -> None:
+    observation = observe_spx_revision_pins(
+        gate_fixture_path("spx_duplicate_literal_pin")
+    )
+
+    assert len(observation.revisions) == 1
+    assert observation.checkout_count > 1
+
+
+def test_second_spx_pin_variable_is_detected() -> None:
+    observation = observe_spx_revision_pins(
+        gate_fixture_path("spx_second_pin_variable")
+    )
+
+    assert observation.pin_variables != {SPX_COMMIT_ENVIRONMENT}
 
 
 def test_spx_pinned_to_a_moving_ref_is_detected() -> None:

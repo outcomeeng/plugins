@@ -1,0 +1,28 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SPX_COMMIT: "0123456789abcdef0123456789abcdef01234567"
+      SPX_COMMIT_SECOND: "0123456789abcdef0123456789abcdef01234567"
+    steps:
+      - name: Check out spx
+        uses: actions/checkout@v5
+        with:
+          repository: outcomeeng/spx
+          ref: ${{ env.SPX_COMMIT }}
+      - name: Check out spx
+        uses: actions/checkout@v5
+        with:
+          repository: outcomeeng/spx
+          ref: ${{ env.SPX_COMMIT_SECOND }}
+      - name: Run quality gate
+        run: just check-full

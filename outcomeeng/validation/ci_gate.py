@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Final
 
@@ -20,6 +21,26 @@ DISCOVERY_AUTH_MODE_ENVIRONMENT: Final = "SUBAGENT_DISCOVERY_AUTH_MODE"
 SPX_REPOSITORY: Final = "outcomeeng/spx"
 SPX_COMMIT_ENVIRONMENT: Final = "SPX_COMMIT"
 SPX_CHECKOUT_REFERENCE: Final = f"${{{{ env.{SPX_COMMIT_ENVIRONMENT} }}}}"
+CHECKOUT_ACTION_PREFIX: Final = "actions/checkout@"
+STEP_USES_KEY: Final = "uses"
+STEP_WITH_KEY: Final = "with"
+CHECKOUT_REPOSITORY_KEY: Final = "repository"
+CHECKOUT_PATH_KEY: Final = "path"
+CHECKOUT_REF_KEY: Final = "ref"
+SETUP_PYTHON_VERSION_KEY: Final = "python-version"
+STEP_NAME_KEY: Final = "name"
+STEP_RUN_KEY: Final = "run"
+STEP_ENV_KEY: Final = "env"
+CONDITION_KEY: Final = "if"
+CONTINUE_ON_ERROR_KEY: Final = "continue-on-error"
+WORKFLOW_ON_KEY: Final = "on"
+PUSH_BRANCHES_KEY: Final = "branches"
+PROJECT_TABLE_KEY: Final = "project"
+REQUIRES_PYTHON_KEY: Final = "requires-python"
+WORKFLOW_JOBS_KEY: Final = "jobs"
+JOB_ENV_KEY: Final = "env"
+JOB_STEPS_KEY: Final = "steps"
+ENV_REFERENCE_PATTERN: Final = re.compile(r"\$\{\{\s*env\.(\w+)\s*\}\}")
 CONTINUE_ON_ERROR_FALSY: Final = (None, "false")
 FAIL_FAST_PREAMBLE: Final = "set -euo pipefail"
 TRAP_COMMAND_PREFIX: Final = "trap "
@@ -98,6 +119,16 @@ WORKFLOW_FILE_GLOBS: Final = ("*.yml", "*.yaml")
 
 
 __all__ = [
+    "CHECKOUT_ACTION_PREFIX",
+    "CHECKOUT_PATH_KEY",
+    "CHECKOUT_REF_KEY",
+    "ENV_REFERENCE_PATTERN",
+    "JOB_ENV_KEY",
+    "JOB_STEPS_KEY",
+    "WORKFLOW_JOBS_KEY",
+    "CHECKOUT_REPOSITORY_KEY",
+    "STEP_USES_KEY",
+    "STEP_WITH_KEY",
     "CI_STEP_ENVIRONMENT_REQUIREMENTS",
     "CODEX_API_KEY_ENVIRONMENT",
     "DISCOVERY_AUTH_MODE_ENVIRONMENT",
