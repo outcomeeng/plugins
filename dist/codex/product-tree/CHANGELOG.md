@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.109.6
+
+### Changed
+
+- **`/audit-implementation` passes its audit input to the scope resolver through a file.** The skill tells the caller to write the audit-input object with the file-write tool to a file in the session scratch directory and to name that file's path as the value of the resolver's `--audit-input` option, and it teaches no inline JSON argument. The bundled `resolve_scope.py` reads the file at that path, merges the object beneath the git-resolved scope as before, and exits nonzero with a diagnostic naming the path and the failure, emitting no payload, when the file is absent, unreadable, or not a JSON object. A key in the file that collides with `base`, `head`, or `changed_paths` is still discarded, and the `--output` file and the `--reconcile-run` mode are unchanged. Before this change, `--audit-input` took the JSON object as an inline single-quoted argument, the one audit payload that did not travel through a file. A caller that passed JSON text as the option's value now gets the nonzero diagnostic and passes a file path instead.
+
 ## 0.109.5
 
 ### Changed

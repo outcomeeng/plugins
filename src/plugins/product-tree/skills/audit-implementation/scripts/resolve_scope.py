@@ -3,8 +3,8 @@
 Tested before this script is bundled by the audit node's
 ``test_implementation_scope.scenario.l1.py`` (stale-local-base resolution, a
 nonexistent repository) and ``test_implementation_scope.compliance.l1.py``
-(a run-input object whose keys cannot displace the git-resolved scope, a
-non-object and a malformed run-input value, a sealed inventory path carrying no
+(a run-input file whose keys cannot displace the git-resolved scope, an absent
+run-input file, a non-object and a malformed run-input file, a sealed inventory path carrying no
 recorded scope unit, a required unit outside the final coverage statuses beside
 an optional unit carrying the same status, exact inventory agreement, drift in
 both directions, a recorded subject outside the inventory, a missing-skill unit
@@ -299,7 +299,8 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
     parser.add_argument("--repo", type=pathlib.Path, default=pathlib.Path.cwd())
     parser.add_argument(
         "--audit-input",
-        help="JSON object merged beneath the resolved scope to form a run-start input",
+        type=pathlib.Path,
+        help="file holding a JSON object merged beneath the resolved scope to form a run-start input",
     )
     parser.add_argument(
         "--reconcile-run",
@@ -343,16 +344,26 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
         return _reconcile_run(runner, scope, args, resolved)
     if args.audit_input is not None:
         try:
-            resolved = {**json.loads(args.audit_input), **resolved}
-        except (json.JSONDecodeError, TypeError) as exc:
+            supplied = json.loads(args.audit_input.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             print(
-                f"{ERROR_PREFIX}: --audit-input must be one JSON object such as "
-                f"""'{{"selector": "HEAD"}}', received """
-                f"{args.audit_input[:200]!r} ({type(exc).__name__}: {exc}). "
-                "Pass the object as a single-quoted argument.",
+                f"{ERROR_PREFIX}: --audit-input must name a readable file holding "
+                f"one JSON object, received {str(args.audit_input)[:200]!r} "
+                f"({type(exc).__name__}: {exc}). Write the object to a file in "
+                "the session scratch directory with the file-write tool and pass "
+                "that file's path.",
                 file=sys.stderr,
             )
             return EXIT_COMMAND_FAILURE
+        if not isinstance(supplied, dict):
+            print(
+                f"{ERROR_PREFIX}: --audit-input file {str(args.audit_input)[:200]!r} "
+                f"holds a {type(supplied).__name__}, not a JSON object. Write one "
+                "JSON object to the file.",
+                file=sys.stderr,
+            )
+            return EXIT_COMMAND_FAILURE
+        resolved = {**supplied, **resolved}
     # The selection is set after the merge, so no run-input key displaces it.
     try:
         selection = _selection_provider()

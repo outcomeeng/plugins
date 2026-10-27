@@ -151,7 +151,7 @@ Retyping such a list is a transcription task, and the contract gave the
 transcription no later referent that could contradict it.
 
 How to avoid: Have the resolver write its output to a file and pass that file by
-path to `run start --input`, with `--audit-input` carrying only the short
+path to `run start --input`, with the `--audit-input` file carrying only the short
 invocation-supplied values, per the run-start contract. Never read `changed_paths` out of the resolver's
 output and re-emit them into a payload.
 
