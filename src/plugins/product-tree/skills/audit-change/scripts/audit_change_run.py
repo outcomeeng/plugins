@@ -66,7 +66,8 @@ within the same page bound as ``read-authority``.
 
 ``resolve-reference`` reports where a named path resolves in the checkout and,
 in ``defaultBranch``, whether the path is a file on origin's default branch,
-tested with ``git cat-file -e origin/<default>:<path>``.
+tested with ``git cat-file -t origin/<default>:<path>`` printing ``blob``, so a
+directory is not on the default branch.
 
 ``count-limits`` reads the candidate and starts no process beyond the
 repository-root lookup; it returns the title's word count and the Intent
@@ -298,6 +299,7 @@ EVIDENCE_FIELDS: Final = frozenset(
 
 SPX_EXECUTABLE: Final = "spx"
 GIT_EXECUTABLE: Final = "git"
+GIT_BLOB_TYPE: Final = "blob"
 _GIT_TOPLEVEL: Final = (GIT_EXECUTABLE, "rev-parse", "--show-toplevel")
 _GIT_DEFAULT_BRANCH: Final = (
     GIT_EXECUTABLE,
@@ -939,9 +941,11 @@ def _default_branch_resolution(
     """Resolve ``named`` against origin's default branch, not the checkout.
 
     Absolute and outside-repository paths are never on the default branch. For
-    any other path the lookup is ``git cat-file -e origin/<default>:<path>``, so
-    a file present only in the checkout or on a work branch reports
-    ``checkout-only``.
+    any other path the lookup is ``git cat-file -t origin/<default>:<path>``,
+    and only a printed ``blob`` reports ``on-default-branch``. A file present
+    only in the checkout or on a work branch, and a directory on the default
+    branch, report ``checkout-only`` when the path resolves in the checkout and
+    ``absent`` when it does not.
     """
     if resolution in (Resolution.ABSOLUTE, Resolution.OUTSIDE_REPOSITORY):
         return DefaultBranchResolution.ABSENT
@@ -956,7 +960,7 @@ def _default_branch_resolution(
     argv = (
         GIT_EXECUTABLE,
         "cat-file",
-        "-e",
+        "-t",
         f"{default}:{posixpath.normpath(named)}",
     )
     try:
@@ -974,7 +978,7 @@ def _default_branch_resolution(
                 ResultField.STDERR: str(exc),
             },
         ) from exc
-    if result.exit_code == 0:
+    if result.exit_code == 0 and result.stdout.strip() == GIT_BLOB_TYPE:
         return DefaultBranchResolution.ON_DEFAULT_BRANCH
     if resolution is Resolution.RESOLVED:
         return DefaultBranchResolution.CHECKOUT_ONLY
