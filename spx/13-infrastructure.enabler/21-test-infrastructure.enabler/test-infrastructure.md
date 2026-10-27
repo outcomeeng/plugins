@@ -6,6 +6,8 @@ CAN be verified for correctness before changes reach the main branch, with the t
 
 ## Assertions
 
+- NEVER: a test harness under `outcomeeng_testing/harnesses/` leaves bytecode beside a shipped script, so that every subprocess it starts to run a shipped script carries the interpreter's no-bytecode option, every in-process load of a shipped script runs with bytecode writing off, and after a full `just check` no `__pycache__` directory and no `.pyc` file stands under `dist/`, per [`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md)
+
 ### Scenarios
 
 - Given a pinned `outcomeeng/spx` checkout without the corpus directory, when a test asks the harness for the corpus, then the run fails naming the missing path and neither passes nor skips, per [`spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`](spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md) ([test](tests/test_spx_fixture_corpus.scenario.l1.py))
