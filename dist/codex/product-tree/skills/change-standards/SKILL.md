@@ -35,7 +35,7 @@ NEVER load another Maturity's Definition of Ready in the same invocation. Each D
 
 <authority>
 
-The governing methodology is the Change chapter selected by the consumer repository's `spx.config.yaml`. An accepted `methodology.version` is exactly `4.0`, or exactly `4.0.N` with `N` one or more decimal digits representing a non-negative integer. Both accepted forms select `versions/4.0/methodology/change/changes.md` inside the declared `methodology.source`. An absent configuration, absent `methodology` block, the sentinel `installed`, another major or minor line, a non-integer patch component, an extra version component, and a prerelease suffix are invalid selections. The invalid-selection diagnostic contains the observed value — `absent` when no value exists — and the accepted forms `4.0` and `4.0.N`, where `N` is a non-negative integer. These standards operationalize the selected chapter without replacing it. A Change is mutable coordination for one intended Output in one Product, or in a root that spans Products; it declares no product, architecture, or methodology truth. Its body carries content only; every state and every authority event is read from the store.
+The governing methodology is the Change chapter selected by the consumer repository's `spx.config.yaml`. An accepted `methodology.version` is exactly `4.0`, or exactly `4.0.N` with `N` one or more decimal digits representing a non-negative integer. Both accepted forms select `versions/4.0/methodology/changes/changes.md` inside the declared `methodology.source`. An absent configuration, absent `methodology` block, the sentinel `installed`, another major or minor line, a non-integer patch component, an extra version component, and a prerelease suffix are invalid selections. The invalid-selection diagnostic contains the observed value — `absent` when no value exists — and the accepted forms `4.0` and `4.0.N`, where `N` is a non-negative integer. These standards operationalize the selected chapter without replacing it. A Change is mutable coordination for one intended Output in one Product, or in a root that spans Products; it declares no product, architecture, or methodology truth. Its body carries content only; every state and every authority event is read from the store.
 
 </authority>
 
@@ -62,9 +62,10 @@ The body opens with `## Intent`. Each Maturity adds its sections after the Inten
 | Section                   | First required at                         | Rule                   |
 | ------------------------- | ----------------------------------------- | ---------------------- |
 | `## Intent`               | Proposed                                  | `intent`               |
-| `## Governance`           | Proposed                                  | `governance`           |
-| `## Governance mutations` | Proposed                                  | `governance-mutations` |
-| `## Spec mutations`       | Proposed                                  | `spec-mutations`       |
+| `## Verification`         | Proposed, except a Parent at Sliced       | `verification`         |
+| `## Governance`           | Framed                                    | `governance`           |
+| `## Governance mutations` | Framed                                    | `governance-mutations` |
+| `## Spec mutations`       | Framed                                    | `spec-mutations`       |
 | `## Assumptions`          | Framed, when the Frame settled a question | `assumptions`          |
 | `## Slice`                | Sliced                                    | `slice`                |
 | `## Open questions`       | optional, Proposed only                   | `open-questions`       |
@@ -103,6 +104,32 @@ When the Change derives from a raw submission, the Intent restates that submissi
 <rule id="record-limits">
 
 The title has at most 15 words and the Intent at most 60 words, labels included. A record over a limit is a non-blocking finding under `review-bar` that names the section, the limit, and the count.
+
+</rule>
+
+<rule id="verification">
+
+`## Verification` follows `## Intent` and states the evidence obligations of the Output as entries, one for each Node the Output touches and each decision record it amends or adds. Every Change carries it except a Parent at Sliced, whose record carries none; a Parent's record that carries it at Sliced is a defect.
+
+At Proposed an entry states the obligations of its Node or record. From Framed on the section holds one row for each assertion of Spec mutations and each decision of Governance mutations. A Change with no assertion and no decision to verify holds the single row `none` and its reason. A Framed or higher record whose section holds neither a row nor the single row `none` with its reason is a defect; a Proposed section holds an entry for each Node and decision record, or the single row `none` with its reason.
+
+</rule>
+
+<rule id="verification-row">
+
+A row gives the verification type — `test`, `evaluate`, `probe`, or `audit` — and for a test the assertion type; the evidence path, the file execution creates; the repository path of each harness, generator, and fixture the evidence uses; and the judgment that decides the verdict, bound to the type: the oracle's comparison for a test or an evaluate, the attested observation for a probe, and the Verifier's criteria for an audit. A test or evaluate row on a Node whose Malleability after is `implementation` also names the evidence audit. A row that names a verification type and no evidence path states no obligation and is a defect, and so is a row whose judgment does not match its type. An evidence path need not exist before execution.
+
+</rule>
+
+<rule id="verification-assertions-only">
+
+A row states what the evidence holds and names no activity: no step, producer, command, or order of work. A row that names one is a defect.
+
+</rule>
+
+<rule id="verification-infrastructure">
+
+A harness, generator, or fixture that a row names and that does not exist is the Output of a separate Change that `blocked_by` names. Sliced requires that blocker. Executable requires every harness, generator, and fixture path a row names to be a file on the default branch on origin; a file only on a work branch or in a checkout does not satisfy it.
 
 </rule>
 
@@ -148,7 +175,7 @@ A blocker closed `Applied` satisfies the dependency; an open blocker remains a b
 
 <rule id="spec-mutations">
 
-`## Spec mutations` holds one block for each affected or intended Node, in execution order, providers first. The block opens with `<path>: <malleability before> -> <malleability after>`, which names the Node. From Framed on, the block continues with `<file> states:` and the Node's assertions as bare bullets. Malleability before is the value the Node declares before the Change, `none` for a Node the Change creates. Malleability after is the value the Node declares once the Change is applied: `spec`, `verification`, or `implementation`, an absent field meaning `implementation`. The malleability order from most to least malleable is `spec`, `verification`, `implementation`; the least malleable target is the Malleability after value latest in that order. Malleability is a per-Node fact; the record carries no Change-wide target. Existing paths resolve; an intended Node is labeled as intended.
+`## Spec mutations` holds one block for each affected or intended Node, in execution order, providers first. The block opens with `<path>: <malleability before> -> <malleability after>`, which names the Node. The block continues with `<file> states:` and the Node's assertions as bare bullets. Malleability before is the value the Node declares before the Change, `none` for a Node the Change creates. Malleability after is the value the Node declares once the Change is applied: `spec`, `verification`, or `implementation`, an absent field meaning `implementation`. The malleability order from most to least malleable is `spec`, `verification`, `implementation`; the least malleable target is the Malleability after value latest in that order. Malleability is a per-Node fact; the record carries no Change-wide target. Existing paths resolve; an intended Node is labeled as intended.
 
 Execution takes the Governance mutations blocks, then the Spec mutations blocks, each in record order. The record names no result, producer, or Verifier: execution selects each block's results and Verifiers from the merge composition for the Node's malleability after and from the decision-record audit of a record.
 
