@@ -3,8 +3,6 @@ name: change-author
 description: >-
   Round session `/execute-change` launches by exact name when a Mutation row needs product-tree artifacts: decisions, specs, nodes, and notes produced or repaired through `/author`.
 profile: standard
-targets:
-  - claude
 disallowedTools: Agent, {{! tool('ask_user') !}}
 skills:
   - product-tree:author

@@ -3,8 +3,6 @@ name: change-implementer
 description: >-
   Round session `/execute-change` launches by exact name when a Mutation row needs a language implementation of one node produced or repaired through `/implement-change`.
 profile: standard
-targets:
-  - claude
 disallowedTools: Agent, {{! tool('ask_user') !}}
 skills:
   - product-tree:implement-change
