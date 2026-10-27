@@ -22,6 +22,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/test` runs every resource-intensive command under the lock line.** The skill tells the caller to run each resource-intensive command as the argument vector of `spx orchestration lock --run-id <id> -- <command>` on one foreground line and to report a result only after every such line has exited. Before this change, the skill told the caller to chain the command behind a host-load waiter.
 
+- **`/implement-change` runs every resource-intensive command under the lock line.** The skill tells the caller to run each resource-intensive command any step runs as the argument vector of `spx orchestration lock --run-id <id> -- <command>` on one foreground line and to report a result only after every such line has exited. Before this change, the skill told the caller to chain the command behind a host-load waiter.
+
 ### Removed
 
 - **`/wait-for-load` ships no waiter script.** The skill no longer carries `scripts/wait_for_load.py`, its `python3` allowed-tools entry, its terminal-status table, or its waiter-only failure modes. The guard's help declares the exit codes and the terminal record the skill reads. A consumer repository that kept `spx/local/wait-for-load.md` can remove it, because nothing reads it, and one that chained its commands behind the waiter script uses the lock line instead.
