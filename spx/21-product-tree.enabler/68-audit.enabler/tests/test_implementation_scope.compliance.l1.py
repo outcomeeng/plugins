@@ -99,6 +99,36 @@ def test_a_non_object_run_input_is_rejected_rather_than_ignored() -> None:
         assert not completed.stdout
 
 
+def test_an_absent_audit_input_file_is_rejected_naming_the_path(
+    tmp_path: pathlib.Path,
+) -> None:
+    (absent_name,) = distinct_subject_paths(1)
+    absent = tmp_path / absent_name
+    with stale_local_base_repo() as stale:
+        completed = run_implementation_scope(
+            stale.repo, CHANGESET_SCOPE.HEAD_REF, audit_input_path=absent
+        )
+
+    assert completed.returncode == EXIT_COMMAND_FAILURE
+    assert completed.stderr.startswith(ERROR_PREFIX)
+    assert str(absent) in completed.stderr
+    assert not completed.stdout
+
+
+def test_an_unreadable_audit_input_path_is_rejected_naming_the_path(
+    tmp_path: pathlib.Path,
+) -> None:
+    with stale_local_base_repo() as stale:
+        completed = run_implementation_scope(
+            stale.repo, CHANGESET_SCOPE.HEAD_REF, audit_input_path=tmp_path
+        )
+
+    assert completed.returncode == EXIT_COMMAND_FAILURE
+    assert completed.stderr.startswith(ERROR_PREFIX)
+    assert str(tmp_path) in completed.stderr
+    assert not completed.stdout
+
+
 def test_malformed_run_input_json_is_rejected_rather_than_ignored() -> None:
     with stale_local_base_repo() as stale:
         completed = run_implementation_scope(

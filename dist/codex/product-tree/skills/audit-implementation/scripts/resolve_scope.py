@@ -53,6 +53,9 @@ SCOPE_OPTION = "--scope"
 # The option naming the file that receives the complete run-start input in
 # place of standard output.
 OUTPUT_OPTION = "--output"
+# The option naming the file that holds the audit input merged beneath the
+# resolved scope.
+AUDIT_INPUT_OPTION = "--audit-input"
 # Audit-input key under which an advisory (`worktree:`) audit carries its live
 # modified and untracked paths; a committed audit omits it.
 LIVE_PATHS_KEY = "live_paths"
@@ -298,7 +301,7 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
     parser.add_argument("scope", help="HEAD, a branch, or a three-dot range")
     parser.add_argument("--repo", type=pathlib.Path, default=pathlib.Path.cwd())
     parser.add_argument(
-        "--audit-input",
+        AUDIT_INPUT_OPTION,
         type=pathlib.Path,
         help="file holding a JSON object merged beneath the resolved scope to form a run-start input",
     )
@@ -347,7 +350,7 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
             supplied = json.loads(args.audit_input.read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             print(
-                f"{ERROR_PREFIX}: --audit-input must name a readable file holding "
+                f"{ERROR_PREFIX}: {AUDIT_INPUT_OPTION} must name a readable file holding "
                 f"one JSON object, received {str(args.audit_input)[:200]!r} "
                 f"({type(exc).__name__}: {exc}). Write the object to a file in "
                 "the session scratch directory with the file-write tool and pass "
@@ -357,7 +360,7 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
             return EXIT_COMMAND_FAILURE
         if not isinstance(supplied, dict):
             print(
-                f"{ERROR_PREFIX}: --audit-input file {str(args.audit_input)[:200]!r} "
+                f"{ERROR_PREFIX}: {AUDIT_INPUT_OPTION} file {str(args.audit_input)[:200]!r} "
                 f"holds a {type(supplied).__name__}, not a JSON object. Write one "
                 "JSON object to the file.",
                 file=sys.stderr,
