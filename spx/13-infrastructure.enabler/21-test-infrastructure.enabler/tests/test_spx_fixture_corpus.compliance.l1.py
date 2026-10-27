@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from outcomeeng.validation.orchestration_corpus import (
-    ORCHESTRATION_CORPUS_PATH,
-    tracked_corpus_copies,
+from outcomeeng.validation.orchestration_corpus import tracked_corpus_copies
+from outcomeeng_testing.generators.orchestration_corpus import (
+    copied_corpus_paths,
+    unrelated_paths,
 )
 from outcomeeng_testing.harnesses.orchestration_corpus import (
     tracked_files_of_new_repository,
@@ -20,9 +21,6 @@ from outcomeeng_testing.harnesses.product_tree import (
     marketplace_root_for_product_tree_root_test,
     marketplace_tracked_files,
 )
-
-COPIED_FIXTURE_NAME = "case.json"
-
 
 def _product_root() -> Path:
     return marketplace_root_for_product_tree_root_test(__file__)
@@ -35,9 +33,9 @@ def test_no_tracked_file_lies_under_the_corpus_path() -> None:
 
 
 def test_a_tracked_copy_of_the_corpus_is_detected(tmp_path: Path) -> None:
-    copied = f"{ORCHESTRATION_CORPUS_PATH}/{COPIED_FIXTURE_NAME}"
-    unrelated = f"docs/{COPIED_FIXTURE_NAME}"
+    copied = copied_corpus_paths()
+    unrelated = unrelated_paths()
 
-    tracked = tracked_files_of_new_repository(tmp_path, [copied, unrelated])
+    tracked = tracked_files_of_new_repository(tmp_path, [*copied, *unrelated])
 
-    assert tracked_corpus_copies(tracked) == (copied,)
+    assert sorted(tracked_corpus_copies(tracked)) == sorted(copied)

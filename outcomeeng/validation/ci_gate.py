@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Final
 
@@ -25,6 +26,11 @@ STEP_USES_KEY: Final = "uses"
 STEP_WITH_KEY: Final = "with"
 CHECKOUT_REPOSITORY_KEY: Final = "repository"
 CHECKOUT_PATH_KEY: Final = "path"
+CHECKOUT_REF_KEY: Final = "ref"
+WORKFLOW_JOBS_KEY: Final = "jobs"
+JOB_ENV_KEY: Final = "env"
+JOB_STEPS_KEY: Final = "steps"
+ENV_REFERENCE_PATTERN: Final = re.compile(r"\$\{\{\s*env\.(\w+)\s*\}\}")
 CONTINUE_ON_ERROR_FALSY: Final = (None, "false")
 FAIL_FAST_PREAMBLE: Final = "set -euo pipefail"
 TRAP_COMMAND_PREFIX: Final = "trap "
@@ -105,6 +111,11 @@ WORKFLOW_FILE_GLOBS: Final = ("*.yml", "*.yaml")
 __all__ = [
     "CHECKOUT_ACTION_PREFIX",
     "CHECKOUT_PATH_KEY",
+    "CHECKOUT_REF_KEY",
+    "ENV_REFERENCE_PATTERN",
+    "JOB_ENV_KEY",
+    "JOB_STEPS_KEY",
+    "WORKFLOW_JOBS_KEY",
     "CHECKOUT_REPOSITORY_KEY",
     "STEP_USES_KEY",
     "STEP_WITH_KEY",

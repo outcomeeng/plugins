@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,6 +11,15 @@ import yaml
 
 from outcomeeng.validation import VALIDATION_STEPS
 from outcomeeng.validation.ci_gate import (
+    CHECKOUT_ACTION_PREFIX,
+    CHECKOUT_REF_KEY,
+    CHECKOUT_REPOSITORY_KEY,
+    ENV_REFERENCE_PATTERN,
+    JOB_ENV_KEY,
+    JOB_STEPS_KEY,
+    STEP_USES_KEY,
+    STEP_WITH_KEY,
+    WORKFLOW_JOBS_KEY,
     GATE_JOB_NAME,
     JOB_TIMEOUT_KEY,
     SPX_COMMIT_ENVIRONMENT,
@@ -24,7 +32,6 @@ from outcomeeng.validation.ci_gate import (
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_DIRECTORY: Final = REPO_ROOT / ".github" / "workflows"
 GATE_WORKFLOW: Final = WORKFLOW_DIRECTORY / "check.yml"
-ENV_REFERENCE_PATTERN: Final = re.compile(r"\$\{\{\s*env\.(\w+)\s*\}\}")
 
 
 def workflow_paths(directory: Path | None = None) -> tuple[Path, ...]:
@@ -274,7 +281,7 @@ def observe_spx_source(workflow_path: Path | None = None) -> SpxSourceObservatio
             cast("dict[str, str]", step.get("with", {})).get("ref"),
         )
         for step in gate_steps(workflow(workflow_path))
-        if "actions/checkout@" in cast("str", step.get("uses", ""))
+        if CHECKOUT_ACTION_PREFIX in cast("str", step.get(STEP_USES_KEY, ""))
     )
     return SpxSourceObservation(
         commit_pin=env.get(SPX_COMMIT_ENVIRONMENT), checkouts=checkouts
@@ -289,13 +296,13 @@ def observe_spx_revision_pins(
     revisions: set[str] = set()
     variables: set[str] = set()
     for path in workflow_paths(directory):
-        for job in cast("dict[str, Any]", workflow(path).get("jobs") or {}).values():
-            env = cast("dict[str, str]", job.get("env", {}))
-            for step in cast("list[dict[str, Any]]", job.get("steps", [])):
-                inputs = cast("dict[str, str]", step.get("with", {}))
-                if inputs.get("repository") != SPX_REPOSITORY:
+        for job in cast("dict[str, Any]", workflow(path).get(WORKFLOW_JOBS_KEY) or {}).values():
+            env = cast("dict[str, str]", job.get(JOB_ENV_KEY, {}))
+            for step in cast("list[dict[str, Any]]", job.get(JOB_STEPS_KEY, [])):
+                inputs = cast("dict[str, str]", step.get(STEP_WITH_KEY, {}))
+                if inputs.get(CHECKOUT_REPOSITORY_KEY) != SPX_REPOSITORY:
                     continue
-                reference = inputs.get("ref", "")
+                reference = inputs.get(CHECKOUT_REF_KEY, "")
                 named = ENV_REFERENCE_PATTERN.fullmatch(reference)
                 if named is None:
                     revisions.add(reference)
