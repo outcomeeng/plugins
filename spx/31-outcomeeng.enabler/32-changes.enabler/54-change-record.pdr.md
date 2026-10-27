@@ -32,15 +32,22 @@ The body carries no attestation, accountable-person, priority, or overrule text;
 ## Final format
 
 - final-format-only: Skills write, judge, and execute only a Change record in the final format. A record in another form receives no migration, alias, or inferred field, and its next revision authors the record anew from the proposal it carries.
-- record-sections: The record body opens with `## Intent`. Proposed adds `## Governance`, `## Governance mutations`, and `## Spec mutations`, whose blocks name each affected Node by its opening line; Framed states each Node's assertions and adds `## Assumptions` when the Frame settled a question; Sliced adds `## Slice`; Executable adds no section. The order is Intent, Governance, Governance mutations, Spec mutations, Assumptions, Slice, and a Proposed record may end with `## Open questions`, which a Framed record leaves empty.
+- record-sections: The record body opens with `## Intent`. A Leaf, and a Parent below Sliced, continue with `## Verification`; a Parent at Sliced carries no `## Verification` section. Proposed holds `## Intent` and `## Verification` and may end with `## Open questions`; Framed adds `## Governance`, `## Governance mutations`, and `## Spec mutations`, which derive from the Intent and the Verification section and state each Node's assertions, and adds `## Assumptions` when the Frame settled a question; Sliced adds `## Slice`; Executable adds no section. The order is Intent, Verification, Governance, Governance mutations, Spec mutations, Assumptions, Slice, and a Proposed record may end with `## Open questions`, which a Framed record leaves empty. A Change whose record carries a Governance mutations or Spec mutations block is a Leaf, a Change that another Change names in `parent` is a Parent, a Proposed record with neither is a Leaf by lineage until another Change names it in `parent`, and any other Change with neither is a root.
 - record-intent: The Intent runs at most 60 words including its labels. It holds What, Why, an optional Observation, and Evidence, and a list inside a part stands in parentheses.
 - record-governance: `## Governance` lists every record the Output touches or that governs it, by its path from `spx/`, each with the verdict `in line`, `amended`, or `new`.
 - record-governance-mutations: `## Governance mutations` holds one block for each amended or new record. The block opens with `<path> states:`, lists its decisions in exact text, each opening with a slug and a colon.
 - record-spec-mutations: `## Spec mutations` holds one block for each Node in execution order. The block opens with `<path>: <malleability before> -> <malleability after>`. The block continues with `<file> states:` and the Node's assertions as bare bullets.
+- record-verification: `## Verification` states the evidence obligations of the Output, one entry for each Node the Output touches and each decision record it amends or adds. At Proposed an entry states the obligations of its Node or record; from Framed on it holds one row for each assertion of Spec mutations and each decision of Governance mutations. A row gives the verification type and, for a test, the assertion type; the evidence path, the file execution creates; the repository path of each harness, generator and fixture the evidence uses; and the judgment that decides its verdict, bound to the type: the oracle's comparison for a test or an evaluate, the attested observation for a probe, and the Verifier's criteria for an audit. A test or evaluate row on an implementation-malleable Node also names the evidence audit.
+- verification-no-path: A row that names a verification type and no evidence path states no obligation and is a defect.
+- verification-none: A Change with no assertion and no decision to verify holds the single row `none` and its reason; any other record from Framed on whose `## Verification` section holds no row is defective, and a Proposed section holds one obligation entry for each Node and decision record or the single row `none`.
+- verification-assertions-only: A Verification row states what the evidence holds and names no activity: no step, producer, command, or order of work.
+- verification-authoring: Change authoring derives each row's verification type through `/verify`, and a test row's assertion type through `/test`.
+- verification-infrastructure: The Refiner checks each path of the section as it checks each fact of the Frame. A harness, generator or fixture that does not exist is the Output of a separate Change, which blocks this Change. An evidence path names the file execution creates and need not exist before execution.
+- verification-execution: Execution produces each row's evidence by routing the row through `/verify` in a change-verifier round session, and a test row then through `/test` in a change-tester round session.
 - record-slice: `## Slice` holds `- Repository:` and `- Check:`, one repository and one observable check, which is one trigger and its result.
 - no-execution-status: The record carries no execution status: no Node state, no link to produced content, and no progress. Execution records its progress only in its Handoff.
 - draft-predecessors: The local draft names the Changes this Change absorbed by a merge in the key `predecessors`, and the store field `Predecessors` holds the same value.
-- change-type: A Change whose record carries a Governance mutations or Spec mutations block is a Leaf, a Change that another Change names in `parent` is a Parent, and a Change with neither is a root.
+- change-type: A Change whose record carries a Governance mutations or Spec mutations block is a Leaf, a Change that another Change names in `parent` is a Parent, a Proposed record with neither is a Leaf by lineage until another Change names it in `parent`, and any other Change with neither is a root.
 - parent-product: A Change carries the Product that owns its Output, and a Parent and its children may carry different Products.
 - execution-order: Execution takes the Governance mutations blocks, then the Spec mutations blocks, each in record order. The merge composition for the Node's malleability after, and the decision-record audit of a record, select each block's results and Verifiers.
 - applied-leaf: A Leaf closes Applied when the merge commit of the pull request or branch its newest Handoff names is an ancestor of the default branch, every Node holds every result the merge composition for its malleability after selects, every amended or new record holds an approving decision-record audit, and the Intent's Evidence is met.
@@ -52,28 +59,21 @@ Each Definition of Ready is an independently loadable criterion set, and the set
 
 ### Proposed
 
-- proposed-ready: A Proposed Change is ready when its Intent states What, Why, and Evidence, `## Governance mutations` holds the exact text of every decision the Output adds or amends, `## Governance` lists every record the Output touches or that governs it, and `## Spec mutations` names every Node the Output touches.
+- proposed-ready: A Proposed Change is ready when its Intent states What, Why, and Evidence and `## Verification` holds an entry stating the obligations of each Node the Output touches and each decision record it amends or adds, or the single row `none` and its reason.
 
 Readiness at Proposed requires no operator review statement in the record.
 
 ### Framed
 
-- framed-ready: A Framed Change is ready when the Proposed Definition of Ready holds, every affected or intended Node has a Spec mutations block stating its assertions, and no question stays open: each question the Frame settled stands under `## Assumptions` as its answer and one sentence of reason.
+- framed-ready: A Framed Change is ready when the Proposed Definition of Ready holds, `## Governance` lists every record the Output touches or that governs it, `## Governance mutations` holds the exact text of every decision the Output adds or amends, every affected or intended Node has a Spec mutations block stating its assertions, `## Verification` holds one row for each assertion and decision, or the single row `none` and its reason, and no question stays open: each question the Frame settled stands under `## Assumptions` as its answer and one sentence of reason.
 
 ### Sliced
 
-A Sliced Change is ready when:
-
-- the Framed Definition of Ready holds;
-- a Leaf's `## Slice` names the one repository and the one observable check of one coherent, independently integrable unit whose dependencies and sequence are resolved; and
-- a Parent is Sliced when every child exists naming it in `parent` and its record carries neither a Governance mutations nor a Spec mutations block; a Parent never reaches Executable.
+- sliced-ready: A Sliced Change is ready when the Framed Definition of Ready holds; a Leaf's `## Slice` names the one repository and the one observable check of one coherent, independently integrable unit whose dependencies and sequence are resolved, and each harness, generator or fixture a Verification row names and that does not exist is the Output of a Change that `blocked_by` names; and a Parent is Sliced when every child exists naming it in `parent` and its record carries no Verification section and neither a Governance mutations nor a Spec mutations block; a Parent never reaches Executable.
 
 ### Executable
 
-An Executable Change is ready when:
-
-- the Sliced Definition of Ready holds;
-- `## Slice` is complete and the Governance mutations and Spec mutations blocks state every consequential decision for the changeset; Executable adds no section.
+- executable-ready: An Executable Change is ready when the Sliced Definition of Ready holds, `## Slice` is complete, the Governance mutations and Spec mutations blocks state every consequential decision for the changeset, `## Verification` is complete, and every harness, generator and fixture path it names is a file on the default branch on origin; a file only on a work branch or in a checkout does not satisfy it. Executable adds no section.
 
 The merge composition is the one the `Merge` section of the 4.0 Projection chapter states — `versions/4.0/methodology/product-tree/verification/projection.md` inside the declared `methodology.source` — which defines when a changeset touches a node, the predicates a changeset selects by its least malleable touched node and by a product spec or outcome-record change, when a result is produced again before merge, the dependency protection that fails a changeset raising a malleability or ending `Passing` in the closure of an effectively `Passing` consumer, and the decision-record audit as an authoring check that produces no node-local result.
 
@@ -171,4 +171,8 @@ Excluding records without the closed front-matter key set keeps the contract clo
 - NEVER: a Lifecycle skill writes Maturity or a body section, or posts a comment other than its Claim, Handoff, or terminal record.
 - NEVER: a Lifecycle transition performs a later mutation after a required write fails or a readback differs from the intended state; its diagnostic names every completed write, the failed operation, and the observed state.
 - NEVER: a Handoff, Claim, terminal record, or rejection instruction carries a secret value or credential payload.
-- ALWAYS: a Change that another Change names in `parent` carries no Governance mutations or Spec mutations block and never reaches Executable; the change audit rejects a record that breaks the rule.
+- ALWAYS: a Change that another Change names in `parent` carries no Governance mutations or Spec mutations block, carries no `## Verification` section at Sliced or Executable, and never reaches Executable; the change audit rejects a record that breaks the rule.
+- ALWAYS: a Leaf's `## Verification` section follows `## Intent`, and from Framed on holds one row for each Spec mutations assertion and each Governance mutations decision, or the single row `none` with its reason; each row names its verification type, its evidence path, and the judgment bound to that type.
+- NEVER: a Verification row names a verification type and no evidence path, or names an activity: a step, a producer, a command, or an order of work.
+- ALWAYS: Change authoring derives each Verification row's verification type through `/verify` and a test row's assertion type through `/test`, and execution produces each row's evidence through `/verify` in a change-verifier round session and a test row's evidence then through `/test` in a change-tester round session.
+- ALWAYS: a harness, generator or fixture that a Verification row names and that does not exist is the Output of a Change that `blocked_by` names, an Executable Change names only harness, generator and fixture paths that are files on the default branch on origin, and no readiness criterion requires an evidence path to exist before execution.

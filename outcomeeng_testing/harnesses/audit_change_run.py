@@ -118,6 +118,17 @@ MALFORMED_REQUEST_PROPERTY_REPLAY: Final = (
     "test_audit_change_run.compliance.l1.py"
 )
 
+_ORIGIN_DIRNAME: Final = "origin.git"
+_DEFAULT_BRANCH: Final = "main"
+_REMOTE: Final = "origin"
+_GIT_CONFIGURATION: Final = (
+    "-c",
+    "user.name=Example Author",
+    "-c",
+    "user.email=author@example.invalid",
+    "-c",
+    "commit.gpgsign=false",
+)
 _CANDIDATE_DIRNAME: Final = "changes"
 _FIXTURE_SUFFIX: Final = ".txt"
 _TEMPORARY_DIRECTORY_VARIABLES: Final = ("TMPDIR", "TMP", "TEMP")
@@ -484,6 +495,31 @@ class AuditWorkspace:
         return projection
 
 
+def _git(cwd: Path, *arguments: str) -> None:
+    subprocess.run(  # noqa: S603
+        ["git", *_GIT_CONFIGURATION, *arguments],  # noqa: S607
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _build_repository_with_origin(root: Path, origin: Path) -> None:
+    """Make ``root`` a repository whose bare origin holds the default branch.
+
+    The repository gets an empty first commit, pushed to the origin, and the
+    ``origin/HEAD`` reference a clone carries, so the runner reads a real
+    default branch and the repository holds no file beyond the candidates.
+    """
+    origin.mkdir()
+    _git(origin, "init", "--quiet", "--bare", f"--initial-branch={_DEFAULT_BRANCH}")
+    _git(root, "init", "--quiet", f"--initial-branch={_DEFAULT_BRANCH}")
+    _git(root, "remote", "add", _REMOTE, str(origin))
+    _git(root, "commit", "--quiet", "--allow-empty", "-m", "baseline")
+    _git(root, "push", "--quiet", _REMOTE, _DEFAULT_BRANCH)
+    _git(root, "remote", "set-head", _REMOTE, _DEFAULT_BRANCH)
+
+
 @contextmanager
 def audit_workspace() -> Iterator[AuditWorkspace]:
     """Yield a fresh repository and the runner's empty temporary and home directories."""
@@ -504,10 +540,7 @@ def audit_workspace() -> Iterator[AuditWorkspace]:
             workspace.observation_directory,
         ):
             directory.mkdir()
-        subprocess.run(  # noqa: S603
-            ["git", "init", "--quiet", str(workspace.root)],  # noqa: S607
-            check=True,
-        )
+        _build_repository_with_origin(workspace.root, base / _ORIGIN_DIRNAME)
         yield workspace
 
 
