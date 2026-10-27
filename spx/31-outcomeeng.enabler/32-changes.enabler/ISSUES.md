@@ -211,14 +211,38 @@ Revisit and settlement condition: `outcomeeng/changes#515` is the home of the fi
 
 Reason the fix is a separate larger concern: the fix adds a Write grant to the change-auditor agent, which reverses that agent's no-file-write rule. A separate Change set that rule, and no block of `outcomeeng/changes#425` amends it, so the fix lies outside this changeset.
 
-## DEBT [voice]: change-standards lifecycle inert-stdin names the agent as a subject
+## DEBT [consistency]: the report-changes assertions map a row from the retired Claimed, Claim, and Handoff comment model `spx/31-outcomeeng.enabler/32-changes.enabler/changes.md` `report-changes row mapping assertions` [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md)
 
-Defect class: `voice`.
+Defect class: `consistency`.
 
-Finding: the `inert-stdin` rule in `src/plugins/product-tree/skills/change-standards/references/lifecycle.md` (line 67) uses "the agent" as the subject of "the agent never removes the file". Prompt text in skill content states an instruction in imperative voice or names Claude, and never uses "the agent" as a subject.
+Finding: the `report-changes` assertions of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) at lines 55 and 56 map a row's changeset from the `Branch or PR` line of the newest `Handoff:` comment, its next action from that comment's `Next block` line, and its waiting state from a `Claimed` Change, its winning Claim, and `claim none recorded`. [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) removes the `Claimed` Lifecycle value, the `Claim:` and `Handoff:` comments, and every comment read except the claim exception, and keeps the Handoff on the Change's branch `change/<N>`.
 
-Evidence: `instructions:skill-auditor` run `2026-10-17_18-16-04-154-bd168bad0aee`, terminal status approved, returned a `filed` finding under rule `banned_subject` for unit `instructions:skill:file:src/plugins/product-tree/skills/change-standards/references/lifecycle.md`, base-ref evidence `ffb6bdca9cfea5d4657fd86c184487179df6432e..a101e169becf514e2c8a76cb4f82fe1aa4a7135a`. Observed: line 67 reads "...and the agent never removes the file." Expected: "NEVER remove the file", or a sentence naming Claude. The line lies outside the changeset.
+Evidence: the assertions at lines 55 and 56 of `changes.md`; the two links of those assertions to `spx/31-outcomeeng.enabler/32-changes.enabler/tests/test_report_changes.mapping.l1.py`; `src/plugins/product-tree/skills/report-changes/SKILL.md`; and `src/plugins/product-tree/skills/report-changes/scripts/report_changes.py`. The local review run `2026-10-21_19-28-07-109-fedf596d2469` raised the mismatch as a `reject` finding of category `consistency`.
 
-Impact: a later audit of `change-standards` can raise the finding again.
+Impact: the assertions, the linked tests, the skill, and the script encode the retired model, so a report built from them derives no holder, changeset, or next action from the current records and reports a Lifecycle set that includes `Claimed`.
 
-Revisit and settlement condition: `inert-stdin` in `lifecycle.md` states the instruction in imperative voice or names Claude as its subject, and one typed skill audit of `change-standards` raises no `banned_subject` finding on it.
+Revisit and settlement condition: a Change revises the `report-changes` assertions, tests, harness, skill, and script together to derive the holder from the assignee and the winning claim block, the changeset and next action from the newest Handoff commit on `change/<N>`, and the Lifecycle set from the four values `Available`, `Submitted`, `Applied`, and `Abandoned`.
+
+## FILED [security]: authority-read accepts a holder's own release of a Submitted Change as the Maintainer's confirmation `src/plugins/product-tree/skills/change-standards/references/lifecycle.md` `authority-read` [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md)
+
+Defect class: `security`.
+
+Finding: the `authority-read` rule reads a Lifecycle move out of `Submitted` whose Maturity at the move equals the Maturity at the move into `Submitted` as the authority for leaving that Maturity. The release of a `Submitted` Change writes `Available` and lets its pending confirmation lapse, so a holder's own release writes the same field-change event the rule accepts. A holder who submits a Change at Framed and then releases it leaves a `Submitted` to `Available` move at equal Maturity, which the rule reports as the authority to advance past Framed. The rule, the decisions `field-authority` and `authority-move` of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md), `maturity-and-authority` in `change-standards`, and the `audit-change` authority read name no condition that tells a holder's release from the Product's Maintainer's confirmation.
+
+Evidence: local review run `2026-10-21_22-42-32-804-317559994c88` on head `50b3087be79b99724a255beca186b9e3646f769b` returned the finding as `reject`, category `security`, at line 41 of `src/plugins/product-tree/skills/change-standards/references/lifecycle.md`. The decisions `release-event`, `submitted-not-ready`, and `lifecycle-transitions` of the PDR state in exact text that the release of a `Submitted` Change writes `Available`, and the Change's Governance mutations state them as written, so under [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) the changeset writes no repair and the finding is returned `filed`. The Plugins Maintainer ruled it `filed`.
+
+Impact: the store's field-change events cannot show whether the Maintainer or the holder moved a `Submitted` Change to `Available`, so the Maturity gate rests on an event a holder can also write.
+
+Revisit and settlement condition: `authority-read`, the PDR decisions `field-authority` and `authority-move`, and the `audit-change` authority read exclude a holder's own release from the authority for leaving a Maturity, and one change audit and one PDR audit raise no finding on the exclusion.
+
+## DEBT [capability]: release-change cannot release a second Change held in one worktree
+
+Defect class: `capability`.
+
+Finding: step 3.1 of `src/plugins/product-tree/skills/release-change/SKILL.md` takes the branch the checkout is attached to as the work branch of the Change being released, and steps 5.2 to 5.4 push that branch to `refs/heads/change/<N>` and detach the worktree. A session that holds outcomeeng/changes#586 and outcomeeng/changes#789 in one worktree, attached to the work branch of #586, releases #789 only by pushing every #586 commit to `change/789` and detaching the checkout under #586. The skill names no placement for a Handoff when the attached branch carries another Change's work, and no rule that one worktree holds one Change.
+
+Evidence: step 3.1, step 5.2, and step 5.4 of the skill above; `git status --short --branch` in the worktree of the session reports the branch `work/change-586-2` while the claim block of outcomeeng/changes#789 names the same worktree.
+
+Impact: the release of #789 waits until #586 has merged and the worktree is free, and a session that holds two Changes cannot submit the second one for confirmation.
+
+Revisit and settlement condition: the skill states the Handoff placement for a worktree whose attached branch carries another Change's work, or the Lifecycle rules state that one worktree holds one Change, and one typed skill audit of `release-change` raises no finding on step 3.1.

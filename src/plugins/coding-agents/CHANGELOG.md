@@ -6,6 +6,14 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.17.1
+
+### Changed
+
+- **`/orchestrate-change` starts the Executor session without claiming the Change, and reads holding from the assignee and Handoffs from commits on `change/<N>`.** Start posts no claim and adds no assignee: the Executor session claims the Change for its own session and worktree, and a restarted Executor claims it again. Check reads a release from the Change's assignee list and its newest assignment event, an empty list after an unassignment, and reads the Handoff's `Blockers` and `Hazards` from the newest `Handoff:` commit on the Change's branch `change/<N>`; a release is reported to the principal once per Handoff commit under the correlation `change-<N>-handoff-<commit SHA>`. No step reads a `Claim:` or `Handoff:` comment or a `Claimed` Lifecycle. A start the harness's classifier refuses twice reports the refused request and the reason to the principal, with no Claim held.
+
+- **`/orchestrate-change` Check reads an unassignment as a release only when the worktree runs no Executor work.** An Executor that Start launches or a restart relaunches claims the Change only after its session is running, so an empty assignee list whose newest holding event is the unassignment of an earlier release stands until the claim lands. Check now reads that state as a release only when `spx worktree status` shows no running Executor work in the worktree; while the status shows running work, Check checks the pane as it checks any running Executor and neither restarts nor stops the session. Before this change, a Check in that window read the earlier release's Handoff and relaunched or stopped the session just started.
+
 ## 0.17.0
 
 ### Breaking
