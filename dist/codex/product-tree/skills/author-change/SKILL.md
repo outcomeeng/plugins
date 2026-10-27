@@ -5,7 +5,7 @@ description: >-
   Engineering Change record, or when turning a request into one. NEVER use it
   to author a spec or review a code changeset.
 argument-hint: "<local Change path and intent | existing Change reference and revision>"
-allowed-tools: Read, Write, Edit, Grep, Glob, collaboration.spawn_agent, collaboration.wait_agent, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by/*:*), Bash(gh api repos/*/issues/* --jq .id), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(spx verification run input:*), Bash(spx verification run render:*), request_user_input
+allowed-tools: Read, Write, Edit, Grep, Glob, collaboration.spawn_agent, collaboration.wait_agent, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by/*:*), Bash(gh api repos/*/issues/* --jq .id), Bash(git fetch origin change/:*), Bash(git log -1:*), Bash(spx -C * worktree status --format json), Bash(gh api user --jq .login), Bash(printenv USER), Bash(hostname -s), Bash(printenv CODEX_THREAD_ID), Bash(git rev-parse --show-toplevel), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(spx verification run input:*), Bash(spx verification run render:*), request_user_input
 ---
 
 <objective>
@@ -70,9 +70,9 @@ Read exactly one maturity workflow and the template of the same name under `${SK
 
 <revision_safety>
 
-For an existing Change, read its complete current body, each field from its store home, holder, predecessor and blocker records needed for the revision, and latest Handoff when resuming execution. Import it into the selected draft once, composing the front matter from each field's home above the body. Preserve `predecessors` and `parent` byte-for-byte; a revision changes `predecessors` only to append a Change it absorbed by a merge, and changes `parent` only when the Sliced workflow splits the Change under a new Parent. Retain the inspected remote representation outside the record for the publication concurrency check.
+For an existing Change, read its complete current body, each field from its store home, holder, predecessor and blocker records needed for the revision, and, when resuming execution, the newest Handoff commit on the Change's branch `change/<N>`, read with `git fetch origin change/<N>` and `git log -1 --grep='^Handoff:' --format=%B origin/change/<N>`. Import it into the selected draft once, composing the front matter from each field's home above the body. Preserve `predecessors` and `parent` byte-for-byte; a revision changes `predecessors` only to append a Change it absorbed by a merge, and changes `parent` only when the Sliced workflow splits the Change under a new Parent. Retain the inspected remote representation outside the record for the publication concurrency check.
 
-A claim held by another holder blocks takeover. Terminal Lifecycle blocks ordinary resumption. A split creates children as the Sliced workflow states, and a merge closes the absorbed Change `Abandoned` and appends it to the survivor's `predecessors`. A published record in another form — a body that opens with `# Output`, or one that carries `## Nodes`, `## Assertion operations`, `## Decisions`, `## Mutations`, `## Activities`, or `## Artifacts` — takes the final format at this revision under `compatibility-boundary`: author the new record from the proposal it carries, and never convert the old body in place. Reconcile an existing local candidate with the store representation before overwriting either.
+A Change held by another session blocks takeover; the winning claim comes from the claim read under `claim-record`, which runs `spx -C <worktree> worktree status --format json` against each claim's worktree to judge its liveness. Resolve this session's id from `printenv CODEX_THREAD_ID`, its assigned worktree root from `git rev-parse --show-toplevel`, the machine from `printenv USER` and `hostname -s` joined as `<user>@<host>`, and the account from `gh api user --jq .login` before the claim read. Terminal Lifecycle blocks ordinary resumption. A split creates children as the Sliced workflow states, and a merge closes the absorbed Change `Abandoned` and appends it to the survivor's `predecessors`. A published record in another form — a body that opens with `# Output`, or one that carries `## Nodes`, `## Assertion operations`, `## Decisions`, `## Mutations`, `## Activities`, or `## Artifacts` — takes the final format at this revision under `compatibility-boundary`: author the new record from the proposal it carries, and never convert the old body in place. Reconcile an existing local candidate with the store representation before overwriting either.
 
 Maturity moves backward through this skill only for a reframe, which lowers it to `Proposed` under `maturity-and-authority`, or for a reopened judgment, which lowers it to the Maturity whose Definition of Ready the judgment makes false. This skill writes no rejection lowering; `maturity-and-authority` states who writes it, its order, and what a rejection means at each Maturity, and a revision reads the `Maturity` the store holds.
 
@@ -84,7 +84,7 @@ Maturity advances past `Proposed`, `Framed`, and `Sliced` only on the authority 
 
 Use skill `product-tree:change-standards`. Invoke it with `Lifecycle`, which `<persistence>` also loads. Read the authority for the Maturity the Change currently holds under `authority-read`, and report each authority found with its actor and time. When the store shows none, stop with `authority-required`, naming that Maturity and the move the store lacks. Leave the candidate and the store record unchanged. A body line never stands in for the move.
 
-This skill persists the record at the Maturity it reached. This skill never writes `Submitted` itself: the release that closes `<result>` writes `Submitted` after this skill persists the record, for the session that holds the Change at `Proposed`, `Framed`, or `Sliced`. Persisting never claims a Change: a new Change is persisted `Available` and stays unsubmitted until a session claims it, and a revision keeps the Lifecycle the store holds. Only the Sliced workflow claims Changes, the sources it splits or merges. The Product's Maintainer's move out of `Submitted` ends it as `maturity-and-authority` states, and posts no comment; an `Executable` record is never submitted.
+This skill persists the record at the Maturity it reached. This skill never writes `Submitted` itself: the release that closes `<result>` writes `Submitted` after this skill persists the record, for the session that holds the Change at `Proposed`, `Framed`, or `Sliced`. Persisting never claims a Change: a new Change is persisted `Available` and stays unsubmitted until a session claims it, and a revision keeps the Lifecycle the store holds. Only the Sliced workflow claims Changes, the sources it splits or merges. The Product's Maintainer's move out of `Submitted` ends it as `maturity-and-authority` states, and `confirm-change` posts one confirm or reject block for that move; an `Executable` record is never submitted.
 
 </authority_gate>
 
@@ -136,7 +136,7 @@ Any mismatch or partial write is a failed persistence result. Preserve the local
 
 Return the canonical Change reference, each finding with its severity, key, rule, and run token, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next block, with each question no assumption can defend and its best answer. A stop at `<authority_gate>` returns the result `authority-required` instead, naming the Maturity the Change holds and the move the store lacks.
 
-Use skill `product-tree:release-change`. Invoke it only when this session holds the Change (Lifecycle `Claimed`, with the winning Claim naming this session's assigned worktree root) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Invoke it with `submit` when the persisted record is at `Proposed`, `Framed`, or `Sliced` and waits for the Product's Maintainer's confirmation. Preserve any local candidate that received no audit locally and leave the published Change unchanged.
+Use skill `product-tree:release-change`. Invoke it only when this session holds the Change (the assignee list holds this account and the winning claim under `claim-record` names this session and its assigned worktree root) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Invoke it with `submit` when the persisted record is at `Proposed`, `Framed`, or `Sliced` and waits for the Product's Maintainer's confirmation. Preserve any local candidate that received no audit locally and leave the published Change unchanged.
 
 </result>
 
@@ -172,13 +172,13 @@ Use skill `product-tree:release-change`. Invoke it only when this session holds 
 <success_criteria>
 
 - Exactly one local candidate and one configured-store Change represent the intended Output, except in a split or merge, whose Sliced workflow states its own success criteria.
-- An `authority-required` stop left the candidate and the store record unchanged and named the Maturity the Change holds and the move the store lacks.
+- An `authority-required` stop named the Maturity the Change holds and the move the store lacks.
 - The candidate satisfies the one cumulative Definition of Ready loaded for its declared Maturity, and its Maturity above `Proposed` rests on the store's authority for the level it left.
 - Triage asks only questions whose answers change the Output, its mutations blocks, Maturity, risk, or ownership.
-- The complete unchanged record receives one independent audit per revision before publication, every same-class site and changed-section dependent is resolved before the record publishes, and the record publishes at the highest Maturity whose blocking criteria it meets.
+- The audit received the complete unchanged record, and every same-class site and changed-section dependent was resolved before the record published.
 - Each question no assumption can defend appears in the result with its best answer and under `## Open questions` where the Maturity admits the section, while every part independent of the answer was refined.
-- Every front-matter field reads back equal from its one store home, and the issue body equals the approved file from its `## Intent` line.
+- Every front-matter field reads back from its one store home, and the issue body equals the approved file from its `## Intent` line.
 - The record contains no store-specific key, received conversation input, audit bookkeeping, body authority line, or authoritative body restatement of front matter.
-- A session with no conversation history resumes from the stored Change, its repository references, and its newest Handoff alone.
+- A session with no conversation history resumes from the stored Change, its repository references, and its newest Handoff commit alone.
 
 </success_criteria>
