@@ -64,6 +64,10 @@ the named issue's Product and Parent, its Parent's Product, and the issues whose
 Parent is the named issue, and the issues whose Predecessors value names it,
 within the same page bound as ``read-authority``.
 
+``resolve-reference`` reports where a named path resolves in the checkout and,
+in ``defaultBranch``, whether the path is a file on origin's default branch,
+tested with ``git cat-file -e origin/<default>:<path>``.
+
 ``count-limits`` reads the candidate and starts no process beyond the
 repository-root lookup; it returns the title's word count and the Intent
 section's word count, labels included, with the limit of each, and lists those
@@ -75,6 +79,7 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+import posixpath
 import re
 import shlex
 import string
@@ -127,6 +132,7 @@ class ResultField(StrEnum):
     CONTENT = "content"
     SHA256 = "sha256"
     RESOLUTION = "resolution"
+    DEFAULT_BRANCH = "defaultBranch"
     TOOL_VERSION = "toolVersion"
     IDEMPOTENCY_KEY = "idempotencyKey"
     SEQUENCE = "sequence"
@@ -193,6 +199,14 @@ class Resolution(StrEnum):
     ABSOLUTE = "absolute"
     OUTSIDE_REPOSITORY = "outside-repository"
     MISSING = "missing"
+
+
+class DefaultBranchResolution(StrEnum):
+    """Whether a path a candidate names is a file on origin's default branch."""
+
+    ON_DEFAULT_BRANCH = "on-default-branch"
+    CHECKOUT_ONLY = "checkout-only"
+    ABSENT = "absent"
 
 
 class TerminalStatus(StrEnum):
@@ -285,6 +299,12 @@ EVIDENCE_FIELDS: Final = frozenset(
 SPX_EXECUTABLE: Final = "spx"
 GIT_EXECUTABLE: Final = "git"
 _GIT_TOPLEVEL: Final = (GIT_EXECUTABLE, "rev-parse", "--show-toplevel")
+_GIT_DEFAULT_BRANCH: Final = (
+    GIT_EXECUTABLE,
+    "symbolic-ref",
+    "--short",
+    "refs/remotes/origin/HEAD",
+)
 _SPX_VERSION: Final = (SPX_EXECUTABLE, "--version")
 _RUN_COMMAND: Final = (SPX_EXECUTABLE, "verification", "run")
 GH_EXECUTABLE: Final = "gh"
@@ -901,7 +921,64 @@ def _resolve_reference(
         resolution = Resolution.MISSING
     else:
         resolution = Resolution.RESOLVED
-    return {ResultField.PATH: named, ResultField.RESOLUTION: resolution}
+    return {
+        ResultField.PATH: named,
+        ResultField.RESOLUTION: resolution,
+        ResultField.DEFAULT_BRANCH: _default_branch_resolution(
+            context, root, named, resolution
+        ),
+    }
+
+
+def _default_branch_resolution(
+    context: _Context,
+    root: pathlib.Path,
+    named: str,
+    resolution: Resolution,
+) -> DefaultBranchResolution:
+    """Resolve ``named`` against origin's default branch, not the checkout.
+
+    Absolute and outside-repository paths are never on the default branch. For
+    any other path the lookup is ``git cat-file -e origin/<default>:<path>``, so
+    a file present only in the checkout or on a work branch reports
+    ``checkout-only``.
+    """
+    if resolution in (Resolution.ABSOLUTE, Resolution.OUTSIDE_REPOSITORY):
+        return DefaultBranchResolution.ABSENT
+    default = _command(context, _GIT_DEFAULT_BRANCH, cwd=root).strip()
+    if not default:
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"`{' '.join(_GIT_DEFAULT_BRANCH)}` printed no default branch in "
+            f"{root}; set refs/remotes/origin/HEAD with `git remote set-head "
+            "origin --auto` and repeat the request",
+        )
+    argv = (
+        GIT_EXECUTABLE,
+        "cat-file",
+        "-e",
+        f"{default}:{posixpath.normpath(named)}",
+    )
+    try:
+        result = context.runner(argv, cwd=root, stdin=None)
+    except (OSError, ValueError, UnicodeDecodeError) as exc:
+        raise Blocked(
+            BlockReason.COMMAND_FAILED,
+            "git could not be executed; confirm git is installed and on PATH, "
+            "then repeat the request",
+            evidence={
+                ResultField.COMMAND: shlex.join(argv),
+                ResultField.PAYLOAD_SOURCE: NOT_APPLICABLE,
+                ResultField.PAYLOAD_KEY: NOT_APPLICABLE,
+                ResultField.EXIT_CODE: NOT_APPLICABLE,
+                ResultField.STDERR: str(exc),
+            },
+        ) from exc
+    if result.exit_code == 0:
+        return DefaultBranchResolution.ON_DEFAULT_BRANCH
+    if resolution is Resolution.RESOLVED:
+        return DefaultBranchResolution.CHECKOUT_ONLY
+    return DefaultBranchResolution.ABSENT
 
 
 def _tool_version(
