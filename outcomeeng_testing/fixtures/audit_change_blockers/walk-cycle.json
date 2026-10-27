@@ -1,0 +1,38 @@
+{
+  "declared": [
+    {
+      "issue": "example-org/example-changes#12",
+      "blockers": [
+        {
+          "identity": "example-org/example-changes#13",
+          "open": true
+        }
+      ]
+    },
+    {
+      "issue": "example-org/example-changes#13",
+      "blockers": [
+        {
+          "identity": "example-org/example-changes#12",
+          "open": true
+        }
+      ]
+    }
+  ],
+  "issues": {
+    "example-org/example-changes#12": [
+      {
+        "number": 13,
+        "state": "open",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "example-org/example-changes#13": [
+      {
+        "number": 12,
+        "state": "open",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ]
+  }
+}

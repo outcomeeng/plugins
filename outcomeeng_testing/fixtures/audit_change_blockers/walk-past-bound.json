@@ -1,0 +1,83 @@
+{
+  "declared": [],
+  "issues": {
+    "example-org/example-changes#12": [
+      {
+        "number": 13,
+        "state": "open",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "example-org/example-changes#13": [
+      {
+        "number": 14,
+        "state": "open",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "example-org/example-changes#14": [
+      {
+        "number": 15,
+        "state": "open",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "example-org/example-changes#15": [
+      {
+        "number": 16,
+        "state": "open",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "example-org/example-changes#16": [
+      {
+        "number": 17,
+        "state": "open",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "example-org/example-changes#17": [
+      {
+        "number": 18,
+        "state": "open",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "example-org/example-changes#18": [
+      {
+        "number": 19,
+        "state": "open",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "example-org/example-changes#19": [
+      {
+        "number": 20,
+        "state": "open",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "example-org/example-changes#20": [
+      {
+        "number": 21,
+        "state": "open",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "example-org/example-changes#21": [
+      {
+        "number": 22,
+        "state": "open",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "example-org/example-changes#22": [
+      {
+        "number": 23,
+        "state": "open",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "example-org/example-changes#23": []
+  }
+}
