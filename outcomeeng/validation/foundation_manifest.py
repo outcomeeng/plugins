@@ -52,8 +52,17 @@ CORE_FIELD: Final = "core"
 REFERENCES_FIELD: Final = "references"
 TEMPLATES_FIELD: Final = "templates"
 EXAMPLES_FIELD: Final = "examples"
+COMPACT_RECOVERY_FIELD: Final = "compact_recovery"
+COMPACT_RECOVERY_RELATIVE_PATH: Final = (
+    f"{UNDERSTAND_SKILL_RELATIVE_DIR}/compact-recovery.md"
+)
 CATALOG_FIELDS: Final = (REFERENCES_FIELD, TEMPLATES_FIELD, EXAMPLES_FIELD)
-MANIFEST_FIELDS: Final = (SCHEMA_VERSION_FIELD, CORE_FIELD, *CATALOG_FIELDS)
+MANIFEST_FIELDS: Final = (
+    SCHEMA_VERSION_FIELD,
+    CORE_FIELD,
+    COMPACT_RECOVERY_FIELD,
+    *CATALOG_FIELDS,
+)
 SUPPORTED_SCHEMA_VERSION: Final = 1
 
 # Catalog field -> plugin-relative directory whose files that catalog declares.
@@ -73,6 +82,7 @@ class FoundationManifest:
     references: tuple[str, ...]
     templates: tuple[str, ...]
     examples: tuple[str, ...]
+    compact_recovery: str
 
     def catalog(self, field: str) -> tuple[str, ...]:
         """The declared catalog for one of ``CATALOG_FIELDS``."""
@@ -85,9 +95,10 @@ class FoundationManifest:
 
     @property
     def declared_paths(self) -> tuple[str, ...]:
-        """Every declared path — the core entry first, then each catalog in order."""
+        """Every declared path — core, compact recovery, then each catalog in order."""
         return (
             self.core,
+            self.compact_recovery,
             *self.references,
             *self.templates,
             *self.examples,
@@ -133,9 +144,17 @@ def parse_foundation_manifest(text: str) -> FoundationManifest:
     if not isinstance(core, str) or not core:
         message = f"{CORE_FIELD} must be exactly one package-relative path string"
         raise ValueError(message)
+    compact_recovery = payload[COMPACT_RECOVERY_FIELD]
+    if not isinstance(compact_recovery, str) or not compact_recovery:
+        message = (
+            f"{COMPACT_RECOVERY_FIELD} must be exactly one package-relative "
+            "path string"
+        )
+        raise ValueError(message)
     return FoundationManifest(
         schema_version=schema_version,
         core=core,
+        compact_recovery=compact_recovery,
         references=_catalog_entries(payload, REFERENCES_FIELD),
         templates=_catalog_entries(payload, TEMPLATES_FIELD),
         examples=_catalog_entries(payload, EXAMPLES_FIELD),
@@ -170,6 +189,12 @@ def manifest_violations(plugin_root: Path) -> list[str]:
         violations.append(
             f"{MANIFEST_RELATIVE_PATH}: unsupported {SCHEMA_VERSION_FIELD} "
             f"{manifest.schema_version} (supported: {SUPPORTED_SCHEMA_VERSION})"
+        )
+
+    if manifest.compact_recovery != COMPACT_RECOVERY_RELATIVE_PATH:
+        violations.append(
+            f"{MANIFEST_RELATIVE_PATH}: {COMPACT_RECOVERY_FIELD} must name "
+            f"{COMPACT_RECOVERY_RELATIVE_PATH}, not {manifest.compact_recovery}"
         )
 
     seen: set[str] = set()

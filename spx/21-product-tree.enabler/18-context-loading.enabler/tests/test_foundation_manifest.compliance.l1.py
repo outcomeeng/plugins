@@ -16,6 +16,8 @@ from pathlib import Path
 
 from outcomeeng.validation.foundation_manifest import (
     CATALOG_DIRECTORIES,
+    COMPACT_RECOVERY_FIELD,
+    COMPACT_RECOVERY_RELATIVE_PATH,
     CORE_DOCUMENT_RELATIVE_PATH,
     CORE_FIELD,
     EXAMPLES_FIELD,
@@ -35,10 +37,12 @@ def _payload(
     examples: tuple[str, ...],
     core: object = CORE_DOCUMENT_RELATIVE_PATH,
     schema_version: object = SUPPORTED_SCHEMA_VERSION,
+    compact_recovery: object = COMPACT_RECOVERY_RELATIVE_PATH,
 ) -> dict[str, object]:
     return {
         SCHEMA_VERSION_FIELD: schema_version,
         CORE_FIELD: core,
+        COMPACT_RECOVERY_FIELD: compact_recovery,
         REFERENCES_FIELD: list(references),
         TEMPLATES_FIELD: list(templates),
         EXAMPLES_FIELD: list(examples),
@@ -50,10 +54,13 @@ def _write_plugin(
     manifest_text: str,
     *,
     files: tuple[str, ...] = (),
+    ship_compact_recovery: bool = True,
 ) -> Path:
     manifest_path = root / MANIFEST_RELATIVE_PATH
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(manifest_text, encoding="utf-8")
+    if ship_compact_recovery:
+        files = (*files, COMPACT_RECOVERY_RELATIVE_PATH)
     for directory in CATALOG_DIRECTORIES.values():
         (root / directory).mkdir(parents=True, exist_ok=True)
     for relative in files:
@@ -180,6 +187,43 @@ def test_omitted_shipped_resource_is_flagged(tmp_path: Path) -> None:
     root = _valid_plugin(tmp_path)
     undeclared = tmp_path / _reference("undeclared.md")
     undeclared.write_text("", encoding="utf-8")
+    assert manifest_violations(root)
+
+
+def test_absent_compact_recovery_entry_is_flagged(tmp_path: Path) -> None:
+    payload = _payload(references=(), templates=(), examples=())
+    del payload[COMPACT_RECOVERY_FIELD]
+    root = _write_plugin(
+        tmp_path, json.dumps(payload), files=(CORE_DOCUMENT_RELATIVE_PATH,)
+    )
+    assert manifest_violations(root)
+
+
+def test_compact_recovery_entry_naming_a_missing_file_is_flagged(
+    tmp_path: Path,
+) -> None:
+    payload = _payload(references=(), templates=(), examples=())
+    root = _write_plugin(
+        tmp_path,
+        json.dumps(payload),
+        files=(CORE_DOCUMENT_RELATIVE_PATH,),
+        ship_compact_recovery=False,
+    )
+    assert manifest_violations(root)
+
+
+def test_compact_recovery_entry_naming_another_resource_is_flagged(
+    tmp_path: Path,
+) -> None:
+    other = _reference("other.md")
+    payload = _payload(
+        references=(other,), templates=(), examples=(), compact_recovery=other
+    )
+    root = _write_plugin(
+        tmp_path,
+        json.dumps(payload),
+        files=(CORE_DOCUMENT_RELATIVE_PATH, other),
+    )
     assert manifest_violations(root)
 
 

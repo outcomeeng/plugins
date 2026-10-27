@@ -15,6 +15,7 @@ import pytest
 
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.validation.foundation_manifest import (
+    COMPACT_RECOVERY_RELATIVE_PATH,
     CORE_DOCUMENT_RELATIVE_PATH,
     MANIFEST_RELATIVE_PATH,
     SUPPORTED_SCHEMA_VERSION,
@@ -50,6 +51,18 @@ def test_shipped_manifest_names_the_single_core_foundation_document(
     manifest_path = _shipped_plugin_root(target) / MANIFEST_RELATIVE_PATH
     manifest = parse_foundation_manifest(manifest_path.read_text(encoding="utf-8"))
     assert manifest.core == CORE_DOCUMENT_RELATIVE_PATH
+
+
+@pytest.mark.parametrize("target", sorted(Target))
+def test_shipped_manifest_names_the_compact_recovery_resource(
+    target: Target,
+) -> None:
+    plugin_root = _shipped_plugin_root(target)
+    manifest = parse_foundation_manifest(
+        (plugin_root / MANIFEST_RELATIVE_PATH).read_text(encoding="utf-8")
+    )
+    assert manifest.compact_recovery == COMPACT_RECOVERY_RELATIVE_PATH
+    assert (plugin_root / manifest.compact_recovery).is_file()
 
 
 @pytest.mark.parametrize("target", sorted(Target))
