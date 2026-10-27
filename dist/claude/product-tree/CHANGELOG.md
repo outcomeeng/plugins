@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.109.6
+
+### Changed
+
+- **`/audit-change` judges a stored Change's blockers from its native dependencies.** The audit's runner gains `read-blockers`, which returns the Change's native blockers, one page of 100, each with its canonical identity and whether it is open, and `walk-blockers`, which reads the blockers' own blockers, each issue once and at most 10 issues. A candidate whose `blocked_by` omits an open native blocker draws a finding that cites the native list, a blocker the candidate adds or a closed blocker it omits draws none, and at Sliced and Executable the walk finds a blocker cycle. A read that fills a bound returns a blocked result naming it, and a Change with no store record has its blocker list judged from the candidate alone. Before this change, the audit took no native blocker read, so a candidate that omitted an open blocker was approved on its own `blocked_by`.
+
 ## 0.109.5
 
 ### Changed

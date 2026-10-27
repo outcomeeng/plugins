@@ -64,6 +64,16 @@ the named issue's Product and Parent, its Parent's Product, and the issues whose
 Parent is the named issue, and the issues whose Predecessors value names it,
 within the same page bound as ``read-authority``.
 
+``read-blockers`` starts ``gh`` once and returns the issue's native blockers, one
+page of ``BLOCKERS_PAGE_SIZE``, each with its canonical identity and whether it
+is open; a connection that reports a further page blocks with
+``page-bound-reached`` naming the page.
+
+``walk-blockers`` starts ``gh`` once per issue and returns the issue and every
+issue its blockers reach, each read once in breadth-first order with its
+blockers; it reads at most ``BLOCKERS_WALK_MAX_ISSUES`` issues and blocks with
+``page-bound-reached`` naming that bound when a blocker remains unread.
+
 ``count-limits`` reads the candidate and starts no process beyond the
 repository-root lookup; it returns the title's word count and the Intent
 section's word count, labels included, with the limit of each, and lists those
@@ -100,6 +110,8 @@ class Operation(StrEnum):
     READ_AUTHORITY = "read-authority"
     READ_PUBLISHED = "read-published"
     READ_RELATIONS = "read-relations"
+    READ_BLOCKERS = "read-blockers"
+    WALK_BLOCKERS = "walk-blockers"
     COUNT_LIMITS = "count-limits"
 
 
@@ -157,6 +169,10 @@ class ResultField(StrEnum):
     PARENT_PRODUCT = "parentProduct"
     CHILDREN = "children"
     ABSORBERS = "absorbers"
+    BLOCKERS = "blockers"
+    GRAPH = "graph"
+    IDENTITY = "identity"
+    OPEN = "open"
     NUMBER = "number"
     LIMITS = "limits"
     VIOLATIONS = "violations"
@@ -260,6 +276,9 @@ class StoreField(StrEnum):
     NUMBER = "number"
     VALUE = "value"
     ISSUE_FIELD_VALUES = "issueFieldValues"
+    BLOCKED_BY = "blockedBy"
+    STATE = "state"
+    NAME_WITH_OWNER = "nameWithOwner"
 
 
 NOT_STARTED: Final = "not-started"
@@ -327,6 +346,18 @@ _RELATIONS_QUERY: Final = (
     " ... on IssueFieldSingleSelectValue{name field{... on IssueFieldSingleSelect"
     "{name}}}}}}}}}"
 )
+#: One blocker read takes one page of this many blockers per issue.
+BLOCKERS_PAGE_SIZE: Final = 100
+#: A walk of the blockers' own blockers reads at most this many issues.
+BLOCKERS_WALK_MAX_ISSUES: Final = 10
+OPEN_STATE: Final = "OPEN"
+_BLOCKERS_QUERY: Final = (
+    "query($o:String!,$r:String!,$n:Int!)"
+    f"{{repository(owner:$o,name:$r){{issue(number:$n){{{StoreField.BLOCKED_BY}"
+    f"(first:{BLOCKERS_PAGE_SIZE})"
+    "{pageInfo{hasNextPage endCursor} nodes{number state repository{nameWithOwner}}}"
+    "}}}"
+)
 PRODUCT_FIELD: Final = "Product"
 PARENT_FIELD: Final = "Parent"
 PREDECESSORS_FIELD: Final = "Predecessors"
@@ -358,6 +389,8 @@ REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
     Operation.READ_AUTHORITY: frozenset({RequestField.ISSUE}),
     Operation.READ_PUBLISHED: frozenset({RequestField.ISSUE}),
     Operation.READ_RELATIONS: frozenset({RequestField.ISSUE}),
+    Operation.READ_BLOCKERS: frozenset({RequestField.ISSUE}),
+    Operation.WALK_BLOCKERS: frozenset({RequestField.ISSUE}),
     Operation.COUNT_LIMITS: frozenset({RequestField.PATH}),
 }
 
@@ -738,6 +771,8 @@ _REQUEST_CHECKS: Final[
     Operation.READ_AUTHORITY: (_issue_identity,),
     Operation.READ_PUBLISHED: (_issue_identity,),
     Operation.READ_RELATIONS: (_issue_identity,),
+    Operation.READ_BLOCKERS: (_issue_identity,),
+    Operation.WALK_BLOCKERS: (_issue_identity,),
     Operation.COUNT_LIMITS: (_candidate_path,),
 }
 
@@ -1384,6 +1419,122 @@ def _read_relations(
     )
 
 
+def _blocker_entry(node: object) -> dict[str, object]:
+    """Return one native blocker as its canonical identity and whether it is open."""
+    repository = node.get(StoreField.REPOSITORY) if isinstance(node, dict) else None
+    owner_name = (
+        repository.get(StoreField.NAME_WITH_OWNER)
+        if isinstance(repository, dict)
+        else None
+    )
+    numbered = node.get(StoreField.NUMBER) if isinstance(node, dict) else None
+    state = node.get(StoreField.STATE) if isinstance(node, dict) else None
+    if (
+        not isinstance(owner_name, str)
+        or not isinstance(numbered, int)
+        or isinstance(numbered, bool)
+        or not isinstance(state, str)
+    ):
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"blockers page holds an entry with no repository, issue number, and state{_STORE_HINT}",
+        )
+    return {
+        ResultField.IDENTITY: f"{owner_name}#{numbered}",
+        ResultField.OPEN: state == OPEN_STATE,
+    }
+
+
+def _issue_blockers(
+    context: _Context, identity: tuple[str, str, str]
+) -> list[dict[str, object]]:
+    """Read one page of an issue's native blockers, or block when it is not the whole list."""
+    owner, repository, number = identity
+    argv = [
+        *_GRAPHQL,
+        "-f",
+        f"query={_BLOCKERS_QUERY}",
+        "-f",
+        f"o={owner}",
+        "-f",
+        f"r={repository}",
+        "-F",
+        f"n={number}",
+    ]
+    node: object = _json_lines(_command(context, argv, cwd=context.cwd), argv=argv)[-1]
+    for key in (StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUE):
+        node = node.get(key) if isinstance(node, dict) else None
+    connection = node.get(StoreField.BLOCKED_BY) if isinstance(node, dict) else None
+    nodes = connection.get(StoreField.NODES) if isinstance(connection, dict) else None
+    info = connection.get(StoreField.PAGE_INFO) if isinstance(connection, dict) else None
+    if not isinstance(nodes, list) or not isinstance(info, dict):
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"blockers page carries no nodes array and pageInfo object{_STORE_HINT}",
+        )
+    if info.get(StoreField.HAS_NEXT_PAGE) is True:
+        bound = f"{BLOCKERS_PAGE_SIZE} blockers, one page"
+        raise Blocked(
+            BlockReason.PAGE_BOUND_REACHED,
+            f"the blockers read is not complete at {bound}{_BOUND_HINT}",
+            evidence={ResultField.BOUND: bound},
+        )
+    return [_blocker_entry(entry) for entry in nodes]
+
+
+def _identity_parts(identity: str) -> tuple[str, str, str]:
+    found = ISSUE_IDENTITY_PATTERN.fullmatch(identity)
+    if found is None:
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"store answer names a blocker {identity!r} that is not owner/repository#number{_STORE_HINT}",
+        )
+    owner, repository, number = found.groups()
+    return owner, repository, number
+
+
+def _read_blockers(
+    context: _Context, request: Mapping[str, object]
+) -> dict[str, object]:
+    """Return the named issue's native blockers, each with identity and openness."""
+    return {
+        ResultField.ISSUE: request[RequestField.ISSUE],
+        ResultField.BLOCKERS: _issue_blockers(context, _issue_identity(request)),
+    }
+
+
+def _walk_blockers(
+    context: _Context, request: Mapping[str, object]
+) -> dict[str, object]:
+    """Return the named issue and every issue its blockers reach, each with its blockers.
+
+    Issues are read in breadth-first order, each once, so a cycle ends the walk.
+    A walk that still holds an unread blocker after reading the issue bound
+    blocks naming that bound.
+    """
+    start = str(request[RequestField.ISSUE])
+    pending = [start]
+    seen = {start}
+    graph: list[dict[str, object]] = []
+    while pending:
+        if len(graph) == BLOCKERS_WALK_MAX_ISSUES:
+            bound = f"{BLOCKERS_WALK_MAX_ISSUES} issues"
+            raise Blocked(
+                BlockReason.PAGE_BOUND_REACHED,
+                f"the blockers walk is not complete at {bound}{_BOUND_HINT}",
+                evidence={ResultField.BOUND: bound},
+            )
+        current = pending.pop(0)
+        blockers = _issue_blockers(context, _identity_parts(current))
+        graph.append({ResultField.ISSUE: current, ResultField.BLOCKERS: blockers})
+        for blocker in blockers:
+            identity = str(blocker[ResultField.IDENTITY])
+            if identity not in seen:
+                seen.add(identity)
+                pending.append(identity)
+    return {ResultField.ISSUE: start, ResultField.GRAPH: graph}
+
+
 TITLE_WORD_LIMIT: Final = 15
 INTENT_WORD_LIMIT: Final = 60
 _FRONT_MATTER_PATTERN: Final = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
@@ -1474,6 +1625,8 @@ _HANDLERS: Final[
     Operation.READ_AUTHORITY: _read_authority,
     Operation.READ_PUBLISHED: _read_published,
     Operation.READ_RELATIONS: _read_relations,
+    Operation.READ_BLOCKERS: _read_blockers,
+    Operation.WALK_BLOCKERS: _walk_blockers,
     Operation.COUNT_LIMITS: _count_limits,
 }
 
