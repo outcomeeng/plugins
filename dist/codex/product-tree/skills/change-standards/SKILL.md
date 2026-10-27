@@ -149,7 +149,7 @@ Preserve the proposal in the proposer's terms while excluding provider conversat
 
 `predecessors` is `[]` or the complete append-only set of Changes this Change absorbed by a merge; it contains canonical Change identities and no duplicate or self reference. `parent` is `null` or the canonical identity of the one Parent Change in the same store, and is no self reference.
 
-The `predecessors` set and the `parent` value are the only authored lineage directions. Derive roots, Leaves, Parents, children, and reverse changeset views. NEVER restate lineage in the body or maintain an authoritative child list. A split creates every child naming the source in `parent`, and the source drops its Governance mutations and Spec mutations blocks. A merge closes the absorbed Change `Abandoned` and adds it to the survivor's `predecessors`. A reframe edits the Change in place and lowers its Maturity to `Proposed`. No operation writes or accepts `Refined`.
+The `predecessors` set and the `parent` value are the only authored lineage directions. Derive roots, Leaves, Parents, children, and reverse changeset views. NEVER restate lineage in the body or maintain an authoritative child list. A split creates every child naming the source in `parent`, and the source drops its Governance mutations and Spec mutations blocks and its `## Verification` section, so the source stands as a Parent that carries none of them. A merge closes the absorbed Change `Abandoned` and adds it to the survivor's `predecessors`. A reframe edits the Change in place and lowers its Maturity to `Proposed`. No operation writes or accepts `Refined`.
 
 </rule>
 
