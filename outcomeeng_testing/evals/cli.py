@@ -10,7 +10,7 @@ from tempfile import TemporaryDirectory
 from typing import Final
 
 import click
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 
 from outcomeeng_evals.cli import (
     EXIT_GENERAL_ERROR,
@@ -150,22 +150,10 @@ def build_run_cli_harness(
     )
 
 
-def assert_main_group_exposes_documented_subcommands() -> None:
-    """Assert the CLI help surface lists every documented subcommand."""
+def invoke_main_help() -> Result:
+    """Invoke the CLI group's help and return the observed result."""
 
-    result = CliRunner().invoke(main, ["--help"])
-
-    assert result.exit_code == EXIT_SUCCESS
-    for subcommand in (
-        "run",
-        "history",
-        "view",
-        "discover",
-        "plan",
-        "ci",
-        "materialize-prompts",
-    ):
-        assert subcommand in result.output
+    return CliRunner().invoke(main, ["--help"])
 
 
 def assert_run_subcommand_requires_eval_toml_path() -> None:

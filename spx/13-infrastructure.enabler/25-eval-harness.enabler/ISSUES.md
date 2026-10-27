@@ -91,3 +91,11 @@ No fork-per-case implementation happens in this node. The caching decision re-de
 **Evidence.** The isolated test-evidence audit of `spx/13-infrastructure.enabler/13-host-readiness.enabler` on head `e3bf060ce4dd29ff34984b5d66f8302d9ca22e95` rejected the same shape in that node's harness (finding `f-001`), fixed there by raising a `RuntimeError` subclass from a harness-owned horizon.
 
 **Settlement condition.** Each infrastructure `AssertionError` in these modules becomes a lifecycle or dependency error type the harness owns, with every behavioral predicate left in the linked tests, and the node passes its test-evidence audit.
+
+## Harness-owned assertions in the CLI mapping tests
+
+The linked tests in `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_cli.mapping.l1.py` delegate their predicates to `assert_*` functions in `outcomeeng_testing/evals/cli.py`, for example `assert_run_subcommand_rejects_workers_above_cap` and `assert_run_command_filters_cases_by_case_id`. The harness owns the `assert` calls and the expected values, so each linked test hides its predicate and the same harness cannot serve an opposite claim.
+
+**Evidence.** The isolated test-evidence audit of this node on head `ee127962419b7923f6255c614b94ba942c0b6662` filed the pattern as `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_cli.mapping.l1.py:assertion-seam`. The test for the subcommand-name assertion was repaired in that round.
+
+**Settlement condition.** Each delegating `assert_*` harness function returns the observed result, and the linked test owns the comparison, and the node passes its test-evidence audit.
