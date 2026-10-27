@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +15,7 @@ from outcomeeng.validation.ci_gate import (
     GATE_JOB_NAME,
     JOB_TIMEOUT_KEY,
     SPX_COMMIT_ENVIRONMENT,
+    SPX_REPOSITORY,
     PYTHON_SETUP_STEP_NAME,
     REUSABLE_WORKFLOW_CALL_KEY,
     WORKFLOW_FILE_GLOBS,
@@ -22,6 +24,7 @@ from outcomeeng.validation.ci_gate import (
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 WORKFLOW_DIRECTORY: Final = REPO_ROOT / ".github" / "workflows"
 GATE_WORKFLOW: Final = WORKFLOW_DIRECTORY / "check.yml"
+ENV_REFERENCE_PATTERN: Final = re.compile(r"\$\{\{\s*env\.(\w+)\s*\}\}")
 
 
 def workflow_paths(directory: Path | None = None) -> tuple[Path, ...]:
@@ -89,6 +92,14 @@ class SpxSourceObservation:
 
     commit_pin: str | None
     checkouts: tuple[tuple[str | None, str | None], ...]
+
+
+@dataclass(frozen=True)
+class SpxRevisionPinObservation:
+    """Every `outcomeeng/spx` revision pin the workflow files in a directory declare."""
+
+    revisions: frozenset[str]
+    pin_variables: frozenset[str]
 
 
 @dataclass(frozen=True)
@@ -267,4 +278,30 @@ def observe_spx_source(workflow_path: Path | None = None) -> SpxSourceObservatio
     )
     return SpxSourceObservation(
         commit_pin=env.get(SPX_COMMIT_ENVIRONMENT), checkouts=checkouts
+    )
+
+
+def observe_spx_revision_pins(
+    workflow_directory: Path | None = None,
+) -> SpxRevisionPinObservation:
+    """Return each revision and job variable that pins a checkout of `outcomeeng/spx`."""
+    directory = WORKFLOW_DIRECTORY if workflow_directory is None else workflow_directory
+    revisions: set[str] = set()
+    variables: set[str] = set()
+    for path in workflow_paths(directory):
+        for job in cast("dict[str, Any]", workflow(path).get("jobs") or {}).values():
+            env = cast("dict[str, str]", job.get("env", {}))
+            for step in cast("list[dict[str, Any]]", job.get("steps", [])):
+                inputs = cast("dict[str, str]", step.get("with", {}))
+                if inputs.get("repository") != SPX_REPOSITORY:
+                    continue
+                reference = inputs.get("ref", "")
+                named = ENV_REFERENCE_PATTERN.fullmatch(reference)
+                if named is None:
+                    revisions.add(reference)
+                else:
+                    variables.add(named.group(1))
+                    revisions.add(env.get(named.group(1), reference))
+    return SpxRevisionPinObservation(
+        revisions=frozenset(revisions), pin_variables=frozenset(variables)
     )
