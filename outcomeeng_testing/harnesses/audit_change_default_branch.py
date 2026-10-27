@@ -251,7 +251,8 @@ def _interpose_nothing(argv: Sequence[str]) -> object | None:
 
 def _answer_default_branch_with_no_output(argv: Sequence[str]) -> object | None:
     if _READ_DEFAULT_BRANCH_SUBCOMMAND in argv:
-        return _runner.CommandResult(0, "\n", "")
+        no_output: object = _runner.CommandResult(0, "\n", "")
+        return no_output
     return None
 
 
