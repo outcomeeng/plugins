@@ -4,21 +4,32 @@ The protocol lives at `probes/definition-invocation/probe.md`, the target of the
 
 ## Intent
 
-The seven definitions `change-executor`, `change-author`, `change-verifier`, `change-tester`, `change-implementer`, `change-skill-author` and `change-subagent-author` are launched by exact name, with no human watching the launch. Reading a definition does not show that Claude Code loads it, starts it as a child of one launch by its exact name, and returns a result its fronted skill or its own workflow declares. This probe shows each exact emitted Claude Code definition doing so in one minimal isolated invocation. For `change-skill-author` and `change-subagent-author` the retained run exercises the `blocked` result for an uninstalled fronted skill, because the probe installs no `instructions` plugin.
+The seven definitions `change-executor`, `change-author`, `change-verifier`, `change-tester`, `change-implementer`, `change-skill-author` and `change-subagent-author` are launched by exact name, with no human watching the launch. Reading a definition does not show that its harness loads it, lists it in a fresh session, starts it as a child of one launch by its exact name, and returns a result its fronted skill or its own workflow declares. This probe shows each exact emitted definition doing so in one minimal isolated invocation, for the Claude Code build and for the Codex build. The Codex build names each definition by the flat name `product-tree_<authored-name>`. For `change-skill-author` and `change-subagent-author` the retained run exercises the `blocked` result for an uninstalled fronted skill, because the probe installs no `instructions` plugin.
 
 ## Environment and preconditions
 
 - The generated tree `dist/claude/product-tree` is built from the subject commit, and the working tree is clean.
 - Claude Code runs from an empty scratch directory outside every repository, with no setting source loaded, no session persistence, and `dist/claude/product-tree` as its only product-tree plugin.
 - The task message is the literal `not-a-target`, which no fronted skill accepts as a target, so each skill stops before it reads or writes a Change, a store, or a repository.
+- For the Codex build, the generated tree `dist/codex/product-tree` is installed into a disposable Codex home, outside every repository, that holds no other plugin and no other agent definition, and the run starts a fresh Codex session from an empty scratch directory with that home selected.
 
 ## Protocol
+
+Claude Code build:
 
 1. From the scratch directory, for each definition `<name>`, pipe this prompt to `claude -p --plugin-dir <checkout>/dist/claude/product-tree --setting-sources "" --no-session-persistence --output-format stream-json --verbose --max-budget-usd 2.00 --allowedTools Agent`: "Use the Agent tool exactly once to launch the subagent product-tree:<name> with the prompt: not-a-target. Do nothing else. Then reply with that subagent's final result verbatim."
 2. From the stream, keep the parent's init event (model, the product-tree plugin path, and whether the definition is listed), the one `Agent` launch, the child's first event with its `parent_tool_use_id` and `subagent_type`, and the launch's tool result.
 3. Record the emitted definition's path, front matter, and SHA-256 at the subject commit beside each run.
 
+Codex build:
+
+4. In one fresh Codex session of the disposable home, ask the session to list the custom agents it can launch, and keep the listing. The listing names all seven definitions by their `product-tree_` names.
+5. For each definition `<name>`, start a fresh Codex session of the disposable home and ask it to launch the custom agent `product-tree_<name>` exactly once through the native subagent capability with the prompt `not-a-target`, to do nothing else, and to reply with that subagent's final result verbatim. Keep the session's event stream: the one launch, the name it launched, the child session it started, and the launch's result.
+6. Record the emitted Codex definition's path, content, and SHA-256 at the subject commit beside each run.
+
 ## Attested run
+
+The attested run below covers the Claude Code build. The Codex build has no attested run; its verdict stays open until steps 4 to 6 run on a subject commit.
 
 The protocol ran unchanged for all seven definitions, from an empty scratch directory outside every repository, with `dist/claude/product-tree` as the only product-tree plugin (version 0.107.2), Claude Code 2.1.309, and the protocol's `--max-budget-usd 2.00` ceiling. Earlier records for these definitions are superseded and not retained.
 
@@ -43,7 +54,9 @@ The protocol ran unchanged for all seven definitions, from an empty scratch dire
 
 ## Verdict
 
-`passed`: each exact emitted definition loaded natively, started as a child session of one `Agent` launch, and returned a result its fronted skill or its own workflow declares.
+Claude Code build, `passed`: each exact emitted definition loaded natively, started as a child session of one `Agent` launch, and returned a result its fronted skill or its own workflow declares.
+
+Codex build: none. No attested run exists, so the Codex build carries no verdict.
 
 ## Limitations
 
@@ -51,5 +64,5 @@ The protocol ran unchanged for all seven definitions, from an empty scratch dire
 - The emitted effort is recorded from the definition file, `effort: medium` for six definitions and `effort: high` for `change-executor`; each child's tool result reports the resolved model and no effort value.
 - The run of `change-tester` stops at a skill load the protocol's tool grant refuses, so `product-tree:test` past its prerequisite load stays unexercised.
 - The run of the two instruction round definitions exercises the `blocked` result for an uninstalled fronted skill. A round that runs `instructions:author-skill` or `instructions:author-subagent` whole stays unexercised because the probe installs no `instructions` plugin. Neither fronted skill launches an auditor; the Verifier of such a round is a separate launch by `/execute-change`, outside this protocol.
-- The Codex renderings are not invoked; the node's `ISSUES.md` records that gap.
+- The attested run invokes no Codex rendering; the Codex steps await their first run.
 - A later change to an emitted definition invalidates its record here until the protocol runs again on the new commit.

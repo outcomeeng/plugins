@@ -13,7 +13,8 @@ The product-tree plugin ships one subagent definition per skill an Executor sess
 
 ## Assertions
 
-- ALWAYS: the seven definitions ship for Claude Code only, and `/execute-change` on Codex returns an explicit unavailable result ([audit])
+- ALWAYS: the seven definitions ship for Claude Code and Codex, and `/execute-change` on Codex executes a Change through the same steps and returns the same results as on Claude Code ([audit])
+- ALWAYS: on Codex, `/execute-change` launches every round session and every Verifier through the native subagent capability by the flat definition name `<plugin>_<authored-name>`, and by no other name ([audit])
 
 ### Compliance
 
@@ -37,7 +38,7 @@ The product-tree plugin ships one subagent definition per skill an Executor sess
 - ALWAYS: an Executor passes each new `debt` finding a review raises on text the changeset touches or invalidates up the chain of positions for its ruling and acts on the finding only as the ruling directs, per [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) ([audit])
 - ALWAYS: the cap covers agentic gates only; a deterministic command that fails runs again after its Fixer round outside the cap, and one that fails again after that round releases the Change ([audit])
 - ALWAYS: `change-executor`, `change-author`, `change-verifier`, `change-tester`, `change-implementer`, `change-skill-author` and `change-subagent-author` each front exactly one skill, hold no logic, and inherit the invoking session's execution policy ([audit])
-- ALWAYS: each of the seven definitions, as the Claude Code build emits it, loads natively, starts as the child session of one launch by its exact name, and returns a result its fronted skill or its own workflow declares ([probe](probes/definition-invocation/probe.md))
+- ALWAYS: each of the seven definitions, as the Claude Code build and as the Codex build emits it, loads natively under its harness name, is listed by a fresh session of that harness, starts as the child session of one launch by that name, and returns a result its fronted skill or its own workflow declares ([probe](probes/definition-invocation/probe.md))
 - ALWAYS: a load-gated command `/implement-change` runs executes in the foreground, and the skill reports its result only after every such command has exited ([audit])
 - ALWAYS: `/execute-change` reads the verdict of each `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, `eval-evidence-auditor`, `changeset-coherence-auditor`, `implementation-auditor`, `assertion-auditor`, `skill-auditor` and `subagent-auditor` launch from the sealed run whose token the launch returns, and takes the run file from the launch's result: a `rejected` run rejects whatever its finding count, a launch whose run spx refused a payload or the finish of is blocked, and a verdict read from a verdict object outside the run, a transcript, a task-output file, or text parsed into a scratch file is an unusable result ([audit])
 - ALWAYS: `/execute-change` launches `assertion-auditor` as the Verifier for an evidence obligation on a node's `[audit]` assertions ([audit])

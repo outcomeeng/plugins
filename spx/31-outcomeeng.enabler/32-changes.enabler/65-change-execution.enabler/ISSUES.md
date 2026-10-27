@@ -1,12 +1,12 @@
 # Issues: Change Execution
 
-## The seven definitions ship for Claude Code only
+## `/orchestrate-change` Start returns `unavailable` on Codex
 
-**Evidence**: `/subagent-standards` requires each subagent definition without declared per-harness release acceptance to retain its exact-definition minimal isolated invocation, per `spx/43-instructions.enabler/21-subagents.enabler/subagents.md`. The build emits no Codex rendering of `change-executor`, `change-author`, `change-verifier`, `change-tester`, `change-implementer`, `change-skill-author` and `change-subagent-author`.
+**Evidence**: `spx/43-coding-agents.enabler/32-change-orchestration.enabler/change-orchestration.md` returns an explicit `unavailable` result from `/orchestrate-change` Start on Codex. The seven definitions list Codex among their targets, and a Codex session that is already running executes a Change through `/execute-change`.
 
-**Impact**: a Codex session cannot execute a Change: `/orchestrate-change` Start and `/execute-change` return an explicit unavailable result on Codex.
+**Impact**: no herdr launch starts a Codex Executor session for a Change; a Codex session executes a Change only when an operator starts it and invokes `/execute-change`.
 
-**Settlement condition**: a Codex Executor start exists, the seven definitions list Codex among their targets, and each Codex rendering retains its own minimal isolated invocation.
+**Settlement condition**: a Codex Executor start exists in `/orchestrate-change`, and a retained run shows a session it started loading `change-executor` and returning a result `/execute-change` declares.
 
 ## The Executor's session start through `--agent` is unobserved
 
