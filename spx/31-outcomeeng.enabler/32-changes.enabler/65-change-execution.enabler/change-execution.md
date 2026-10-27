@@ -13,11 +13,10 @@ The product-tree plugin ships one subagent definition per skill an Executor sess
 
 ## Assertions
 
-- ALWAYS: the seven definitions ship for Claude Code and Codex, and `/execute-change` on Codex executes a Change through the same steps and returns the same results as on Claude Code ([audit])
-- ALWAYS: on Codex, `/execute-change` launches every round session and every Verifier through the native subagent capability by the flat definition name `<plugin>_<authored-name>`, and by no other name ([audit])
-
 ### Compliance
 
+- ALWAYS: the seven definitions ship for Claude Code and Codex, and `/execute-change` on Codex executes a Change through the same steps and returns the same results as on Claude Code ([audit])
+- ALWAYS: on Codex, `/execute-change` launches every round session and every Verifier through the native subagent capability by the flat definition name `<plugin>_<authored-name>`, and by no other name ([audit])
 - ALWAYS: `/execute-change` confirms that the winning Claim names its worktree root and loads the latest Handoff before it starts, and executes only an Executable Leaf whose every predecessor is closed and whose blockers are resolved, and refuses a Parent ([audit])
 - ALWAYS: an Executor whose record and newest Handoff name no working branch works on the branch its assigned worktree has checked out only when that branch is not the default branch and its name ends with the Change number with no digit before it, as `work/change-<N>` and `executor-<N>` do and `work/change-1<N>` does not; otherwise the worktree counts as naming no branch, and the Executor creates the work branch `work/change-<N>` from the Change's number and starts there; a branch the record or the newest Handoff names stays the working branch ([audit])
 - ALWAYS: execution launches, for every round, one agent session of the kind that produces the block's result — decisions and specs, verification evidence, tests, implementation, a skill surface, or a subagent definition — and launches each Fixer as a fresh session of the same kind, handed exactly the rejected run's sealed run file, unchanged, and the instruction "attend to every rule the run names and sweep each named class across the whole target" ([audit])
