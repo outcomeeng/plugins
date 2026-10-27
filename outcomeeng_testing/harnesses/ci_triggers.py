@@ -164,6 +164,20 @@ def assert_eval_workflow_uses_global_budget_default() -> None:
     assert runtime_timeout == expected_runtime_timeout
 
 
+def eval_workflow_trigger_events() -> tuple[str, ...]:
+    """Return the event names the committed eval workflow declares under `on`.
+
+    The harness observes the real workflow file and returns the sorted event
+    names; the linked test decides which events the workflow may declare.
+    """
+
+    workflow = yaml.load(
+        _EVAL_WORKFLOW.read_text(encoding="utf-8"),
+        Loader=yaml.BaseLoader,
+    )
+    return tuple(sorted(workflow["on"]))
+
+
 def _invoke_cli(repo: EvalTriggerRepo, *, check: bool) -> Result:
     """Invoke `outcomeeng-evals materialize-ci-triggers` against the temp repo.
 
