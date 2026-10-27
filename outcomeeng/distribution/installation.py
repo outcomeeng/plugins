@@ -2046,7 +2046,7 @@ def _successor_records(
     successor: str,
     records: Sequence[ListedInstallRecord],
     added: Sequence[ClaudeInstallRecord],
-) -> tuple[ClaudeInstallRecord, ...]:
+) -> list[ClaudeInstallRecord]:
     """The record a retired plugin's record moves as, or none where one holds its address.
 
     The successor record sits at the retired record's scope and project path.
@@ -2063,16 +2063,16 @@ def _successor_records(
         )
 
     if any(holds_address(other) for other in (*records, *added)):
-        return ()
-    return (
+        return []
+    return [
         ClaudeInstallRecord(
             plugin=successor,
             scope=record.scope,
             project_path=record.project_path,
             version=record.version,
             enabled=record.enabled,
-        ),
-    )
+        )
+    ]
 
 
 def claude_refresh_records(
