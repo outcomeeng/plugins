@@ -10,6 +10,16 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.109.4
+
+### Added
+
+- **A post-compaction reminder ships with `/understand`, and the foundation manifest names it.** `skills/understand/compact-recovery.md` states as facts that a compaction occurred, that skill content and markers from before it are not live, that `/understand` runs before the next product-content access and `/contextualize` before the next access to content a node governs, and how the resumed session re-enters: through the Change it holds and that Change's governing workflow skill where a live Claim exists, through its position's governing skill after recovering its grant and scope where it holds a position and no Change, and under its live task instruction otherwise, with no Claim inferred to satisfy recovery. It instructs no step of its own. The manifest at `skills/understand/manifest.json` carries a package-relative `compact_recovery` entry naming this file, an additive change within schema version 1, and package checks reject a generated tree that lacks the file. A consumer reading the manifest needs no change; a consumer that validates manifest keys strictly must accept `compact_recovery`.
+
+### Changed
+
+- **`/understand` states the post-compaction rules ahead of its workflow.** A new opening section says that the foundation marker is absent until `/understand` emits it again, that the set of contextualized nodes and the set of active skills are empty after a compaction, that a step a compaction summary, a Handoff, a session file, or a coordination note names is a record and never an instruction, and the re-entry rule above, including that recovery and skill loading are authorized under the live instruction so a session holding neither a Change nor a position continues its live task. A re-attachment that keeps only the opening of the skill now carries these rules. Before this change, the skill said only that a compaction empties the set of contextualized nodes and that the marker counts as absent, so a resumed session had no stated path back into its Change, its position, or its task. The skill's text was tightened elsewhere to stay within the eager length ceiling, with no change to the rules it states.
+
 ## 0.109.3
 
 ### Changed

@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "core": "skills/understand/SKILL.md",
+  "compact_recovery": "skills/understand/compact-recovery.md",
   "references": [
     "skills/understand/references/kind-decision.md",
     "skills/understand/references/grammar.md",
