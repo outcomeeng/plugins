@@ -161,18 +161,6 @@ Impact: two reviewers can apply different close rules to a top-level Parent, one
 
 Revisit and settlement condition: `## Lifecycle` names the close rule that governs a Parent with `parent: null`; one PDR audit then raises no `ambiguous-criterion` finding on the type derivation and the close rule.
 
-## DEBT [consistency]: the path-rejected row of the audit-change runner contract omits count-limits
-
-Defect class: `consistency`.
-
-Finding: the `path-rejected` row of the blocked-reason table in `src/plugins/product-tree/skills/audit-change/SKILL.md` (line 87) states that `read-candidate`, `start`, and `reconcile` reject a candidate the filesystem cannot resolve, that resolves outside the repository, that is not a regular file, or is not UTF-8 text. The `count-limits` operation reads the candidate through the same path checks, and the `candidate-missing` and `candidate-unreadable` rows below it name `count-limits`, so the row names three of the four operations that read a candidate.
-
-Evidence: the hosted review of [PR 643](https://github.com/outcomeeng/plugins/pull/643#issuecomment-6104113065) raised the omission as a `debt` finding against the row; the row at line 87 and the `candidate-missing` row at line 88 of the skill show the two lists differ.
-
-Impact: a reader of the table concludes that `count-limits` returns no `path-rejected` result for a candidate outside the repository or not UTF-8, though it does.
-
-Revisit and settlement condition: the row names `count-limits` beside `read-candidate`, `start`, and `reconcile`, and one typed skill audit of `audit-change` raises no finding on the blocked-reason table.
-
 ## DEBT [consistency]: the read-relations operation returns parentProduct with no remaining reader
 
 Defect class: `consistency`.
