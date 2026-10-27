@@ -1,0 +1,9 @@
+name: Violating eval workflow
+on:
+  push:
+    branches: [main]
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo eval

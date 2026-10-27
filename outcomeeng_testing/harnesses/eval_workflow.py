@@ -41,3 +41,30 @@ def observe_eval_workflow_defaults() -> EvalWorkflowDefaults:
         dispatch_timeout_seconds=inputs["timeout_seconds"]["default"],
         runtime_timeout_seconds=env["TIMEOUT_SECONDS"],
     )
+
+
+_TRIGGER_FIXTURES = (
+    Path(__file__).resolve().parents[1] / "fixtures" / "eval_workflow_triggers"
+)
+
+
+def violating_trigger_workflow_paths() -> tuple[Path, ...]:
+    """Return the inert workflow files that each declare a forbidden trigger."""
+
+    return tuple(sorted(_TRIGGER_FIXTURES.glob("*.yml")))
+
+
+def observe_workflow_triggers(workflow_path: Path | None = None) -> frozenset[str]:
+    """Return the event names a workflow file declares under `on`.
+
+    Without an argument the committed eval workflow is read.
+    """
+
+    path = _EVAL_WORKFLOW if workflow_path is None else workflow_path
+    workflow = yaml.load(path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    declared = workflow["on"]
+    if isinstance(declared, str):
+        return frozenset({declared})
+    if isinstance(declared, list):
+        return frozenset(declared)
+    return frozenset(declared)
