@@ -1,9 +1,8 @@
 # Generated-source declaration: every committed generated extent and its
 # producing relation, governed by
 # spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md.
-# A `begin`/`end` marker matches at the start of a line — leading whitespace
-# only where the generator emits the marker indented,
-# trailing content only where the begin or end is a prefix of a version- or
+# A `begin`/`end` marker matches at the start of a line — trailing content
+# only where the begin or end is a prefix of a version- or
 # name-bearing marker line (router and shared fences). A marker quoted in
 # prose or an example fence bounds nothing, and a relation's generator fence
 # matching is authoritative where stricter. The README
