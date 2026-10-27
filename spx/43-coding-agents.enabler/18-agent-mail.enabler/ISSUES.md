@@ -190,12 +190,12 @@ The compliance assertion `ALWAYS: the adapter rejects an empty string in every t
 
 **Evidence**: `product-tree:changes-reviewer` run `2026-10-09_21-16-21-663-cb5623784a49` on head `f2e86d4c4637f466795d15c787f442fb1b79205c`, a `debt` finding at `agent-mail.md` line 33; the record body check at `src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py` line 526.
 
-## DEBT: the decision and the probe still claim labels on the event stream
+## DEBT: the events response fixture is read by no test
 
-The adapter exposes no events operation, and the probe's limitations state that the run does not exercise the event stream for that reason. The adapter decision still names events where it places the labels: the rationale's sentence on position labels, the invariant on the store's labels, and the mapping assertion under `### Testing` each list `sender_display_name` on events beside inbox items and send results. The captured response fixture `outcomeeng_testing/fixtures/agent_mail/responses/inbox-events.json` is read by no test.
+The adapter exposes no events operation. The captured response fixture `outcomeeng_testing/fixtures/agent_mail/responses/inbox-events.json` is read by no test, while the adapter decision, its mapping assertion, and the probe name only the surfaces an adapter operation reaches.
 
-**Impact**: the decision declares a pass-through on a surface no operation reaches, so its mapping assertion names a domain member the linked evidence never exercises.
+**Impact**: the fixture records a captured response of a store surface no operation reaches, so it reads as an oracle while no test consumes it.
 
-**Settlement condition**: the decision's rationale, invariant, and mapping assertion name only the surfaces an adapter operation reaches, and the unused events response fixture is removed or consumed by a test that a declared events operation requires — or an events operation is declared and evidenced, and the claims stand on it.
+**Settlement condition**: the events response fixture is removed, or a test that a declared events operation requires consumes it.
 
 **Evidence**: `product-tree:changes-reviewer` run `2026-10-09_19-42-27-272-9b7af3f2fe83` on head `568924292d60b6a5d51d15075eb6e83c12d72de0`, an `evidence` finding at `probes/position-labels/probe.md` line 20; run `2026-10-09_21-16-21-663-cb5623784a49` on head `f2e86d4c4637f466795d15c787f442fb1b79205c`, an `evidence` finding at `21-agent-mail-adapter.adr.md` lines 16 and 34.
