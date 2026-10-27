@@ -87,9 +87,9 @@ The bundled review and audit runners record no skipped generated extent in a run
 
 ## Generators that consume their own declared inputs carry no migration obligation
 
-`outcomeeng/catalog/plugin_catalog.py` reading `.claude-plugin/marketplace.json` and `outcomeeng_evals/ci_triggers.py` discovering `eval.toml` files are generators consuming their own declared inputs. They generate; they derive no generated-source attribution, so [`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md) places no migration obligation on them. A Verifier skips this class.
+`outcomeeng/catalog/plugin_catalog.py` reading `.claude-plugin/marketplace.json` is a generator consuming its own declared input. It generates; it derives no generated-source attribution, so [`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md) places no migration obligation on it. A Verifier skips this class.
 
-**Revisit condition.** Either generator begins deriving generated-source attribution, which brings the migration obligation, or [`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md) states that a generator consuming only its own declared inputs carries none, after which this entry is deleted.
+**Revisit condition.** The generator begins deriving generated-source attribution, which brings the migration obligation, or [`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md) states that a generator consuming only its own declared inputs carries none, after which this entry is deleted.
 
 ## A merging decision governs the apply flow's Verifier dispatches
 
