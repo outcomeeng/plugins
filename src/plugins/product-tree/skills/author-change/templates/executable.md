@@ -21,7 +21,7 @@ parent: null
 
 ## Verification
 
-<!-- One row for each assertion of Spec mutations and each decision of Governance mutations, or the single row `none` and its reason. A row states what the evidence holds and names no activity: no step, producer, command, or order of work. Use skill `product-tree:verify` for the verification type of each row. Use skill `product-tree:test` for the assertion type of a test row. A Parent at Sliced carries no Verification. -->
+<!-- One row for each assertion of Spec mutations and each decision of Governance mutations, or the single row `none` and its reason. A row states what the evidence holds and names no activity: no step, producer, command, or order of work. Use skill `product-tree:verify` for the verification type of each row. Use skill `product-tree:test` for the assertion type of a test row. -->
 
 - `[assertion or decision slug]`: [verification type: test, evaluate, probe, or audit; for a test, its assertion type] | evidence `[path of the file execution creates]` | harness, generator, fixture `[repository paths, or none]` | judgment [the oracle's comparison for a test or evaluate, the attested observation for a probe, the Verifier's criteria for an audit] | evidence audit `[only for a test or evaluate row on a Node whose Malleability after is implementation]`
 
