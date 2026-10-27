@@ -129,8 +129,9 @@ A blocked result names exactly one of these reasons:
    request carries `issue`, request `read-relations` with `issue`; a blocked
    result returns `BLOCKED`. Request `read-blockers` with `issue` when the
    declared Maturity is Proposed or Framed, and `walk-blockers` with `issue`
-   when it is Sliced or Executable; a blocked result returns `BLOCKED`
-   naming the bound. A request with no `issue` has no store relations or
+   when it is Sliced or Executable; a blocked result returns `BLOCKED`,
+   naming the bound when the reason is `page-bound-reached`. A request with
+   no `issue` has no store relations or
    native blockers: step 6 judges `change-type` from the candidate alone,
    records no finding from the store's `Parent` values, and judges the
    blocker list from the candidate alone.
