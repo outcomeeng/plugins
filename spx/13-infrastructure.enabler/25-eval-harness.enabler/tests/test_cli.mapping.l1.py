@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from outcomeeng_evals.cli import EXIT_SUCCESS
+from outcomeeng_evals.cli import EXIT_SUCCESS, SUBCOMMANDS
 from outcomeeng_testing.evals.cli import (
     PLAN_PLUGIN_DIR,
     assert_ci_subcommand_executes_selected_plan,
@@ -51,15 +51,7 @@ def test_main_group_exposes_documented_subcommands() -> None:
         for line in commands_section.splitlines()
         if line.startswith("  ") and not line.startswith("   ") and line.strip()
     }
-    assert listed_names == {
-        "run",
-        "history",
-        "view",
-        "discover",
-        "plan",
-        "ci",
-        "materialize-prompts",
-    }
+    assert listed_names == {subcommand.name for subcommand in SUBCOMMANDS}
 
 
 def test_run_subcommand_requires_eval_toml_path() -> None:

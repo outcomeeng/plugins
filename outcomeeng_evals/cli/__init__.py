@@ -38,10 +38,15 @@ def main() -> None:
     """Replay curated cases through Claude and grade structured verdicts."""
 
 
-main.add_command(run_command)
-main.add_command(history_command)
-main.add_command(view_command)
-main.add_command(discover_command)
-main.add_command(ci_command)
-main.add_command(plan_command)
-main.add_command(materialize_prompts_command)
+SUBCOMMANDS: tuple[click.Command, ...] = (
+    run_command,
+    history_command,
+    view_command,
+    discover_command,
+    ci_command,
+    plan_command,
+    materialize_prompts_command,
+)
+
+for _subcommand in SUBCOMMANDS:
+    main.add_command(_subcommand)
