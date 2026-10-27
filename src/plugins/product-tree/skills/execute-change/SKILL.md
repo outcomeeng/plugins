@@ -16,7 +16,7 @@ Use skill `product-tree:change-standards`. Invoke it with `Lifecycle`; its rules
 
 Use skill `product-tree:change-standards`. Invoke it with `Executable`; its `merge_composition` derives each block's results and Verifiers, because the record names none.
 
-Use skill `product-tree:wait-for-load` for every resource-intensive command any step below runs: run the waiter and that command as one line in the foreground, and report a result only after every such line has exited.
+Use skill `product-tree:wait-for-load` for every resource-intensive command any step below runs: run that command as the argument vector of `spx orchestration lock --run-id <id> -- <command>` on one line in the foreground, and report a result only after every such line has exited.
 
 </required_reading>
 
