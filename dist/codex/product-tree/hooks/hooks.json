@@ -10,6 +10,16 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ \"${PRODUCT_TREE_SESSION_HOOK_DISABLED:-}\" != \"1\" ] && [ -r \"${CLAUDE_PLUGIN_ROOT}/skills/understand/compact-recovery.md\" ]; then while IFS= read -r line || [ -n \"$line\" ]; do printf '%s\\n' \"$line\"; done < \"${CLAUDE_PLUGIN_ROOT}/skills/understand/compact-recovery.md\"; fi; exit 0",
+            "timeout": 5
+          }
+        ]
       }
     ]
   }
