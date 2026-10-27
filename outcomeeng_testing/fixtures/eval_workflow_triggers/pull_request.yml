@@ -1,0 +1,9 @@
+name: Violating eval workflow
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo eval

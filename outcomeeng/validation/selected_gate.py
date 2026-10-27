@@ -20,8 +20,6 @@ from outcomeeng.validation._steps import (
     CHECK_RECIPES,
     EVAL_LINKS_ARGV,
     EVAL_PROMPTS_ARGV,
-    EVAL_TRIGGER_WORKFLOW,
-    EVAL_TRIGGERS_ARGV,
     FMT_CHECK_ARGV,
     INSTRUCTION_BLOCK_ARGV,
     MYPY_ARGV,
@@ -69,7 +67,7 @@ MARKDOWN_REASON: Final = "markdown or spec path changed"
 WORKFLOW_REASON: Final = "workflow or shell surface changed"
 SKILL_REASON: Final = "plugin skill, shared fragment, or generated runtime changed"
 INSTRUCTION_BLOCK_REASON: Final = "managed instruction-block source changed"
-EVAL_REASON: Final = "eval definition, producer, or trigger surface changed"
+EVAL_REASON: Final = "eval definition or producer changed"
 EVIDENCE_LINK_REASON: Final = "product-tree evidence link surface changed"
 TEST_REASON: Final = "changed python assertion tests"
 REACHED_TESTS_REASON: Final = "tests reaching changed test infrastructure"
@@ -168,12 +166,6 @@ SKILL_PATTERNS: Final = (
     ".claude-plugin/**",
     ".agents/plugins/**",
 )
-# The trigger list is generated from the eval definitions and written into the
-# eval workflow, so only those two surfaces can stale it.
-EVAL_TRIGGER_PATTERNS: Final = (
-    "spx/**/evals/**",
-    EVAL_TRIGGER_WORKFLOW,
-)
 # A producer-coupled prompt is derived from a producer the eval names under
 # `src/plugins/`. The producer set is per-eval, not statically known here, so
 # the whole authored plugin tree is the pattern: selecting the prompt check for
@@ -209,7 +201,6 @@ class PathCategory(StrEnum):
     WORKFLOW = "workflow"
     SKILL = "skill"
     INSTRUCTION_BLOCK = "instruction-block"
-    EVAL_TRIGGER = "eval-trigger"
     EVAL_PROMPT = "eval-prompt"
     EVIDENCE_LINK = "evidence-link"
 
@@ -228,7 +219,6 @@ PATH_CATEGORY_PATTERNS: Final[Mapping[PathCategory, tuple[str, ...]]] = (
             PathCategory.WORKFLOW: WORKFLOW_PATTERNS,
             PathCategory.SKILL: SKILL_PATTERNS,
             PathCategory.INSTRUCTION_BLOCK: INSTRUCTION_BLOCK_PATTERNS,
-            PathCategory.EVAL_TRIGGER: EVAL_TRIGGER_PATTERNS,
             PathCategory.EVAL_PROMPT: EVAL_PROMPT_PATTERNS,
             PathCategory.EVIDENCE_LINK: EVIDENCE_LINK_PATTERNS,
         }
@@ -268,9 +258,6 @@ VALIDATION_LANES: Final[Mapping[PathCategory, ValidationLane]] = MappingProxyTyp
         PathCategory.SKILL: ValidationLane(argvs=SKILL_LANE_ARGVS, reason=SKILL_REASON),
         PathCategory.INSTRUCTION_BLOCK: ValidationLane(
             argvs=(INSTRUCTION_BLOCK_ARGV,), reason=INSTRUCTION_BLOCK_REASON
-        ),
-        PathCategory.EVAL_TRIGGER: ValidationLane(
-            argvs=(EVAL_TRIGGERS_ARGV,), reason=EVAL_REASON
         ),
         PathCategory.EVAL_PROMPT: ValidationLane(
             argvs=(EVAL_PROMPTS_ARGV,), reason=EVAL_REASON

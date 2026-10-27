@@ -4,8 +4,6 @@ PROVIDES a generic Python evaluation runner — the `outcomeeng_evals` package �
 SO THAT spec assertions about LLM-driven skill behavior across any project consuming this marketplace
 CAN carry `[eval]` evidence bounded by per-eval expected-verdict structures declared in each case file, governed by the lane declaration in [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md), and gated by pass@k thresholds
 
-An eval definition is the single authored source of its suite's CI ownership. A path-filtered CI workflow decides whether the eval job starts at all, and that decision is evaluated by the CI provider's event router before any code runs — so the trigger list is the one place ownership must be materialized as static text. That text is generated from the definitions rather than transcribed alongside them.
-
 ## Assertions
 
 ### Conformance
@@ -26,15 +24,13 @@ An eval definition is the single authored source of its suite's CI ownership. A 
 - ALWAYS: suite-level pass rate gates an exit-0 result against a configurable threshold whose default sits next to the case set — CI consumes the exit code, not transcript text ([test](tests/test_run_exit.mapping.l1.py))
 - ALWAYS: the `run` CLI rejects a `--workers` value outside the range `[1, 16]` with a usage error — the upper bound caps concurrent `claude` subprocesses so a misconfigured worker count cannot fork-burst the Claude API, per [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) ([test](tests/test_cli.mapping.l1.py))
 - ALWAYS: the `run` CLI accepts repeatable `--case-id` selectors and runs only the named cases in case-file order, rejecting any selector that does not resolve to a case in the suite ([test](tests/test_cli.mapping.l1.py))
-- ALWAYS: the `outcomeeng-evals` Click group exposes the `run`, `history`, `view`, `discover`, `plan`, `ci`, `materialize-prompts`, and `materialize-ci-triggers` subcommand names ([test](tests/test_cli.mapping.l1.py))
+- ALWAYS: the `outcomeeng-evals` Click group exposes the `run`, `history`, `view`, `discover`, `plan`, `ci`, and `materialize-prompts` subcommand names ([test](tests/test_cli.mapping.l1.py))
 - Version-1 history rows both without and with additive ceiling fields map to complete rendered summaries, and the additive fields retain schema version 1 ([test](tests/test_cli.mapping.l1.py))
 - ALWAYS: CI planning maps PR changed paths to suites through each eval's `owned_paths`, runs `smoke_cases` for owned-path changes, runs full suites for eval-definition or harness changes, skips unrelated PR changes, and runs all non-manual suites in full mode ([test](tests/test_cli.mapping.l1.py))
-- ALWAYS: the CI workflow's trigger paths are derived from the eval definitions — the union of every non-manual suite's `owned_paths` and its own eval directory, plus the universal surfaces that force a full plan — so a suite declaring `ci_policy = "manual"` contributes no trigger path and no suite's owned path is absent from the surface that starts the job ([test](tests/test_ci_triggers.mapping.l1.py))
 
 ### Properties
 
-- NEVER: an `owned_paths` entry carries any character outside that alphabet — the rejected domain is the alphabet's open complement rather than an enumerable set of globs, so a character nobody thought to forbid would otherwise select a suite the CI job never starts ([test](tests/test_definition.property.l1.py))
-- ALWAYS: the derived trigger set is minimal — a pattern a recursive-glob sibling already covers is dropped — and minimization selects exactly the paths the un-minimized set selects ([test](tests/test_ci_triggers.property.l1.py))
+- NEVER: an `owned_paths` entry carries any character outside that alphabet — the rejected domain is the alphabet's open complement rather than an enumerable set of globs ([test](tests/test_definition.property.l1.py))
 - ALWAYS: producer-derived prompt materialization changes when any selected whole producer changes ([test](tests/test_producer_prompt.property.l1.py))
 
 ### Compliance
@@ -55,8 +51,8 @@ An eval definition is the single authored source of its suite's CI ownership. A 
 - ALWAYS: the JSON results document is the authoritative artifact for downstream tooling; the sibling HTML viewer reads the same JSON payload (embedded in a `<script type="application/json">` tag for `file://` opens) and adds no fields beyond what the JSON contains ([test](tests/test_report.compliance.l1.py))
 - ALWAYS: every suite run appends one summary row to the per-eval `history.jsonl` carrying timestamp, schema version, git SHA, selected model, configured per-trial `max_budget_usd` and `timeout_seconds`, suite verdict, pass rate, case counts, total cost, total duration, the aggregate input, output, prompt-cache read, and prompt-cache creation token counts, and the run's transcript path — the configured ceilings distinguish completed observations from budget- and timeout-censored failures, and the cache-token aggregates make the prompt-cache hit rate a durable trend signal; the file is the durable trend record ([test](tests/test_history.compliance.l1.py))
 - ALWAYS: developer-machine eval runs produce local `history.jsonl` appends that contributors restore before committing unrelated changes, while CI workflows own canonical baseline appends when wired ([audit])
-- ALWAYS: `outcomeeng-evals materialize-ci-triggers --check` fails when a workflow's generated trigger blocks differ from the definition-derived rendering — whether a path is missing or unowned — and exits successfully when every block is current; each declared trigger event renders the identical path list ([test](tests/test_ci_triggers.compliance.l1.py))
-- NEVER: a CI trigger path is authored by hand alongside the eval definition that owns it — a transcribed list drifts silently, dropping a suite's coverage or triggering a job no suite selects ([audit])
+- NEVER: the eval workflow declares a `pull_request`, `push`, or `schedule` trigger — `workflow_dispatch` is its only trigger, so CI starts an eval only when an operator dispatches it ([test](tests/test_eval_workflow_triggers.compliance.l1.py))
+- ALWAYS: the eval workflow's dispatch inputs and runtime fallbacks for `max_budget_usd` and `timeout_seconds` take the defaults `outcomeeng_evals.settings` declares — a dispatched run spends no more than a local run by default ([test](tests/test_eval_workflow_defaults.compliance.l1.py))
 - ALWAYS: every eval case carries at least two structurally coupled expectations — one on a verdict-level attribute (e.g., `status="rejected"`) and one on a finding-level attribute (e.g., `rule="X" present="true"`) — paired so that a hallucinated verdict status without a matching finding, or a matching finding without the correct verdict status, fails the case ([audit])
 - NEVER: spawn long-lived `claude` subprocesses or polling loops; each case is a single bounded invocation per [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) ([audit])
 - NEVER: grade a case by interpreting free-form LLM prose; structural verdict fields are the only source of pass/fail signal ([audit])

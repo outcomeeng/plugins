@@ -17,7 +17,6 @@ from outcomeeng.validation import (
     ACTIONLINT_ARGV,
     EVAL_LINKS_ARGV,
     EVAL_PROMPTS_ARGV,
-    EVAL_TRIGGERS_ARGV,
     EXECUTION_LEVELS,
     FMT_CHECK_ARGV,
     L3_LEVEL,
@@ -356,7 +355,6 @@ def declared_lane_steps() -> Mapping[PathCategory, LaneSteps]:
             PathCategory.INSTRUCTION_BLOCK: _lane(
                 (INSTRUCTION_BLOCK_ARGV,), INSTRUCTION_BLOCK_REASON
             ),
-            PathCategory.EVAL_TRIGGER: _lane((EVAL_TRIGGERS_ARGV,), EVAL_REASON),
             PathCategory.EVAL_PROMPT: _lane((EVAL_PROMPTS_ARGV,), EVAL_REASON),
             PathCategory.EVIDENCE_LINK: _lane((EVAL_LINKS_ARGV,), EVIDENCE_LINK_REASON),
         }

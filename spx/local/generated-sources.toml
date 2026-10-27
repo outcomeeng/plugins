@@ -1,15 +1,14 @@
 # Generated-source declaration: every committed generated extent and its
 # producing relation, governed by
 # spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md.
-# A `begin`/`end` marker matches at the start of a line — leading whitespace
-# only where the generator emits the marker indented (eval-trigger paths),
-# trailing content only where the begin or end is a prefix of a version- or
+# A `begin`/`end` marker matches at the start of a line — trailing content
+# only where the begin or end is a prefix of a version- or
 # name-bearing marker line (router and shared fences). A marker quoted in
 # prose or an example fence bounds nothing, and a relation's generator fence
-# matching is authoritative where stricter. The eval-trigger and README
-# plugin-catalog generators do not themselves enforce line-start anchoring;
-# the declared line-start rule governs attribution for those relations, with
-# each generator's anchor gap tracked at its owning node. Extents span begin
+# matching is authoritative where stricter. The README
+# plugin-catalog generator does not itself enforce line-start anchoring;
+# the declared line-start rule governs attribution for that relation, with
+# the generator's anchor gap tracked at its owning node. Extents span begin
 # through end inclusive, for every such pair in the file.
 
 [[relation]]
@@ -68,14 +67,6 @@ sources = [
 ]
 generator = ["outcomeeng/catalog/plugin_catalog.py"]
 regenerate = "just docs"
-
-[[relation]]
-outputs = [
-  { file = ".github/workflows/product-tree-evals.yml", begin = "# BEGIN eval-trigger-paths", end = "# END eval-trigger-paths" },
-]
-sources = ["spx/**/evals/**/eval.toml"]
-generator = ["outcomeeng_evals/**"]
-regenerate = "just build-eval-triggers"
 
 # Producer-coupled eval prompts. Each eval's `eval.toml` `[prompt_source]`
 # declares its template and producer file(s); the producer set spans authored

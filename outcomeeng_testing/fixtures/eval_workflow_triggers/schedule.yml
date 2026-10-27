@@ -1,0 +1,9 @@
+name: Violating eval workflow
+on:
+  schedule:
+    - cron: "0 3 * * *"
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo eval

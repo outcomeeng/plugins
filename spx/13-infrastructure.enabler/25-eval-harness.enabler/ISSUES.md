@@ -8,22 +8,17 @@ The harness supports `--workers` for parallelism within a suite. `run --all` cou
 
 ## CI integration
 
-The CI workflow `.github/workflows/product-tree-evals.yml` runs planned eval
-suites through `outcomeeng-evals ci`. It discovers each `eval.toml` under the
-configured root, filters out `ci_policy = "manual"` suites, and chooses
-full-suite, smoke-case, or skipped execution from the trigger mode and
-changed paths. PRs run smoke cases when a changed file matches a suite's
-`owned_paths`, run a full suite when the suite definition or eval harness
-changed, and skip unrelated suites. `push` to main, the weekly schedule, and
-`workflow_dispatch` run every non-manual suite under the configured root.
-Each selected suite runs through the Python CI executor, which constructs the
+The CI workflow `.github/workflows/product-tree-evals.yml` starts only on
+`workflow_dispatch`. A dispatched run executes the full plan through
+`outcomeeng-evals ci`: it discovers each `eval.toml` under the configured
+root, filters out `ci_policy = "manual"` suites, and runs every remaining
+suite through the Python CI executor, which constructs the
 `outcomeeng-evals run` command using the suite's `plugin_dir` or the workflow
-fallback, and the job gates on the aggregate exit code.
+fallback. The job gates on the aggregate exit code. The `plan` and `ci`
+subcommands still map a changed-path list to suites through each eval's
+`owned_paths` on a developer's machine.
 
-The workflow triggers on PRs touching declared eval ownership surfaces, pushes
-to `main` for the same surfaces, a weekly `schedule`, and `workflow_dispatch`.
-PR execution is gated by collaborator authorization so untrusted PRs never
-receive secrets. The runner follows the auth mode already provisioned in the
+The dispatcher's write access authorizes a run. The runner follows the auth mode already provisioned in the
 inherited environment per `eval-harness.md`: a non-empty `ANTHROPIC_API_KEY`
 selects the `--bare` path, and an absent or empty `ANTHROPIC_API_KEY` keeps the
 non-bare path while preserving the inherited environment, including
@@ -33,9 +28,9 @@ run.
 
 CI owns the canonical appends on main: `product-tree-evals.yml`'s commit-back step pushes them with `[skip ci]` via the `OUTCOMEENG_EVAL_STORE` PAT. Developer-machine runs still append local rows that show up as `git diff` noise. Staging discipline: do not stage `**/evals/**/history.jsonl` unless the commit's purpose *is* an eval run — restore it (`git checkout -- <path>`) before committing unrelated changes. The repo's `.gitattributes` marks these files `merge=union` so concurrent appends from different branches merge cleanly instead of conflicting; that covers merges, not the staging hygiene, which still wants the CI step (or a pre-commit guard) to fully solve.
 
-`append_history_row` (in `outcomeeng_evals/history.py`) opens the file in append mode and writes one line. Within a single `outcomeeng-evals run` the GIL serializes the workers, so rows land in case order. But two overlapping `run` invocations against the same eval directory — a CI matrix, or a developer running while CI runs — can interleave their rows in the file (`merge=union` resolves the *git merge*, not the *concurrent write*). `product-tree-evals.yml` serializes its main/schedule runs (concurrency group per ref, `cancel-in-progress: false`), so the workflow's own runs don't interleave their appends. The file lock (`fcntl.flock` or a lockfile) is only needed if a developer runs the same eval while CI runs it, or if the workflow later fans out the same eval across a matrix.
+`append_history_row` (in `outcomeeng_evals/history.py`) opens the file in append mode and writes one line. Within a single `outcomeeng-evals run` the GIL serializes the workers, so rows land in case order. But two overlapping `run` invocations against the same eval directory — a CI matrix, or a developer running while CI runs — can interleave their rows in the file (`merge=union` resolves the *git merge*, not the *concurrent write*). `product-tree-evals.yml` serializes its dispatched runs on main (concurrency group per ref, `cancel-in-progress: false`), so the workflow's own runs don't interleave their appends. The file lock (`fcntl.flock` or a lockfile) is only needed if a developer runs the same eval while CI runs it, or if the workflow later fans out the same eval across a matrix.
 
-The eval CI workflow (`product-tree-evals.yml`) scopes to trusted triggers: `push` to `main`, `schedule`, and `workflow_dispatch` run unconditionally; `pull_request` runs only after the `authorize` job confirms the PR is same-repo (not a fork) and its author has `admin`/`maintain`/`write` permission. Fork PRs are skipped because GitHub withholds secrets from `pull_request` events triggered by a fork, so the `claude` subprocess would never receive `CLAUDE_CODE_OAUTH_TOKEN`. `_subprocess_env` forwards the full job environment to the `claude` subprocess, so an eval crafted in an untrusted PR could otherwise exfiltrate job secrets; the mitigation is the trigger scoping plus the authorization gate, not env filtering (auth resolution requires the inherited env).
+The eval CI workflow (`product-tree-evals.yml`) starts only on `workflow_dispatch`, which requires write access to the repository. `_subprocess_env` forwards the full job environment to the `claude` subprocess, so an eval crafted in an untrusted PR could otherwise exfiltrate job secrets; the mitigation is that no pull-request, push, or schedule event starts the workflow, not env filtering (auth resolution requires the inherited env).
 
 ## FOLLOW-UP: no PR-time guarantee that `dist/claude/product-tree` matches `src/plugins/product-tree` (RESOLVED)
 
@@ -74,12 +69,6 @@ CommonMark does not treat a line opening with three or more backticks as a fence
 
 `_error_outcome` (in `outcomeeng_evals/suite.py`) replaces all of a case's trials with one synthetic `trial_index=0` failing trial when the worker raises. If trial 1 passed and trial 2 raised, the successful trial's evidence is lost from the report. A richer error outcome — successful trials kept, the error appended as the final trial — would preserve that evidence. Defer; today's runs use `trials_per_case = 1`, so the loss is moot until multi-trial parallel runs are common.
 
-## CI-trigger marker regex lacks line-start anchoring
-
-`outcomeeng_evals/ci_triggers.py` compiles its `# BEGIN eval-trigger-paths` block-matching regex without a `^` anchor or `re.MULTILINE`, so it can match the marker text mid-line, unlike the `^...$`-anchored router and shared-region matchers in the instruction-block module. `spx/local/generated-sources.toml` declares line-start matching for this marker family and notes the deviation; the declared rule governs attribution, per [`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md).
-
-**Resolution shape**: anchor the block pattern to the start of a line and cover the anchoring in the node's ci-trigger tests, then drop the deviation note from `spx/local/generated-sources.toml`.
-
 ## The shipped harness retires its producer-coupling assertions at the cutover
 
 The eval-harness redesign re-homes this concern: eval-verification governance moves to `spx/31-outcomeeng.enabler/31-verification.enabler/31-eval-verification.enabler/`, with harness vocabulary under its `21-eval-harness.enabler` child, and the runtime adapter contract the redesigned harness delegates to lives under `spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/`. This node's specs, decisions and evidence stay authoritative for the shipped harness until the implementation cutover, after which the node retires.
@@ -102,3 +91,21 @@ No fork-per-case implementation happens in this node. The caching decision re-de
 **Evidence.** The isolated test-evidence audit of `spx/13-infrastructure.enabler/13-host-readiness.enabler` on head `e3bf060ce4dd29ff34984b5d66f8302d9ca22e95` rejected the same shape in that node's harness (finding `f-001`), fixed there by raising a `RuntimeError` subclass from a harness-owned horizon.
 
 **Settlement condition.** Each infrastructure `AssertionError` in these modules becomes a lifecycle or dependency error type the harness owns, with every behavioral predicate left in the linked tests, and the node passes its test-evidence audit.
+
+## Harness-owned assertions in the CLI mapping tests
+
+The linked tests in `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_cli.mapping.l1.py` delegate their predicates to `assert_*` functions in `outcomeeng_testing/evals/cli.py`, for example `assert_run_subcommand_rejects_workers_above_cap` and `assert_run_command_filters_cases_by_case_id`. The harness owns the `assert` calls and the expected values, so each linked test hides its predicate and the same harness cannot serve an opposite claim.
+
+**Evidence.** The isolated test-evidence audit of this node on head `ee127962419b7923f6255c614b94ba942c0b6662` filed the pattern as `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_cli.mapping.l1.py:assertion-seam`. The test for the subcommand-name assertion was repaired in that round.
+
+**Settlement condition.** Each delegating `assert_*` harness function returns the observed result, and the linked test owns the comparison, and the node passes its test-evidence audit.
+
+The same pattern holds in six further linked tests of this node. The isolated test-evidence audit of this node on head `9569c99f65bf67acd2b8b004bf82c86953a4e4f3` filed each as a standing finding outside the changeset: `git diff 898a77ee089dbb512ebaf1ec9630a3941fc6fff6..HEAD` shows these files unchanged. Each filed finding carries the severity `FILED`.
+
+- **`f-003`**, key `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_run_exit.mapping.l1.py:assertion-seam`. Evidence: the harness `outcomeeng_testing/harnesses/eval_run_exit.py` owns the assertion and the expected exit values, and the linked test holds no predicate. Settlement condition: the harness returns the observed exit values, the linked test owns the comparison and the expected values, and the node passes its test-evidence audit.
+- **`f-004`**, key `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_history.compliance.l1.py:assertion-seam`. Evidence: one wrapper delegates the whole compliance predicate and its expectations to the harness `outcomeeng_testing/harnesses/eval_history.py`. Settlement condition: the harness returns the observed history result, the linked test owns the compliance predicate and its expectations, and the node passes its test-evidence audit.
+- **`f-005`**, key `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_report.compliance.l1.py:assertion-seam`. Evidence: the harness `outcomeeng_testing/harnesses/eval_report.py` owns every `assert` and expected value, and every `test_report_*` and `test_run_command_*` function delegates to an `assert_*` function. Settlement condition: each `assert_*` function returns the observed report result, every linked test owns its comparison, and the node passes its test-evidence audit.
+- **`f-006`**, key `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_runner.compliance.l1.py:assertion-seam`. Evidence: the harness `outcomeeng_testing/harnesses/eval_runner.py` owns every `assert` and expected value, and every test function delegates to an `assert_*` function. Settlement condition: each `assert_*` function returns the observed runner result, every linked test owns its comparison, and the node passes its test-evidence audit.
+- **`f-007`**, key `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_eval_harness.compliance.l1.py:assertion-seam`. Evidence: the harness `outcomeeng_testing/harnesses/eval_harness.py` owns every `assert` and expected value, and every test function delegates to an `assert_*` function. Settlement condition: each `assert_*` function returns the observed result, every linked test owns its comparison, and the node passes its test-evidence audit.
+- **`f-008`**, key `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_eval_just_recipes.compliance.l1.py:assertion-seam`. Evidence: the harness `outcomeeng_testing/evals/just_recipes.py` owns the `assert` calls and expected values for seven of eight tests, and only the materialize-prompts writing test keeps its predicate in the test. Settlement condition: the seven delegating `assert_*` functions return the observed results, their linked tests own the comparisons, and the node passes its test-evidence audit.
+- **`f-009`**, key `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_definition.property.l1.py:assertion-seam`. Evidence: the harness `outcomeeng_testing/harnesses/evals.py` owns the invariant, so the property invariant is not lexically in the linked test. Settlement condition: the property invariant is stated in the linked test over values the harness generates or returns, and the node passes its test-evidence audit.

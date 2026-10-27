@@ -56,9 +56,9 @@ decision (2026-09-07). `spx/43-instructions.enabler/ISSUES.md` entry 4 records t
 matching gap for `/audit-skill`; both auditors need the instructions plugin's first eval
 suite. Author `evals/invocation-scope/` (producer
 `src/plugins/instructions/skills/audit-subagent/SKILL.md`, `plugin_dir`
-`dist/claude/instructions`, cases for one configuration versus several), regenerate the
-eval CI triggers with `just build-eval-triggers`, run it at the default budget, and
-restore the `[eval](evals/invocation-scope/eval.toml)` tag once it passes.
+`dist/claude/instructions`, cases for one configuration versus several), run it at the
+default budget, and restore the `[eval](evals/invocation-scope/eval.toml)` tag once it
+passes.
 
 ## The governing-context rule speaks product-tree vocabulary the instructions plugin does not define
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from outcomeeng_evals.cli import EXIT_SUCCESS
+from outcomeeng_evals.cli import EXIT_SUCCESS, SUBCOMMANDS
 from outcomeeng_testing.evals.cli import (
     PLAN_PLUGIN_DIR,
     assert_ci_subcommand_executes_selected_plan,
@@ -12,7 +12,6 @@ from outcomeeng_testing.evals.cli import (
     assert_discover_subcommand_succeeds_on_empty_tree,
     assert_history_subcommand_handles_missing_file,
     assert_history_subcommand_reads_version_1_compatible_rows,
-    assert_main_group_exposes_documented_subcommands,
     assert_plan_selects_full_suite_for_absolute_eval_definition_change,
     assert_plan_selects_full_suite_for_copied_harness_path,
     assert_plan_selects_full_suite_for_eval_definition_change,
@@ -37,12 +36,22 @@ from outcomeeng_testing.evals.cli import (
     assert_run_subcommand_rejects_workers_below_minimum,
     assert_run_subcommand_requires_eval_toml_path,
     assert_view_subcommand_requires_run_path_or_latest_flag,
+    invoke_main_help,
     observe_plan_full_mode_with_manual_eval,
 )
 
 
 def test_main_group_exposes_documented_subcommands() -> None:
-    assert_main_group_exposes_documented_subcommands()
+    result = invoke_main_help()
+
+    assert result.exit_code == EXIT_SUCCESS
+    _, _, commands_section = result.output.partition("Commands:\n")
+    listed_names = {
+        line.split()[0]
+        for line in commands_section.splitlines()
+        if line.startswith("  ") and not line.startswith("   ") and line.strip()
+    }
+    assert listed_names == {subcommand.name for subcommand in SUBCOMMANDS}
 
 
 def test_run_subcommand_requires_eval_toml_path() -> None:
