@@ -23,13 +23,24 @@ import shlex
 import subprocess
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
 from hypothesis import seed, settings
 
-from outcomeeng.validation.hook_contract import SESSION_START_EVENT
+from outcomeeng.validation.foundation_manifest import (
+    MANIFEST_RELATIVE_PATH,
+    parse_foundation_manifest,
+)
+from outcomeeng.validation.hook_contract import (
+    MATCHER_FIELD,
+    PLUGIN_ROOT_ENV,
+    SESSION_START_COMPACT_MATCHER,
+    SESSION_START_EVENT,
+)
+from outcomeeng.validation.hook_safety import COMMAND_FIELD, HOOKS_FIELD
 from outcomeeng_testing.harnesses.product_tree import (
     marketplace_root_for_product_tree_root_test,
 )
@@ -38,7 +49,15 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 # A shell variable name the harness may safely interpolate into a sourced script.
 _ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
-_HOOKS_JSON = ("src", "plugins", "product-tree", "hooks", "hooks.json")
+_PLUGIN_ROOT = ("src", "plugins", "product-tree")
+_HOOKS_JSON = (*_PLUGIN_ROOT, "hooks", "hooks.json")
+_COMPACT_ENTRY_FIXTURES = (
+    Path(__file__).resolve().parents[1]
+    / "fixtures"
+    / "agent_environment"
+    / "compact_entry"
+)
+_COMPACT_ENTRY_FIXTURE_SUFFIX = ".hooks.json"
 HOOK_EVIDENCE_SEED = 20260728
 HOOK_EVIDENCE_EXAMPLES = 40
 HOOK_EVIDENCE_REPLAY_PATH = (
@@ -64,6 +83,8 @@ UNSET_ENV_VALUE = "<unset>"
 # Env vars dropped from the child so the hook command sees only what the call
 # provides — its own session identity, project dir, and env file, not the runner's.
 _SESSION_START_ENV_EXCLUDES = {
+    KILL_SWITCH_ENV,
+    PLUGIN_ROOT_ENV,
     "CLAUDE_PROJECT_DIR",
     "CLAUDE_ENV_FILE",
     "CLAUDE_SESSION_ID",
@@ -105,37 +126,105 @@ def session_start_workspace() -> Iterator[tuple[Path, Path]]:
         yield project_dir, project_dir / "claude.env"
 
 
-def _hooks_config(test_file: str | None = None) -> dict[str, Any]:
-    root = (
+@dataclass(frozen=True)
+class HookEntry:
+    """One ``SessionStart`` entry as declared: its matcher and handler commands."""
+
+    matcher: str
+    commands: tuple[str, ...]
+
+
+def marketplace_root(test_file: str | None = None) -> Path:
+    """Return the repository root that carries the authored plugin tree."""
+    return (
         marketplace_root_for_product_tree_root_test(test_file)
         if test_file is not None
         else Path(__file__).resolve().parents[2]
     )
-    config: dict[str, Any] = json.loads(
-        root.joinpath(*_HOOKS_JSON).read_text(encoding="utf-8")
+
+
+def shipped_plugin_root(test_file: str | None = None) -> Path:
+    """Return the authored product-tree plugin root a hook command resolves against."""
+    return marketplace_root(test_file).joinpath(*_PLUGIN_ROOT)
+
+
+def compact_recovery_resource(plugin_root: Path) -> Path:
+    """Return the reminder resource path the plugin's manifest names under ``plugin_root``."""
+    manifest_text = plugin_root.joinpath(*Path(MANIFEST_RELATIVE_PATH).parts).read_text(
+        encoding="utf-8"
     )
+    manifest = parse_foundation_manifest(manifest_text)
+    return plugin_root.joinpath(*Path(manifest.compact_recovery).parts)
+
+
+def _hooks_config(
+    test_file: str | None = None, hooks_file: Path | None = None
+) -> dict[str, Any]:
+    path = (
+        hooks_file
+        if hooks_file is not None
+        else marketplace_root(test_file).joinpath(*_HOOKS_JSON)
+    )
+    config: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     return config
 
 
 def session_start_events(test_file: str | None = None) -> list[str]:
     """Return the hook event names the product-tree plugin declares, in order."""
-    return list(_hooks_config(test_file)["hooks"])
+    return list(_hooks_config(test_file)[HOOKS_FIELD])
 
 
-def session_start_command(test_file: str | None = None) -> str:
-    """Return the single shipped ``SessionStart`` hook command string."""
-    entries = _hooks_config(test_file)["hooks"][SESSION_START_EVENT]
-    commands = [hook["command"] for entry in entries for hook in entry["hooks"]]
-    if len(commands) != 1:
-        msg = (
-            f"expected exactly one {SESSION_START_EVENT} command, found {len(commands)}"
+def session_start_entries(
+    test_file: str | None = None, hooks_file: Path | None = None
+) -> list[HookEntry]:
+    """Return every ``SessionStart`` entry in declaration order."""
+    entries = _hooks_config(test_file, hooks_file)[HOOKS_FIELD][SESSION_START_EVENT]
+    return [
+        HookEntry(
+            matcher=entry.get(MATCHER_FIELD, ""),
+            commands=tuple(hook[COMMAND_FIELD] for hook in entry[HOOKS_FIELD]),
         )
+        for entry in entries
+    ]
+
+
+def _single_command(entries: list[HookEntry], description: str) -> str:
+    commands = [command for entry in entries for command in entry.commands]
+    if len(commands) != 1:
+        msg = f"expected exactly one {description} command, found {len(commands)}"
         raise ValueError(msg)
-    command = commands[0]
-    if not isinstance(command, str):
-        msg = f"{SESSION_START_EVENT} command must be a string, got {type(command).__name__}"
-        raise TypeError(msg)
-    return command
+    return commands[0]
+
+
+def delegating_entry_command(test_file: str | None = None) -> str:
+    """Return the command of the ``SessionStart`` entry that is not the compact entry."""
+    return _single_command(
+        [
+            entry
+            for entry in session_start_entries(test_file)
+            if entry.matcher != SESSION_START_COMPACT_MATCHER
+        ],
+        "delegating SessionStart",
+    )
+
+
+def compact_entry_command(
+    test_file: str | None = None, hooks_file: Path | None = None
+) -> str:
+    """Return the command of the ``SessionStart`` entry matched on ``compact``."""
+    return _single_command(
+        [
+            entry
+            for entry in session_start_entries(test_file, hooks_file)
+            if entry.matcher == SESSION_START_COMPACT_MATCHER
+        ],
+        "compact SessionStart",
+    )
+
+
+def compact_entry_violation_fixtures() -> list[Path]:
+    """Return the inert ``hooks.json`` payloads whose compact entry violates the rule."""
+    return sorted(_COMPACT_ENTRY_FIXTURES.glob(f"*{_COMPACT_ENTRY_FIXTURE_SUFFIX}"))
 
 
 def run_session_start(
@@ -170,12 +259,54 @@ def run_session_start(
     if env_overrides:
         env.update(env_overrides)
     return subprocess.run(  # noqa: S603 — command is the shipped hook artifact under test.
-        ["/bin/sh", "-c", session_start_command()],
+        ["/bin/sh", "-c", delegating_entry_command()],
         input=json.dumps(payload),
         capture_output=True,
         text=True,
         env=env,
         cwd=str(project_dir) if project_dir is not None else None,
+        timeout=_SUBPROCESS_TIMEOUT_S,
+    )
+
+
+def run_compact_entry(
+    *,
+    plugin_root: Path,
+    project_dir: Path,
+    command: str | None = None,
+    env_overrides: dict[str, str] | None = None,
+    path: str | None = None,
+) -> subprocess.CompletedProcess[str]:
+    """Run a compact-entry command as the host would after a compaction.
+
+    ``command`` defaults to the shipped compact entry; a caller passes a fixture's
+    command to exercise a violating entry. ``plugin_root`` is exported as the plugin
+    root the command resolves its resource against, and ``project_dir`` is the
+    working directory, so any state the command writes lands there. ``path``
+    overrides ``PATH`` so a caller can withhold every external command.
+    """
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in _SESSION_START_ENV_EXCLUDES
+    }
+    env[PLUGIN_ROOT_ENV] = str(plugin_root)
+    env["CLAUDE_PROJECT_DIR"] = str(project_dir)
+    if path is not None:
+        env["PATH"] = path
+    if env_overrides:
+        env.update(env_overrides)
+    return subprocess.run(  # noqa: S603 — command is the shipped hook artifact or a violating fixture under test.
+        [
+            "/bin/sh",
+            "-c",
+            command if command is not None else compact_entry_command(),
+        ],
+        input="",
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(project_dir),
         timeout=_SUBPROCESS_TIMEOUT_S,
     )
 
@@ -272,6 +403,7 @@ def worktree_occupancy(project_dir: Path) -> list[dict[str, Any]]:
 
 
 __all__ = [
+    "HookEntry",
     "KILL_SWITCH_DISABLED",
     "KILL_SWITCH_ENV",
     "HOOK_EVIDENCE_REPLAY_PATH",
@@ -280,14 +412,20 @@ __all__ = [
     "WORKTREE_CLAIMED_ENV",
     "WORKTREE_CLAIM_PATH_ENV",
     "WORKTREE_CONTROLLING_PID_ENV",
+    "compact_entry_command",
+    "compact_entry_violation_fixtures",
+    "compact_recovery_resource",
+    "delegating_entry_command",
     "has_worktree_claim_export",
     "hook_generated_evidence",
     "init_session_worktree",
     "read_env_exports",
+    "run_compact_entry",
     "run_session_start",
-    "session_start_workspace",
-    "session_start_command",
+    "session_start_entries",
     "session_start_events",
+    "session_start_workspace",
+    "shipped_plugin_root",
     "worktree_claim_path_from_env",
     "worktree_occupancy",
 ]

@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{}'; while IFS= read -r line; do printf '%s\\n' \"$line\"; done < \"${CLAUDE_PLUGIN_ROOT}/skills/understand/compact-recovery.md\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
