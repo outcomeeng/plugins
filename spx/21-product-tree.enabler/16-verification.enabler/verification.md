@@ -22,7 +22,7 @@ The six verification types and the two axes that classify them — verdict mode 
 
 Each rule enforces a guarantee of [`spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md).
 
-- ALWAYS: every agentic verification run writes its journal and its context only to the repository-shared locations SPX resolves, per [`spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-spec-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([audit])
+- ALWAYS: every agentic verification run writes its journal and its context only to the repository-shared locations SPX resolves, per [`spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md`](spx/21-product-tree.enabler/16-verification.enabler/13-run-journal.adr.md) ([audit])
 - ALWAYS: an agentic verification skill whose run-recording write the native permission policy refuses stops the run, retries no write, writes to no other location, and returns a blocked result whose diagnostic is a configuration error naming the refused path ([audit])
 - ALWAYS: every agentic verification run records its durable facts as appended events on one journal that is the run's sole source of truth ([audit])
 - ALWAYS: every agentic verification run streams its events live — opening the journal at the start and appending each domain event (scope entered, scope advanced as each unit of scope is examined, finding reported the instant it is raised, run completed) at the moment the run reaches it — so the journal reflects the run's progress in flight, per [`spx/15-audit-result-delivery.pdr.md`](spx/15-audit-result-delivery.pdr.md) ([audit])
