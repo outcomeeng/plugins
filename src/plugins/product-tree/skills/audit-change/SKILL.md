@@ -156,7 +156,7 @@ A blocked result names exactly one of these reasons:
    `blocked_by` front matter and the `resolve-reference` results for the
    harness, generator, and fixture paths the rows name. At Executable, a path
    whose `defaultBranch` is not `on-default-branch` fails the criterion,
-   whatever its `resolution`; a `checkout-only` path fails it. No resolution
+   whatever its `resolution`. No resolution
    of an evidence path yields a finding. A `## Verification` heading is a known
    section, never an unknown one under `record-shape`. Then judge each body section against
    the loaded rule and criterion inventory, together with every other section
