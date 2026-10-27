@@ -116,6 +116,9 @@ Use a native TOML definition with `name`, `description`, and
   verifier-mutation rule. The admission judges how the grants are bounded and does not
   establish that the `workspace-write` sandbox completes the run-recording write. Every other
   write grant to a verifier stays under both rules.
+- ALWAYS: document a verifier's directory access as prompt-bounded operation within the
+  writable roots its host supplies from the write paths SPX reports. The roots supply no
+  guarantee that only the caller's run can be changed.
 - ALWAYS: keep user decisions in the invoking conversation. A configured role reports a
   missing decision with the evidence and blocked action its caller needs.
 - ALWAYS: preserve progress and findings that the native harness exposes. No workflow

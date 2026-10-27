@@ -1,4 +1,4 @@
-"""Drive an assertion-audit run through the pinned published SPX release.
+"""Drive an assertion-audit run through the spx build that meets the repository floor.
 
 The payload objects and the selectors come from the ``/audit-assertions`` skill
 text itself, rendered with the run's own values, so the observations describe the
@@ -29,9 +29,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     AuditTerminalStatus,
 )
 from outcomeeng.validation.spx_version import (
-    REQUIRED_SPX_VERSION,
-    SPX_PACKAGE_NAME,
-    minimum_release_package_command,
+    floor_spx_command,
 )
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
@@ -380,17 +378,4 @@ def _render(value: object, bindings: Mapping[str, str]) -> object:
 
 
 def _floor_release_command() -> tuple[str, ...]:
-    package_spec = f"{SPX_PACKAGE_NAME}@{REQUIRED_SPX_VERSION}"
-    command = minimum_release_package_command(package_spec)
-    version = subprocess.run(
-        (*command, "--version"),
-        cwd=REPO_ROOT,
-        text=True,
-        capture_output=True,
-        check=True,
-    ).stdout.strip()
-    if version != REQUIRED_SPX_VERSION:
-        raise RuntimeError(
-            f"floor release command returned {version}, expected {REQUIRED_SPX_VERSION}"
-        )
-    return command
+    return floor_spx_command()

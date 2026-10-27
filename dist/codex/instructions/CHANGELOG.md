@@ -6,6 +6,18 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.22.3
+
+### Changed
+
+- **`/subagent-standards` documents a Verifier's directory access as prompt-bounded operation within host-supplied writable roots.** The capabilities standard now states that a Verifier writes only within the writable roots its host supplies from the write paths SPX reports, and that those roots supply no guarantee that only the caller's run can be changed. An auditor reading a Verifier definition judges directory access against that statement instead of expecting the roots to confine the Verifier to its own run. Before this change, the standard admitted the Verifier's run-recording write grants but was silent on what bounds the directories those grants reach.
+
+- **The `/author-skill` auditor template stops on a refused run-recording write and returns a configuration error.** A skill authored from `auditor-skill.md` now writes its journal and context only to the locations `spx verification run` resolves. When the native permission policy refuses a payload file, a run-recording command, or the journal, the authored audit stops at that write, retries nothing, writes to no other location, and returns `BLOCKED` with a `diagnostic` line that names the configuration error and the refused path; its permission-refusal stop is separate from the one rerun it allows for an absent payload file. Before this change, the template gave a new auditor no such stop and no `diagnostic` line in its blocked result.
+
+- **`/audit-subagent` stops on a refused run-recording write and returns a configuration error.** When the native permission policy refuses a payload file, a run-recording command, or the journal, the audit stops at that write, retries nothing, writes to no other location, and returns `BLOCKED` with a `diagnostic` line that names the configuration error and the refused path. The audit writes its journal and context only to the locations `spx verification run` resolves, and its permission-refusal stop is separate from the one rerun it allows for an absent payload file. A host that launches the audit must grant those paths; the audit never widens its own access. Before this change, a refused write ended in a generic blocked result that named no configuration cause, and the skill was silent on where else a write could land.
+
+- **`/audit-skill` stops on a refused run-recording write and returns a configuration error.** When the native permission policy refuses a payload file, a run-recording command, or the journal, the audit stops at that write, retries nothing, writes to no other location, and returns `BLOCKED` with a `diagnostic` line that names the configuration error and the refused path. The audit writes its journal and context only to the locations `spx verification run` resolves, and its permission-refusal stop is separate from the one rerun it allows for an absent payload file. A host that launches the audit must grant those paths; the audit never widens its own access. Before this change, a refused write ended in a generic blocked result that named no configuration cause, and the skill was silent on where else a write could land.
+
 ## 0.22.2
 
 ### Changed

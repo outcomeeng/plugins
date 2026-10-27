@@ -542,31 +542,6 @@ class Environments:
         operation = "prompt" if pane.environment == ENVIRONMENT_HERDR else "send"
         return self._execute(pane.environment, operation, pane=pane.pane_id, text=text)
 
-    def restart(self, pane: Pane, timeout_ms: int) -> dict[str, Any]:
-        """Stop and relaunch a herdr session as the same agent kind, with no launch arguments."""
-        if pane.environment != ENVIRONMENT_HERDR or pane.kind is None:
-            return {
-                "status": "unavailable",
-                "detail": f"restart of pane {pane.pane_id} needs a herdr session whose "
-                f"inventory item names its agent kind; pane {pane.pane_id} is hosted by "
-                f"{pane.environment} with agent kind {pane.kind!r}. Restart it by "
-                "hand through its environment skill.",
-            }
-        stopped = self._execute(
-            pane.environment, "stop", pane=pane.pane_id, mutationAuthorized=True
-        )
-        if stopped.get("status") != "succeeded":
-            return stopped
-        return self._execute(
-            pane.environment,
-            "relaunch",
-            name=pane.name or pane.kind,
-            kind=pane.kind,
-            pane=pane.pane_id,
-            timeout=timeout_ms,
-            mutationAuthorized=True,
-        )
-
 
 def _prowl_panes(response: object) -> list[Pane]:
     """The panes of a public Prowl agents response."""

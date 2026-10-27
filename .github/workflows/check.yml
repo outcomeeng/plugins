@@ -27,7 +27,7 @@ jobs:
       CLAUDE_CLI_VERSION: "2.1.168" # renovate: datasource=npm depName=@anthropic-ai/claude-code
       CODEX_CLI_VERSION: "0.162.1"
       DPRINT_VERSION: "0.60.1" # renovate: datasource=npm depName=dprint
-      SPX_COMMIT: "4ffc053da6e7b4d76208d78ba7e3ded951f3711a"
+      SPX_COMMIT: "dfba7ca375232e30d3aefe3af2614f8ad74569e9"
       ACTIONLINT_VERSION: "1.7.12" # renovate: datasource=github-releases depName=rhysd/actionlint
       SHELLCHECK_VERSION: "0.11.0" # renovate: datasource=github-releases depName=koalaman/shellcheck
     steps:

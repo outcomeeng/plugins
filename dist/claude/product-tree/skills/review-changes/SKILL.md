@@ -44,7 +44,7 @@ The bracketed `SPX_VERIFY_*=<value>` assignments are optional and appear only wh
 
 `finish` refuses, with a non-zero exit, while a changed file is neither advanced nor marked unread, except a declared generated extent and a pure rename, which `finish` accounts for itself and which need no `append-scope` and no unread mark. Otherwise it reads the journal prefix, appends the terminal run-completed event with review status, finding counts, each unread file, each declared generated extent skipped by declaration with its relation's regenerate command, and each rename without content change, and seals the run `failed` when any file is marked unread, never `approved`. A run whose only unexamined files are declared generated extents and pure renames seals by its findings. On a successful `finish` it prints the raw run token. The runner removes its scratch storage on every `finish` exit and on every non-zero exit of `start`, `append-scope`, or `append-finding`, so a failed verb, a coverage refusal included, ends the run and a later verb finds no state.
 
-When any runner verb exits non-zero, stop and surface its stderr, except for the single `append-finding` rerun `<finding_payload>` directs, which follows a shell diagnostic that names an absent finding file and so a runner that never ran and left its state in place; the command boundary in `<constraints>` admits no repair outside the runner.
+When any runner verb exits non-zero, stop and surface its stderr, except for the single `append-finding` rerun `<finding_payload>` directs, which follows a shell diagnostic that names an absent finding file and so a runner that never ran and left its state in place; the command boundary in `<constraints>` admits no repair outside the runner. A verb or payload-file write that the native permission policy refuses ends the run as `<constraints>` directs, not as a stderr surface.
 
 </api_surface>
 
@@ -93,6 +93,7 @@ A finding is a payload: it carries code spans, quotes, and JSON.
 - NEVER run validation, tests, evals, coverage, lint, typecheck, or any deterministic verification command. Deterministic verification has already passed before this review starts; this skill provides agentic judgment by reading the diff and loaded review context.
 - NEVER invoke `spx journal`, `git`, `mktemp`, `rm`, `date`, `printf`, `compute_diff.py`, `journal_emit.py`, or `review_result.py` directly. The runner is the only command boundary.
 - NEVER write review-result files, rendered Markdown artifacts, or durable state outside `spx journal`. The runner-owned diff bundle and state file are scratch input for the active invocation only; the only files Claude writes are a finding payload per `<finding_payload>` and an unread-list payload per `<api_surface>`.
+- When the native permission policy refuses a run-recording write — a runner `start`, `append-scope`, `append-finding`, or `finish` invocation, the journal it appends to, a finding payload file, or an unread-list payload file — stop at that write, retry it no more, write to no other location, and return a blocked result in place of the `runToken`: `blocked` with `diagnostic: configuration error` naming the refused path. The host grants the paths; this skill never widens its own access. The one `append-finding` rerun `<finding_payload>` allows for an absent finding file is separate from this stop.
 - NEVER load a review prompt other than `${CLAUDE_SKILL_DIR}/references/review-prompt.md` — one prompt keeps every review run comparable.
 - NEVER read `REVIEW.md`, `REVIEW.example.md`, or another repository-root review prompt.
 - NEVER append praise, acknowledgements, open questions, verdicts, or prose summaries to the review stream — it carries findings only.
@@ -103,6 +104,8 @@ A finding is a payload: it carries code spans, quotes, and JSON.
 <failure_modes>
 
 **Runner failure bypassed the command boundary.** A runner verb exited non-zero, and Claude attempted to repair the journal through direct `spx journal` or scratch-file commands. Stop on the failed verb and surface its stderr; the runner remains the only command boundary.
+
+**A refused run-recording write was worked around.** The native permission policy refused a runner verb or a finding file, and Claude retried or wrote the finding to another location. Stop at the refused write and return the blocked configuration error naming the refused path.
 
 **A retyped finding path sealed a review with no verdict.** Claude rebuilt the finding file path by hand, `append-finding` read no file, and the run ended without recording the finding. Copy the path from the file-write result, and rerun once only when the diagnostic names the file as absent.
 
@@ -128,5 +131,6 @@ A finding is a payload: it carries code spans, quotes, and JSON.
 - [ ] Every changed file that is neither a declared generated extent nor a pure rename is either advanced after being read or named unread, so no unread file is sealed `approved`.
 - [ ] The final output contains no rendered findings, count line, verdict, or summary.
 - [ ] A non-zero runner exit is reported with its stderr instead of a partial review result.
+- [ ] A permission-refused run-recording write yields a blocked result with `diagnostic: configuration error` naming the refused path, with no retry and no write elsewhere.
 
 </success_criteria>

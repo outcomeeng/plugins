@@ -31,6 +31,7 @@ An authoritative SPX projection, raw run token, and run file for the requested i
 - ALWAYS record coverage as `<coverage_model>` states; a run that narrows a set or records a unit only where it found something states its findings as its coverage.
 - NEVER let a raised finding or a rejected terminal status shorten the inspection: rejection is a verdict about what was inspected, never permission to leave a concern or a resolved path unrecorded.
 - ALWAYS start the verification run after resolving the target's Git metadata and validating the run-driver identity, before reading changed project file bodies or loading concern standards — every substantive project inspection and concern result belongs to the open run.
+- NEVER write the run journal or its context anywhere but the locations `spx verification run` resolves. When the native permission policy refuses a run-recording write — a payload file, a resolver output file, a run-recording command, or the journal — stop at that write, retry it no more, write to no other location, and return the `<verdict_format>` blocked diagnostic with `diagnostic: configuration error` naming the refused path; the host grants the paths, and this skill never widens its own access.
 
 </constraints>
 
@@ -208,7 +209,7 @@ successfully.
 Read `${CLAUDE_SKILL_DIR}/references/run-payloads.md` before writing the first scope or finding payload: it carries the scope, accounting-record, and finding payload JSON, the idempotency key forms, and the payload-file rules. Those rules bind every command that follows:
 
 - Write each scope and finding payload with the file-write tool to its own file in the session scratch directory, and pass `--payload` the path exactly as the file-write result reports it, never retyped.
-- Add each scope unit and each finding with its own literal command, one at a time, and stop at the first nonzero exit with the `<verdict_format>` blocked diagnostic; the one exception is a single rerun of a scope-add or finding-add whose diagnostic names its payload file as absent.
+- Add each scope unit and each finding with its own literal command, one at a time, and stop at the first nonzero exit with the `<verdict_format>` blocked diagnostic; the one exception is a single rerun of a scope-add or finding-add whose diagnostic names its payload file as absent. A permission refusal is no absent payload file and takes no rerun.
 - Pass every idempotency key as one single-quoted argument.
 - Send no payload through a heredoc, a pipe, or an inline argument, and remove no payload file.
 
@@ -337,6 +338,7 @@ payloadSource: <payload-file-path-or-none>
 payloadKey: <unitId-or-finding-idempotency-key-or-none>
 exitCode: <exact-exit-code>
 stderr: <exact-stderr>
+diagnostic: <configuration error naming the refused path, or none>
 ```
 
 Never return the command alone: the run token locates durable state, the payload

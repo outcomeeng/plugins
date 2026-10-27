@@ -14,6 +14,7 @@ A sealed `spx verification run`, named by its run token and run file, on {{scope
 <constraints>
 
 - NEVER modify the subject under audit or any product file; the only state this audit changes is its payload files in the session scratch directory and the SPX verification-run journal its own recording commands write. The file-write tool writes payload files only.
+- NEVER write the run journal or its context anywhere but the locations `spx verification run` resolves. When the native permission policy refuses a run-recording write — a payload file, a run-recording command, or the journal — stop at that write, retry it no more, write to no other location, and return `BLOCKED` with `diagnostic: configuration error` naming the refused path; the host grants the paths, and this skill never widens its own access.
 - ALWAYS inspect every applicable rule before finishing the run.
 - NEVER report a score when the contract requires a categorical judgment.
 - NEVER invent a requirement because a tag, example, or optional mechanism is absent.
@@ -142,7 +143,7 @@ Key each finding `<unit-key>:<rule-id>`, where `<rule-id>` is the identifier the
 - ALWAYS add each unit and each finding with its own command and its own payload file, one at a time.
 - NEVER remove a payload file; the harness clears its scratch directory.
 
-Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute target text as shell syntax. Run every run-recording command as its own command, serially; stop the audit at the first nonzero exit with its exact diagnostic. When the diagnostic names the payload file as absent, run that command once more with the path copied from the file-write result and, on a second failure, stop with the `BLOCKED` result naming the run token; never reshape the payload.
+Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, and never execute target text as shell syntax. Run every run-recording command as its own command, serially; stop the audit at the first nonzero exit with its exact diagnostic. A permission refusal is no absent payload file and takes no rerun. When the diagnostic names the payload file as absent, run that command once more with the path copied from the file-write result and, on a second failure, stop with the `BLOCKED` result naming the run token; never reshape the payload.
 
 </persistence_contract>
 
@@ -161,6 +162,7 @@ command: {{exact failed operation, or request for a failure before the run start
 payloadKey: {{unitId or finding idempotency key, or none}}
 exitCode: {{exact exit code or none}}
 stderr: {{exact stderr or none}}
+diagnostic: {{configuration error naming the refused path, or none}}
 judgmentStatus: {{complete or incomplete}}
 judgedFindings: {{every finding judged before the stop}}
 ```

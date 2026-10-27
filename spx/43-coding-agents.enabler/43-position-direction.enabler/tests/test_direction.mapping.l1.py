@@ -195,6 +195,34 @@ def test_act_names_the_missing_argument_and_its_valid_options(
     assert named in result["detail"]
 
 
+def test_act_operation_outside_the_accepted_set_is_refused_by_argument_parsing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    out = StringIO()
+
+    with pytest.raises(SystemExit) as refusal:
+        direction.main(
+            [
+                "act",
+                "--position",
+                "Lead Director",
+                "--authority",
+                "grant",
+                "--target",
+                "x",
+                "--operation",
+                "restart",
+            ],
+            stdout=out,
+            runtime=(_Mail(tmp_path), None),  # type: ignore[arg-type]
+            checkout=tmp_path / "checkout",
+        )
+
+    assert refusal.value.code == 2
+    assert out.getvalue() == ""
+    assert "invalid choice: 'restart'" in capsys.readouterr().err
+
+
 def test_send_names_every_missing_argument(tmp_path: Path) -> None:
     out = StringIO()
 
@@ -256,29 +284,6 @@ def test_unresolved_pane_detail_names_cwd_match_count_and_available_cwds() -> No
 
     assert "/work/missing" in detail and "no herdr pane matched" in detail
     assert "/work/a" in detail
-
-
-class _Herdr:
-    def __init__(self) -> None:
-        self.requests: list[dict] = []
-
-    def execute(self, request: dict) -> dict:
-        self.requests.append(request)
-        return {"status": "succeeded"}
-
-
-def test_restart_relaunches_the_same_agent_kind_with_no_launch_arguments() -> None:
-    herdr = _Herdr()
-    envs = core.Environments(herdr, None)  # type: ignore[arg-type]
-    pane = core.Pane("herdr", "w1:p1", "/work/a", "idle", "exec", "claude")
-
-    result = envs.restart(pane, 1000)
-
-    assert result["status"] == "succeeded"
-    assert [r["operation"] for r in herdr.requests] == ["stop", "relaunch"]
-    relaunch = herdr.requests[-1]
-    assert relaunch["arguments"]["kind"] == "claude"
-    assert "agent_arguments" not in relaunch["arguments"]
 
 
 def test_prompt_without_text_stops_naming_the_argument_and_fix(
