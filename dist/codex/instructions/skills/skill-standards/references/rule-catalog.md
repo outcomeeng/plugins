@@ -123,12 +123,13 @@ The rules below govern every instructions rule catalog alike: this catalog, the 
 
 <platform_and_script_rules>
 
-| Identifier                  | Severity | Rule                                                                                     | Stated in                                                   |
-| --------------------------- | -------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `nested_fence_breakage`     | blocking | No fence nests more than one inner fence of one fewer backtick.                          | `references/platform-constraints.md` `<nested_code_fences>` |
-| `script_validation_message` | debt     | A bundled script's errors are verbose, specific, located, actionable, and deterministic. | `references/script-standards.md` `<validation_rule>`        |
-| `untested_script`           | blocking | A bundled script is tested before inclusion, error cases and cleanup included.           | `references/script-standards.md` `<script_testing_rule>`    |
-| `script_test_record`        | debt     | The skill records what each bundled script was tested with.                              | `references/script-standards.md` `<script_testing_rule>`    |
+| Identifier                  | Severity | Rule                                                                                       | Stated in                                                   |
+| --------------------------- | -------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `nested_fence_breakage`     | blocking | No fence nests more than one inner fence of one fewer backtick.                            | `references/platform-constraints.md` `<nested_code_fences>` |
+| `script_validation_message` | debt     | A bundled script's errors are verbose, specific, located, actionable, and deterministic.   | `references/script-standards.md` `<validation_rule>`        |
+| `untested_script`           | blocking | A bundled script is tested before inclusion, error cases and cleanup included.             | `references/script-standards.md` `<script_testing_rule>`    |
+| `script_test_record`        | debt     | The skill records what each bundled script was tested with.                                | `references/script-standards.md` `<script_testing_rule>`    |
+| `runner_contract_mismatch`  | blocking | The runner contract a `SKILL.md` states for a bundled script matches what the script does. | `references/script-standards.md` `<runner_contract_rule>`   |
 
 </platform_and_script_rules>
 
