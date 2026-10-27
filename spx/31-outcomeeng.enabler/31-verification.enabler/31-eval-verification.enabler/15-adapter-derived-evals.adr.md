@@ -30,8 +30,8 @@ This governance takes precedence, methodology-wide for skill, agent, and command
 
 ### Audit
 
-- ALWAYS: an eval for skill, agent, or command behavior invokes the real coding agent on the installed plugin under test through [`spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-adapter-contract.adr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-adapter-contract.adr.md) ([audit:real-agent-invocation])
-- ALWAYS: a workflow-conformance verdict computed per `spx/31-outcomeeng.enabler/31-verification.enabler/21-conformance-verification.enabler/conformance-verification.md` is one evidence layer of a skill eval, scored beside the run's structural output, final state, and telemetry ([audit:conformance-evidence-layer])
-- ALWAYS: every evidence layer resolves to a deterministic score over structured artifacts, so no layer's verdict comes from a model reading prose ([audit:deterministic-layer-scores])
-- NEVER: a model-facing prompt derived from a producer artifact's text stands as evidence for that producer's shipped behavior ([audit:no-producer-derived-prompt])
-- NEVER: a generated-prompt drift check stands as evidence of producer coupling — coupling is established by the run reaching the installed artifact ([audit:no-drift-check-as-coupling])
+- ALWAYS: an eval for skill, agent, or command behavior invokes the real coding agent on the installed plugin under test through [`spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-adapter-contract.adr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/21-agentic-verification.enabler/21-adapter-contract.adr.md) ([audit])
+- ALWAYS: a workflow-conformance verdict computed per `spx/31-outcomeeng.enabler/31-verification.enabler/21-conformance-verification.enabler/conformance-verification.md` is one evidence layer of a skill eval, scored beside the run's structural output, final state, and telemetry ([audit])
+- ALWAYS: every evidence layer resolves to a deterministic score over structured artifacts, so no layer's verdict comes from a model reading prose ([audit])
+- NEVER: a model-facing prompt derived from a producer artifact's text stands as evidence for that producer's shipped behavior ([audit])
+- NEVER: a generated-prompt drift check stands as evidence of producer coupling — coupling is established by the run reaching the installed artifact ([audit])

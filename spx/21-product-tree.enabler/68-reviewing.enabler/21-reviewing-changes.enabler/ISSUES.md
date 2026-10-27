@@ -257,14 +257,6 @@ The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's
 
 **Settlement condition.** A decision states whether an implementation audit executes a shipped executable, and the review's execution of the subject has a named owner. The full entry is in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md`.
 
-## The script-decomposition ADR's Audit rules carry the pathless audit tag
-
-**Evidence.** The six rules under `### Audit` of [`spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md`](spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/21-script-decomposition.adr.md) end in `([audit])`, while the decision template requires `([audit:{rule-slug}])` with a slug unique within the record. The decision-record audit of the ADR on head `1501a3cf634c5c1e0ff99f3f735e70a5cf8e68f7` filed one `invalid-tag` finding on them; the change that audit judged rewrote the ADR's voice and touched none of the six rules.
-
-**Impact.** A status claim cannot key an audit result of this decision to a rule slug, and each later decision-record audit of the ADR files the same finding again.
-
-**Settlement condition.** Each of the six rules carries its own `[audit:{rule-slug}]` tag, and a decision-record audit of the ADR raises no `invalid-tag` finding.
-
 ## The review prompt's rule citation names a decision file, not the clause the finding rests on
 
 **Evidence.** `<rule_citation>` in `src/plugins/product-tree/skills/review-changes/references/review-prompt.md` accepts an ADR or PDR as `spx/<path>/<n>-<slug>.adr.md` or `spx/<path>/<n>-<slug>.pdr.md` with no clause component, while a spec assertion carries `:<MUST|NEVER|ALWAYS|SCENARIO|MAPPING|CONFORMANCE|PROPERTY|AUDIT>:<n>`. `<finding_validity>` asks `message` to state the violated rule and never to name a clause. The citation grammar is declared by the `Finding.rule` assertions of [`spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md`](spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md), parsed by `src/plugins/product-tree/skills/review-changes/scripts/review_result.py`, and pinned by `tests/test_review_result.mapping.l1.py` and `tests/test_review_result.compliance.l1.py`. Property 7 of [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) makes the class of a finding the rule it cites as the cited standard defines that rule, so a review finding that cites a decision file leaves the clause to the free text of `message`. The CI review of pull request 683 raised it as a debt finding on head `ab243a44ec6b7e75762ad7629b5b6479afeb673b` (comment `issuecomment-6233117818`); the pull request leaves `review-prompt.md` untouched.
