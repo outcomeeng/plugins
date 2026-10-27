@@ -63,8 +63,11 @@ CAN move a prioritized Output from proposal to executable work without placing m
 
 - ALWAYS: `read-relations` maps a `Parent` number field value, integer or float, to the issue number it names and an absent value to `null` ([test](tests/test_audit_change_relations_parent.mapping.l1.py))
 
+- ALWAYS: `resolve-reference` maps a named path to `defaultBranch`: `on-default-branch` when origin's default branch holds the path, whether or not the checkout still holds it, `checkout-only` when origin's default branch does not hold it and the path resolves to an existing path in the checkout, and `absent` for every other path, an absolute path and a path outside the repository among them ([test](tests/test_audit_change_default_branch.mapping.l1.py))
+
 ### Compliance
 
+- ALWAYS: `resolve-reference` returns a blocked result with reason `unreadable-output` when the read of origin's default branch prints no default branch, and a blocked result with reason `command-failed` when that read exits nonzero or the lookup of the path cannot be executed, returns no `defaultBranch` in either block, and looks up no path after a failed default-branch read ([test](tests/test_audit_change_default_branch.compliance.l1.py))
 - ALWAYS: `read-relations` returns `absorbers`, the numbers of the issues whose `Predecessors` field value, split at every comma followed by one space, names the named issue, and never the issues that the named issue's own `Predecessors` value names ([test](tests/test_audit_change_relations.compliance.l1.py))
 - ALWAYS: `read-relations` reads the store's issue pages in order until the store reports no further page, so a child on any page is returned, and returns a blocked result naming `100 issues per page, 10 pages` when the tenth page still reports a further page ([test](tests/test_audit_change_relations.compliance.l1.py))
 - ALWAYS: `read-relations` returns a blocked result naming `50 issue field values per issue` when an issue's field-value connection reports a further page, and returns no Product or Parent read from that partial connection ([test](tests/test_audit_change_relations.compliance.l1.py))
