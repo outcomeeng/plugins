@@ -6,7 +6,7 @@ malleability: spec
 # Audit Assertions
 
 PROVIDES the isolated Agentic verdict on each `[audit]` assertion of one node's spec, judged against the subject the assertion names and recorded through `spx verification run`
-SO THAT an Executor, a merge gate and a status claim
+SO THAT an Applier, a merge gate and a status claim
 CAN read an `[audit]` result from a sealed run
 
 ## Assertions
