@@ -11,6 +11,8 @@ CAN construct and judge `[test]` evidence from one methodology without duplicati
 
 ## Assertions
 
+- test-type-from-line: `/test` reads the assertion type from the `[test: <type>]` tag of the diff line it executes and names the test file for the line's slug
+
 ### Compliance
 
 - ALWAYS: generic test guidance separates generated property evidence over product-owned variation from finite real-boundary evidence, keeps filesystem, Git, and full CLI work outside each generated case when it only supplies wiring, and preserves `l1` classification for cheap local boundary checks ([audit])
