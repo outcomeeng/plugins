@@ -222,3 +222,41 @@ Evidence: `instructions:skill-auditor` run `2026-10-17_18-16-04-154-bd168bad0aee
 Impact: a later audit of `change-standards` can raise the finding again.
 
 Revisit and settlement condition: `inert-stdin` in `lifecycle.md` states the instruction in imperative voice or names Claude as its subject, and one typed skill audit of `change-standards` raises no `banned_subject` finding on it.
+
+## DEBT [section-structure]: the changes spec names its mapping section Mapping
+
+Defect class: `section-structure`.
+
+Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) holds a `### Mapping` heading, which is the unsupported singular of the template's claim-shape heading `### Mappings`.
+
+Evidence: `product-tree:spec-auditor` launch 2 on head `2a07693326fdd4951267b7683216109412f50f68`, verdict `APPROVED`, rule `heading-mismatch`, severity `filed`, unit "`### Mapping`", base-ref evidence `git diff dd3ddc1766da65127aea58fd3f9d95838c10faa6..HEAD -- spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`, which touches only lines 20, 24, 25, and 38, so the heading lies outside the changeset. The spec-auditor reports no run token.
+
+Impact: a later spec audit of the node can raise the finding again.
+
+Revisit and settlement condition: the heading reads `### Mappings`, and one spec audit of the node raises no `heading-mismatch` finding.
+
+## DEBT [consistency]: the file-write constraint of the change auditor contradicts its request-file instructions
+
+Defect class: `consistency`.
+
+Finding: the `auditor-writes-no-file` assertion of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) states that `audit-change` and its `change-auditor` wrapper write no file and that every payload passes over stdin and stdout. The `<constraints>` of `src/plugins/product-tree/skills/audit-change/SKILL.md` allow a request file, and the first constraint of `src/plugins/product-tree/agents/change-auditor.md` directs `Write` of each request to a file in the session scratch directory.
+
+Evidence: `product-tree:assertion-auditor` launches on the node, runs `2026-10-28_02-52-37-026-d7de610b9e8c` and `2026-10-28_03-10-30-874-1273a5ab8b5c` on head `b0fc2711a327521ace014965665c312186dd02e1` and `2a07693326fdd4951267b7683216109412f50f68`, rule `constraint-unmet`, severity `debt`, assertion `auditor-writes-no-file`. Base-ref evidence: `git diff --unified=0 dd3ddc1766da65127aea58fd3f9d95838c10faa6 -- src/plugins/product-tree/skills/audit-change/SKILL.md` changes only the `no-execution-status` rule name, and the same diff of `src/plugins/product-tree/agents/change-auditor.md` is empty, so the locations lie outside the changeset. The sealed run `2026-10-28_03-10-30-874-1273a5ab8b5c` holds no finding for it; the auditor's report names it.
+
+Impact: the assertion and the skill state opposite rules, so each later audit of either can reject on the other.
+
+Successor: Change `outcomeeng/changes#515` carries the runner request form.
+
+Revisit and settlement condition: the skill, the wrapper, and the assertion state one request form, and one assertion audit of the node raises no `constraint-unmet` finding on `auditor-writes-no-file`.
+
+## DEBT [consistency]: only change-standards states the rejection order the spec requires of three skills
+
+Defect class: `consistency`.
+
+Finding: the `rejection-lowering` assertion of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) requires `change-standards`, `author-change`, and `release-change` each to state the order of a rejection at Framed or Sliced. Only `maturity-and-authority` of `change-standards` states it. The `<revision_safety>` of `src/plugins/product-tree/skills/author-change/SKILL.md` and the `<result>` of `src/plugins/product-tree/skills/release-change/SKILL.md` point to that rule.
+
+Evidence: `product-tree:assertion-auditor` run `2026-10-28_03-10-30-874-1273a5ab8b5c` on head `2a07693326fdd4951267b7683216109412f50f68`, rule `constraint-unmet`, assertion `rejection-lowering`. Base-ref evidence: `git diff --unified=0 dd3ddc1766da65127aea58fd3f9d95838c10faa6 -- src/plugins/product-tree/skills/author-change/SKILL.md` touches only the application wording of `<revision_safety>` and `<authority_gate>`, and the same diff of `release-change/SKILL.md` touches only the Applier wording of step 1, so the locations lie outside the changeset. The sealed run holds no finding for it; the auditor's report names it.
+
+Impact: a reader of `author-change` or `release-change` alone meets a pointer where the assertion promises the order.
+
+Revisit and settlement condition: each of the three skills states the one order, or the assertion states that two of them point to the rule, and one assertion audit of the node raises no `constraint-unmet` finding on `rejection-lowering`.
