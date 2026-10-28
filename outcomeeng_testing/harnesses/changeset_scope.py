@@ -87,6 +87,11 @@ CHANGESET_SCOPE_FIXTURES_DIR = (
 )
 SPACED_NOTE_FIXTURE_DIR = CHANGESET_SCOPE_FIXTURES_DIR / "spaced-note"
 CHANGESET_SCOPE_CASE_COUNT = 3
+AUTOMATIC_MAINTENANCE_CONFIG = (
+    ("gc.auto", "0"),
+    ("gc.autoDetach", "false"),
+    ("maintenance.auto", "false"),
+)
 
 
 def _fixture_file(scenario: pathlib.Path, role: str) -> pathlib.Path:
@@ -250,6 +255,12 @@ def _initialize_changeset_repo(
         cwd=pathlib.Path.cwd(),
     )
     _git(repo, "config", "commit.gpgsign", "false")
+    # Git's automatic maintenance detaches and repacks into ``.git`` after a
+    # commit or fetch, so it can still be writing there when the temporary root
+    # is removed. The repository config applies to the harness's own git calls
+    # and to every git process a shipped script starts in this repository.
+    for key, value in AUTOMATIC_MAINTENANCE_CONFIG:
+        _git(repo, "config", key, value)
     commit_file(
         repo,
         scenario.initial_file,
@@ -278,6 +289,9 @@ def _publish_origin_base(
     bare = _origin_bare_path(repo)
     if not bare.exists():
         _git(repo, "init", "-q", "--bare", str(bare), cwd=pathlib.Path.cwd())
+        for key, value in AUTOMATIC_MAINTENANCE_CONFIG:
+            _git(bare, "config", key, value)
+        _git(bare, "config", "receive.autogc", "false")
         _git(repo, "remote", "add", ORIGIN_REMOTE_NAME, str(bare))
     _git(
         repo,

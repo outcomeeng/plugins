@@ -279,6 +279,7 @@ def run_implementation_scope(
     repo_override: pathlib.Path | None = None,
     audit_input: str | None = None,
     audit_input_path: pathlib.Path | None = None,
+    audit_input_value: str | None = None,
     reconcile_run: str | None = None,
     scope_identity: str | None = None,
     output_path: pathlib.Path | None = None,
@@ -288,18 +289,29 @@ def run_implementation_scope(
     ``audit_input`` is the text of the audit-input document: the harness writes
     it to a file in a scratch directory it owns for the run and names that file
     to the resolver. ``audit_input_path`` names a path directly, so a test can
-    supply a path that holds no readable document.
+    supply a path that holds no readable document. ``audit_input_value`` is
+    passed verbatim as the option's value, so a test can supply text where the
+    resolver expects a path.
     """
-    if audit_input is not None and audit_input_path is not None:
-        raise ValueError("supply audit_input or audit_input_path, not both")
+    if (
+        sum(
+            item is not None
+            for item in (audit_input, audit_input_path, audit_input_value)
+        )
+        > 1
+    ):
+        raise ValueError(
+            "supply one of audit_input, audit_input_path, or audit_input_value"
+        )
     with tempfile.TemporaryDirectory() as scratch:
         named_input = audit_input_path
         if audit_input is not None:
             named_input = pathlib.Path(scratch, AUDIT_INPUT_FILE_NAME)
             named_input.write_text(audit_input, encoding="utf-8")
         output_argv = () if output_path is None else (output_option(), str(output_path))
+        option_value = audit_input_value if named_input is None else str(named_input)
         audit_input_argv = (
-            () if named_input is None else (AUDIT_INPUT_OPTION, str(named_input))
+            () if option_value is None else (AUDIT_INPUT_OPTION, option_value)
         )
         reconcile_argv = (
             () if reconcile_run is None else ("--reconcile-run", reconcile_run)

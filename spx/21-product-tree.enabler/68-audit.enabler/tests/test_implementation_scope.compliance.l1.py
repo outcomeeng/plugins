@@ -129,6 +129,21 @@ def test_an_unreadable_audit_input_path_is_rejected_naming_the_path(
     assert not completed.stdout
 
 
+def test_json_text_passed_as_the_audit_input_value_is_rejected_without_a_payload() -> (
+    None
+):
+    (live,) = distinct_subject_paths(1)
+    json_text = json.dumps({LIVE_PATHS_KEY: [live]})
+    with stale_local_base_repo() as stale:
+        completed = run_implementation_scope(
+            stale.repo, CHANGESET_SCOPE.HEAD_REF, audit_input_value=json_text
+        )
+
+    assert completed.returncode == EXIT_COMMAND_FAILURE
+    assert completed.stderr.startswith(ERROR_PREFIX)
+    assert not completed.stdout
+
+
 def test_malformed_run_input_json_is_rejected_rather_than_ignored() -> None:
     with stale_local_base_repo() as stale:
         completed = run_implementation_scope(
