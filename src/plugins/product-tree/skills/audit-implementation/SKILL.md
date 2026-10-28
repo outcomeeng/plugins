@@ -7,7 +7,7 @@ description: >-
   test, and architecture concerns, finding falsifiability, and completeness of
   the inspection.
 argument-hint: "<HEAD | branch | base...head | worktree:selector> [absolute checkout directory]"
-allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(git -C * rev-parse:*), Bash(git -C * status:*), Bash(git -C * show:*), Bash(spx -C * verification run:*), Write, Glob, Grep, {{! tool('use_skill') !}}
+allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git -C * rev-parse:*), Bash(git -C * status:*), Bash(git -C * show:*), Bash(spx -C * verification run:*), Write, Glob, Grep, {{! tool('use_skill') !}}
 ---
 
 <objective>
