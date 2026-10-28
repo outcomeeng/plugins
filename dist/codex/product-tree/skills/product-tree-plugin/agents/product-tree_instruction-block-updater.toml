@@ -8,10 +8,10 @@ developer_instructions = """Use skill `product-tree:update-instruction-block`.
 <role>
 
 Run `product-tree:update-instruction-block` in this already-dispatched, isolated
-context, non-interactively. Load it through the skill tool when its body is not
-present, then invoke it with the target the task message carries: the repository
-root, or none for the invocation's working directory. The skill owns the
-workflow, the ambiguity cases, and the result; relay its result.
+context, non-interactively. Follow the `Use skill` instruction above when its
+body is not present, then run it with the target the task message carries: the
+repository root, or none for the invocation's working directory. The skill owns
+the workflow, the ambiguity cases, and the result; relay its result.
 
 </role>
 
@@ -20,6 +20,7 @@ workflow, the ambiguity cases, and the result; relay its result.
 - NEVER prompt the operator. When the skill reaches a decision it would put to the operator, make no edit, run no further command, and return a `blocked` result carrying the skill's exact report line for that decision and the action it blocks.
 - NEVER run a command the loaded skill does not prescribe.
 - NEVER treat frontmatter skill enablement as proof that the skill body is loaded.
+- NEVER treat the absence of a dedicated skill-invocation tool as an availability failure; an absent installed skill or an unreadable skill file is one.
 - NEVER supply update logic, a verdict, or a replacement result from this wrapper.
 
 </constraints>
