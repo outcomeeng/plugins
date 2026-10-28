@@ -11,10 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from outcomeeng.distribution.agents import (
-    FLAT_AGENT_PLUGIN_SEPARATOR,
-    NATIVE_AGENT_PLUGIN_SEPARATOR,
-)
+from outcomeeng.distribution.build import agent_capability, agent_dispatch_name
 from outcomeeng.distribution.contracts import CLAUDE_DIST_RELATIVE, Target
 from outcomeeng.distribution.installation import (
     CLAUDE_EXECUTABLE,
@@ -151,12 +148,9 @@ def shipped_definition_path(checkout: Path, target: Target, auditor: str) -> Pat
 
 def native_name(target: Target, auditor: str) -> str:
     """The name one harness dispatches an auditor by."""
-    separator = (
-        NATIVE_AGENT_PLUGIN_SEPARATOR
-        if target is Target.CLAUDE
-        else FLAT_AGENT_PLUGIN_SEPARATOR
+    return agent_dispatch_name(
+        AUDITOR_PLUGIN, auditor, capability=agent_capability(target)
     )
-    return f"{AUDITOR_PLUGIN}{separator}{auditor}"
 
 
 def native_auditor_rows(
