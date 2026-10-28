@@ -13,7 +13,7 @@ allowed-tools: Read, Grep, Glob, Write, Bash(spx verification run:*), Bash(pytho
 
 <objective>
 
-A sealed `spx verification run` on one exact committed changeset whose `terminalStatus` is `approved` or `rejected`, with the changeset's semantic clusters recorded as review-unit children and each finding or undecidable unit naming the violated rule, its location, and the evidence, returned as the run token, the run file, and the rendered projection; or the complete `BLOCKED` diagnostic when the scope or the run cannot be established.
+A sealed `spx verification run` on whether one exact committed changeset forms one coherent review unit, judged against the evidence rules in `${SKILL_DIR}/references/rule-catalog.md`, whose `terminalStatus` is `approved` or `rejected`, with the changeset's semantic clusters recorded as review-unit children and each finding or `incomplete` unit naming the violated rule's catalog identifier, its location, and the evidence, returned as the run token, the run file, and the rendered projection; or the complete `BLOCKED` diagnostic when the scope or the run cannot be established. Findings fall in four categories: semantic clustering, generated-source attribution, evidence completeness, and review-unit sequencing.
 
 </objective>
 
