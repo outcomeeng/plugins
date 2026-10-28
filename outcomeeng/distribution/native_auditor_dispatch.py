@@ -42,10 +42,41 @@ CONFIGURATION_FILENAME: Final = "configuration.json"
 LOADING_FILENAME: Final = "loading.json"
 RESULT_FILENAME: Final = "result.json"
 BLOCKED_MARKER: Final = "BLOCKED"
-RUN_TOKEN_PATTERN: Final = re.compile(
-    r"run\s*token\W+([A-Za-z0-9_.:-]+)", re.IGNORECASE
-)
+RUN_TOKEN_PATTERN: Final = re.compile(r"run\s*token\W+([a-z0-9_.:-]+)", re.IGNORECASE)
 RUN_FILE_PATTERN: Final = re.compile(r"run\s*file\W+(\S+)", re.IGNORECASE)
+
+NATIVE_LAUNCH_COMMANDS: Final[Mapping[Target, tuple[str, ...]]] = {
+    Target.CLAUDE: (
+        CLAUDE_EXECUTABLE,
+        "-p",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--include-partial-messages",
+        "--forward-subagent-text",
+    ),
+    Target.CODEX: (
+        CODEX_EXECUTABLE,
+        CODEX_EXEC_SUBCOMMAND,
+        "--json",
+        "--strict-config",
+        "--skip-git-repo-check",
+    ),
+}
+"""Each harness's headless launch command, before the dispatch prompt is placed."""
+
+RESULT_DOCUMENT_KEYS: Final = (
+    "identifier",
+    "parent_command",
+    "exit_code",
+    "stdout",
+    "stderr",
+    "returned_message",
+    "run_token",
+    "run_file",
+    "blocked",
+)
+"""The fields a dispatched row's result document carries before a failure is recorded."""
 
 AUDITOR_FIXTURES: Final[Mapping[str, tuple[str, str]]] = {
     "skill-auditor": (
@@ -170,23 +201,7 @@ def _native_definition_path(state_root: Path, target: Target, name: str) -> Path
 
 
 def _native_launch_command(target: Target) -> tuple[str, ...]:
-    if target is Target.CLAUDE:
-        return (
-            CLAUDE_EXECUTABLE,
-            "-p",
-            "--output-format",
-            "stream-json",
-            "--verbose",
-            "--include-partial-messages",
-            "--forward-subagent-text",
-        )
-    return (
-        CODEX_EXECUTABLE,
-        CODEX_EXEC_SUBCOMMAND,
-        "--json",
-        "--strict-config",
-        "--skip-git-repo-check",
-    )
+    return NATIVE_LAUNCH_COMMANDS[target]
 
 
 def materialize_native_auditor(row: NativeAuditorRow) -> None:
@@ -303,11 +318,16 @@ def record_native_auditor_failure(
     row: NativeAuditorRow, condition: str, *, install_exit_code: int | None = None
 ) -> NativeAuditorDispatchObservation:
     """Retain a harness failure as the row's terminal condition, without a retry."""
-    document: dict[str, object] = (
+    retained = (
         json.loads(row.result_path.read_text(encoding="utf-8"))
         if row.result_path.exists()
-        else {"identifier": row.identifier}
+        else {}
     )
+    document: dict[str, object] = {"identifier": row.identifier}
+    if isinstance(retained, dict):
+        document.update(
+            (key, retained[key]) for key in RESULT_DOCUMENT_KEYS if key in retained
+        )
     document["terminal_condition"] = condition
     document["install_exit_code"] = install_exit_code
     _write_json(row.result_path, document)
