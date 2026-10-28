@@ -6,8 +6,9 @@ nonexistent repository) and ``test_implementation_scope.compliance.l1.py``
 (a run-input file whose keys cannot displace the git-resolved scope, an absent
 run-input file, an unreadable run-input path, JSON text passed as the run-input
 value in place of a path, a run-input path given without the scratch directory,
-a run-input file outside that directory and a symbolic link inside it that
-points outside, a non-object and a malformed run-input file, a sealed
+a scratch directory that names no directory, a run-input file outside that
+directory and a symbolic link inside it that points outside, a non-object and a
+malformed run-input file, a sealed
 inventory path carrying no recorded scope unit, a required unit outside the final coverage statuses beside
 an optional unit carrying the same status, exact inventory agreement, drift in
 both directions, a recorded subject outside the inventory, a missing-skill unit
@@ -315,6 +316,15 @@ def _read_audit_input(
         )
     try:
         root = scratch_dir.resolve(strict=True)
+        if not root.is_dir():
+            raise NotADirectoryError(str(root))
+    except OSError as exc:
+        raise RuntimeError(
+            f"{SCRATCH_DIR_OPTION} must name an existing directory, received "
+            f"{str(scratch_dir)[:EXCERPT_LIMIT]!r} ({type(exc).__name__}: {exc}). "
+            "Pass the session scratch directory."
+        ) from exc
+    try:
         confined = path.resolve(strict=True)
         if not confined.is_relative_to(root):
             raise RuntimeError(
