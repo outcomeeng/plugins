@@ -14,13 +14,13 @@ One piece of conformance is deferred:
 
 1. **Filename segment `<evidence>`.** The canonical model `<subject>.<evidence>.<level>[.<runner>]` ([`spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/15-test-infrastructure.pdr.md)) keeps `<evidence>` as the segment that holds the assertion type. Renaming it to `<assertion-type>` touches that PDR, every `spx/**/tests/` filename, and the filename validators — a separate focused PR (operator-decided).
 
-## The probe route has no specialist
+## The routed probe case has no committed eval run
 
-**Evidence:** `/verify` routes an assertion whose claim only an executed observation settles to `/probe` when the runtime skill catalog carries it, and the routing eval proves both branches. No plugin in either marketplace catalog ships a `/probe` skill, so every probe route in a consumer reports `capability-required`, while the probe protocol template and example under `/understand` describe the artifact that skill authors.
+**Evidence:** `/verify` routes an assertion whose claim only an executed observation settles to `/probe` when the runtime skill catalog carries it, and the product-tree plugin ships `/probe`. The routing eval of `69-verify-skill.enabler` has no committed passing run against the shipped specialist: the newest row of its `history.jsonl` predates the `/probe` skill. `69-verify-skill.enabler/ISSUES.md` records the same unrun suite.
 
-**Impact:** A spec-malleable node cannot reach Passing through its characteristic evidence until a specialist authors the protocol, records the attested run, and writes the pin; an Author can still write `probes/{probe-slug}/probe.md` by hand from the template.
+**Impact:** The routed probe case rests on authored cases and no committed run of the routing eval against `/probe` as an installed specialist.
 
-**Settlement condition:** A `/probe` skill ships in the product-tree plugin, the routing eval's routed probe case runs against it as an installed specialist, and this node's spec names it beside `/test` and `/eval`.
+**Settlement condition:** One passing run of the routing eval at a head that carries the shipped `/probe`, with its row committed to `history.jsonl`.
 
 ## Consumers of the shared test-evidence standard hand-copy its category list
 

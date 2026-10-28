@@ -13,11 +13,11 @@ CAN route every assertion to test, evaluate, probe, or audit before a specialist
 
 ### Scenarios
 
-- Given an assertion whose real subject produces deterministic behavior, structured producer output, a claim only an executed observation of the running node settles, or no deterministic verdict, when `/verify` classifies it, then the assertion routes respectively to `/test`, `/eval`, a probe protocol link, or an audit requirement ([eval](evals/routing/eval.toml))
+- Given an assertion whose real subject produces deterministic behavior, structured producer output, a claim only an executed observation of the running node settles, or no deterministic verdict, when `/verify` classifies it, then the assertion routes respectively to `/test`, `/eval`, `/probe`, or an audit requirement ([eval](evals/routing/eval.toml))
 
 ### Mappings
 
-- The verification types map to one specialist result: test maps to `/test`, evaluate maps to `/eval`, probe maps to the protocol link or the missing probe-authoring capability, and audit maps to the applicable isolated-verifier requirement ([eval](evals/routing/eval.toml))
+- The verification types map to one specialist result: test maps to `/test`, evaluate maps to `/eval`, probe maps to `/probe`, and audit maps to the applicable isolated-verifier requirement ([eval](evals/routing/eval.toml))
 
 ### Compliance
 
