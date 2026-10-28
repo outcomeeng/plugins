@@ -53,7 +53,7 @@ CAN move a prioritized Output from proposal to executable work without placing m
 - NEVER: `report-changes` writes; it runs reading `gh` commands only, posts no comment, writes no field, assignee, or blocker, and its script writes no file ([test](tests/test_report_changes.compliance.l1.py))
 - ALWAYS: `report-changes` reads the Change store and the Priority order from `spx/local/coordination.md` and passes them to its bundled script as request values, and the script reads no overlay and no repository content ([audit:report-request-values])
 
-### Mapping
+### Mappings
 
 - ALWAYS: `read-relations` maps a `Parent` number field value, integer or float, to the issue number it names and an absent value to `null` ([test](tests/test_audit_change_relations_parent.mapping.l1.py))
 
