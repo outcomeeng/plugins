@@ -88,11 +88,11 @@ Ignore an existing current tag or decision subsection as classification authorit
 
 <step name="route-specialist">
 
-Route each classified assertion exactly once:
+Route each classified assertion exactly once, except where the probe bullet reclassifies it:
 
 - **test** — use skill `product-tree:test`; it owns test assertion typing, execution level, source-contract checks, generic test ceremony, and language delegation. For each spec node, pass that canonical node target plus a JSON array containing the exact text of every untagged assertion selected for test in that node so `/test` can distinguish routed work from unrelated untagged assertions. Pass each decision target separately in decision-rule mode with no assertion array so `/test` selects the rule's assertion-type tag without creating a test file or evidence link inside the ADR/PDR. An aggregate scope fans out through these per-owner invocations.
 - **evaluate** — for each spec node carrying selected eval assertions, use skill `product-tree:eval` when the runtime skill catalog carries it, with that canonical node target plus a JSON array containing the exact text of every untagged assertion selected for evaluate in that node. This filtered set prevents `/eval` from consuming unrelated untagged assertions. `/eval` owns product command binding, producer-kind classification, and eval authoring. For a decision rule, preserve the implementing-spec eval requirement under `### Eval` without writing an evidence path in the decision, and use skill `product-tree:eval` with that decision target only when it supports decision-rule mode. When `/eval` is not installed, preserve the target artifact's evaluate evidence shape and report `capability-required` with the subject. Never pass an aggregate target to `/eval` or implement eval behavior inside this skill.
-- **probe** — use skill `product-tree:probe` with the canonical node target and the exact text of every assertion selected for probe in that node when the runtime skill catalog carries it; it owns the protocol at `probes/{probe-slug}/probe.md`, and the assertion records that link with routing status `routed`. When `/probe` is not installed, preserve the probe evidence shape and report `capability-required` with the subject and the protocol path. Never author a protocol or attest a run inside this skill.
+- **probe** — use skill `product-tree:probe` with the canonical node target and the exact text of every assertion selected for probe in that node when the runtime skill catalog carries it; it owns the protocol at `probes/{probe-slug}/probe.md`, and the assertion records that link with routing status `routed`. When `/probe` is not installed, preserve the probe evidence shape and report `capability-required` with the subject and the protocol path. Never author a protocol or attest a run inside this skill. When `/probe` reports an assertion `misrouted` with the verification type to select, reclassify the assertion to that type, route it once to that type's specialist per these bullets, and report its row under that type with the status that route yields; never invoke `/probe` for it again, and no `misrouted` status reaches the result.
 - **audit** — record the `[audit:{rule-slug}]` tag with a rule slug unique within its spec — or the pathless `[audit]` tag where the toolchain admits only that form — and the applicable isolated-verifier requirement with routing status `routed`. The pending isolated-verifier verdict does not make evidence routing blocked. Never produce the audit verdict in this workflow.
 
 When the invocation carried a repair block, pass each specialist, after its target and assertion array, the repair items that concern that target's evidence verbatim, including items on an assertion whose current tag this workflow keeps; such an assertion's specialist is invoked for its repair items even though the assertion is not routed again.
@@ -128,6 +128,7 @@ Example:
 | Node B producer rule | evaluate | /eval | path-bearing | evals/<suite>/eval.toml | [audit:producer-voice] | routed |
 | Node D running-node claim | probe | /probe | path-bearing | probes/<probe-slug>/probe.md | null | routed |
 | Node E producer rule, /eval not installed | evaluate | /eval | path-bearing | eval capability required | null | capability-required |
+| Node F claim /probe reported misrouted | evaluate | /eval | path-bearing | evals/<suite>/eval.toml | null | routed |
 | Node C unsupported input | null | null | null | null | null | blocked: unsupported-tag-shape |
 ```
 
@@ -140,7 +141,7 @@ For the terminal unsupported-input guard, record no verification type, specialis
 <success_criteria>
 
 - Every validated spec assertion or decision rule has exactly one selected current verification type derived from its real verdict; unsupported input has none and returns the terminal blocked shape.
-- Test work routes through `/test`, eval work routes through `/eval`, probe work records the protocol link or the missing capability, and audit work records an isolated-verifier requirement.
+- Test work routes through `/test`, eval work routes through `/eval`, probe work records the protocol link, the missing capability, or the reroute a `misrouted` report names, and audit work records an isolated-verifier requirement.
 - Every path-bearing spec evidence link is canonical and co-located with its governing node; decision rules carry no executable evidence links.
 - Unsupported tags block the subject and receive no compatibility behavior or vocabulary in the workflow output.
 - Specialist dependency direction is acyclic and no agentic verdict is produced in the authoring context.
@@ -236,11 +237,11 @@ Ignore an existing current tag or decision subsection as classification authorit
 
 <step name="route-specialist">
 
-Route each classified assertion exactly once:
+Route each classified assertion exactly once, except where the probe bullet reclassifies it:
 
 - **test** — use skill `product-tree:test`; it owns test assertion typing, execution level, source-contract checks, generic test ceremony, and language delegation. For each spec node, pass that canonical node target plus a JSON array containing the exact text of every untagged assertion selected for test in that node so `/test` can distinguish routed work from unrelated untagged assertions. Pass each decision target separately in decision-rule mode with no assertion array so `/test` selects the rule's assertion-type tag without creating a test file or evidence link inside the ADR/PDR. An aggregate scope fans out through these per-owner invocations.
 - **evaluate** — for each spec node carrying selected eval assertions, use skill `product-tree:eval` when the runtime skill catalog carries it, with that canonical node target plus a JSON array containing the exact text of every untagged assertion selected for evaluate in that node. This filtered set prevents `/eval` from consuming unrelated untagged assertions. `/eval` owns product command binding, producer-kind classification, and eval authoring. For a decision rule, preserve the implementing-spec eval requirement under `### Eval` without writing an evidence path in the decision, and use skill `product-tree:eval` with that decision target only when it supports decision-rule mode. When `/eval` is not installed, preserve the target artifact's evaluate evidence shape and report `capability-required` with the subject. Never pass an aggregate target to `/eval` or implement eval behavior inside this skill.
-- **probe** — use skill `product-tree:probe` with the canonical node target and the exact text of every assertion selected for probe in that node when the runtime skill catalog carries it; it owns the protocol at `probes/{probe-slug}/probe.md`, and the assertion records that link with routing status `routed`. When `/probe` is not installed, preserve the probe evidence shape and report `capability-required` with the subject and the protocol path. Never author a protocol or attest a run inside this skill.
+- **probe** — use skill `product-tree:probe` with the canonical node target and the exact text of every assertion selected for probe in that node when the runtime skill catalog carries it; it owns the protocol at `probes/{probe-slug}/probe.md`, and the assertion records that link with routing status `routed`. When `/probe` is not installed, preserve the probe evidence shape and report `capability-required` with the subject and the protocol path. Never author a protocol or attest a run inside this skill. When `/probe` reports an assertion `misrouted` with the verification type to select, reclassify the assertion to that type, route it once to that type's specialist per these bullets, and report its row under that type with the status that route yields; never invoke `/probe` for it again, and no `misrouted` status reaches the result.
 - **audit** — record the `[audit:{rule-slug}]` tag with a rule slug unique within its spec — or the pathless `[audit]` tag where the toolchain admits only that form — and the applicable isolated-verifier requirement with routing status `routed`. The pending isolated-verifier verdict does not make evidence routing blocked. Never produce the audit verdict in this workflow.
 
 When the invocation carried a repair block, pass each specialist, after its target and assertion array, the repair items that concern that target's evidence verbatim, including items on an assertion whose current tag this workflow keeps; such an assertion's specialist is invoked for its repair items even though the assertion is not routed again.
@@ -276,6 +277,7 @@ Example:
 | Node B producer rule | evaluate | /eval | path-bearing | evals/<suite>/eval.toml | [audit:producer-voice] | routed |
 | Node D running-node claim | probe | /probe | path-bearing | probes/<probe-slug>/probe.md | null | routed |
 | Node E producer rule, /eval not installed | evaluate | /eval | path-bearing | eval capability required | null | capability-required |
+| Node F claim /probe reported misrouted | evaluate | /eval | path-bearing | evals/<suite>/eval.toml | null | routed |
 | Node C unsupported input | null | null | null | null | null | blocked: unsupported-tag-shape |
 ```
 
@@ -288,7 +290,7 @@ For the terminal unsupported-input guard, record no verification type, specialis
 <success_criteria>
 
 - Every validated spec assertion or decision rule has exactly one selected current verification type derived from its real verdict; unsupported input has none and returns the terminal blocked shape.
-- Test work routes through `/test`, eval work routes through `/eval`, probe work records the protocol link or the missing capability, and audit work records an isolated-verifier requirement.
+- Test work routes through `/test`, eval work routes through `/eval`, probe work records the protocol link, the missing capability, or the reroute a `misrouted` report names, and audit work records an isolated-verifier requirement.
 - Every path-bearing spec evidence link is canonical and co-located with its governing node; decision rules carry no executable evidence links.
 - Unsupported tags block the subject and receive no compatibility behavior or vocabulary in the workflow output.
 - Specialist dependency direction is acyclic and no agentic verdict is produced in the authoring context.
