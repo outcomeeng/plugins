@@ -25,7 +25,7 @@ A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the 
 - NEVER modify eval artifacts, skill bodies, prompts, cases, history, or any other file — this audit produces a verdict, never a fix or a commit.
 - NEVER run evals, tests, validation, coverage, linters, type-checkers, or other deterministic verification inside the audit — establish evidence quality by reading `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, relevant run summaries, and the producing artifact.
 - ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding — the author repairs from the finding alone, and a finding missing any of the three leaves the repair unbounded.
-- NEVER approve prompt-only simulation as evidence for skill, agent, classifier, or script behavior — a prompt that simulates the producer scores the simulation, never the shipped producer the assertion governs.
+- NEVER approve prompt-only simulation as evidence for skill, agent, classifier, script, or command behavior — a prompt that simulates the producer scores the simulation, never the shipped producer the assertion governs.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the eval evidence for it.
 - NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding with severity `FILED`, and NEVER raise a recorded finding's severity or let a `FILED` finding start to reject unless the run names a changed basis. `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `FILED` form.
 
@@ -35,7 +35,7 @@ A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the 
 
 Bind the spec-node target: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the target is the one the request text carries, and the empty substitution binds nothing. If the request carries no target, return `UNKNOWN` with all five gate rows `UNKNOWN`, each carrying one `REJECT` finding with rule `missing-target`, this skill's file as `file`, `line: null`, and a message naming the required spec-node path. Preserve the supplied target string and set `metadata.branch` to JSON `null`; never inspect an inferred scope.
 
-Check the five evidence properties in strict order, producer coupling first: an eval that never exercises the actual producing skill, agent, classifier, or script passes regardless of what that producer contains, and a prompt that merely asks for a simulated verdict while restating the desired rules is not evidence about the skill. A suite missing any property has zero evidentiary value for the assertion it claims to verify. The standard's case-provenance rule is judged beside oracle independence, in Step 3b.
+Check the five evidence properties in strict order, producer coupling first: an eval that never exercises the actual producing skill, agent, classifier, script, or command passes regardless of what that producer contains, and a prompt that merely asks for a simulated verdict while restating the desired rules is not evidence about the skill. A suite missing any property has zero evidentiary value for the assertion it claims to verify. The standard's case-provenance rule is judged beside oracle independence, in Step 3b.
 
 <step name="load_context">
 
