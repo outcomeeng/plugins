@@ -54,7 +54,10 @@ from unittest.mock import patch
 
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.instruction_block import GENERATOR_PATH
-from outcomeeng.distribution.shipped_scripts import load_shipped_module
+from outcomeeng.distribution.shipped_scripts import (
+    NO_BYTECODE_OPTION,
+    load_shipped_module,
+)
 from outcomeeng_testing.harnesses.agent_tokens import stage_agent_tokens_file
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 
@@ -245,7 +248,7 @@ def run_compute_diff_in_process(
     stderr = io.StringIO()
     old_cwd = pathlib.Path.cwd()
     script_args = args or []
-    argv = [sys.executable, str(COMPUTE_DIFF_SCRIPT), *script_args]
+    argv = [sys.executable, NO_BYTECODE_OPTION, str(COMPUTE_DIFF_SCRIPT), *script_args]
     try:
         os.chdir(repo)
         with (
@@ -277,7 +280,7 @@ def run_journal_emit_in_process(
     stderr = io.StringIO()
     input_stream = io.StringIO(stdin or "")
     old_cwd = pathlib.Path.cwd()
-    argv = [sys.executable, str(JOURNAL_EMIT_SCRIPT), *args]
+    argv = [sys.executable, NO_BYTECODE_OPTION, str(JOURNAL_EMIT_SCRIPT), *args]
     try:
         if repo is not None:
             os.chdir(repo)

@@ -23,6 +23,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Final, cast
 
+from outcomeeng.distribution.shipped_scripts import NO_BYTECODE_OPTION
 from outcomeeng.validation import ProductionSpawner, SUMMARY_PATH_LABEL
 
 ORCHESTRATOR_STARTUP_SECONDS: Final = 8.0
@@ -347,7 +348,7 @@ def _read_child_pid_marker(
 def _spawn_wrapper(path: Path, program: str) -> subprocess.Popen[bytes]:
     path.write_text(program, encoding="utf-8")
     return subprocess.Popen(
-        [sys.executable, str(path)],
+        [sys.executable, NO_BYTECODE_OPTION, str(path)],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         start_new_session=True,
