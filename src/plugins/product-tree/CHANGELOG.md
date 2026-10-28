@@ -10,6 +10,14 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.110.0
+
+### Added
+
+- **`/eval` ships as the skill `/verify` routes an evaluate assertion to.** The skill binds the repository's own eval commands from its instructions and overlays, routes each assertion to the eval specialist for its producer kind or reports `capability-required` naming the producer kind, judges a suite's freshness against its history before running anything, converges one case at a time, and takes the suite result from one deterministic aggregate run. It embeds no runner package, task recipe, path, authentication mode, or model runner, and it raises no cost, worker, retry, or timeout ceiling. Before this change, `/verify` routed evaluate assertions to a skill the plugin did not ship, so a verification round that needed eval authoring stopped with `capability-required`.
+
+- **`eval-evidence-standards` ships as the shared eval-evidence standard.** The non-invocable skill defines the five properties of sound eval evidence — producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence — and reads an optional `spx/local/eval-evidence.md` overlay. `/eval` loads it for authoring. A consumer repository can supply that overlay to route the standard to its own governing specs and decisions.
+
 ## 0.109.8
 
 ### Changed
