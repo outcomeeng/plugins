@@ -12,6 +12,9 @@ Replaces the Justfile `clean` recipe's `find -delete` chain with `git
   the repository metadata and ignore file, the session store, the local-work
   paths, and the active Python environment; an entry holding a nested
   local-work path is replaced by its other children, level by level
+- the agent-copy paths inside the local-work directories are cleanup
+  candidates: a local-work directory holding one is replaced by its agent-copy
+  paths alone, and a symlink is a pathspec as the link, never followed
 
 The module's contract:
 
@@ -51,6 +54,12 @@ LOCAL_WORK_PATHS: tuple[str, ...] = (
     ".mcp.json",
     ".env",
     "methodology/memories",
+)
+AGENT_COPY_PATHS: tuple[str, ...] = (
+    ".claude/agents",
+    ".claude/skills",
+    ".agents/skills",
+    ".codex/agents",
 )
 
 
@@ -104,7 +113,8 @@ def build_clean_argv(
     """Build the cleanup argv that spares every protected path.
 
     The protected set is the repository metadata and ignore file, the session
-    store, the local-work paths, and the active environment. Returns an empty
+    store, the local-work paths less their agent-copy paths, and the active
+    environment. Returns an empty
     argv when no pathspec remains, so the bare base command never runs.
     """
     pathspecs = build_clean_pathspecs(
@@ -126,7 +136,8 @@ def build_clean_pathspecs(
     Every top-level entry outside the protected set is a pathspec, except one
     that contains a nested local-work path: its other children stand in its
     place, level by level, so no pathspec names the protected path or a
-    directory that holds it.
+    directory that holds it. A local-work directory that holds an agent-copy
+    path stands in as its agent-copy paths alone.
     """
     repo_root_absolute = Path(os.path.abspath(repo_root))
     active_python_prefix_absolute = Path(os.path.abspath(active_python_prefix))
@@ -154,6 +165,8 @@ def build_clean_pathspecs(
         if Path(os.path.realpath(entry)) == active_python_prefix_real:
             preserved_names.add(entry.name)
 
+    agent_copies = frozenset(Path(path) for path in AGENT_COPY_PATHS)
+
     return _pathspecs_below(
         repo_root,
         Path(),
@@ -164,7 +177,19 @@ def build_clean_pathspecs(
             for parent in path.parents
             if parent.parts
         ),
+        agent_copies=agent_copies,
+        copy_holders=_proper_ancestors(agent_copies),
     )
+
+
+def _proper_ancestors(paths: frozenset[Path]) -> frozenset[Path]:
+    return frozenset(
+        parent for path in paths for parent in path.parents if parent.parts
+    )
+
+
+def _is_real_directory(entry: Path) -> bool:
+    return entry.is_dir() and not entry.is_symlink()
 
 
 def _pathspecs_below(
@@ -173,18 +198,47 @@ def _pathspecs_below(
     *,
     excluded: frozenset[Path],
     holders: frozenset[Path],
+    agent_copies: frozenset[Path],
+    copy_holders: frozenset[Path],
+    protected: bool = False,
 ) -> tuple[str, ...]:
+    """List the pathspecs below `directory`.
+
+    `protected` marks a directory the walk entered because it holds an
+    agent-copy path: only agent-copy paths below it become pathspecs and every
+    other child stays out.
+    """
     pathspecs: list[str] = []
     for entry in sorted(directory.iterdir(), key=lambda path: path.name):
         entry_relative = relative / entry.name
-        if entry_relative in excluded:
+        if entry_relative in agent_copies:
+            pathspecs.append(entry_relative.as_posix())
             continue
-        if entry_relative in holders and entry.is_dir():
+        enters_copy_holder = (
+            entry_relative in copy_holders
+            and (protected or entry_relative in excluded)
+            and _is_real_directory(entry)
+        )
+        enters_holder = (
+            not protected
+            and entry_relative in holders
+            and entry_relative not in excluded
+            and _is_real_directory(entry)
+        )
+        if enters_copy_holder or enters_holder:
             pathspecs.extend(
                 _pathspecs_below(
-                    entry, entry_relative, excluded=excluded, holders=holders
+                    entry,
+                    entry_relative,
+                    excluded=excluded,
+                    holders=holders,
+                    agent_copies=agent_copies,
+                    copy_holders=copy_holders,
+                    protected=enters_copy_holder,
                 )
             )
+            continue
+        if protected or entry_relative in excluded:
             continue
         pathspecs.append(entry_relative.as_posix())
     return tuple(pathspecs)
@@ -201,6 +255,7 @@ def _real_runner(argv: Sequence[str], *, cwd: Path) -> int:
 
 
 __all__ = [
+    "AGENT_COPY_PATHS",
     "CLEAN_BASE_ARGV",
     "GIT_IGNORE_FILE",
     "GIT_METADATA_DIR",

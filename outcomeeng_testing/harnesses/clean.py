@@ -23,6 +23,7 @@ import subprocess
 import sys
 
 from outcomeeng.hygiene.clean import (
+    AGENT_COPY_PATHS,
     CLEAN_BASE_ARGV,
     GIT_IGNORE_FILE,
     LOCAL_WORK_PATHS,
@@ -39,6 +40,11 @@ REMOVAL_LINE_PREFIX = "Would remove "
 NESTED_WORKING_DIR = "nested"
 WORKSPACE_DIR = "workspace"
 LOCAL_WORK_FILE = "kept"
+LOCAL_SETTINGS_FILE = ".claude/settings.local.json"
+TRACKED_FILE = "tracked"
+LINKED_ENTRY = "linked"
+LINK_TARGET_DIR = "link-target"
+LINK_TARGET_FILE = "contents"
 GIT_PATTERN_WILDCARD = "*"
 GITIGNORE_ESCAPE = "\\"
 RECORDING_RUNNER_FAILURE_EXIT_CODE = os.EX_OK + 1
@@ -95,6 +101,10 @@ class CleanRepo:
     caches_beside_local_work: frozenset[str] = frozenset()
     pattern_named_entries: frozenset[str] = frozenset()
     files_at_holder_positions: frozenset[str] = frozenset()
+    agent_copy_links: frozenset[str] = frozenset()
+    tracked_paths: frozenset[str] = frozenset()
+    local_settings: str | None = None
+    link_target_file: Path | None = None
 
 
 def create_clean_repo(
@@ -125,6 +135,15 @@ def create_clean_repo(
     `local_work_holders_as_files` instead makes the first entry of each nested
     local-work path an ignored plain file, reported by `files_at_holder_positions`,
     so that path and its neighbours do not exist.
+
+    `include_local_work` also arranges the local-work directories' remainder and
+    every agent-copy path. An ignored local settings file sits beside the
+    agent-copy paths under `.claude`, reported by `local_settings`. Each
+    agent-copy directory holds a tracked file and an ignored symlink, reported
+    by `agent_copy_links`, that points at a directory outside the repository
+    whose file `link_target_file` names. A tracked file also sits in each
+    top-level local-work directory. Every tracked file is reported by
+    `tracked_paths`.
     """
     repo_root = tmp_path / "repo"
     ignored_cache = repo_root / IGNORED_CACHE_DIR
@@ -142,6 +161,10 @@ def create_clean_repo(
     caches_beside_local_work: set[str] = set()
     pattern_named_entries: set[str] = set()
     files_at_holder_positions: set[str] = set()
+    agent_copy_links: set[str] = set()
+    tracked_paths: set[str] = set()
+    local_settings: str | None = None
+    link_target_file: Path | None = None
     if include_local_work:
         for local_path in LOCAL_WORK_PATHS:
             holder = Path(local_path).parent
@@ -166,6 +189,26 @@ def create_clean_repo(
                 )
                 ignore_lines.append(f"/{escaped}")
                 pattern_named_entries.add(pattern_name)
+                tracked_file = repo_root / local_path / TRACKED_FILE
+                tracked_file.write_text(local_path, encoding="utf-8")
+                tracked_paths.add(f"{local_path}/{TRACKED_FILE}")
+        link_target = tmp_path / LINK_TARGET_DIR
+        link_target.mkdir()
+        link_target_file = link_target / LINK_TARGET_FILE
+        link_target_file.write_text(LINK_TARGET_DIR, encoding="utf-8")
+        for agent_copy_path in AGENT_COPY_PATHS:
+            agent_copy_dir = repo_root / agent_copy_path
+            agent_copy_dir.mkdir(parents=True, exist_ok=True)
+            (agent_copy_dir / TRACKED_FILE).write_text(
+                agent_copy_path, encoding="utf-8"
+            )
+            tracked_paths.add(f"{agent_copy_path}/{TRACKED_FILE}")
+            (agent_copy_dir / LINKED_ENTRY).symlink_to(
+                link_target, target_is_directory=True
+            )
+            agent_copy_links.add(f"{agent_copy_path}/{LINKED_ENTRY}")
+        (repo_root / LOCAL_SETTINGS_FILE).write_text("{}", encoding="utf-8")
+        local_settings = LOCAL_SETTINGS_FILE
     (repo_root / GIT_IGNORE_FILE).write_text(
         "".join(f"{line}\n" for line in ignore_lines),
         encoding="utf-8",
@@ -176,6 +219,13 @@ def create_clean_repo(
         check=True,
         capture_output=True,
     )
+    if tracked_paths:
+        subprocess.run(
+            ("git", "add", "--force", "--", *sorted(tracked_paths)),
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+        )
     return CleanRepo(
         root=repo_root,
         active_python_prefix=active_python_prefix,
@@ -184,6 +234,10 @@ def create_clean_repo(
         caches_beside_local_work=frozenset(caches_beside_local_work),
         pattern_named_entries=frozenset(pattern_named_entries),
         files_at_holder_positions=frozenset(files_at_holder_positions),
+        agent_copy_links=frozenset(agent_copy_links),
+        tracked_paths=frozenset(tracked_paths),
+        local_settings=local_settings,
+        link_target_file=link_target_file,
     )
 
 
@@ -245,6 +299,15 @@ def observe_dry_run_removals(
     )
 
 
+def run_cleanup(*, repo: CleanRepo, argv: Sequence[str]) -> None:
+    """Run the composed cleanup argv in the arranged repository.
+
+    The repository is a temporary one under the test's `tmp_path`, so the real
+    command cannot reach the test machine's working tree.
+    """
+    subprocess.run(argv, cwd=repo.root, check=True, capture_output=True)
+
+
 def _place_environment(
     tmp_path: Path,
     repo_root: Path,
@@ -282,6 +345,7 @@ __all__ = [
     "create_clean_repo",
     "create_directory_without_repository",
     "observe_dry_run_removals",
+    "run_cleanup",
     "working_directory_below_root",
 ]
 
