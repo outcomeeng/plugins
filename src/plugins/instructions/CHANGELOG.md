@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.22.6
+
+### Fixed
+
+- **`/audit-skill` and the `/author-skill` auditor template resolve the repository root from the audited target.** The audit takes the root from the directory that holds the skill target, whatever the session's working directory, runs its git commands against that root, and keeps its containment check of the target against the root it resolved. A target in another worktree reaches the audit as an absolute path, so the task message stays the target alone, and an auditor authored from the template resolves its root the same way. Before this change, the audit took the root from the session's working directory and returned `BLOCKED` for a target in another worktree.
+
 ## 0.22.5
 
 ### Fixed
