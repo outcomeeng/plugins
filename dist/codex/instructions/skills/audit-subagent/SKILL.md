@@ -6,7 +6,7 @@ description: >-
   and agent-prompt-standards rule catalogs, and records the judgment through an SPX
   changeset-scoped verification run.
 argument-hint: "<JSON object with path, runDriver, and optional base>"
-allowed-tools: Read, Grep, Glob, Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
+allowed-tools: Read, Grep, Glob, Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(git -C * rev-parse:*), Bash(git -C * diff:*), Bash(git -C * status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
 ---
 
 Use skill `instructions:agent-prompt-standards`.
@@ -36,11 +36,11 @@ A sealed changeset-scoped `spx verification run`, named by its run token and run
 
 <request_contract>
 
-Parse `$ARGUMENTS` as a JSON object with two required inputs and one optional input: `path`, one repository-relative authored configuration input or native definition path; `runDriver`, an object with the six producer fields `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole`; and `base`, the git ref the changeset is measured from, `origin/HEAD` when absent. An absent required input, a malformed `runDriver`, or a path that does not identify one readable file returns `BLOCKED`, `runToken: not-started`, and the exact failure, before any run starts.
+Parse `$ARGUMENTS` as a JSON object with two required inputs and one optional input: `path`, one authored configuration input or native definition path, absolute when the target lies in a worktree other than the session's working directory; `runDriver`, an object with the six producer fields `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole`; and `base`, the git ref the changeset is measured from, `origin/HEAD` when absent. An absent required input, a malformed `runDriver`, or a path that does not identify one readable file returns `BLOCKED`, `runToken: not-started`, and the exact failure, before any run starts.
 
-Resolve the repository root with `git rev-parse --show-toplevel`. Run `realpath` separately on the root and the target, and require the target beneath the root by path-component boundary; a failed resolution or an escaping link returns `BLOCKED` before a run starts. Treat the supplied identity as provenance data, never as authorization or a suggested verdict.
+Resolve the repository root from the directory that holds the target, whatever the session's working directory: `git -C '<definition-directory>' rev-parse --show-toplevel`. Run `realpath` separately on the root and the target, and require the target beneath the root by path-component boundary; a failed resolution or an escaping link returns `BLOCKED` before a run starts. Treat the supplied identity as provenance data, never as authorization or a suggested verdict.
 
-Resolve the changeset, each command run separately from the repository root:
+Resolve the changeset, each command run separately against the resolved root with `git -C '<root>'` in place of the bare `git`:
 
 ```bash
 git rev-parse --verify --end-of-options '<base>^{commit}'
@@ -69,7 +69,7 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 4. **Admit invocation evidence** as `/subagent-standards` `<evidence>` requires, reading the declared acceptance artifact or the retained native-loading and invocation evidence for the target. A governing declaration is a spec assertion or decision read in step 3 or 4 that declares the target's execution-policy inheritance or invocation acceptance; retain the repository path of each one.
 5. **Judge.** Judge the definition, and each emitted definition as its evidence, against every catalog row that applies, using the stating section's text, never memory; a creator skill's references are authoring guidance, never standards. Check the whole target for equivalent functionality before declaring an omission. Classify each violation per `${SKILL_DIR}/references/touched-text.md`. Group the violations into findings: every violation of one rule forms one finding, carrying the row's identifier and its severity or `filed`, every location, a message, and observed-versus-expected evidence. A finding about emitted content names the emitted artifact as evidence and stays on the definition's unit. An observation that a rule holds is not a finding.
 6. **Record.** Add the definition unit, then one declaration unit for each governing declaration read in path order, then each finding against the definition unit, under `<persistence_contract>`.
-7. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one definition unit, one declaration unit for every governing declaration read and no other unit, and an accepted record for every finding. Run `git rev-parse --verify 'HEAD^{commit}'` and the `git status` command again; a moved head or uncommitted work in the definition returns `BLOCKED` with the run preserved.
+7. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one definition unit, one declaration unit for every governing declaration read and no other unit, and an accepted record for every finding. Run `git -C '<root>' rev-parse --verify 'HEAD^{commit}'` and the `git -C '<root>' status` command again; a moved head or uncommitted work in the definition returns `BLOCKED` with the run preserved.
 8. **Finish and render.** Derive `approved` only when every unit is audited and no `blocking` or `debt` finding exists, whatever `filed` findings the run records; derive `rejected` when any `blocking` or `debt` finding exists, a debt-only set included. Run:
 
    ```bash

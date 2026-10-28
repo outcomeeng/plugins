@@ -12,6 +12,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 - **`/audit-skill` and the `/author-skill` auditor template resolve the repository root from the audited target.** The audit takes the root from the directory that holds the skill target, whatever the session's working directory, runs its git commands against that root, and keeps its containment check of the target against the root it resolved. A target in another worktree reaches the audit as an absolute path, so the task message stays the target alone, and an auditor authored from the template resolves its root the same way. Before this change, the audit took the root from the session's working directory and returned `BLOCKED` for a target in another worktree.
 
+- **`/audit-subagent` resolves the repository root from the audited definition.** The audit takes the root from the directory that holds the definition, whatever the session's working directory, runs its git commands against that root, and keeps its containment check of the definition against the root it resolved. A definition in another worktree reaches the audit as an absolute path. Before this change, the audit took the root from the session's working directory and returned `BLOCKED` for a definition in another worktree.
+
 ## 0.22.5
 
 ### Fixed
