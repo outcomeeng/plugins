@@ -38,6 +38,7 @@ _REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 TEST_ROOTS: Final = (PRODUCT_TREE_ROOT, TESTS_DIRECTORY_NAME)
 PYTHON_SOURCE_PATHS: Final = ("outcomeeng", "outcomeeng_testing", "outcomeeng_evals")
 INSTRUCTION_BLOCK_ARGV: Final = _INSTRUCTION_BLOCK_ARGV
+RUNTIME_TOKEN_STEP_LABEL: Final = "runtime-token"
 # The command that starts the validation entry point; each recipe word follows it.
 VALIDATION_ENTRY_COMMAND: Final = ("python3", "-m", str(__package__))
 
@@ -268,7 +269,7 @@ VALIDATION_STEPS: Final = (
         ),
     ),
     Step(
-        label="runtime-token",
+        label=RUNTIME_TOKEN_STEP_LABEL,
         argv=(
             "uv",
             "run",

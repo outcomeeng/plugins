@@ -10,8 +10,10 @@ declared line runs.
 
 from __future__ import annotations
 
+import io
 import re
 import shlex
+from functools import cache
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,12 +22,17 @@ from typing import Final
 from hypothesis import given, seed, settings
 
 from outcomeeng.distribution.instruction_block import JUSTFILE_NAME
+from outcomeeng.validation import SUMMARY_KEY_LABEL
+from outcomeeng.validation.__main__ import main as run_validation_entry
 from outcomeeng.validation.infrastructure_index import PRODUCT_TREE_ROOT
-from outcomeeng.validation.selected_gate import (
-    RECIPE_MARKDOWN_LANE,
-    markdown_lane_steps,
-)
+from outcomeeng.validation.selected_gate import RECIPE_MARKDOWN_LANE
 from outcomeeng_testing.generators.markdown_lane import markdown_lane_changesets
+from outcomeeng_testing.harnesses.gate import (
+    RecordingSpawner,
+    summary_path_from_output,
+    summary_steps,
+    read_summary,
+)
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
@@ -69,13 +76,43 @@ def without_launcher(argv: tuple[str, ...]) -> tuple[str, ...]:
     return argv
 
 
+@dataclass(frozen=True)
+class LaneRunObservation:
+    """What one run of the Markdown lane through the validation entry point spawned."""
+
+    command_lines: tuple[tuple[str, ...], ...]
+    step_labels: tuple[str, ...]
+
+
+@cache
+def markdown_lane_run() -> LaneRunObservation:
+    """Run the Markdown lane entry point against a recording spawner.
+
+    The observation is the command lines the lane spawns and the step labels its
+    summary records, read from the run rather than from the selector's tables.
+    """
+
+    spawner = RecordingSpawner(exit_codes=())
+    sink = io.StringIO()
+    run_validation_entry(
+        [RECIPE_MARKDOWN_LANE], spawner=spawner, sink=sink, repo=REPO_ROOT
+    )
+    summary = read_summary(Path(summary_path_from_output(sink.getvalue())))
+    return LaneRunObservation(
+        command_lines=tuple(without_launcher(call) for call in spawner.spawn_calls),
+        step_labels=tuple(
+            str(record[SUMMARY_KEY_LABEL]) for record in summary_steps(summary)
+        ),
+    )
+
+
 def _expand_validation_recipe(
     line: tuple[str, ...],
 ) -> tuple[tuple[str, ...], ...]:
-    """The command lines a line runs; the Markdown lane recipe runs the selector's steps."""
+    """The command lines a line runs; the Markdown lane recipe runs the lines its run spawns."""
 
     if line == (*VALIDATION_ENTRY, RECIPE_MARKDOWN_LANE):
-        return tuple(without_launcher(step.argv) for step in markdown_lane_steps())
+        return markdown_lane_run().command_lines
     return (line,)
 
 
