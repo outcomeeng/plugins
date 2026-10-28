@@ -15,6 +15,9 @@ The product-tree plugin ships one subagent definition per skill an Executor sess
 
 - ALWAYS: the seven definitions ship for Claude Code only, and `/execute-change` on Codex returns an explicit unavailable result ([audit])
 
+- ALWAYS: `/execute-change` runs, before the first block, the Application check as one transaction against the current default branch and the ordered effects of the earlier subsections of the Change, and a Change whose check fails, or whose Base text of a target changed, returns to Sliced with the failed lines named
+- ALWAYS: `/execute-change` leaves a Change whose blocking Change is not yet delivered waiting, and returns a Change to Sliced only on a failed check
+
 ### Compliance
 
 - ALWAYS: `/execute-change` confirms that the winning Claim names its worktree root and loads the latest Handoff before it starts, and executes only an Executable Leaf whose every predecessor is closed and whose blockers are resolved, and refuses a Parent ([audit])
