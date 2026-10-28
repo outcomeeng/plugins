@@ -64,7 +64,7 @@ Each audit or review step below requests exactly one native launch with its mapp
 
 Persist accepted requirements in decisions and specs before dispatch. Start each Verifier without authoring history, following the root guide's isolation mechanics. Never append an author-written context packet, reasoning, summary, or suggested verdict. The invoked skill independently discovers its evidence from the target and configured instructions.
 
-Completed structured verdicts follow the existing finding-repair workflow: repair the defect class, verify and checkpoint the changed subject, then make one launch for that new subject. Never use a repair loop to replace a failed launch or unusable result. While the native capability reports work still running, collect that same invocation; an observation timeout never authorizes a new launch.
+Completed verdicts follow the existing finding-repair workflow: repair the defect class, verify and checkpoint the changed subject, then make one launch for that new subject. A run sealed `rejected` is repaired by the Fixer of `<audit_repair>`. Never use a repair loop to replace a failed launch or unusable result. While the native capability reports work still running, collect that same invocation; an observation timeout never authorizes a new launch.
 
 </launch_contract>
 
@@ -72,7 +72,7 @@ Completed structured verdicts follow the existing finding-repair workflow: repai
 
 Before any audit gate or whole-changeset review runs, self-converge the diff: read the changed specs, tests, and implementation together; confirm the design is coherent; and fix obvious contradictions before asking an auditor or reviewer to find them. Audit gates confirm a stabilized design. They are not the design loop.
 
-When a gate returns `REJECTED`, `UNKNOWN`, or `BLOCKED`, or when a review surfaces a valid `blocking` finding, treat it as evidence of a defect class. Read the touched node(s) — the files they govern — find same-class instances, and fix the class before re-running the gate. The class is the rule the finding cites, as the cited standard defines that rule; the finding's examples are instances of the class, never its definition. Same-class means the same cited clause, the same source contract, evidence pattern, lifecycle step, generated-source relationship, or architectural boundary that clause governs. Fix every instance the cited clause covers across the touched node(s) and change nothing the clause does not require. A patch to the cited line alone is sufficient only when a sweep under that clause proves the defect isolated.
+When an audit gate returns a complete `BLOCKED` diagnostic, or when a review surfaces a valid `blocking` finding, treat it as evidence of a defect class. A run sealed `rejected` takes the Fixer of `<audit_repair>`, whose sweep covers its classes. Read the touched node(s) — the files they govern — find same-class instances, and fix the class before re-running the gate. The class is the rule the finding cites, as the cited standard defines that rule; the finding's examples are instances of the class, never its definition. Same-class means the same cited clause, the same source contract, evidence pattern, lifecycle step, generated-source relationship, or architectural boundary that clause governs. Fix every instance the cited clause covers across the touched node(s) and change nothing the clause does not require. A patch to the cited line alone is sufficient only when a sweep under that clause proves the defect isolated.
 
 Record each repair with the clause it applies and the check that shows the class closed. That record enters the next `VERIFICATION_DISPATCH_READY` record under `<verification_checkpoint>`.
 
@@ -81,6 +81,29 @@ Do not re-run a gate after every micro-edit. Batch the class fix, re-read the af
 A rejection whose defect class a prior repair already claimed to close invalidates that repair invariant. Stop localized patching, analyze why the class survived, widen the repair and the same-class scan, and amend the governing workflow, standard, or source contract before the next dispatch. The work queue stops at the node that raised the repeat until that amendment lands; a new line number, file, or example does not make it a new class.
 
 </stabilized_diff_rule>
+
+<audit_run_verdict>
+
+Steps 4, 8, and 8a read each artifact auditor's verdict from the terminal status of the sealed run whose token the launch returns, with its run file and rendered projection: `approved` passes, `rejected` rejects whatever its finding count, and a launch whose run spx refused a payload or the finish of is blocked. No approval comes from a verdict object outside the run, a transcript, a task-output file, or prose. Step 8 states the complete `BLOCKED` diagnostic.
+
+</audit_run_verdict>
+
+<audit_repair>
+
+Repair each audit run sealed `rejected` in a Fixer's agent session of its own, never in this conversation. Make one native launch from the definition that produces the rejected subject:
+
+| Rejected subject        | Fixer definition                  |
+| ----------------------- | --------------------------------- |
+| An ADR (Step 4)         | `product-tree_change-author`      |
+| Implementation (Step 8) | `product-tree_change-implementer` |
+| Test evidence (Step 8a) | `product-tree_change-tester`      |
+| Eval evidence (Step 8a) | `product-tree_change-verifier`    |
+
+The task message holds exactly two inputs: the rejected run's run file, unchanged, and the fixed instruction "attend to every rule the run names and sweep each named class across the whole target". Add no summary, remedy, class name, or other interpretation of the findings. When the harness supplies no definition for the rejected subject, stop with an unavailable result naming the rejected run file and the missing definition. A failed Fixer launch or unusable result follows `<launch_contract>`.
+
+When the Fixer returns, verify and checkpoint what it left under `<verification_checkpoint>`, and carry the clause each repair applies and the check that shows its class closed from the Fixer's result into the next `VERIFICATION_DISPATCH_READY` record.
+
+</audit_repair>
 
 <verification_checkpoint>
 
@@ -97,13 +120,13 @@ Before dispatching any persisted audit or review gate, bind its subject to an ex
 
 An audit or review over modified or untracked files is advisory. It may provide early feedback, but it never satisfies a Step 4, Step 8, Step 8a, Step 9, or merge-readiness predicate. Commit the exact version before dispatching any persisted gate or asking another agent session or human to read a reusable verification subject.
 
-A Verifier that returns a `stale-base` block returned no verdict: use skill `product-tree:sync-base`, re-establish the deterministic results on the rebased head, checkpoint, and dispatch again. After a rejected audit or valid `blocking` review finding, repair the defect class, rerun deterministic verification, and create a new checkpoint commit before redispatch. Append the rejection to the record's `priorRejections` — Verifier, exact head, finding identifiers, defect classes, failed repair invariant, root cause, widened repair rule, and same-class scan — and record in the new head's `sameClassScans` the cited clause each repair applies and the check that shows its class closed. Redispatch only once the new head's record proves every rejection resolved. The next Verifier's verdict, never the recorded check, decides whether the class closed. Preserve the earlier checkpoint identity while its run remains prior context; do not amend the audited commit in place.
+A Verifier that returns a `stale-base` block returned no verdict: use skill `product-tree:sync-base`, re-establish the deterministic results on the rebased head, checkpoint, and dispatch again. After a run sealed `rejected`, launch the Fixer of `<audit_repair>`; after a valid `blocking` review finding, repair the defect class. Then rerun deterministic verification, and create a new checkpoint commit before redispatch. Append the rejection to the record's `priorRejections` — Verifier, exact head, finding identifiers, defect classes, failed repair invariant, root cause, widened repair rule, and same-class scan — and record in the new head's `sameClassScans` the cited clause each repair applies and the check that shows its class closed. Redispatch only once the new head's record proves every rejection resolved. The next Verifier's verdict, never the recorded check, decides whether the class closed. Preserve the earlier checkpoint identity while its run remains prior context; do not amend the audited commit in place.
 
 </verification_checkpoint>
 
 <result_carryover>
 
-Each Verifier result is preserved once where that Verifier's own skill records it — the review journal for `changes-reviewer`, the `spx verification run` record for `implementation-auditor`, the returned structured verdict for every Auditor that returns one. What the flow carries forward from there is the bounded projection `/merging-standards` `<verification_result_projection>` defines: the result reference or raw run token, exact head, verdict, finding identifiers, defect classes, and next required action.
+Each Verifier result is preserved once where that Verifier's own skill records it — the review journal for `changes-reviewer`, the `spx verification run` record for every artifact auditor. What the flow carries forward from there is the bounded projection `/merging-standards` `<verification_result_projection>` defines: the result reference or raw run token, exact head, verdict, finding identifiers, defect classes, and next required action.
 
 Reopen the complete result by reference when a finding needs exact detail. Never re-paste a complete Verifier payload into a later step, a queue transition to the next node, or the closeout.
 
@@ -115,11 +138,11 @@ After Step 8, run the applicable artifact-type evidence auditors over the stabil
 
 Run deterministic verification first. Bring local validation, tests, and required eval runs to passing for the touched scope before dispatching evidence auditors. An evidence auditor reads and judges evidence quality; it never runs deterministic verification.
 
-Dispatch `product-tree_test-evidence-auditor` during Step 8a when the diff creates or modifies any `[test]` assertion, linked test file, or test-infrastructure artifact imported by a linked test. For each affected governing node, pass only its canonical node path. The invoked audit discovers the assertions, linked tests, and complete evidence chain. If the auditor returns `REJECTED`, `UNKNOWN`, a failing row, an unknown row, or a reject finding, fix the evidence defect class, re-run deterministic verification, and re-dispatch Step 8a.
+Dispatch `product-tree_test-evidence-auditor` during Step 8a when the diff creates or modifies any `[test]` assertion, linked test file, or test-infrastructure artifact imported by a linked test. For each affected governing node, pass only its canonical node path. The invoked audit discovers the assertions, linked tests, and complete evidence chain. Read the verdict under `<audit_run_verdict>`. A run sealed `rejected` goes to the Fixer of `<audit_repair>`; then re-run deterministic verification and re-dispatch Step 8a.
 
-Dispatch `product-tree_eval-evidence-auditor` during Step 8a when the diff creates or modifies any `[eval]` assertion, `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, or producer artifact for an eval-backed assertion. For each affected governing node, pass only its canonical node path. The invoked audit discovers the assertions, eval artifacts, and producers. If the auditor returns `FAIL`, `UNKNOWN`, a failing row, an unknown row, or a reject finding, fix the evidence defect class, re-run the required eval evidence, and re-dispatch Step 8a.
+Dispatch `product-tree_eval-evidence-auditor` during Step 8a when the diff creates or modifies any `[eval]` assertion, `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, or producer artifact for an eval-backed assertion. For each affected governing node, pass only its canonical node path. The invoked audit discovers the assertions, eval artifacts, and producers. Read the verdict under `<audit_run_verdict>`. A run sealed `rejected` goes to the Fixer of `<audit_repair>`; then re-run the required eval evidence and re-dispatch Step 8a.
 
-Before dispatching an applicable evidence auditor, apply `<verification_checkpoint>`; carry each verdict forward under `<result_carryover>`. When both evidence classes changed, dispatch both auditors against the same checkpoint. When the scope is cross-node (see `<scope_detection>`), enumerate every governed node whose linked test or eval evidence the change creates, modifies, or invalidates, and dispatch each applicable auditor once per governed node and evidence type, in parallel when independent. Step 8a completes only after every applicable evidence-auditor verdict is clean on the exact committed diff it reviews.
+Before dispatching an applicable evidence auditor, apply `<verification_checkpoint>`; carry each verdict forward under `<result_carryover>`. When both evidence classes changed, dispatch both auditors against the same checkpoint. When the scope is cross-node (see `<scope_detection>`), enumerate every governed node whose linked test or eval evidence the change creates, modifies, or invalidates, and dispatch each applicable auditor once per governed node and evidence type, in parallel when independent. Step 8a completes only after every applicable evidence-auditor run seals `approved` on the exact committed diff it reviews.
 
 </evidence_auditor_gate>
 
@@ -193,13 +216,13 @@ Before the architecture audit, use skill `product-tree:verify` separately for ev
 
 <step number="4" name="Architecture audit" gate="true">
 
-Dispatch `product-tree_adr-auditor` with only the ADR path. The invoked `audit-adr` discovers its governing node, committed changeset, and implementation-language partitions, then composes each applicable `audit-{lang}-architecture` concern inside its isolated agent session. Require its structured JSON verdict.
+Dispatch `product-tree_adr-auditor` with only the ADR path. The invoked `audit-adr` discovers its governing node, committed changeset, and implementation-language partitions, then composes each applicable `audit-{lang}-architecture` concern inside its isolated agent session. Read the verdict under `<audit_run_verdict>`.
 
 When the scope is cross-node (see `<scope_detection>`), enumerate the ADRs governing every affected implementation surface across the whole changeset and dispatch each ADR path separately. This gate passes only when every required ADR audit approves.
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its verdict forward under `<result_carryover>`.
 
-**REJECTED -> fix the defect class -> re-dispatch this step within the gate cap `<review_gates>` states.** The step passes only on `APPROVED`; a second counted rejection stops the flow.
+**Run sealed `rejected` -> Fixer under `<audit_repair>` -> re-dispatch this step within the gate cap `<review_gates>` states.** The step passes only on `terminalStatus: approved`; a second counted rejection stops the flow.
 
 </step>
 
@@ -257,7 +280,7 @@ When the scope is cross-node (see `<scope_detection>`), point this audit at the 
 
 Before invoking the audit, apply `<stabilized_diff_rule>` and `<verification_checkpoint>`; carry its verdict forward under `<result_carryover>`.
 
-Do not invoke the `audit-{lang}-{code|test|architecture}` concern skills directly from this workflow. Read the returned rendered projection: its `terminalStatus` is the Step 8 verdict — `approved` passes, `rejected` requires repair, and a missing projection or `BLOCKED` result blocks the gate. A command-failure `BLOCKED` result is complete only when it carries the run token or `not-started`, exact command, payload source, payload key, exit code, and stderr, including a failed preparation command. A missing-input diagnostic carries `runToken: not-started` and the exact missing selector or identity. A pre-run skill-load `BLOCKED` result is complete only when it carries run token `not-started`, required skill `product-tree:audit-implementation`, and the exact load or availability failure.
+Do not invoke the `audit-{lang}-{code|test|architecture}` concern skills directly from this workflow. Read the returned rendered projection: its `terminalStatus` is the Step 8 verdict — `approved` passes, `rejected` goes to the Fixer of `<audit_repair>`, and a missing projection or `BLOCKED` result blocks the gate. A command-failure `BLOCKED` result is complete only when it carries the run token or `not-started`, exact command, payload source, payload key, exit code, and stderr, including a failed preparation command. A missing-input diagnostic carries `runToken: not-started` and the exact missing selector or identity. A pre-run skill-load `BLOCKED` result is complete only when it carries run token `not-started`, required skill `product-tree:audit-implementation`, and the exact load or availability failure.
 
 **Projection `terminalStatus: rejected` -> fix the defect class; complete `BLOCKED` diagnostic -> repair the named preparation, input, command, payload, installation, or skill-load boundary.** Verify and checkpoint the changed subject before a new audit. A failed launch or unusable result follows `<launch_contract>` immediately.
 
@@ -313,22 +336,22 @@ If the full deterministic gate fails, fix the reported defect, run the focused t
 
 <review_gates>
 
-Steps 4, 8, and applicable Step 8a are blocking audit gates. Steps 4 and 8a emit verdicts from their auditor contracts. Step 8 returns an `spx verification run` token, run file, and rendered projection whose `terminalStatus` is authoritative; a `BLOCKED` result must relay a complete diagnostic from the implementation-auditor contract as described in Step 8. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work.
+Steps 4, 8, and applicable Step 8a are blocking audit gates. Each returns an `spx verification run` token, run file, and rendered projection whose `terminalStatus` is authoritative; a `BLOCKED` result must relay a complete diagnostic from the implementation-auditor contract as described in Step 8. Step 9 is a blocking whole-changeset review gate that runs whenever the change reaches beyond the target node. Step 10 is the terminal lifecycle boundary for default-branch work.
 
-- Before starting Step 5: require Step 4's workflow-local result to be `APPROVED`. If it is absent or differs, stop and invoke or repair Step 4.
+- Before starting Step 5: require Step 4's run to render `terminalStatus: approved`. If it is absent or differs, stop and invoke or repair Step 4.
 - Before starting Step 7: require Step 6's record that validation and every other test and eval pass, and that each new or changed test or eval fails only because the implementation it verifies is absent. If the record is absent, run Step 6; if it differs, repair the evidence through Step 5 and run Step 6 again.
 - Before considering implementation complete: inspect the Step 8 rendered projection. If `terminalStatus` is absent or differs from `approved`, stop — invoke or repair Step 8.
 - Before Step 8 for Go, Rust, or TypeScript, require Step 7a's usable `simplified` or `unchanged` result for the implementation being verified, with every resulting edit inspected, verified, and committed.
-- Before starting Step 9, the terminal full deterministic gate, Step 10, or completion: if the diff touches a test or eval evidence surface named by `<evidence_auditor_gate>`, require a clean Step 8a verdict over the exact committed diff and invoke or repair Step 8a when that verdict is absent. When the diff touches no named evidence surface, skip Step 8a.
+- Before starting Step 9, the terminal full deterministic gate, Step 10, or completion: if the diff touches a test or eval evidence surface named by `<evidence_auditor_gate>`, require a Step 8a run sealed `approved` over the exact committed diff and invoke or repair Step 8a when that verdict is absent. When the diff touches no named evidence surface, skip Step 8a.
 - Before declaring the flow complete: if the change touches anything beyond the target node, require a raw Step 9 review run token from the native final result and a rendered sealed projection from `/project-run-journal`. If no invocation has occurred, invoke Step 9. A failed invocation or unusable final result follows `<launch_contract>`; a blocked inspection preserves its token; valid `blocking` findings follow the repair workflow, and a `debt` finding follows Step 9.
 - Before using skill `product-tree:merge` when a full deterministic bundle is required: confirm the repository-declared full deterministic gate ran after every applicable agentic gate and against the current clean committed head. If any source, test, spec, generated-output, or configuration file changed afterward, rerun the invalidated agentic gates before running the declared full gate again.
 - Before declaring the flow complete for default-branch work: confirm the change reached the default branch on origin through Step 10's `/merge`, or that the user scoped the work to a proposal, analysis, review, or local-only change, or that an explicit merge lifecycle gate blocks with no independent local action remaining. A clean working tree, a local commit, or a branch ahead of base does not satisfy this — invoke Step 10.
 
-For completed verdicts of `REJECTED`, `UNKNOWN`, or a complete `BLOCKED` diagnostic at Steps 4 and 8a; projection `terminalStatus: rejected` or a complete blocked diagnostic at Step 8; or valid `blocking` findings at Step 9: fix the defect class per `<stabilized_diff_rule>`, bounded to the cited clause and recorded with its closing check, verify and checkpoint the changed subject, then audit that subject within the gate cap below. Use Step 8's complete blocked diagnostic to identify the failed command, payload, installation, or skill-load boundary. Launch failures, unusable results, and blocked inspection of a valid review token follow `<launch_contract>` and Step 9; they never enter this relaunch loop.
+For a run sealed `rejected` at Steps 4, 8, and 8a: launch the Fixer of `<audit_repair>`. For a complete `BLOCKED` diagnostic at Steps 4, 8, and 8a, or valid `blocking` findings at Step 9: fix the defect class per `<stabilized_diff_rule>`, bounded to the cited clause and recorded with its closing check, verify and checkpoint the changed subject, then audit that subject within the gate cap below. Use Step 8's complete blocked diagnostic to identify the failed command, payload, installation, or skill-load boundary. Launch failures, unusable results, and blocked inspection of a valid review token follow `<launch_contract>` and Step 9; they never enter this relaunch loop.
 
 **Gate cap: each gate launches at most twice, counting real rejections.** A gate is one Verifier definition judging one subject: one ADR path at Step 4, one governed node and evidence type at Step 8a, the committed scope at Step 8, and the whole changeset at Step 9. The cap covers the Step 9 review as well as the audit gates.
 
-- A rejection counts when at least one blocking finding, or a debt finding an audit raises, of a completed verdict — `REJECTED` or `UNKNOWN`, a failing or unknown row, projection `terminalStatus: rejected`, or a valid Step 9 `blocking` finding — sits on a line the changeset changed, or is caused by its edit, read from the diff against the base, and a complete `BLOCKED` diagnostic from an audit gate counts as a rejection with no finding to read. A `debt` finding the Step 9 review raises, a finding already filed in the owning node's `ISSUES.md`, a stale finding, a finding on untouched text, and a rejection whose run a recorded override names as the verdict it sets aside count for nothing; a launch that seals no run counts for nothing.
+- A rejection counts when at least one blocking finding, or a debt finding an audit raises, of a completed verdict — a run sealed `rejected`, or a valid Step 9 `blocking` finding — sits on a line the changeset changed, or is caused by its edit, read from the diff against the base, and a complete `BLOCKED` diagnostic from an audit gate counts as a rejection with no finding to read. A `debt` finding the Step 9 review raises, a finding already filed in the owning node's `ISSUES.md`, a stale finding, a finding on untouched text, and a rejection whose run a recorded override names as the verdict it sets aside count for nothing; a launch that seals no run counts for nothing.
 - A second counted rejection on the same gate, one no recorded override sets aside -> STOP the flow. Report through `request_user_input` the gate, both verdicts, the outstanding findings, and the same-class sweep already performed. NEVER launch a gate a third time, and NEVER repeat a gate until it approves.
 - The cap covers agentic gates only. A deterministic check that fails runs again after its repair outside the cap.
 
@@ -355,12 +378,14 @@ This is not slower. The ad hoc script takes the same effort as a test, but the s
 
 **Failure 3: Claude planned an evidence audit before implementation.** Claude wrote the tests at Step 5 and tried to audit them before Step 7, while they failed for want of the implementation. The dispatch could never proceed, because an agentic gate requires passing deterministic verification, and the flow stalled between two of its own rules. Signal: an evidence-auditor dispatch planned while new tests fail. Avoid: Step 6 confirms the failures deterministically, and Step 8a audits the evidence once Step 7 makes it pass.
 
+**Failure 4: Claude repaired a rejected audit run in the main conversation.** Claude read the run's findings, fixed the cited lines itself, or handed a Fixer its own summary of the findings. Signal: a repair commit after a `rejected` run with no Fixer launch, or a Fixer message holding more than the run file and the fixed instruction. Avoid: per `<audit_repair>`, launch the Fixer with exactly the run file and the instruction, and add no interpretation.
+
 </failure_modes>
 
 <success_criteria>
 
 - Every product-declared touched-scope deterministic command exits zero on the final committed subject.
-- Each applicable architecture and test-evidence auditor returns `APPROVED`; each applicable eval-evidence auditor returns JSON `overall: PASS` with no `FAIL` or `UNKNOWN` row; and each implementation-audit run renders `terminalStatus: approved` for the exact committed subject.
+- Each applicable architecture, test-evidence, eval-evidence, and implementation audit run renders `terminalStatus: approved` for the exact committed subject, and every run sealed `rejected` was repaired by a Fixer session that received exactly its run file and the fixed instruction.
 - A cross-node changeset carries a raw Step 9 review run token whose sealed projection renders successfully, with every valid `blocking` finding fixed, every `debt` finding on touched or invalidated text ruled on or labeled `TRACKED`, including every instance its cited clause covers and nothing the clause does not require, and each repair's clause and closing check recorded in the next `VERIFICATION_DISPATCH_READY` record; unbacked findings are dropped.
 - `git rev-parse HEAD` matches the final gate subject and `git status --porcelain` is empty.
 - The requested delivery boundary has observable completion: default-branch work has reached the default branch on origin through `/merge`'s selected transport and every declared release action reports success or no-op; proposal, analysis, review, or local-only work reaches its explicitly selected boundary; an explicit lifecycle gate reports its blocking token only after no independent action remains.
