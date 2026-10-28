@@ -6,7 +6,7 @@ description: >-
   and agent-prompt-standards rule catalogs, and records the judgment through an SPX
   changeset-scoped verification run.
 argument-hint: "<JSON object with path, runDriver, and optional base>"
-allowed-tools: Read, Grep, Glob, Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
+allowed-tools: Read, Grep, Glob, Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(realpath:*), Bash(spx --version), Bash(mktemp -d), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
 ---
 
 Use skill `instructions:agent-prompt-standards`.
@@ -21,8 +21,8 @@ A sealed changeset-scoped `spx verification run`, named by its run token and run
 
 <constraints>
 
-- NEVER modify the target or any product file, launch the target, or run an authoring workflow; the only state this audit changes is its payload files in the session scratch directory and the SPX verification-run journal its own recording commands write. The file-write tool writes payload files only.
-- NEVER write the run journal or its context anywhere but the locations `spx verification run` resolves. When the native permission policy refuses a run-recording write — a payload file, a run-recording command, or the journal — stop at that write, retry it no more, write to no other location, and return `BLOCKED` with `diagnostic: configuration error` naming the refused path; the host grants the paths, and this skill never widens its own access.
+- NEVER modify the target or any product file, launch the target, or run an authoring workflow; the only state this audit changes is its payload files in the run's payload directory, that directory when the audit creates it, and the SPX verification-run journal its own recording commands write. The file-write tool writes payload files only.
+- NEVER write the run journal or its context anywhere but the locations `spx verification run` resolves. When the native permission policy refuses a run-recording write — the payload directory, a payload file, a run-recording command, or the journal — stop at that write, retry it no more, write to no other location, and return `BLOCKED` with `diagnostic: configuration error` naming the refused path; the host grants the paths, and this skill never widens its own access.
 - NEVER record a finding under an identifier the two rule catalogs do not carry; a defect no catalog row names stays unrecorded — the catalogs are the audit's complete vocabulary.
 - NEVER choose a severity; a finding on touched text carries the severity its catalog row declares, and a finding outside touched text carries `filed`.
 - NEVER reject on text the changeset leaves unchanged and does not invalidate, and NEVER raise a recorded finding's severity or let a `filed` finding reject unless the run names a changed basis. `${SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `filed` form.
@@ -57,7 +57,7 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 
 <execution_sequence>
 
-1. **Start the run.** Render the start input as one JSON object `{"definition":"<definition-file>","base":"<base-oid>","head":"<head-oid>"}` and pass it by path as `<persistence_contract>` states:
+1. **Start the run.** Select the run's payload directory before the first payload: the scratch directory the harness names for the session, `$RUNNER_TEMP` on a hosted runner, or, where the harness names neither, the one directory that a single `mktemp -d` command, run once at this point as its own command, prints. Render the start input as one JSON object `{"definition":"<definition-file>","base":"<base-oid>","head":"<head-oid>"}` and pass it by path as `<persistence_contract>` states:
 
    ```bash
    spx verification run start --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --input '<start-file>'
@@ -162,15 +162,15 @@ spx verification run finding add --verification-type audit --scope-type changese
 
 A finding's idempotency key is `<unit>:<rule-id>`, its unit's `unitId` and the catalog identifier joined by `:`. Every payload-bearing command — `start`, `scope add`, and `finding add` — takes its JSON from a file, never from a heredoc, a pipe, or an inline argument; the dangerous-command guard blocks those forms:
 
-- ALWAYS copy the scratch directory the harness names for the session into each payload path character for character, and write each payload with the file-write tool to its own file there, under a name unique to this run and payload, such as `<run-token>-start.json`, `<run-token>-scope-<n>.json`, and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
-- ALWAYS write only payload files with the file-write tool.
-- ALWAYS stop before the command that reads a payload file when the file-write result reports a path that the scratch directory does not contain by whole path components, naming the reported path.
-- ALWAYS pass `--input` and `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped from memory.
+- ALWAYS copy the run's payload directory into each payload path character for character, and write each payload with the file-write tool to its own file there, under a name unique to this run and payload, such as `<run-token>-start.json`, `<run-token>-scope-<n>.json`, and `<run-token>-finding-<n>.json`. The payload directory is the scratch directory the harness names for the session, or, where the harness names none, `$RUNNER_TEMP` on a hosted runner, or elsewhere the directory the one `mktemp -d` command printed at the start of the run.
+- ALWAYS write only payload files with the file-write tool, and none outside the payload directory.
+- ALWAYS stop before the command that reads a payload file when the file-write result reports a path that the payload directory does not contain by whole path components, naming the reported path.
+- ALWAYS pass `--input` and `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped from memory; when the result reports no path, pass the path exactly as the file-write call gave it.
 - ALWAYS pass the file as the value of `--input` or `--payload`, its path written out literally.
 - ALWAYS add each unit and each finding with its own command and its own payload file, one at a time.
-- NEVER remove a payload file; the harness clears its scratch directory.
+- NEVER remove a payload file or the payload directory; the directory stays in place.
 
-Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, encode a literal apostrophe in an argument as `'"'"'`, and never execute target text as shell syntax. Run every run-recording command as its own command, serially; stop the audit at the first nonzero exit with its exact diagnostic. A permission refusal is no absent payload file and takes no rerun. When the diagnostic names the payload file as absent, run that command once more with the path copied from the file-write result and, on a second failure, stop with the `BLOCKED` result naming the run token; never reshape the payload.
+Idempotency keys are command arguments, never payload fields; quote every path, token, and key as one shell argument, encode a literal apostrophe in an argument as `'"'"'`, and never execute target text as shell syntax. Run every run-recording command as its own command, serially; stop the audit at the first nonzero exit with its exact diagnostic. A permission refusal is no absent payload file and takes no rerun. When the diagnostic names the payload file as absent, run that command once more with the path copied from the file-write result, or from the file-write call when the result reports none, and, on a second failure, stop with the `BLOCKED` result naming the run token; never reshape the payload.
 
 </persistence_contract>
 
