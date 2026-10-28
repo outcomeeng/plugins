@@ -3,7 +3,7 @@
 The lane declaration is `spx/local/merging.md`, section "Deterministic
 verification commands": each bullet whose scope names Markdown declares one
 lane, with the commands it runs. A `just` command expands to the command
-lines of its recipe in the `Justfile`. The harness returns those declared
+lines of its recipe in the `justfile`. The harness returns those declared
 command lines as observations; the linked test decides which selected step a
 declared line runs.
 """
@@ -19,6 +19,7 @@ from typing import Final
 
 from hypothesis import given, seed, settings
 
+from outcomeeng.distribution.instruction_block import JUSTFILE_NAME
 from outcomeeng.validation.infrastructure_index import PRODUCT_TREE_ROOT
 from outcomeeng.validation.selected_gate import (
     RECIPE_MARKDOWN_LANE,
@@ -29,7 +30,7 @@ from outcomeeng_testing.harnesses.property_evidence import run_replayable_proper
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 MERGING_OVERLAY_PATH: Final = REPO_ROOT / "spx" / "local" / "merging.md"
-JUSTFILE_PATH: Final = REPO_ROOT / "Justfile"
+JUSTFILE_PATH: Final = REPO_ROOT / JUSTFILE_NAME
 LANES_SECTION_HEADING: Final = "## Deterministic verification commands"
 SECTION_HEADING_PREFIX: Final = "## "
 BULLET_PREFIX: Final = "- "

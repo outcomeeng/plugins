@@ -122,7 +122,6 @@ FULL_GATE_PATTERNS: Final = (
     PYPROJECT_PATH,
     "uv.lock",
     "justfile",
-    "Justfile",
     "outcomeeng/catalog/**",
     "outcomeeng/distribution/**",
     "outcomeeng/validation/**",
