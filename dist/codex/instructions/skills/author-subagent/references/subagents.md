@@ -49,7 +49,7 @@ model = "gpt-6-astra"
 model_reasoning_effort = "high"
 ```
 
-Executor:
+Applier:
 
 ```toml
 model = "gpt-6.1-sol"
