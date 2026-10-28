@@ -30,6 +30,7 @@ The **prose-coupling** check is the verification-type analog: when a claim's sub
 - Given a spec with specific untagged assertions directly under `## Assertions`, alone or alongside valid routed subsections, when its declaration is audited, then missing draft tags and claim-shape headings cause no finding and all other declaration-quality checks remain applicable.
 - Given an untagged assertion inside a claim-shape subsection whose declared malleability requires a tag, when audited, then the run records an `invalid-tag` finding against that assertion.
 - NEVER: approval of a spec declaration establishes evidence completeness, implementation correctness, or Passing state for an untagged assertion.
+- assertion-slug-form: `/audit-specs` raises a finding on an Assertion that opens with no slug, a slug outside the grammar or repeated in the file, a compliance Assertion that states no ALWAYS or NEVER rule, and an `[audit]` tag that carries a slug or a path.
 
 ### Scenarios
 
