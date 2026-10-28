@@ -5,6 +5,17 @@ resolution logic is owned by the `scope-changeset` provider and reached by the
 installed tree's `__file__`-relative layout; nothing is re-implemented here.
 
 Portability: stdlib only.
+
+Tested with: `HEAD` in a repository with a remote base, which emits `base`,
+`head`, and `changed_paths` and exits 0; a malformed range (`HEAD...`), an
+unresolvable branch name, and a nonexistent `--repo` path, each of which exits
+2 with a one-line `error: test-evidence scope resolution failed` diagnostic and
+no traceback or scope JSON; a copy of this script placed where the sibling
+`scope-changeset` provider is absent, which exits 2 with the unloadable-provider
+diagnostic. The stale-base refusal is the provider's own exit code and
+diagnostic, relayed unchanged and covered by the provider-relay test of the
+changeset-coherence node. The script writes no file and leaves nothing to clean
+up.
 """
 
 from __future__ import annotations

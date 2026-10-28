@@ -30,11 +30,11 @@ A sealed `spx verification run` on one spec node's file, or on a committed chang
 - ALWAYS reject an incomplete evidence-chain inventory before approval — an absent artifact is missing evidence, and inferring its contents would approve tests the audit never read.
 - NEVER substitute a code-quality signal for an evidence judgment — mocking patterns, skip patterns, and type annotations are linting concerns for other tools; identify declarations by reading the test file and judge ownership from the evidence role of each declaration.
 - ALWAYS persist audit state through `spx verification run`, started before any judgment; NEVER use markdown comments, tracked files, or a hand-formatted verdict as audit state.
-- ALWAYS write each payload as one rendered JSON object to its own file and pass the file by path as `<payload_files>` states; NEVER send a payload through a heredoc, a pipe, or an inline argument, build one with an interpreter or `printf` stage, or repair one through command substitution or post-hoc text substitution.
+- ALWAYS write each payload as one rendered JSON object to its own file and pass the file by path as `<payload_files>` of `${SKILL_DIR}/references/run-recording.md` states; NEVER send a payload through a heredoc, a pipe, or an inline argument, build one with an interpreter or `printf` stage, or repair one through command substitution or post-hoc text substitution.
 - ALWAYS issue each `spx verification run` mutation as its own command and wait for its exit before the next one — parallel writes race sequence assignment and corrupt the sealed journal.
 - NEVER delegate the audit to another session, or finish a run whose inspection is incomplete because of elapsed time, context pressure, or unfinished reading; an unavailable required inspection leaves its unit `incomplete` with the cause recorded, never an unevaluated unit.
 - NEVER write the run journal or its context anywhere but the locations `spx verification run` resolves. When the native permission policy refuses a run-recording write — a payload file, a run-recording command, or the journal — stop at that write, retry it no more, write to no other location, and return `BLOCKED` with `diagnostic: configuration error` naming the refused path; the host grants the paths, and this skill never widens its own access.
-- NEVER retry a rejected command with a rewritten payload; the first command that exits nonzero ends the audit with `BLOCKED`, except the one rerun `<payload_files>` allows for a payload file named absent.
+- NEVER retry a rejected command with a rewritten payload; the first command that exits nonzero ends the audit with `BLOCKED`, except the one rerun `<payload_files>` of `${SKILL_DIR}/references/run-recording.md` allows for a payload file named absent.
 
 </constraints>
 
@@ -102,7 +102,7 @@ Start the run before judging anything:
 spx verification run start --verification-type audit --scope-type <scope-type> --scope <scope> --input <input-file>
 ```
 
-A file-scoped run takes the audited path as its `<input-file>`, so the retained input equals the audited file and no start payload is built. A changeset-scoped run takes a start input file written per `<payload_files>` as one JSON object carrying the selector as `selector` and `base`, `head`, and `changed_paths` copied verbatim from the resolved scope. The command prints a JSON locator; take its `runToken` exactly and use it for every later command. Retain the run target the locator reports as the run file; only the start report names it. Never pass the whole locator as `--run`.
+A file-scoped run takes the audited path as its `<input-file>`, so the retained input equals the audited file and no start payload is built. A changeset-scoped run takes a start input file written per `<payload_files>` of `${SKILL_DIR}/references/run-recording.md` as one JSON object carrying the selector as `selector` and `base`, `head`, and `changed_paths` copied verbatim from the resolved scope. The command prints a JSON locator; take its `runToken` exactly and use it for every later command. Retain the run target the locator reports as the run file; only the start report names it. Never pass the whole locator as `--run`.
 
 </step>
 
@@ -200,23 +200,7 @@ Read the test file's import statements. Classify each import:
 
 **Zero codebase imports → `no-coupling` (tautology).**
 
-If codebase imports exist, classify using this coupling taxonomy:
-
-| Category           | Definition                                                                                        | Verdict                                    |
-| ------------------ | ------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| Direct             | Test imports the module under test                                                                | Proceed                                    |
-| Indirect           | Test imports a harness wrapping the module                                                        | Proceed — verify harness has real coupling |
-| Transitive         | Test imports a consumer of the module                                                             | Proceed — verify test level matches        |
-| Laundered indirect | Imports a test-infrastructure module that exists only to expose hardcoded values back to the test | Rule `laundered-coupling`                  |
-| False              | Imports module but never calls assertion-relevant functions                                       | Rule `false-coupling`                      |
-| Partial            | Calls functions but on wrong inputs or wrong code paths                                           | Rule `partial-coupling`                    |
-| None               | Test imports only its test framework                                                              | Rule `no-coupling` (tautology)             |
-| Severed            | Imports the module under test and replaces its behavior with a mock, fake, stub, or monkeypatch   | Rule `severed-coupling`                    |
-| Prose-coupling     | Reads an authored prose/doc body and asserts its content                                          | Rule `prose-coupling`                      |
-
-Coupling means exercising executable **behavior**, never reading a document's content. A test whose "subject" is an authored prose or documentation artifact — a skill body, a spec body, a prompt, any text the product authors and maintains — that the test reads and asserts substrings of is NOT behavioral coupling, even when that artifact is the thing the assertion names. The text passes whatever it literally contains; no code runs. This holds full-chain: a harness that exposes the authored path as a constant, or a reader function that performs the read inside test infrastructure, does not convert a prose assertion into behavioral coupling — follow the read to its source and classify by what is ultimately exercised.
-
-**A test whose evidence is reading an authored prose or documentation body and asserting on its content is a `prose-coupling` finding.** The claim verifies that prose was authored, not that code behaves; its verification type belongs in `[eval]` (a graded judgment over a producer's structured verdict) or `[audit]` (a semantic constraint), and the spec assertion is retagged accordingly. Reading an authored *source-code* file for a structural lint that exercises a rule is not prose-coupling; the discriminator is whether the subject is authored prose/documentation or executable behavior.
+When codebase imports exist, classify each by the coupling taxonomy in `${SKILL_DIR}/references/coupling-taxonomy.md`, which assigns the rule `laundered-coupling`, `false-coupling`, `partial-coupling`, `severed-coupling`, or `prose-coupling` to each category. Coupling means exercising executable **behavior**: a test that reads an authored prose or documentation body and asserts on its content is a `prose-coupling` finding, however a harness mediates the read.
 
 </step>
 
@@ -300,38 +284,23 @@ The judgment is traced from the code and named in the finding — never a measur
 
 **Step 12: Compose language-specific test-evidence concerns**
 
-The four evidence properties above are language-neutral. Language-specific test-evidence concerns are owned by the language test audit skill, not by this one.
+The four evidence properties above are language-neutral. Language-specific test-evidence concerns are owned by the language test audit skill, not by this one. `${SKILL_DIR}/references/language-composition.md` states the language skills the composition reaches, how linked-test filenames map to partitions, and how each language result is validated and merged.
 
-Derive language partitions from the linked-test filenames and the installed language plugins. Take the installed language skills from the skill listing already in context; no directory scan is needed. The language skills the composition reaches are:
-
-| Language   | Standards skill                        | Audit skill                        |
-| ---------- | -------------------------------------- | ---------------------------------- |
-| Python     | `python:python-test-standards`         | `python:audit-python-test`         |
-| TypeScript | `typescript:typescript-test-standards` | `typescript:audit-typescript-test` |
-| Go         | `go:go-test-standards`                 | `go:audit-go-test`                 |
-| Rust       | `rust:rust-test-standards`             | `rust:audit-rust-test`             |
-
-For each language whose audit skill appears in the listing, load only that language's standards skill:
+For each language whose audit skill appears in the skill listing, load only that language's standards skill:
 
 - Python: Use skill `python:python-test-standards`.
 - TypeScript: Use skill `typescript:typescript-test-standards`.
 - Go: Use skill `go:go-test-standards`.
 - Rust: Use skill `rust:rust-test-standards`.
 
-Read the loaded skill's filename instantiation of `<subject>.<evidence>.<level>[.<runner>]` — the concrete pattern the standard states, such as `test_<subject>.<evidence>.<level>[.<runner>].py`. The text after the last closing bracket is the declared suffix: a compound suffix such as `.test.ts` as readily as a bare `.py` or `_test.go`. Map every linked test whose filename ends in an installed plugin's declared suffix to that language. A suffix no installed plugin declares, or an ambiguous partition, is an `unsupported-language` finding with remediation target `language-partition` instead of a guess; never map an extension from a list this skill carries.
-
-For each language partition, invoke only that language's audit skill:
+Map the linked tests to language partitions as that reference states, then, for each language partition, invoke only that language's audit skill:
 
 - Python: Use skill `python:audit-python-test`.
 - TypeScript: Use skill `typescript:audit-typescript-test`.
 - Go: Use skill `go:audit-go-test`.
 - Rust: Use skill `rust:audit-rust-test`.
 
-Validate its output against that skill's declared verdict contract: output shape, required fields, applicable rows, and agreement between findings, row statuses, and overall status. Malformed or incomplete output is a `language-composition` finding on the language unit of that partition, which stays `incomplete`; continue the remaining languages.
-
-Take each valid result's findings into this run: a composed finding keeps the rule identifier from the rule catalog of the invoked `audit-<lang>-test` skill and is keyed `<unitId>:<that identifier>` on the language unit of the linked test file it concerns. Composed findings sharing a key join into one finding whose `location` lists each of their locations. A composed rejection remains a rejection in the run. When a required `audit-<lang>-test` skill is absent or unavailable, record a `language-composition` finding naming the missing skill, remediation target `skill-installation`, on the language unit of each affected test file, which stays `incomplete`; never approve incomplete coverage.
-
-A language audit returns a third shape when its own scope step finds that every subject it was given is a retired path with no current `[test]` assertion and no current evidence-chain owner: `{"status": "NOT_APPLICABLE", "subjects": [...], "explanation": "..."}`, carrying no rows and no findings. Treat it as neither a pass nor a failure of that language's concerns. Record each reported subject as one `not-applicable` child per `<persistence_contract>`, compose the remaining languages normally, and decide the terminal status from the units that do exist. When every language in scope returns `NOT_APPLICABLE` and no language-neutral finding was raised, record only the `not-applicable` children, because no evidence was judged.
+Validate and merge each result as that reference states, including the `NOT_APPLICABLE` shape.
 
 </step>
 
@@ -339,10 +308,7 @@ A language audit returns a third shape when its own scope step finds that every 
 
 **Step 13: Roll up composed architectural duplication**
 
-Architectural duplication is a composed-language concern. It applies when at least one language-specific verdict returns a `gate-2-architectural` row. Record each of its findings on the language unit of the test file it names, preserving each finding's language-specific rule and extraction target in its message, and joining findings that share a key.
-
-- Treat a malformed or unevaluated applicable architectural row as `language-composition` evidence on that language unit; never infer architectural approval.
-- Record nothing for a language whose verdict omits the row, as non-applicable or because that language's Gate 1 rejected the evidence, so its Gate 2 never ran.
+Roll up the `gate-2-architectural` findings of the language verdicts as `${SKILL_DIR}/references/language-composition.md` states.
 
 </step>
 
@@ -381,116 +347,9 @@ spx verification run render --verification-type audit --scope-type <scope-type> 
 
 <persistence_contract>
 
-Add a scope unit with `spx verification run scope add --verification-type audit --scope-type <scope-type> --scope <scope> --run <token> --payload <payload-file> --idempotency-key '<unitId>'`, the payload file written per `<payload_files>`. The class `spec` and kind `tests` are the pair `spx` accepts for this audit. The units form three levels for a `path` target. A `changeset` target adds one node level: its root unit is `<base>..<head>`, and each audited spec has a node child below it whose assertion children and `not-applicable` child hang from it.
-
-| Level      | `unitId`                                    | `parentUnitId`        | Created for                                                                                                                                                                                                          |
-| ---------- | ------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Root       | `<path>` or `<base>..<head>`                | omitted               | The audited spec file, or the committed changeset; the run admits one root                                                                                                                                           |
-| Node       | `tests:node:<spec>`                         | the root's `unitId`   | Each audited spec of a `changeset` target; a `path` target has none                                                                                                                                                  |
-| Child      | `tests:assertion-<n>:<spec>`                | the root, or the node | Each `[test]` assertion of `<spec>`, `<n>` its ordinal from Step 4; the parent is the node child for a `changeset` target                                                                                            |
-| Grandchild | `tests:assertion-<n>:<concern>:<test-path>` | the assertion's child | Each linked test file, once with `<concern>` `evidence` for the language-neutral concerns, and once per language partition of that file with `<concern>` the language name (`python`, `typescript`, `go`, or `rust`) |
-| Child      | `tests:not-applicable:<subject>`            | the root, or the node | Each retired path a language audit reports `NOT_APPLICABLE`, and the spec with no `[test]` assertion, whose `<subject>` is `<spec>`; the parent is the node child for a `changeset` target                           |
-
-An evidence-chain artifact that several assertions reach is recorded once, on the unit of the first assertion whose linked test reaches it, with the artifact in the finding's `location`. The language-neutral findings sit on the `evidence` grandchild, and composed language findings sit on the language grandchild.
-
-The root unit:
-
-```json
-{
-  "unitId": "<path-or-base..head>",
-  "auditClass": "spec",
-  "auditKind": "tests",
-  "subject": "<path-or-base..head>",
-  "coverageRequirement": "required",
-  "coverageStatus": "audited",
-  "priorContext": {
-    "changedFilePartition": "<path-or-base..head>",
-    "concernPartition": "tests"
-  },
-  "expectedProducer": {
-    "producerKind": "skill",
-    "agentName": "<runDriver.agentName>",
-    "agentOwningPluginName": "<runDriver.agentOwningPluginName>",
-    "skillName": "audit-tests",
-    "skillOwningPluginName": "product-tree",
-    "invocationRole": "leaf-skill"
-  },
-  "recordedByRunDriver": {
-    "producerKind": "<runDriver.producerKind>",
-    "agentName": "<runDriver.agentName>",
-    "agentOwningPluginName": "<runDriver.agentOwningPluginName>",
-    "skillName": "<runDriver.skillName>",
-    "skillOwningPluginName": "<runDriver.skillOwningPluginName>",
-    "invocationRole": "<runDriver.invocationRole>"
-  }
-}
-```
-
-A child or grandchild unit carries the same fields with its `unitId`, its `parentUnitId`, `coverageStatus` `audited`, `incomplete`, or, for a `not-applicable` child, `not-applicable`, and `priorContext.concernPartition` the part of its `unitId` after `tests:` and before the final `:<spec>` (`assertion-<n>`, `assertion-<n>:<concern>`, or `not-applicable`); a node child's `concernPartition` is `node`. A child's or grandchild's `subject` is `<spec>`. A grandchild's `changedFilePartition` is its `<test-path>`, and every other unit's is `<spec>`:
-
-```json
-{
-  "unitId": "<unit-key>",
-  "parentUnitId": "<parent-unit-key>",
-  "auditClass": "spec",
-  "auditKind": "tests",
-  "subject": "<spec>",
-  "coverageRequirement": "required",
-  "coverageStatus": "audited | incomplete | not-applicable",
-  "priorContext": {
-    "changedFilePartition": "<spec-or-test-path>",
-    "concernPartition": "<concern-partition>"
-  },
-  "expectedProducer": "<the root unit's expectedProducer object, repeated exactly>",
-  "recordedByRunDriver": "<the root unit's recordedByRunDriver object, repeated exactly>"
-}
-```
-
-Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>` per `<payload_files>`, and `--idempotency-key '<unitId>:<rule>'`, the finding key `${SKILL_DIR}/references/touched-text.md` defines. Its payload names an accepted grandchild unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is an identifier from `${SKILL_DIR}/references/rule-catalog.md` or the catalog of the composed language skill; `location` lists every assertion, declaration, call, or artifact where that rule is violated, named by its text and never by a line number, separated by `;`. The message names the failed property, the evidentiary gap, and the remediation target, one of `source-contract`, `harness`, `generator`, `fixture`, `eval-case`, `test-file`, `source-file`, `test-infrastructure`, `independent-oracle`, `skill-installation`, or `language-partition`. A finding that records the cause of an `incomplete` unit names the unavailable inspection in `observed`.
-
-```json
-{
-  "unitId": "<accepted-unit-key>",
-  "producerIdentity": "<the unit's expectedProducer object, repeated exactly>",
-  "producerProvenance": {
-    "agentOwningPluginVersion": "<product-tree-plugin-version>",
-    "skillOwningPluginVersion": "<product-tree-plugin-version>"
-  },
-  "rule": "<catalog-rule-id>",
-  "severity": "<blocking-or-debt>",
-  "location": "<assertion-text>: <declaration-call-or-artifact>[; <further-location>...]",
-  "message": "<property>: <evidentiary-gap>; remediation target: <target>",
-  "evidence": {
-    "observed": "<observed-state>",
-    "expected": "<state the rule requires>"
-  }
-}
-```
-
-These objects are the sanctioned payload schema for this audit; never derive a replacement from command help or CLI source.
+`${SKILL_DIR}/references/run-recording.md` states the units and payload objects that `spx verification run scope add` and `finding add` accept, in its `<persistence_contract>`, and the payload-file procedure for every recording command, in its `<payload_files>`. Read it before Step 3; the recorded run accepts no other payload shape.
 
 </persistence_contract>
-
-<payload_files>
-
-Quote every idempotency key as one single-quoted argument; encode a literal apostrophe with the splice `'"'"'`.
-
-- ALWAYS copy the scratch directory the harness names for the session into each payload path character for character, and write the changeset start input, each scope payload, and each finding payload with the file-write tool to its own file there, under a name unique to this run and payload, such as `<selector-slug>-start.json` for the start input, which exists before a run token does, and `<run-token>-scope-<n>.json` and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
-- ALWAYS write only payload files with the file-write tool.
-- ALWAYS stop before the command that reads a payload file when the file-write result reports a path that the scratch directory does not contain by whole path components, returning the `<verdict_format>` diagnostic naming the reported path.
-- ALWAYS pass `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped from memory.
-- ALWAYS pass the file as the value of `--payload`, its path written out literally:
-
-  ```bash
-  spx verification run scope add --verification-type audit --scope-type <scope-type> --scope <scope> --run <token> --payload <scope-file> --idempotency-key '<unitId>'
-  ```
-
-- ALWAYS add each scope unit and each finding with its own literal command and its own payload file, one at a time, and stop the audit at the first command that exits nonzero, other than the one rerun on an absent-payload diagnostic that the next bullet allows, returning the `<verdict_format>` diagnostic.
-- A permission refusal is no absent payload file and takes no rerun.
-- ALWAYS, when a command exits nonzero with a diagnostic that names its payload file as absent, run that command once more with the path copied from the file-write result; on a second failure, stop with the `<verdict_format>` diagnostic naming the run token.
-- NEVER remove a payload file; the harness clears its scratch directory.
-
-</payload_files>
 
 </audit_workflow>
 
@@ -523,19 +382,19 @@ How to avoid: Step 8 checks imports before the other evidence properties. Zero c
 
 **Failure 2: Accepted mocking as legitimate coupling**
 
-Claude saw `import { database } from "../src/database"` and classified it as direct coupling. The next line was `vi.mock("../src/database")`. The real module never ran.
+Claude saw `import { database } from "../src/database"` and classified it as direct coupling. The next line was `vi.mock("../src/database")`. Claude judged the import line alone and never read how the test used the module, so it missed that the real module never ran.
 
 How to avoid: Step 9 checks for mocking after confirming coupling. Import + mock = coupling severed.
 
 **Failure 3: Re-ran the project's coverage command inside the audit**
 
-Claude ran the project's coverage command three times (baseline, with-test, isolated) to measure a delta. Those runs added no audit evidence and repeated work excluded by `<constraints>`.
+Claude ran the project's coverage command three times (baseline, with-test, isolated) to measure a delta. Claude took a measured number for evidence, though the audit judges by reading whether execution reaches the assertion-relevant path; the runs added no audit evidence and repeated work excluded by `<constraints>`.
 
 How to avoid: Step 11 traces coverage by reading whether the test drives execution into the assertion-relevant path. Name the path from the code; never run the coverage or test command, and never substitute an unbacked "probably covers" for the trace.
 
 **Failure 4: Distracted by code quality signals**
 
-Claude spent the entire audit checking for `as any`, verifying return types, and searching for skip patterns. The test had perfect TypeScript quality and zero evidentiary value. Quality signals are linting concerns, not audit concerns.
+Claude spent the entire audit checking for `as any`, verifying return types, and searching for skip patterns. The test had perfect TypeScript quality and zero evidentiary value. Claude mistook visible quality signals for evidence quality; they are linting concerns, not audit concerns.
 
 How to avoid: Follow the complete ordered audit sequence: inventory the evidence chain, check source testability, screen test-owned declarations, then judge coupling, falsifiability, alignment, and coverage.
 
@@ -547,7 +406,7 @@ How to avoid: Step 8 — after identifying what a test reads, classify by whethe
 
 **Failure 6: Accepted renamed test-local configuration**
 
-Claude saw a validation warning for a SCREAMING_CASE test constant used as a property-test run count, renamed it to camelCase, and approved the audit because the validator stopped flagging it. The value was still runner configuration in the executed test file. The rename only evaded a heuristic.
+Claude saw a validation warning for a SCREAMING_CASE test constant used as a property-test run count, renamed it to camelCase, and approved the audit because the validator stopped flagging it. The value was still runner configuration in the executed test file. Claude took the validator's silence for the verdict instead of reading what the value chooses, and the rename only evaded a heuristic.
 
 How to avoid: Step 7 reads declarations before coupling and classifies ownership. Runner counts, seeds, replay policy, setup choices, boundary bags, expected outputs, fixture paths, and generated domains belong in harnesses, generators, source contracts, inert fixtures, or eval cases — never in the test file under a different name.
 
@@ -559,13 +418,13 @@ How to avoid: Step 5 inventories and reads the complete evidence chain before ju
 
 **Failure 8: Rejected observation and resource bindings by syntax**
 
-Claude rejected a temporary-directory fixture parameter and a local `observations` binding even though both only received values selected by their owning infrastructure. The proposed remediation moved those handles into the harness, obscuring assertion flow without changing any semantic owner.
+Claude rejected a temporary-directory fixture parameter and a local `observations` binding even though both only received values selected by their owning infrastructure. The proposed remediation moved those handles into the harness, obscuring assertion flow without changing any semantic owner. Claude judged each binding by its syntactic shape rather than by who selects its value.
 
 How to avoid: Step 7 classifies each binding by the semantic-binding rule of `/test-evidence-standards`, never by its syntax.
 
 **Failure 9: Used the defect location as the remediation owner**
 
-Claude correctly found copied protocol fields in a harness and emitted `source-ownership`, then set the remediation target to `harness` because that file contained the defect. Copied domain truth belongs to a source contract regardless of where the copy appears.
+Claude correctly found copied protocol fields in a harness and emitted `source-ownership`, then set the remediation target to `harness` because that file contained the defect. Claude conflated where the defect sits with who owns the value. Copied domain truth belongs to a source contract regardless of where the copy appears.
 
 How to avoid: Keep location and ownership separate. Name the artifact containing the copy in `location` and set every `source-ownership` finding's remediation target to `source-contract`.
 
@@ -577,7 +436,7 @@ How to avoid: Inventory applicable discovery and module-resolution artifacts eve
 
 **Failure 11: Recorded a semantically correct but structurally incomplete finding**
 
-Claude rejected a production-derived oracle with the correct assertion, property, rule, artifact, and evidence chain, then omitted the remediation target from the finding. The prose diagnosis named the need for an independent oracle, but the author repairs from the finding alone and the owner who must change was not stated.
+Claude rejected a production-derived oracle with the correct assertion, property, rule, artifact, and evidence chain, then omitted the remediation target from the finding. The prose diagnosis named the need for an independent oracle, but the author repairs from the finding alone and the owner who must change was not stated. Claude treated the prose diagnosis as a complete finding.
 
 How to avoid: Complete each finding in Step 14 before recording it, and derive the remediation target from the evidence model.
 
@@ -589,13 +448,13 @@ How to avoid: Judge ownership by the contract outside the test tree, and read th
 
 **Failure 13: Moved the checkout while loading context**
 
-Claude ran the context loader that rebases the audited branch, so the head under audit was replaced by another commit.
+Claude ran the context loader that rebases the audited branch, so the head under audit was replaced by another commit. Claude invoked the loader because the router requires contextualization before node work, and never checked that the loader moves the checkout.
 
 How to avoid: Load the context by reading files at the head as it stands.
 
 **Failure 14: Rejected the run on a defect in text the changeset left alone**
 
-Claude found a real violation in an unchanged test or harness and recorded it on the unit, so the run rejected a changeset that did not cause the defect.
+Claude found a real violation in an unchanged test or harness and recorded it on the unit, so the run rejected a changeset that did not cause the defect. Claude treated every real defect it found as grounds for rejection and never sorted findings by whether the diff touched them.
 
 How to avoid: Classify each finding by its location, record only findings on touched text, and return every other finding as `filed`.
 
