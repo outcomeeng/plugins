@@ -8,7 +8,9 @@ a path, a ``runToken``, and a payload ``unitId`` carry no NUL character and no
 text without a UTF-8 encoding; every operation except ``resolve-reference``
 names a normalized repository-relative candidate path; a payload is an object
 with a non-empty ``unitId``; a finding ``rule`` is a lowercase hyphenated ID;
-``terminalStatus`` is a listed terminal status.
+``terminalStatus`` is a listed terminal status; the optional ``offset`` of
+``read-candidate`` is a non-negative integer. The values outside that form come
+from ``invalid_offsets`` in the candidate-text generators.
 
 A request text is also outside the contract when the runner cannot parse it
 as one JSON object: a truncated object, a JSON value of another type, or an

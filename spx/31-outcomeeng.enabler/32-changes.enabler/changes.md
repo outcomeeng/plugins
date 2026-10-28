@@ -30,6 +30,7 @@ CAN move a prioritized Output from proposal to executable work without placing m
 - `audit-change` reads the complete record front matter first, judges one record against the Definition of Ready for its declared Maturity, and emits a structured Agentic verdict under [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md), whose result carries the run token, the rendered projection's run-level fields, every finding payload verbatim, and the one command that reproduces the complete rendered projection from the sealed run ([audit:audit-verdict-contract]).
 - ALWAYS: `audit-change` treats a new record as touched text in full, and a revision as touched text in each revised section and each section the revision invalidates ([audit])
 - ALWAYS: `audit-change` reaches the candidate, every repository path, and the SPX store only through its bundled Python runner, and never invokes `rm`, `mktemp`, a shell redirect to a file, or one of its scripts other than as the runner invocation the skill prescribes ([audit:runner-only-access]).
+- ALWAYS: `audit-change` requests `read-candidate` pieces from offset 0 until `next` is `null`, judges the candidate from the concatenation of the pieces, and returns `BLOCKED` when a piece reports another `sha256` or the pieces do not total `length` characters, so a candidate of any size is judged whole ([audit:read-candidate-whole-judgment])
 - ALWAYS: `audit-change` issues each runner invocation as its own command, never chained with `&&` or `;` and never piped into another command, and a nonzero runner exit stops the audit with a blocked result naming the request and the exit status ([audit:one-command-per-invocation]).
 - ALWAYS: the `change-auditor` wrapper loads `audit-change` and `product-tree-plugin` through the `Use skill` instruction on every agent, `audit-change` owns the load of `change-standards` with the selection value it judges, and the wrapper's instructions name no skill tool as an available capability, so a native dispatch returns the `finish` result with `run.sealed` true and never the pre-run `BLOCKED` diagnostic for a missing skill tool ([audit:change-auditor-skill-loading]).
 - NEVER: `audit-change` or its `change-auditor` wrapper writes a file; every payload passes over stdin and stdout, and the SPX run journal holds the run ([audit:auditor-writes-no-file]).
@@ -55,9 +56,18 @@ CAN move a prioritized Output from proposal to executable work without placing m
 - NEVER: `report-changes` writes; it runs reading `gh` commands only, posts no comment, writes no field, assignee, or blocker, and its script writes no file ([test](tests/test_report_changes.compliance.l1.py))
 - ALWAYS: `report-changes` reads the Change store and the Priority order from `spx/local/coordination.md` and passes them to its bundled script as request values, and the script reads no overlay and no repository content ([audit:report-request-values])
 
-### Mapping
+### Scenarios
+
+- A client reading a candidate that needs more than one piece through the request boundary of a Git repository receives each piece as one sorted JSON line of at most 16,000 UTF-8 bytes, follows `next` to `null`, concatenates the pieces to the candidate file, and is refused with `invalid-request` at and past the `length` ([test](tests/test_audit_change_read_candidate.scenario.l1.py))
+- A client reading an empty candidate through the request boundary of a Git repository receives one empty piece whose `next` is `null` at offset 0 and is refused with `invalid-request` at offset 1 ([test](tests/test_audit_change_read_candidate.scenario.l1.py))
+
+### Mappings
 
 - ALWAYS: `read-relations` maps a `Parent` number field value, integer or float, to the issue number it names and an absent value to `null` ([test](tests/test_audit_change_relations_parent.mapping.l1.py))
+
+### Properties
+
+- ALWAYS: the `read-candidate` operation of the `audit-change` runner returns the candidate in pieces, each the longest run of the remaining characters, at most 16,000, whose complete serialized response, metadata and escaping included, takes at most 16,000 bytes of UTF-8, so a piece of multi-byte or escaped content shrinks and every piece of a non-empty candidate carries at least one character, while an empty candidate returns one empty piece whose `next` is `null`; each piece carries the candidate's `sha256` and `length`, its `offset`, and the `next` offset, `null` after the last piece, both offsets counting characters of the candidate; a request without `offset` starts at 0, `offset` 0 is accepted for every candidate, and a positive `offset` at or past the `length`, an empty candidate included, is blocked as `invalid-request` ([test](tests/test_audit_change_read_candidate.property.l1.py))
 
 ### Compliance
 
