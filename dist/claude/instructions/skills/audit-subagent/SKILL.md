@@ -6,7 +6,7 @@ description: >-
   and agent-prompt-standards rule catalogs, and records the judgment through an SPX
   changeset-scoped verification run.
 argument-hint: "<JSON object with path, runDriver, and optional base>"
-allowed-tools: Read, Grep, Glob, Skill, Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(git -C * rev-parse:*), Bash(git -C * diff:*), Bash(git -C * status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
+allowed-tools: Read, Grep, Glob, Skill, Bash(git -C * rev-parse:*), Bash(git -C * diff:*), Bash(git -C * status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
 ---
 
 Use skill `instructions:agent-prompt-standards`.

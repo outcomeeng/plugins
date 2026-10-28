@@ -13,7 +13,7 @@ The classification that sorts each subagent-audit finding into a finding on touc
 
 <touched_text>
 
-Touched text, inside the changed definition, is each line that `git diff --unified=0 '<base-oid>...<head-oid>' -- '<definition-file>'` adds or changes, extended to its enclosing unit, plus the text the change invalidates. The enclosing unit is:
+Touched text, inside the changed definition, is each line that `git -C '<root>' diff --unified=0 '<base-oid>...<head-oid>' -- '<definition-file>'` adds or changes, extended to its enclosing unit, plus the text the change invalidates. The enclosing unit is:
 
 | Content                                      | Unit                                                                           |
 | -------------------------------------------- | ------------------------------------------------------------------------------ |
