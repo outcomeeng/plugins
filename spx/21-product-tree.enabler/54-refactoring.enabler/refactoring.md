@@ -11,6 +11,8 @@ CAN reorganize the Product Tree without losing context, breaking references, or 
 
 ## Assertions
 
+- refactor-keeps-slug: `/refactor` keeps each Assertion's slug across a move, an extraction, and a consolidation, resolves a repeated slug in the destination file, and rewrites every `carries` reference whose target path or slug it changes.
+
 ### Compliance
 
 - ALWAYS: update all cross-references when moving a node — stale paths break deterministic context loading ([audit])
