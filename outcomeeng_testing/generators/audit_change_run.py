@@ -131,6 +131,13 @@ def _unfit_candidate_paths() -> st.SearchStrategy[str]:
     return st.one_of(with_unfit_segment(), rooted)
 
 
+def _relative_paths() -> st.SearchStrategy[str]:
+    """Normalized paths that are not absolute, which no checkout root can be."""
+    return st.lists(
+        st.text(alphabet=_SEGMENT_ALPHABET, min_size=1), min_size=1, max_size=4
+    ).map(_PATH_SEPARATOR.join)
+
+
 def _non_rule_ids(runner: ModuleType) -> st.SearchStrategy[object]:
     """Values that are not a lowercase hyphenated ID in the runner's alphabet."""
     alphabet = runner.RULE_ID_ALPHABET
@@ -198,6 +205,12 @@ def _malformed_values(
         return paths
     if field == fields.RUN_TOKEN:
         return st.one_of(_not_non_empty_strings(), _text_without_system_form(runner))
+    if field == fields.ROOT:
+        return st.one_of(
+            _not_non_empty_strings(),
+            _text_without_system_form(runner),
+            _relative_paths(),
+        )
     if field == fields.CANDIDATE_SHA256:
         return _not_non_empty_strings()
     if field == fields.TERMINAL_STATUS:

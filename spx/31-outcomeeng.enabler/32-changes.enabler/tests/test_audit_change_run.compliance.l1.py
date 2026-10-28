@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from pathlib import Path
 
 import pytest
 
@@ -59,7 +60,11 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
     opened = workspace.start_run(relative)
     run_token = opened.run_token
     resolved = workspace.invoke(
-        {Field.OPERATION: Operation.RESOLVE_REFERENCE, Field.PATH: relative}
+        {
+            Field.OPERATION: Operation.RESOLVE_REFERENCE,
+            Field.PATH: relative,
+            Field.ROOT: str(workspace.root),
+        }
     )
     versioned = workspace.invoke({Field.OPERATION: Operation.TOOL_VERSION})
     calls = [opened.read, opened.started, resolved, versioned]
@@ -340,6 +345,85 @@ def test_a_request_that_is_not_utf8_text_blocks_on_stdout_without_a_file() -> No
 
         assert len(blocked.stdout_lines) == 1
         assert blocked.result[Result.STATUS] == Status.BLOCKED
+        assert blocked.runner_writes == ()
+        assert _started_executables([blocked]) <= PERMITTED_EXECUTABLES
+        assert changes.in_repository_outside_store == ()
+        assert changes.in_runner_temporary_directory == ()
+        assert changes.in_runner_home_directory == ()
+
+
+def test_a_reference_resolution_naming_no_root_blocks_naming_the_root_without_a_file() -> (
+    None
+):
+    with audit_workspace() as workspace:
+        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        before = workspace.snapshot()
+
+        blocked = workspace.invoke(
+            {Field.OPERATION: Operation.RESOLVE_REFERENCE, Field.PATH: relative}
+        )
+        changes = workspace.changes_since(before)
+
+        assert blocked.exit_code == ExitCode.INVALID_REQUEST
+        assert blocked.result[Result.STATUS] == Status.BLOCKED
+        assert blocked.result[Result.REASON] == Reason.INVALID_REQUEST
+        assert Field.ROOT.value in str(blocked.result[Result.DETAIL])
+        assert blocked.runner_writes == ()
+        assert _started_executables([blocked]) <= PERMITTED_EXECUTABLES
+        assert changes.in_repository_outside_store == ()
+        assert changes.in_runner_temporary_directory == ()
+        assert changes.in_runner_home_directory == ()
+
+
+def test_a_reference_resolution_whose_root_is_inside_a_checkout_blocks_naming_the_root() -> (
+    None
+):
+    with audit_workspace() as workspace:
+        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        inside = workspace.root / Path(relative).parent
+        before = workspace.snapshot()
+
+        blocked = workspace.invoke(
+            {
+                Field.OPERATION: Operation.RESOLVE_REFERENCE,
+                Field.PATH: relative,
+                Field.ROOT: str(inside),
+            }
+        )
+        changes = workspace.changes_since(before)
+
+        assert blocked.exit_code == ExitCode.BLOCKED
+        assert blocked.result[Result.STATUS] == Status.BLOCKED
+        assert blocked.result[Result.REASON] == Reason.PATH_REJECTED
+        assert str(inside) in str(blocked.result[Result.DETAIL])
+        assert blocked.runner_writes == ()
+        assert _started_executables([blocked]) <= PERMITTED_EXECUTABLES
+        assert changes.in_repository_outside_store == ()
+        assert changes.in_runner_temporary_directory == ()
+        assert changes.in_runner_home_directory == ()
+
+
+def test_a_reference_resolution_whose_root_is_no_repository_blocks_naming_the_root() -> (
+    None
+):
+    with audit_workspace() as workspace:
+        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        outside = workspace.outside_directory
+        before = workspace.snapshot()
+
+        blocked = workspace.invoke(
+            {
+                Field.OPERATION: Operation.RESOLVE_REFERENCE,
+                Field.PATH: relative,
+                Field.ROOT: str(outside),
+            }
+        )
+        changes = workspace.changes_since(before)
+
+        assert blocked.exit_code == ExitCode.BLOCKED
+        assert blocked.result[Result.STATUS] == Status.BLOCKED
+        assert blocked.result[Result.REASON] == Reason.PATH_REJECTED
+        assert str(outside) in str(blocked.result[Result.DETAIL])
         assert blocked.runner_writes == ()
         assert _started_executables([blocked]) <= PERMITTED_EXECUTABLES
         assert changes.in_repository_outside_store == ()
