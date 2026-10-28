@@ -5,7 +5,7 @@ name: implementation-auditor
 description: >-
   Verifier running `/audit-implementation`: a calling skill launches it by exact name with one
   changeset scope selector when its gate requires an independent audit of that changeset's implementation.
-tools: Read, Glob, Grep, Write, Skill, Bash(python3 "*/skills/audit-implementation/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(git -C * rev-parse:*), Bash(git -C * status:*), Bash(git -C * show:*), Bash(spx -C * verification run:*)
+tools: Read, Glob, Grep, Write, Skill, Bash(python3 "*/skills/audit-implementation/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git -C * rev-parse:*), Bash(git -C * status:*), Bash(git -C * show:*), Bash(spx -C * verification run:*)
 skills:
   - product-tree:audit-implementation
 ---

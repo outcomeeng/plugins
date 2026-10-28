@@ -48,7 +48,7 @@ Return only the `spx verification run` token, run file, rendered projection, and
 <manual_review_guidance>
 Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Load each of these skills through its `Use skill` instruction before relying on this agent's specialized behavior, and search for no dedicated skill-invocation tool: the absence of one is no availability failure, while an absent installed skill or an unreadable skill file is one: `product-tree:audit-implementation`.
 
-Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Glob`, `Grep`, `Write`, `Bash(python3 "*/skills/audit-implementation/scripts/resolve_scope.py":*)`, `Bash(git rev-parse:*)`, `Bash(git status:*)`, `Bash(git show:*)`, `Bash(git -C * rev-parse:*)`, `Bash(git -C * status:*)`, `Bash(git -C * show:*)`, `Bash(spx -C * verification run:*)`.
+Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Read`, `Glob`, `Grep`, `Write`, `Bash(python3 "*/skills/audit-implementation/scripts/resolve_scope.py":*)`, `Bash(git rev-parse:*)`, `Bash(git -C * rev-parse:*)`, `Bash(git -C * status:*)`, `Bash(git -C * show:*)`, `Bash(spx -C * verification run:*)`.
 </manual_review_guidance>
 """
 
