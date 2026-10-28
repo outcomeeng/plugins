@@ -14,7 +14,7 @@ owned_paths = [
 smoke_cases = [
   "coherent-generated-fanout-approved",
   "independent-clusters-rejected-in-order",
-  "missing-rollback-evidence-unknown",
+  "missing-rollback-evidence-incomplete",
 ]
 threshold = 0.85
 trials = 1

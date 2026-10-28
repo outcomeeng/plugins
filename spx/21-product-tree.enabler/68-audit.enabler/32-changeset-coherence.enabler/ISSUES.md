@@ -65,12 +65,6 @@ result.
 head `843ddd709b058970d414ec755cc10121ff6bb5ff`. The same audit approved the
 corrected least-privilege tool and profile configuration.
 
-## The coherence eval suite still scores the structured JSON verdict
-
-The assertions state the sealed-run verdict model: the audit run's terminal status is `approved` or `rejected`, an undecidable unit is `incomplete`, and the wrapper relays the run token, the run file and the rendered projection. The shipped `audit-changeset-coherence` skill and the `changeset-coherence-auditor` wrapper seal and relay that run. The `evals/coherence-verdict` suite, its `cases.jsonl` expectations and its generated `prompt.md` still carry the `APPROVED`, `REJECTED` and `UNKNOWN` JSON verdict, so the `[eval]` assertions score a result shape the shipped producer no longer returns.
-
-**Settlement condition.** The `evals/coherence-verdict` case expectations score the sealed run's terminal status, review-unit children and finding evidence, with the prompt regenerated from the shipped producer, under an unchanged semantic verdict model.
-
 ## The compliance section holds eleven assertions
 
 The Compliance section holds eleven assertions, above the guideline of about seven for a decomposition candidate. The node stays whole: one `PROVIDES` statement covers every assertion, and the verdict states, the cluster partition, the collapse ordering, the evidence boundaries and the structured projection are one classification contract that the eval suite scores as one producer. Splitting them yields children whose assertions cannot be verified apart. A Verifier skips this decomposition signal.
