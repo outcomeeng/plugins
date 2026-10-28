@@ -31,8 +31,6 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TextIO, cast
 
-from hypothesis import given, seed, settings
-
 from outcomeeng import validation as validation_pkg
 from outcomeeng.validation import (
     POST_KILL_REAP_ATTEMPTS,
@@ -88,7 +86,7 @@ from outcomeeng_testing.harnesses.changeset_scope import (
     CHANGESET_SCOPE,
     build_repo_without_origin,
 )
-from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.harnesses.property_evidence import replayable_property
 
 SELECTED_GATE_PROPERTY_SEED = 20260705
 SELECTED_GATE_PROPERTY_REPLAY_PATH = (
@@ -102,7 +100,6 @@ L3_TESTS_PROPERTY_SEED = 20261024
 L3_TESTS_PROPERTY_EXAMPLES = 60
 STEP_LIST_PROPERTY_SEED = 20261025
 STEP_LIST_PROPERTY_EXAMPLES = 50
-PROPERTY_REPLAY_COMMAND = "just test"
 PATHSPEC_GIT_TIMEOUT_SECONDS = 30
 PASS_EXIT_CODE = 0
 FAIL_EXIT_CODE = 2
@@ -403,30 +400,12 @@ def selected_gate_property(
 ) -> Callable[[], None]:
     """Run the selected-gate property with reproducible failure diagnostics."""
 
-    configured = seed(SELECTED_GATE_PROPERTY_SEED)(
-        settings(max_examples=SELECTED_GATE_PROPERTY_EXAMPLES, deadline=None)(
-            given(paths=selected_gate_changed_paths())(test_func)
-        )
-    )
-
-    def wrapper() -> None:
-        run_replayable_property(
-            configured,
-            seed_value=SELECTED_GATE_PROPERTY_SEED,
-            replay_path=SELECTED_GATE_PROPERTY_REPLAY_PATH,
-        )
-
-    return wrapper
-
-
-def _property_replay_path(test_func: Callable[..., None]) -> str:
-    # A property named `_{name}` runs through the test entry point `test_{name}`
-    # beside it in the same file.
-    source = Path(inspect.getfile(test_func)).resolve()
-    return (
-        f"{PROPERTY_REPLAY_COMMAND} "
-        f"{source.relative_to(Path(__file__).resolve().parents[2]).as_posix()}"
-        f"::test{test_func.__name__}"
+    return replayable_property(
+        test_func,
+        seed_value=SELECTED_GATE_PROPERTY_SEED,
+        max_examples=SELECTED_GATE_PROPERTY_EXAMPLES,
+        strategies={"paths": selected_gate_changed_paths()},
+        replay_path=SELECTED_GATE_PROPERTY_REPLAY_PATH,
     )
 
 
@@ -435,20 +414,12 @@ def l3_tests_property(
 ) -> Callable[[], None]:
     """Run the L3 tests property with reproducible failure diagnostics."""
 
-    configured = seed(L3_TESTS_PROPERTY_SEED)(
-        settings(max_examples=L3_TESTS_PROPERTY_EXAMPLES, deadline=None)(
-            given(test_files=generated_test_file_sets())(test_func)
-        )
+    return replayable_property(
+        test_func,
+        seed_value=L3_TESTS_PROPERTY_SEED,
+        max_examples=L3_TESTS_PROPERTY_EXAMPLES,
+        strategies={"test_files": generated_test_file_sets()},
     )
-
-    def wrapper() -> None:
-        run_replayable_property(
-            configured,
-            seed_value=L3_TESTS_PROPERTY_SEED,
-            replay_path=_property_replay_path(test_func),
-        )
-
-    return wrapper
 
 
 def step_list_property(
@@ -456,20 +427,12 @@ def step_list_property(
 ) -> Callable[[], None]:
     """Run a gate step-list property with reproducible failure diagnostics."""
 
-    configured = seed(STEP_LIST_PROPERTY_SEED)(
-        settings(max_examples=STEP_LIST_PROPERTY_EXAMPLES, deadline=None)(
-            given(steps=step_lists())(test_func)
-        )
+    return replayable_property(
+        test_func,
+        seed_value=STEP_LIST_PROPERTY_SEED,
+        max_examples=STEP_LIST_PROPERTY_EXAMPLES,
+        strategies={"steps": step_lists()},
     )
-
-    def wrapper() -> None:
-        run_replayable_property(
-            configured,
-            seed_value=STEP_LIST_PROPERTY_SEED,
-            replay_path=_property_replay_path(test_func),
-        )
-
-    return wrapper
 
 
 def timed_step_list_property(
@@ -477,20 +440,12 @@ def timed_step_list_property(
 ) -> Callable[[], None]:
     """Run a gate step-list property over generated controlled-clock advances."""
 
-    configured = seed(STEP_LIST_PROPERTY_SEED)(
-        settings(max_examples=STEP_LIST_PROPERTY_EXAMPLES, deadline=None)(
-            given(steps=step_lists(), increments=clock_increments())(test_func)
-        )
+    return replayable_property(
+        test_func,
+        seed_value=STEP_LIST_PROPERTY_SEED,
+        max_examples=STEP_LIST_PROPERTY_EXAMPLES,
+        strategies={"steps": step_lists(), "increments": clock_increments()},
     )
-
-    def wrapper() -> None:
-        run_replayable_property(
-            configured,
-            seed_value=STEP_LIST_PROPERTY_SEED,
-            replay_path=_property_replay_path(test_func),
-        )
-
-    return wrapper
 
 
 @dataclass

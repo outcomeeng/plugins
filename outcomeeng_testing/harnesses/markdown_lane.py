@@ -19,8 +19,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from hypothesis import given, seed, settings
-
 from outcomeeng.distribution.instruction_block import JUSTFILE_NAME
 from outcomeeng.validation import SUMMARY_KEY_LABEL, VALIDATION_ENTRY_COMMAND
 from outcomeeng.validation.__main__ import main as run_validation_entry
@@ -33,9 +31,11 @@ from outcomeeng_testing.harnesses.gate import (
     summary_steps,
     read_summary,
 )
-from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.harnesses.property_evidence import (
+    REPO_ROOT,
+    replayable_property,
+)
 
-REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 MERGING_OVERLAY_PATH: Final = REPO_ROOT / "spx" / "local" / "merging.md"
 JUSTFILE_PATH: Final = REPO_ROOT / JUSTFILE_NAME
 LANES_SECTION_HEADING: Final = "## Deterministic verification commands"
@@ -51,7 +51,6 @@ ROOT_PREFIX: Final = ""
 
 MARKDOWN_LANE_PROPERTY_SEED: Final = 20261028
 MARKDOWN_LANE_PROPERTY_EXAMPLES: Final = 60
-PROPERTY_REPLAY_COMMAND: Final = "just test"
 
 
 class LaneDeclarationError(RuntimeError):
@@ -208,22 +207,9 @@ def markdown_lane_property(
 ) -> Callable[[], None]:
     """Run a property over Markdown-lane changesets with replayable failures."""
 
-    configured = seed(MARKDOWN_LANE_PROPERTY_SEED)(
-        settings(max_examples=MARKDOWN_LANE_PROPERTY_EXAMPLES, deadline=None)(
-            given(paths=markdown_lane_changesets(lane_scope_prefixes()))(test_func)
-        )
+    return replayable_property(
+        test_func,
+        seed_value=MARKDOWN_LANE_PROPERTY_SEED,
+        max_examples=MARKDOWN_LANE_PROPERTY_EXAMPLES,
+        strategies={"paths": markdown_lane_changesets(lane_scope_prefixes())},
     )
-    source = Path(test_func.__code__.co_filename).resolve()
-    replay_path = (
-        f"{PROPERTY_REPLAY_COMMAND} {source.relative_to(REPO_ROOT).as_posix()}"
-        f"::test{test_func.__name__}"
-    )
-
-    def wrapper() -> None:
-        run_replayable_property(
-            configured,
-            seed_value=MARKDOWN_LANE_PROPERTY_SEED,
-            replay_path=replay_path,
-        )
-
-    return wrapper
