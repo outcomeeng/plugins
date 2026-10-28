@@ -33,7 +33,7 @@ Exact external API fields, command names, filesystem paths, and attributed quota
 
 `runtime` remains valid for execution-time behavior or an execution environment such as Python when no agent concept is meant.
 
-**Change, Output, Leaf, and Parent.** The chapter `versions/4.0/methodology/refinement/changes.md` of `outcomeeng/methodology` is the home of what a Change, an Output, a Leaf, and a Parent are and of the Refiner, and its chapter `versions/4.0/methodology/application/application.md` is the home of the Applier, the Author, the Fixer, and the Verifier; the roles below use those terms as those chapters define them and hold whether or not a repository declares a coordination overlay.
+**Change, Output, Leaf, and Parent.** The chapter `versions/4.0/methodology/changes/changes.md` of `outcomeeng/methodology` is the home of what a Change, an Output, a Leaf, and a Parent are and of the Refiner, and its chapter `versions/4.0/methodology/development/application.md` is the home of the Applier, the Author, the Fixer, and the Verifier; the roles below use those terms as those chapters define them and hold whether or not a repository declares a coordination overlay.
 
 **Role.** What an agent session does for a Change; a session holds a role for that Change and may hold another in a different one. A role name is capitalized, so it stands apart from the everyday word. One round is one Author or Fixer pass together with every Verifier pass it triggers.
 
