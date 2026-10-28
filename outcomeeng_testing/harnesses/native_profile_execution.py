@@ -206,7 +206,7 @@ class NativeProfileInterval:
         )
 
 
-def _isolated_environment(environment: Mapping[str, str]) -> dict[str, str]:
+def isolated_environment(environment: Mapping[str, str]) -> dict[str, str]:
     return {
         name: value
         for name, value in credential_free_environment(environment).items()
@@ -226,7 +226,7 @@ def _execute_row(
             select_authentication(environment), interval.runner
         )
     plan = build_isolated_installation_plan(
-        checkout, row.state_root, _isolated_environment(environment)
+        checkout, row.state_root, isolated_environment(environment)
     )
     execute_installation(plan, interval.install)
     child_environment = dict(plan.commands[0].environment)
