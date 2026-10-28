@@ -11,6 +11,8 @@ CAN persist declarations without duplicating template, placement, voice, referen
 
 ## Assertions
 
+- template-slug-openings: The spec, ADR, and PDR templates open each Assertion and decision with `<slug>:` and carry the closing tag the decision section requires
+
 ### Compliance
 
 - ALWAYS: `/author` is hidden from operator autocomplete while remaining model-invocable by parent workflows ([audit])
