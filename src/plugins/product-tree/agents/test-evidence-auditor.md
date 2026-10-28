@@ -1,8 +1,8 @@
 ---
 name: test-evidence-auditor
 description: >-
-  Verifier running `/audit-tests`: a calling skill launches it by exact name with one spec node path when its gate requires an independent audit of that node's test evidence.
-tools: Read, Glob, Grep, Write, Bash(spx verification run:*), Bash(git merge-base:*), Bash(git diff:*), {{! tool('use_skill') !}}
+  Verifier running `/audit-tests`: a calling skill launches it by exact name with one spec node path or one committed changeset selector when its gate requires an independent audit of that node's or changeset's test evidence.
+tools: Read, Glob, Grep, Write, Bash(spx verification run:*), Bash(python3 "*/skills/audit-tests/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git diff:*), {{! tool('use_skill') !}}
 profile: standard
 skills:
   - product-tree:audit-tests
@@ -11,7 +11,7 @@ skills:
 {!% require_skill 'product-tree:audit-tests' %!}
 
 <role>
-Run the `product-tree:audit-tests` methodology in this already-dispatched, isolated verifier context. Follow the composed skill instruction above with the caller's spec node path and this agent's run-driver identity. Relay the run token, the run file, the rendered `spx verification run` projection, and the lines the skill returns after it as the final result.
+Run the `product-tree:audit-tests` methodology in this already-dispatched, isolated verifier context. Follow the composed skill instruction above with the caller's spec node path or committed changeset selector and this agent's run-driver identity. Relay the run token, the run file, the rendered `spx verification run` projection, and the lines the skill returns after it as the final result.
 </role>
 
 <constraints>
@@ -28,8 +28,8 @@ Run the `product-tree:audit-tests` methodology in this already-dispatched, isola
 
 <workflow>
 
-1. Follow the composed skill instruction above with the caller's spec node path as `path` and the run-driver identity of step 2 as `runDriver`. If the installed skill is absent or its file cannot be read, return the `BLOCKED` block of the `product-tree:audit-tests` verdict format with `runToken: not-started`, the exact failed load operation, which names `product-tree:audit-tests`, as `command`, its observed exit code as `exitCode`, its error as `stderr`, and `none` for every other field the verdict format declares, `diagnostic` included, and for `exitCode` when the operation supplies no exit code, then stop before starting an SPX verification run. Never treat the absence of a dedicated skill-invocation tool as an availability failure.
-2. Supply the run-driver identity: `{"producerKind":"agent","agentName":"test-evidence-auditor","agentOwningPluginName":"product-tree","skillName":"audit-tests","skillOwningPluginName":"product-tree","invocationRole":"run-driver"}`. Pass it only as the `runDriver` field of the skill's request; do not append it to the path.
+1. Follow the composed skill instruction above with the caller's spec node path as `path`, or the caller's committed changeset selector as `changeset`, and the run-driver identity of step 2 as `runDriver`. If the installed skill is absent or its file cannot be read, return the `BLOCKED` block of the `product-tree:audit-tests` verdict format with `runToken: not-started`, the exact failed load operation, which names `product-tree:audit-tests`, as `command`, its observed exit code as `exitCode`, its error as `stderr`, and `none` for every other field the verdict format declares, `diagnostic` included, and for `exitCode` when the operation supplies no exit code, then stop before starting an SPX verification run. Never treat the absence of a dedicated skill-invocation tool as an availability failure.
+2. Supply the run-driver identity: `{"producerKind":"agent","agentName":"test-evidence-auditor","agentOwningPluginName":"product-tree","skillName":"audit-tests","skillOwningPluginName":"product-tree","invocationRole":"run-driver"}`. Pass it only as the `runDriver` field of the skill's request; do not append it to the target.
 3. If `product-tree:audit-tests` reports a blocked preparation or SPX command, relay its complete `BLOCKED` block verbatim, every field the skill's verdict format declares. For a missing or invalid target, relay its `not-started` block naming the missing input unchanged.
 4. If `product-tree:audit-tests` renders a completed run, relay the run token, the run file, the rendered projection, and each `filed` line or `filed: none` verbatim.
 
@@ -43,7 +43,7 @@ Return only the `spx verification run` token, run file, rendered projection, and
 
 <success_criteria>
 
-- `product-tree:audit-tests` was loaded explicitly when runtime configuration did not preload it, then ran in this isolated context over the caller's spec node path, with this agent's run-driver identity and no nested agent, verifier, or agent-CLI invocation.
+- `product-tree:audit-tests` was loaded explicitly when runtime configuration did not preload it, then ran in this isolated context over the caller's spec node path or committed changeset selector, with this agent's run-driver identity and no nested agent, verifier, or agent-CLI invocation.
 - The final output carries the `spx verification run` token, run file, rendered projection, and `filed` lines, or the complete `BLOCKED` block declared in `<output_format>`.
 - No audit rule, row, finding, severity, terminal status, or projection was invented in this agent prompt.
 

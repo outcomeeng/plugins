@@ -446,7 +446,7 @@ Product Tree: /understand, /contextualize, /bootstrap, /author, /decompose, /ref
 | Agent | `instruction-block-updater`   | Updates the managed Product Tree instruction block in a product's root CLAUDE.md and AGENTS.md without operator interaction, in an isolated context                                                                                                                                |
 | Agent | `pdr-auditor`                 | Verifier running `/audit-pdr`: a calling skill launches it by exact name with one PDR path when its gate requires an independent audit of that PDR                                                                                                                                 |
 | Agent | `spec-auditor`                | Verifier running `/audit-specs`: a calling skill launches it by exact name with one node spec path when its gate requires an independent audit of that spec                                                                                                                        |
-| Agent | `test-evidence-auditor`       | Verifier running `/audit-tests`: a calling skill launches it by exact name with one spec node path when its gate requires an independent audit of that node's test evidence                                                                                                        |
+| Agent | `test-evidence-auditor`       | Verifier running `/audit-tests`: a calling skill launches it by exact name with one spec node path or one committed changeset selector when its gate requires an independent audit of that node's or changeset's test evidence                                                     |
 
 ### prose
 
