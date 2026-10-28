@@ -79,9 +79,7 @@ Classify how the eval reaches the producer into one category of the evidence mod
 
 **Step 3b: Oracle independence and case provenance**
 
-Read `prompt.md` and `cases.jsonl` side by side. Check whether the prompt sent to the producer leaks the expected verdict, expected finding IDs, exact answer table, or rule mapping in a way that makes the case self-answering.
-
-Expected fields belong in the grader input, not in the task prompt the producer answers. A case may include expected verdict data for deterministic scoring; the model-facing prompt must still require the producer to infer the verdict from the scenario and its own methodology.
+Read `prompt.md` and `cases.jsonl` side by side. Apply the standard's oracle-independence property and the evidence model's `<oracle_independence>` case to the prompt sent to the producer and to the case inputs.
 
 Self-answering prompt or case construction is REJECT — "oracle leakage."
 

@@ -50,20 +50,9 @@ For claims about skill, agent, classifier, script, or command behavior, replacin
 
 <oracle_independence>
 
-Oracle independence means the model-facing task does not contain the answer key.
+`/eval-evidence-standards` states the oracle-independence property. This section supplies the audit-level case that the standard does not state, and the rejection value.
 
-Allowed:
-
-- Expected verdict fields in `cases.jsonl` when they are consumed only by the deterministic grader.
-- Scenario facts the producer must inspect.
-- A compact output schema the producer must return.
-
-Rejected:
-
-- Prompt text that includes the exact expected verdict for each case.
-- A decision table mapping the case identifiers or scenario labels directly to answers.
-- A prompt that restates the producing skill's policy in simplified form while the real skill is absent.
-- Case input fields named or shaped so the answer is visible without applying the producer methodology.
+A case input field named or shaped so that the answer is visible without applying the producer methodology leaks the oracle.
 
 Oracle leakage is a REJECT finding even when the run history passes.
 
