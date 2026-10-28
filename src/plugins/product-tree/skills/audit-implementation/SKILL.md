@@ -6,7 +6,7 @@ description: >-
   skill the artifact registry selects for its changed paths, covering code,
   test, and architecture concerns, finding falsifiability, and completeness of
   the inspection.
-argument-hint: "<HEAD | branch | base...head | worktree:selector>"
+argument-hint: "<HEAD | branch | base...head | worktree:selector> [absolute checkout directory]"
 allowed-tools: Read, Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(git -C * rev-parse:*), Bash(git -C * status:*), Bash(git -C * show:*), Bash(spx verification run:*), Write, Glob, Grep, {{! tool('use_skill') !}}
 ---
 
@@ -93,9 +93,9 @@ unfinished reading are never such a cause.
 
 <request_contract>
 
-Bind the target scope selector before discovery. `$ARGUMENTS` supplies it when
-that argument is non-empty; when it is empty, the selector is the one the
-request text carries, and the empty substitution binds nothing. Only a request
+Bind the target scope selector before discovery. `$ARGUMENTS` supplies the
+request tokens when that argument is non-empty; when it is empty, the tokens are
+the ones the request text carries, and the empty substitution binds nothing. Only a request
 that carries no selector is the missing-input case. The target is one scope
 selector: `HEAD`, a branch, or an explicit three-dot range. `worktree:` before
 a selector explicitly requests an advisory audit of that committed scope plus
@@ -107,9 +107,12 @@ Run-driver identity uses the six published producer fields (the
 context, separate from `$ARGUMENTS`. Accept that identity generically; never
 infer it from a role name, installed plugin, or descriptive text.
 
-A target in another worktree reaches the audit as an absolute directory path
-the request names beside the selector, the checkout that holds the audited
-scope. The session's working directory never decides the repository.
+A target in another worktree reaches the audit as the absolute path of the
+checkout directory that holds the audited scope. The request carries the
+selector first and that directory second, separated by one space; a directory
+path that contains a space is wrapped in double quotes, and a request with one
+token carries the selector alone. Bind each token separately and preserve each
+verbatim. The session's working directory never decides the repository.
 
 Before reading project file bodies:
 
