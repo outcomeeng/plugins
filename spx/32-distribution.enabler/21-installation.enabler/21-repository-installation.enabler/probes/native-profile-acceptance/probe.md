@@ -26,8 +26,9 @@ The retained rows are the release acceptance of the profiles. A changed profile 
 6. Copy each row's directory from the artifact's `profiles` directory into this probe directory under `profiles/<row identifier>/`, unchanged.
 7. Copy each of the four auditor-dispatch rows from the artifact's `auditors` directory — `skill-auditor` and `subagent-auditor` on each of Claude Code and Codex — unchanged into this probe directory under `auditors/<row identifier>/`, beside the profile rows.
 8. Read each of the eight profile rows' artifacts: from the loading artifact, whether the native definition was materialized and discovered; from the result artifact, the terminal condition, the child invocation, and, for Codex, the recorded role, model, effort and completion of the sole child. Judge each row against the configuration its configuration artifact records.
-9. Under Attested run, list the run identifier, the subject commit, the date, one observation per row, and a link to every retained artifact.
-10. Under Verdict, name each row `passed` or `failed`. A row whose result artifact is missing, unparseable, or records a terminal condition other than one completed native child invocation is `failed`, and the verdict names it.
+9. Read each of the four auditor-dispatch rows' artifacts: from the configuration artifact, the shipped auditor definition the row dispatches; from the loading artifact, whether the definition was materialized and discovered; from the result artifact, the terminal condition, the run token, the run file, the rendered projection, and the blocked diagnostic when the dispatch was blocked. Judge each row against the configuration its configuration artifact records.
+10. Under Attested run, list the run identifier, the subject commit, the date, one observation per row for all twelve rows — the eight profile rows and the four auditor-dispatch rows — and a link to every retained artifact.
+11. Under Verdict, name each of the twelve rows `passed` or `failed`. A profile row whose result artifact is missing, unparseable, or records a terminal condition other than one completed native child invocation is `failed`. An auditor-dispatch row whose result artifact is missing, unparseable, or records a blocked diagnostic or a terminal condition other than one completed dispatch is `failed`. The verdict names each failed row.
 
 ## Attested run
 
