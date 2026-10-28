@@ -53,9 +53,9 @@ definitions a plugin ships and audits without adding behavior the skills lack.
    subagent definition exists only where a decision records the exception and
    its reason.
 3. Every subagent selects one of four centrally owned profiles: Standard,
-   Strong, Executor, or Fast. Standard is the default; Strong, Executor, and
+   Strong, Applier, or Fast. Standard is the default; Strong, Applier, and
    Fast require an explicit selection by the governing skill or product
-   decision. The `change-executor` definition selects Executor. Each profile contains
+   decision. The `change-applier` definition selects Applier. Each profile contains
    a complete native configuration for each supported agent harness. Model and
    reasoning controls form one configuration; their fields, value domains, and
    absence are harness-specific, with no shared effort scale. Products cannot
@@ -70,11 +70,11 @@ definitions a plugin ships and audits without adding behavior the skills lack.
    | ------ | -------- | ---------------------------------------------------------- |
    | Codex  | Standard | `model = "gpt-6.1-sol"`, `model_reasoning_effort = "high"` |
    | Codex  | Strong   | `model = "gpt-6-astra"`, `model_reasoning_effort = "high"` |
-   | Codex  | Executor | `model = "gpt-6.1-sol"`, `model_reasoning_effort = "high"` |
+   | Codex  | Applier  | `model = "gpt-6.1-sol"`, `model_reasoning_effort = "high"` |
    | Codex  | Fast     | `model = "gpt-6-luna"`, `model_reasoning_effort = "high"`  |
    | Claude | Standard | `model: sonnet`, `effort: medium`                          |
    | Claude | Strong   | `model: opus`, `effort: high`                              |
-   | Claude | Executor | `model: sonnet`, `effort: high`                            |
+   | Claude | Applier  | `model: sonnet`, `effort: high`                            |
    | Claude | Fast     | `model: haiku`; no effort field                            |
 
    Release acceptance is established independently for each agent harness and
@@ -160,18 +160,18 @@ definitions a plugin ships and audits without adding behavior the skills lack.
 - NEVER: the subagent invocation policy changes audit verdict handling, output
   contracts, finding disposition, or repair workflows ([audit])
 - ALWAYS: derive agent definitions, configuration examples, and model descriptions
-  from the same centrally owned Standard, Strong, Executor, and Fast profiles; each
+  from the same centrally owned Standard, Strong, Applier, and Fast profiles; each
   supported harness receives its complete native configuration ([audit])
 - NEVER: impose a universal reasoning-effort field, value domain, or translation
   between harnesses; a profile uses only the controls its harness supports ([audit])
 - NEVER: let task difficulty infer a profile selection; Standard is the default
-  and Strong, Executor, or Fast requires an explicit governing selection ([audit])
+  and Strong, Applier, or Fast requires an explicit governing selection ([audit])
 - ALWAYS: a skill runs with the invoking agent session's model and reasoning
   configuration, including when a configured subagent invokes it; skill
   frontmatter declares no model or reasoning override ([audit])
 - ALWAYS: establish release acceptance separately for each supported harness,
   retaining native loading and one minimal isolated execution for each of its
-  Standard, Strong, Executor, and Fast profiles; a combined acceptance claim requires
+  Standard, Strong, Applier, and Fast profiles; a combined acceptance claim requires
   complete evidence for every harness it names. An independent
   Auditor judges the actual configuration and result, with no retry or
   substitution after a failed or unusable launch ([audit])

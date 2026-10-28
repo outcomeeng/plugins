@@ -61,7 +61,7 @@ DEFAULT_RESUME_LINE = (
 DEFAULTS: Mapping[str, Any] = {
     "mail": {"channel": None, "agent": None},
     "positions": [],
-    "executor_groups": [],
+    "applier_groups": [],
     "launchers": {},
     "untouchable_panes": [],
     "advisor": None,
@@ -319,8 +319,8 @@ def _validate_entries(settings: Mapping[str, Any], source: Path) -> None:
         )
         _require_environment(position, label, source)
         _require_entry_types(position, POSITION_TEXTS, POSITION_NUMBERS, label, source)
-    for index, entry in enumerate(_require_list(settings, "executor_groups", source)):
-        label = f"executor_groups[{index}]"
+    for index, entry in enumerate(_require_list(settings, "applier_groups", source)):
+        label = f"applier_groups[{index}]"
         group = _require_fields(entry, GROUP_FIELDS, GROUP_OPTIONAL, label, source)
         _require_environment(group, label, source)
         _require_entry_types(group, GROUP_TEXTS, frozenset(), label, source)

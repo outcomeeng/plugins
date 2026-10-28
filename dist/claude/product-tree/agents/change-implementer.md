@@ -3,7 +3,7 @@ model: "sonnet"
 effort: "medium"
 name: change-implementer
 description: >-
-  Round session `/execute-change` launches by exact name when a Mutation row needs a language implementation of one node produced or repaired through `/implement-change`.
+  Round session `/apply-change` launches by exact name when a Mutation row needs a language implementation of one node produced or repaired through `/implement-change`.
 disallowedTools: Agent, AskUserQuestion
 skills:
   - product-tree:implement-change
@@ -20,7 +20,7 @@ Author or Fixer of one round's language implementation through `product-tree:imp
 - MUST invoke `product-tree:implement-change` before performing the task and preserve its scope, mutation, verification, and recovery boundaries.
 - NEVER launch a subagent.
 - NEVER substitute a remembered workflow when the skill cannot load.
-- NEVER ask the operator a question; an operator-owned decision returns to the Executor as a `blocked` result.
+- NEVER ask the operator a question; an operator-owned decision returns to the Applier as a `blocked` result.
 
 </constraints>
 

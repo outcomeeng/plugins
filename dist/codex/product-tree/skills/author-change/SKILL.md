@@ -70,7 +70,7 @@ Read exactly one maturity workflow and the template of the same name under `${SK
 
 <revision_safety>
 
-For an existing Change, read its complete current body, each field from its store home, holder, predecessor and blocker records needed for the revision, and latest Handoff when resuming execution. Import it into the selected draft once, composing the front matter from each field's home above the body. Preserve `predecessors` and `parent` byte-for-byte; a revision changes `predecessors` only to append a Change it absorbed by a merge, and changes `parent` only when the Sliced workflow splits the Change under a new Parent. Retain the inspected remote representation outside the record for the publication concurrency check.
+For an existing Change, read its complete current body, each field from its store home, holder, predecessor and blocker records needed for the revision, and latest Handoff when resuming application. Import it into the selected draft once, composing the front matter from each field's home above the body. Preserve `predecessors` and `parent` byte-for-byte; a revision changes `predecessors` only to append a Change it absorbed by a merge, and changes `parent` only when the Sliced workflow splits the Change under a new Parent. Retain the inspected remote representation outside the record for the publication concurrency check.
 
 A claim held by another holder blocks takeover. Terminal Lifecycle blocks ordinary resumption. A split creates children as the Sliced workflow states, and a merge closes the absorbed Change `Abandoned` and appends it to the survivor's `predecessors`. A published record in another form — a body that opens with `# Output`, or one that carries `## Nodes`, `## Assertion operations`, `## Decisions`, `## Mutations`, `## Activities`, or `## Artifacts` — takes the final format at this revision under `compatibility-boundary`: author the new record from the proposal it carries, and never convert the old body in place. Reconcile an existing local candidate with the store representation before overwriting either.
 
@@ -80,7 +80,7 @@ Maturity moves backward through this skill only for a reframe, which lowers it t
 
 <authority_gate>
 
-Maturity advances past `Proposed`, `Framed`, and `Sliced` only on the authority `maturity-and-authority` states. A new Change is persisted at `Proposed`; a drafting or execution request supplies no authority.
+Maturity advances past `Proposed`, `Framed`, and `Sliced` only on the authority `maturity-and-authority` states. A new Change is persisted at `Proposed`; a drafting or application request supplies no authority.
 
 Use skill `product-tree:change-standards`. Invoke it with `Lifecycle`, which `<persistence>` also loads. Read the authority for the Maturity the Change currently holds under `authority-read`, and report each authority found with its actor and time. When the store shows none, stop with `authority-required`, naming that Maturity and the move the store lacks. Leave the candidate and the store record unchanged. A body line never stands in for the move.
 

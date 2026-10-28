@@ -2,7 +2,7 @@
 name: claim-change
 description: >-
   ALWAYS invoke this skill when claiming an Available Change from the declared
-  Change store to hold it for refinement or execution. NEVER assign a Change or
+  Change store to hold it for refinement or application. NEVER assign a Change or
   write its Lifecycle by hand without this skill.
 argument-hint: "[#N | owner/repo#N | issue-url] [worktree-root]"
 allowed-tools: Read, Write, Bash(spx worktree status:*), Bash(git fetch:*), Bash(git switch:*), Bash(gh pr view:*), Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(printenv CLAUDE_CODE_SESSION_ID), Bash(git rev-parse --show-toplevel), Bash(git worktree list --porcelain), Bash(git branch --list:*), Bash(git ls-remote --heads origin:*), AskUserQuestion, Skill
@@ -45,13 +45,13 @@ Use skill `product-tree:change-standards`. Invoke it with `Lifecycle`; it loads 
 
 <result>
 
-Return the issue URL, the readback values verbatim, the Maturity, the newest `Handoff:` comment's `Branch or PR` line when one exists, and the branch now checked out in the assigned worktree. A Change below Executable continues as refinement; execution at Executable continues from the Handoff's `Next block` line, or from the first block of the record when no Handoff exists.
+Return the issue URL, the readback values verbatim, the Maturity, the newest `Handoff:` comment's `Branch or PR` line when one exists, and the branch now checked out in the assigned worktree. A Change below Executable continues as refinement; application at Executable continues from the Handoff's `Next block` line, or from the first block of the record when no Handoff exists.
 
 </result>
 
 <failure_modes>
 
-**The assignee stood in for the Claim.** Claude treated an added assignee as a won claim and started executing while a second session of the same account held the earlier Claim. One account runs several sessions, so the assignee cannot distinguish them; the winning Claim under `claim-record` decides — the earliest `Claim:` after the newest `Handoff:` that a move to `Available` follows; a Handoff the Executor posted while the Change stayed Claimed does not start a window — and the loser withdraws only its own record.
+**The assignee stood in for the Claim.** Claude treated an added assignee as a won claim and started applying while a second session of the same account held the earlier Claim. One account runs several sessions, so the assignee cannot distinguish them; the winning Claim under `claim-record` decides — the earliest `Claim:` after the newest `Handoff:` that a move to `Available` follows; a Handoff the Applier posted while the Change stayed Claimed does not start a window — and the loser withdraws only its own record.
 
 **A partial claim was repaired by guessing.** Claude's Lifecycle write failed after the assignee and Claim landed, and Claude re-ran a later step to make the state look complete. Stop at the failed write, report the completed prefix and the observed state, and leave the partial state visible for recovery.
 
@@ -61,14 +61,14 @@ Return the issue URL, the readback values verbatim, the Maturity, the newest `Ha
 
 - The Change was claimable from current store state before the first write, and any other state produced a report with no mutation; a `Submitted` Change was reported as waiting for the Product's Maintainer to move it out of `Submitted`.
 - The claimed state reads back complete: Lifecycle `Claimed`, exactly the winning account as assignee, this session's Claim as the winning Claim under `claim-record`, and Product and Maturity unchanged, a root's empty Product included.
-- A losing concurrent claim removed only its own holder record, verified the winner unchanged, reported `owned_elsewhere`, and executed nothing.
+- A losing concurrent claim removed only its own holder record, verified the winner unchanged, reported `owned_elsewhere`, and applied nothing.
 - Every failed transition stopped before later mutation and reported the ordered successful writes, the failed operation, and the complete observed state.
 - Maturity and every body section are untouched.
 - A root carrying no Product was claimable beside the configured Product's Changes and read back with its Product still empty.
 - A candidate listing of 50 entries produced a blocked result naming `50 issues`, with no offer and no claim.
 - A Handoff branch absent on origin, a failed fetch, and a failed switch each left the claim standing and the checkout unchanged, with the `Branch or PR` line and the git output reported verbatim.
 - The winning Claim names the claim root: the worktree root the argument supplied, or this session's assigned root.
-- The result names the Handoff's `Next block` line, or the first block of the record when no Handoff exists, as the point execution continues from.
+- The result names the Handoff's `Next block` line, or the first block of the record when no Handoff exists, as the point application continues from.
 - When the claim root is this session's assigned root and the newest Handoff names a branch or pull request, that work is checked out in the assigned worktree after a read-only occupancy check, and the checkout is current with its base.
 
 </success_criteria>

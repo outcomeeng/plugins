@@ -97,7 +97,7 @@ def _group_targets(group: Mapping[str, Any], panes: list[Pane]) -> list[dict[str
 
 
 def _targets(config: Mapping[str, Any], envs: Environments) -> list[dict[str, Any]]:
-    """Every pane the configuration directs: positions first, then executor groups."""
+    """Every pane the configuration directs: positions first, then applier groups."""
     inventories: dict[str, list[Pane]] = {}
 
     def panes_of(environment: str) -> list[Pane]:
@@ -109,7 +109,7 @@ def _targets(config: Mapping[str, Any], envs: Environments) -> list[dict[str, An
         _position_target(position, panes_of(position["environment"]))
         for position in config["positions"]
     ]
-    for group in config["executor_groups"]:
+    for group in config["applier_groups"]:
         found.extend(_group_targets(group, panes_of(group["environment"])))
     return found
 
@@ -430,7 +430,7 @@ def _act_stop(config, target: str, operation: str, text: str | None) -> str | No
     """The detail of the stop an act request's arguments raise, or None."""
     if not target:
         labels = [p["name"] for p in config["positions"]] + [
-            g["label"] for g in config["executor_groups"]
+            g["label"] for g in config["applier_groups"]
         ]
         return (
             f"act received no --target; pass --target with one of the labels {labels} "

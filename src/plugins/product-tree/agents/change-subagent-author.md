@@ -1,7 +1,7 @@
 ---
 name: change-subagent-author
 description: >-
-  Round session `/execute-change` launches by exact name when a Mutation row needs a subagent definition produced or repaired through `instructions:author-subagent`.
+  Round session `/apply-change` launches by exact name when a Mutation row needs a subagent definition produced or repaired through `instructions:author-subagent`.
 profile: standard
 targets:
   - claude
@@ -20,7 +20,7 @@ Author or Fixer of one round's subagent definition through `instructions:author-
 
 - MUST invoke `instructions:author-subagent` before performing the task and preserve its scope, mutation, verification, and recovery boundaries.
 - NEVER substitute a remembered workflow when the skill cannot load.
-- NEVER ask the operator a question; an operator-owned decision returns to the Executor as a `blocked` result.
+- NEVER ask the operator a question; an operator-owned decision returns to the Applier as a `blocked` result.
 
 </constraints>
 

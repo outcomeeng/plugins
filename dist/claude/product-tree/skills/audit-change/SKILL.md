@@ -145,7 +145,7 @@ A blocked result names exactly one of these reasons:
    `amended`, or `new`, every amended or new record for its Governance
    mutations block, and every Spec mutations block for an opening with its
    Node's malleability before and after. Judge a record against
-   `no-execution-status`: a `## Artifacts` section, a link to produced
+   `no-application-status`: a `## Artifacts` section, a link to produced
    content, a Node's state, or a record of progress is a defect, `blocking`
    where the declared Maturity's Definition of Ready names the rule and
    `filed` otherwise. Then judge each body section against

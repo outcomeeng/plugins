@@ -51,7 +51,7 @@ model: "opus"
 effort: "high"
 ```
 
-Executor:
+Applier:
 
 ```yaml
 model: "sonnet"

@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.23.0
+
+### Breaking
+
+- **The central profile `executor` is `applier` in `/subagent-standards` and `/author-subagent`.** A subagent definition that sets `profile: executor` carries a profile name the standard no longer recognizes, and sets `profile: applier` instead. The profile table, the `profile_selection` rule, and the authoring step that selects a profile name Applier, and the profile's native configuration is unchanged. Before this change, the profile was named `executor` and the standard listed Strong, Executor, and Fast as the explicit selections.
+
 ## 0.22.4
 
 ### Added

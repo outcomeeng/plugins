@@ -38,6 +38,6 @@ whose verdict depended on that version.
 
 Read each role's central profile selection from its configuration and governing
 requirement. Coordination, verification, and implementation are responsibilities;
-none automatically selects Strong, Executor, or Fast.
+none automatically selects Strong, Applier, or Fast.
 
 </profile_selection>

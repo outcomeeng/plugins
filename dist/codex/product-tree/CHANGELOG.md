@@ -10,6 +10,17 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.110.0
+
+### Breaking
+
+- **`/execute-change` is `/apply-change`, and the `change-executor` definition is `change-applier`.** A caller that invokes `/execute-change`, names `product-tree:execute-change`, or selects the `change-executor` subagent definition finds nothing, and renames each to `/apply-change`, `product-tree:apply-change`, and `change-applier`. The Role the workflow names is the Applier and the phase is application. The Maturity value Executable, its argument and reference files, and the Lifecycle values are unchanged. Before this change, the skill was `/execute-change`, the definition was `change-executor`, and the workflow named the Role Executor.
+
+### Changed
+
+- **`/understand` names the Applier in its coordination model.** The foundation's coordination model says the Applier holds the Change during application, takes the mutation blocks in application order, and makes a mechanical repair directly. A Change record carries no application status. Before this change, the foundation named the Role Executor and called the phase execution.
+- **The Change skills and round definitions name the Applier and application.** The skills `change-standards`, `author-change`, `audit-change`, `claim-change`, `close-change`, and `release-change`, and the round definitions `change-author`, `change-verifier`, `change-tester`, `change-implementer`, `change-skill-author`, and `change-subagent-author`, name the Applier and application. The record rule `no-execution-status` is `no-application-status`, and `change-standards` selects the Changes chapter `versions/4.0/methodology/changes/changes.md`. Before this change, these skills and definitions named the Executor and execution, and `change-standards` selected the chapter `versions/4.0/methodology/change/changes.md`.
+
 ## 0.109.5
 
 ### Changed

@@ -1,7 +1,7 @@
 ---
 name: change-skill-author
 description: >-
-  Round session `/execute-change` launches by exact name when a Mutation row needs a skill surface (a `SKILL.md`, another file in a skill directory, or an authored shared fragment) produced or repaired through `instructions:author-skill`.
+  Round session `/apply-change` launches by exact name when a Mutation row needs a skill surface (a `SKILL.md`, another file in a skill directory, or an authored shared fragment) produced or repaired through `instructions:author-skill`.
 profile: standard
 targets:
   - claude
@@ -20,7 +20,7 @@ Author or Fixer of one round's skill surface through `instructions:author-skill`
 
 - MUST invoke `instructions:author-skill` before performing the task and preserve its scope, mutation, verification, and recovery boundaries.
 - NEVER substitute a remembered workflow when the skill cannot load.
-- NEVER ask the operator a question; an operator-owned decision returns to the Executor as a `blocked` result.
+- NEVER ask the operator a question; an operator-owned decision returns to the Applier as a `blocked` result.
 
 </constraints>
 

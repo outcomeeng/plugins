@@ -18,7 +18,7 @@ The subagents-about-subagents cluster is three peers with distinct roles:
   complete task prompt and delegates context discovery to the owning skill while
   preserving its output contract, per [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md); guidance
   judges native sandbox and approval fields against the governing context's
-  execution-boundary declaration before applying the harness contract ([audit]).
+  execution-boundary declaration before applying the harness contract ([audit:task-prompt-target-only]).
 - ALWAYS: `/subagent-standards` admits a definition that inherits the invoking
   session's execution policy when its governing context declares that inheritance
   with linked evidence: an assertion in the owning node's spec, or a decision on
@@ -26,41 +26,41 @@ The subagents-about-subagents cluster is three peers with distinct roles:
   owning node through the tree as the node whose linked test or audit assertion
   names the definition, several matching nodes resolving to their lowest common
   ancestor, names which declaration it read, and judges its presence;
-  an absent native sandbox field does not invalidate declared inheritance ([audit]).
+  an absent native sandbox field does not invalidate declared inheritance ([audit:inheritance-declaration-admitted]).
 - NEVER: `/subagent-standards` accepts a citation inside a definition's frontmatter
   or body as the inheritance declaration, or admits undeclared inheritance on the
-  auditor's judgment that the definition needs the invoking policy ([audit]).
+  auditor's judgment that the definition needs the invoking policy ([audit:inheritance-citation-rejected]).
 - ALWAYS: `/subagent-standards` accepts retained per-harness, per-profile release
   acceptance as invocation evidence when the owning node's spec or a decision on
   the path from the root that reaches it by index declares that acceptance:
   native loading and one minimal isolated execution for every declared profile,
   as [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) requires. Every other definition retains
   its exact-definition minimal isolated invocation. The auditor names the
-  declaration and acceptance artifact it read ([audit]).
+  declaration and acceptance artifact it read ([audit:release-acceptance-evidence]).
 - ALWAYS: subagent invocation guidance requires plugin authorization and an active
   skill's explicit call request, uses the native tool schema, and requires analysis
-  and reporting of a failed launch or unusable result without retry or substitution ([audit]).
-- ALWAYS: configuration guidance selects one central Standard, Strong, Executor, or Fast
+  and reporting of a failed launch or unusable result without retry or substitution ([audit:invocation-guidance]).
+- ALWAYS: configuration guidance selects one central Standard, Strong, Applier, or Fast
   profile declared in [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) and obtains the complete
-  native configuration together; Standard is the default, Strong, Executor, and Fast
+  native configuration together; Standard is the default, Strong, Applier, and Fast
   require explicit governing selection, and independent model or reasoning
-  overrides and product-defined profiles are forbidden ([audit]).
-- ALWAYS: `/subagent-standards` owns every rule `/audit-subagent` enforces — standards and enforcement stay in one place so drift cannot open between them ([audit])
-- ALWAYS: `/author-subagent` applies the `/subagent-standards` catalog to the finished definition and returns it ready for independent verification ([audit])
-- ALWAYS: `/author-subagent` carries no route that dispatches a subagent auditor or waits on an audit verdict ([audit])
-- ALWAYS: `/author-subagent` repairs a definition from a rejected run's sealed run file, supplied unchanged with the instruction "attend to every rule the run names and sweep each named class across the whole target", and reads every finding it repairs, by its `<unit>:<rule-id>` key, from that run file alone ([audit])
-- ALWAYS: `/author-subagent` repairs a definition from the command line and complete output of a deterministic command that failed on it, supplied unchanged, and repairs the defect that output names at its authored source ([audit])
-- ALWAYS: `/author-subagent` repairs each finding across every instance the cited clause covers and nothing the clause does not require, checks every same-class site and every dependency the repair changes before it returns the repaired definition, and returns with it, for each repair, the clause it applies and the check that shows the class closed ([audit])
-- ALWAYS: `/author-subagent` returns an `unchanged` result naming the committed head and the path that holds the requested result when the definition already holds it, and a `blocked` result naming the missing input or skill when a required input or a composed skill is absent ([audit])
-- ALWAYS: the subagent-authoring skill ships under the one name `/author-subagent`, the instructions plugin changelog maps `create-subagent` to it, and every reference to it outside the plugin changelogs and the retained artifacts of attested runs uses that name ([audit])
-- ALWAYS: `/author-subagent` and `/audit-subagent` load `/subagent-standards` before doing any authoring or evaluation work — prevents memory-based assessment ([audit])
-- ALWAYS: `/audit-subagent` judges exactly one subagent configuration per invocation, and auditing several configurations dispatches one invocation per configuration ([audit])
-- ALWAYS: `/audit-subagent` records one changeset-scoped verification run with one unit for the definition the changeset changes and one unit for each governing declaration it reads, keys each finding `<unit>:<rule-id>`, and returns `BLOCKED` when the changeset leaves the definition unchanged or a governing standard is unreadable ([audit])
-- ALWAYS: the subagent audit records the start input, each scope-add payload and each finding-add payload through a file written with the file-write tool in the session scratch directory and passed by path as the payload-path rule of `/skill-standards` states, runs every run-recording command as its own command that stops the audit on a nonzero exit other than the one rerun the payload-path rule allows, teaches no heredoc and no pipe-built payload, and the subagent auditor's definition grants the file-write tool and no stage that builds a payload in the shell ([audit])
+  overrides and product-defined profiles are forbidden ([audit:profile-selection]).
+- ALWAYS: `/subagent-standards` owns every rule `/audit-subagent` enforces — standards and enforcement stay in one place so drift cannot open between them ([audit:standards-own-rules])
+- ALWAYS: `/author-subagent` applies the `/subagent-standards` catalog to the finished definition and returns it ready for independent verification ([audit:author-applies-catalog])
+- ALWAYS: `/author-subagent` carries no route that dispatches a subagent auditor or waits on an audit verdict ([audit:author-no-audit-dispatch])
+- ALWAYS: `/author-subagent` repairs a definition from a rejected run's sealed run file, supplied unchanged with the instruction "attend to every rule the run names and sweep each named class across the whole target", and reads every finding it repairs, by its `<unit>:<rule-id>` key, from that run file alone ([audit:author-repair-from-run])
+- ALWAYS: `/author-subagent` repairs a definition from the command line and complete output of a deterministic command that failed on it, supplied unchanged, and repairs the defect that output names at its authored source ([audit:author-repair-from-command])
+- ALWAYS: `/author-subagent` repairs each finding across every instance the cited clause covers and nothing the clause does not require, checks every same-class site and every dependency the repair changes before it returns the repaired definition, and returns with it, for each repair, the clause it applies and the check that shows the class closed ([audit:author-class-repair])
+- ALWAYS: `/author-subagent` returns an `unchanged` result naming the committed head and the path that holds the requested result when the definition already holds it, and a `blocked` result naming the missing input or skill when a required input or a composed skill is absent ([audit:author-result-forms])
+- ALWAYS: the subagent-authoring skill ships under the one name `/author-subagent`, the instructions plugin changelog maps `create-subagent` to it, and every reference to it outside the plugin changelogs and the retained artifacts of attested runs uses that name ([audit:author-subagent-name])
+- ALWAYS: `/author-subagent` and `/audit-subagent` load `/subagent-standards` before doing any authoring or evaluation work — prevents memory-based assessment ([audit:standards-loaded-first])
+- ALWAYS: `/audit-subagent` judges exactly one subagent configuration per invocation, and auditing several configurations dispatches one invocation per configuration ([audit:audit-one-configuration])
+- ALWAYS: `/audit-subagent` records one changeset-scoped verification run with one unit for the definition the changeset changes and one unit for each governing declaration it reads, keys each finding `<unit>:<rule-id>`, and returns `BLOCKED` when the changeset leaves the definition unchanged or a governing standard is unreadable ([audit:audit-run-shape])
+- ALWAYS: the subagent audit records the start input, each scope-add payload and each finding-add payload through a file written with the file-write tool in the session scratch directory and passed by path as the payload-path rule of `/skill-standards` states, runs every run-recording command as its own command that stops the audit on a nonzero exit other than the one rerun the payload-path rule allows, teaches no heredoc and no pipe-built payload, and the subagent auditor's definition grants the file-write tool and no stage that builds a payload in the shell ([audit:audit-payload-files])
 - ALWAYS: `/subagent-standards` admits, as prompt-bounded, the write grants of a Verifier whose skill records its verdict through run-recording commands — the file-write grant for the payload files that skill passes to those commands and, in a Codex definition, the run-recording command scope and the `workspace-write` sandbox that scope emits, since Codex offers no native per-command scope — when the definition and that skill limit every write by instruction to the Verifier's own verification-run journal and to payload files in the session scratch directory, judging those grants as conforming under its rule that a material restriction is enforced through native permission fields and its rule that no mutation is granted solely to run an audit or review, while every other write grant to a Verifier stays under both rules; the admission judges how the grants are bounded and does not establish that the `workspace-write` sandbox completes the run-recording write, which the tracked issue in `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/54-native-artifact.enabler/ISSUES.md` governs ([audit:prompt-bounded-verifier-writes])
 - ALWAYS: `/subagent-standards` documents a Verifier's directory access as prompt-bounded operation within the writable roots its host supplies from the write paths SPX reports, which supplies no guarantee that only the caller's run can be changed ([audit:writable-root-access])
-- ALWAYS: every rule identifier `/audit-subagent` records names a rule in the `/subagent-standards` or `/agent-prompt-standards` rule catalog, and no finding is recorded under an identifier outside those catalogs ([audit])
-- ALWAYS: `/audit-subagent` rejects only on touched text inside the changed definition, and returns each other finding as `filed` ([audit])
-- ALWAYS: `/author-subagent` writes a configuration to the invocation checkout by default, and reaches a user-scope destination outside it — creating, editing, or deleting — only after operator confirmation naming the absolute destination, one approval covering one write ([audit])
-- NEVER: `/author-subagent` widens an approved checkout-scope write to user scope on its own judgment that the configured agent suits other projects — that destination applies to every project on the machine and no repository reviews it ([audit])
-- NEVER: restate `/subagent-standards` or `/agent-prompt-standards` rules inside `/author-subagent` or `/audit-subagent` — a single source of truth prevents drift between standard and enforcer ([audit])
+- ALWAYS: every rule identifier `/audit-subagent` records names a rule in the `/subagent-standards` or `/agent-prompt-standards` rule catalog, and no finding is recorded under an identifier outside those catalogs ([audit:audit-rule-identifiers])
+- ALWAYS: `/audit-subagent` rejects only on touched text inside the changed definition, and returns each other finding as `filed` ([audit:audit-touched-text-only])
+- ALWAYS: `/author-subagent` writes a configuration to the invocation checkout by default, and reaches a user-scope destination outside it — creating, editing, or deleting — only after operator confirmation naming the absolute destination, one approval covering one write ([audit:author-write-scope])
+- NEVER: `/author-subagent` widens an approved checkout-scope write to user scope on its own judgment that the configured agent suits other projects — that destination applies to every project on the machine and no repository reviews it ([audit:author-no-scope-widening])
+- NEVER: restate `/subagent-standards` or `/agent-prompt-standards` rules inside `/author-subagent` or `/audit-subagent` — a single source of truth prevents drift between standard and enforcer ([audit:single-source-of-truth])

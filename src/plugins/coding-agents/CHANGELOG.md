@@ -6,6 +6,16 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.18.0
+
+### Breaking
+
+- **The `/direct-positions` settings key `executor_groups` is `applier_groups`.** A settings file that still carries `executor_groups` is rejected as an unknown key. The key keeps its shape, each entry naming a label, an environment, a working-directory prefix, and exclusions, and keeps its empty default. A caller renames the key and the label of each entry. Before this change, the key was `executor_groups`.
+
+### Changed
+
+- **`/orchestrate-change`, `/direct-positions`, `/wait-for-event`, and the Codex manifest name the Applier.** `/orchestrate-change` claims the Change for its Applier and starts the session with the `product-tree` definition `change-applier`. `/direct-positions` calls the position that launches Appliers by that name in the `launchers` description. The `/wait-for-event` sample session is `applier-288`, and the Codex manifest `longDescription` reads "the Applier session of each Change". Before this change, each named the Executor, `/orchestrate-change` started the `change-executor` definition, the sample session was named for an Executor, and the manifest read "the Executor session of each Change".
+
 ## 0.17.1
 
 ### Changed

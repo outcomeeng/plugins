@@ -21,7 +21,7 @@ class AgentProfile(StrEnum):
 
     STANDARD = "standard"
     STRONG = "strong"
-    EXECUTOR = "executor"
+    APPLIER = "applier"
     FAST = "fast"
 
 
@@ -134,7 +134,7 @@ AGENT_PROFILES: Final[ProfileRegistry] = MappingProxyType(
                 AgentProfile.STRONG: CodexConfiguration(
                     CodexModel.ASTRA, CodexReasoningEffort.HIGH
                 ),
-                AgentProfile.EXECUTOR: CODEX_STANDARD_CONFIGURATION,
+                AgentProfile.APPLIER: CODEX_STANDARD_CONFIGURATION,
                 AgentProfile.FAST: CodexConfiguration(
                     CodexModel.LUNA, CodexReasoningEffort.HIGH
                 ),
@@ -148,7 +148,7 @@ AGENT_PROFILES: Final[ProfileRegistry] = MappingProxyType(
                 AgentProfile.STRONG: ClaudeConfiguration(
                     ClaudeModel.OPUS, ClaudeEffort.HIGH
                 ),
-                AgentProfile.EXECUTOR: ClaudeConfiguration(
+                AgentProfile.APPLIER: ClaudeConfiguration(
                     ClaudeModel.SONNET, ClaudeEffort.HIGH
                 ),
                 AgentProfile.FAST: ClaudeConfiguration(ClaudeModel.HAIKU, None),
