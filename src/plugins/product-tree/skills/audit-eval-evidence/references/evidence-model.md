@@ -78,7 +78,7 @@ Oracle leakage is a REJECT finding even when the run history passes.
 
 <case_provenance>
 
-Case provenance asks where each case input came from. A case input copied from the producer's text or from its prior output cannot disagree with the producer, so the case proves nothing about it.
+`/eval-evidence-standards` states the case-provenance rule. This section supplies the procedure that locates a violation and the rejection value.
 
 Procedure:
 
