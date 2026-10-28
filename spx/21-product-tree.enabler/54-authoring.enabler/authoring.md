@@ -11,6 +11,9 @@ CAN change durable declarations through one context-complete boundary without du
 
 ## Assertions
 
+- authoring-slug-grammar: `/author` opens each Assertion and decision it writes with a slug of lowercase letters, digits, and hyphens, unique within its file, never `malleability`, `path`, or `title`, and holds no opening square bracket in the Assertion text before the tags
+- authoring-closing-tags: `/author` closes a Testing rule with its assertion type and an Audit rule with the bare audit tag, writes no audit tag that carries a rule slug, and states each compliance rule as an ALWAYS or NEVER rule
+
 ### Compliance
 
 - ALWAYS: operator-driven creation, modification, or removal of durable declarations enters through `/spec`, which owns requirements convergence and delegates decision-ready writes to `/author` ([audit])
