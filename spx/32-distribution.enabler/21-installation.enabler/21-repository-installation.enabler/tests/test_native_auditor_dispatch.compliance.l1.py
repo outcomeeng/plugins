@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from uuid import uuid4
 
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.native_auditor_dispatch import (
@@ -13,6 +14,7 @@ from outcomeeng.distribution.native_auditor_dispatch import (
     RESULT_RUN_TOKEN_KEY,
     RESULT_TERMINAL_CONDITION_KEY,
     native_auditor_rows,
+    record_native_auditor_failure,
 )
 from outcomeeng.validation.implementation_audit_contract import (
     RUN_TERMINAL_STATUS_FIELD,
@@ -155,6 +157,38 @@ def test_a_blocked_dispatch_diagnostic_is_a_returned_result_without_a_terminal_c
             assert result[RESULT_RUN_TOKEN_KEY] is None, row.identifier
             assert result[RESULT_RUN_FILE_KEY] is None, row.identifier
             assert result[RESULT_TERMINAL_CONDITION_KEY] is None, row.identifier
+
+
+def test_a_failure_recorded_after_a_dispatch_retains_every_field_the_dispatch_captured() -> (
+    None
+):
+    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
+    condition = uuid4().hex
+    with native_auditor_launch({selected}) as observation:
+        assert observation.rows
+        for item in observation.rows:
+            row = item.observation.row
+            captured = json.loads(row.result_path.read_text("utf-8"))
+            failure = record_native_auditor_failure(
+                row, condition, install_exit_code=NATIVE_FAILURE_EXIT_CODE
+            )
+            retained = json.loads(row.result_path.read_text("utf-8"))
+            assert retained.keys() >= captured.keys(), row.identifier
+            assert {
+                key: retained[key]
+                for key in captured
+                if key != RESULT_TERMINAL_CONDITION_KEY
+            } == {
+                key: value
+                for key, value in captured.items()
+                if key != RESULT_TERMINAL_CONDITION_KEY
+            }, row.identifier
+            assert retained[RESULT_TERMINAL_CONDITION_KEY] == condition, row.identifier
+            assert failure.terminal_condition == condition, row.identifier
+            assert failure.install_exit_code == NATIVE_FAILURE_EXIT_CODE, row.identifier
+            assert failure.launch_exit_code == item.observation.launch_exit_code, (
+                row.identifier
+            )
 
 
 def test_a_failed_launch_records_its_terminal_condition_without_a_retry() -> None:
