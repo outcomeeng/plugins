@@ -11,7 +11,7 @@ allowed-tools: Read, Grep, Glob, Write, Bash(spx verification run:*), Bash(git m
 
 <objective>
 
-A sealed `spx verification run` on one node spec file, including a prior enabler/outcome form, with one root scope unit for the spec and one child scope unit per property (section structure, atemporal voice, tag fitness), whose verdict records every finding on touched text on its child unit, returned as the run token, the run file, and the rendered projection, whose `terminalStatus` is `approved` or `rejected`, followed by each other finding as a `filed` line; or the complete `BLOCKED` diagnostic when the run cannot finish.
+A sealed `spx verification run` on one node spec file, including a prior enabler/outcome form, against the node-spec form and `${CLAUDE_SKILL_DIR}/references/rule-catalog.md`, whose verdict is a `terminalStatus` of `approved` or `rejected` with each finding on touched text recorded under its category (section structure, atemporal voice, tag fitness), returned as the run token, the run file, and the rendered projection, followed by each other finding as a `filed` line; or the complete `BLOCKED` diagnostic when the run cannot finish.
 
 </objective>
 
@@ -341,11 +341,11 @@ Claude ran the context loader that rebases the audited branch, so the head under
 
 <success_criteria>
 
-- The run holds one `audited` root scope unit for the node spec and one child unit under its key for each of section structure, atemporal voice, and tag fitness, and every child unit names the root.
+- Every unit is `audited` and every child unit names the root, with no unit left unevaluated.
 - Every spec-node rule was judged with none skipped — claim-shape heading structure independent of verification type, atemporal voice, and per-assertion tag fitness (coverage-complete).
 - Every recorded finding lies on touched text, sits on an accepted unit, is keyed by an identifier from the rule catalog, and names the section or assertion, the violated rule, and observed-versus-expected evidence.
-- Every standing finding appears as a `filed` line carrying its key, `baseRefEvidence`, and `issuesEntry`, and rejects no run.
-- The `terminalStatus` is `rejected` exactly when a finding on touched text is recorded and `approved` otherwise, whatever standing findings exist.
+- Every standing finding carries its key, `baseRefEvidence`, and `issuesEntry`, and rejects no run.
+- The `terminalStatus` derives from findings on touched text alone, whatever standing findings exist.
 - The checkout's head is the same before and after the audit.
 - The same node spec, context, and base yield the same units, finding keys, and terminal status.
 
