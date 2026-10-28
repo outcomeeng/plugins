@@ -43,6 +43,7 @@ A `### Testing` rule's assertion-type tag is chosen from the rule's claim shape 
 ### Compliance
 
 - ALWAYS: check structure, voice, and tag validity in order ([audit])
+- ALWAYS: load the ADR's context read-only before any audit phase — the product spec, then each spec and every decision record on the path from `spx/` to the directory containing the ADR, then every decision a loaded spec or decision cites by full `spx/` path, excluding the ADR under audit — never invoking `/contextualize` or `/sync-base`, so the audit changes no checkout state ([audit])
 - ALWAYS: judge section structure, atemporal voice, and tag validity from the canonical decision template, never from a transcribed copy of it ([audit])
 - ALWAYS: compose language-specific ADR concerns by invoking `audit-{lang}-architecture` for the language detected in scope, rather than dispatching a separate language-specific auditor agent ([audit])
 - ALWAYS: verify each `### Testing` rule's assertion type fits the claim's quantifier per the `/test` router — a universal is never `scenario`; reject a type the router would not produce, without relitigating a choice the router leaves open ([audit])
