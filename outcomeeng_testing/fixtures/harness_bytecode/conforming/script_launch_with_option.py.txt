@@ -1,0 +1,2 @@
+argv = [sys.executable, "-B", str(script), "arg"]
+argv = [sys.executable, "-I", "-B", str(script)]

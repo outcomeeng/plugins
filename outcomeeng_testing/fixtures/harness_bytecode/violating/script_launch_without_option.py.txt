@@ -1,0 +1,1 @@
+argv = [sys.executable, str(script), "arg"]

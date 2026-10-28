@@ -1,0 +1,7 @@
+"""A script that stands in for a shipped script: loading it compiles a source file."""
+
+GREETING = "loaded"
+
+
+def greet() -> str:
+    return GREETING
