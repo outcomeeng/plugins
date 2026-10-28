@@ -142,16 +142,16 @@ class RowObservation(Protocol):
 
 
 @dataclass(frozen=True)
-class RowLaunch[Observation, Call]:
+class RowLaunch[Retained, Call]:
     """One row's retained observation and every recorded command issued for its state."""
 
-    observation: Observation
+    observation: Retained
     calls: tuple[Call, ...]
 
 
-def row_launches[Observation: RowObservation, Call: HomedCall](
-    observations: Sequence[Observation], calls: Sequence[Call]
-) -> tuple[RowLaunch[Observation, Call], ...]:
+def row_launches[Retained: RowObservation, Call: HomedCall](
+    observations: Sequence[Retained], calls: Sequence[Call]
+) -> tuple[RowLaunch[Retained, Call], ...]:
     """Pair each observation with the recorded commands whose Codex home lies beneath its row's state root."""
     return tuple(
         RowLaunch(
