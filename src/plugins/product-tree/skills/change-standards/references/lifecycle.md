@@ -76,7 +76,7 @@ A Claim is one comment, `Claim: <agent session id> <claim root>`, posted after t
 
 <rule id="handoff-record">
 
-A Handoff is one comment, posted by the holder when it releases the Change, and by the Executor after every completed block and after integration while it keeps the Change Claimed. It carries exactly these lines in this order: the opening line `Handoff:`, one blank line, the five required lines, and optionally the two context lines. It carries nothing else, and nothing that belongs in the body:
+A Handoff is one comment, posted by the holder when it releases the Change, and by the Applier after every completed block and after integration while it keeps the Change Claimed. It carries exactly these lines in this order: the opening line `Handoff:`, one blank line, the five required lines, and optionally the two context lines. It carries nothing else, and nothing that belongs in the body:
 
 ```markdown
 Handoff:

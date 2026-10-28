@@ -29,7 +29,7 @@ Apply `<authority>` and `<record_rules>` below for every selection. Then read ex
 
 NEVER load another Maturity's Definition of Ready in the same invocation. Each Definition of Ready is cumulative and complete for its level.
 
-`<record_rules>` states the record rules, and each Definition of Ready states criteria that judge a record against those rules by identifier; the Executable Definition of Ready also carries the `<merge_composition>` that execution applies, and none of them carries a store command. `lifecycle.md` carries the store-binding, canonical-state, authority-read, ordered-write, complete-readback, write-inspection, inert-stdin, claim-record, handoff-record, and terminal-record rules, together with the store commands those rules name; it alone assigns each field's home in the declared store and names the store reads — fields, lineage, blockers, and authority. A criterion whose evidence is store state, such as the blocker graph of `*-relationships`, is judged from those reads, which a separate `Lifecycle` load supplies; a Maturity selection never infers that state from the record alone.
+`<record_rules>` states the record rules, and each Definition of Ready states criteria that judge a record against those rules by identifier; the Executable Definition of Ready also carries the `<merge_composition>` that application applies, and none of them carries a store command. `lifecycle.md` carries the store-binding, canonical-state, authority-read, ordered-write, complete-readback, write-inspection, inert-stdin, claim-record, handoff-record, and terminal-record rules, together with the store commands those rules name; it alone assigns each field's home in the declared store and names the store reads — fields, lineage, blockers, and authority. A criterion whose evidence is store state, such as the blocker graph of `*-relationships`, is judged from those reads, which a separate `Lifecycle` load supplies; a Maturity selection never infers that state from the record alone.
 
 </loading_contract>
 
@@ -81,7 +81,7 @@ A record is held only to what its review needs. A failed criterion of the declar
 
 <rule id="one-audit">
 
-Each revision of a record receives at most one change audit, and its findings never withhold publication, claiming, or execution. The author repairs what takes a minute and publishes. Before the first audit of a revision, the author checks every same-class site and every section the repair changed.
+Each revision of a record receives at most one change audit, and its findings never withhold publication, claiming, or application. The author repairs what takes a minute and publishes. Before the first audit of a revision, the author checks every same-class site and every section the repair changed.
 
 </rule>
 
@@ -130,7 +130,7 @@ The `predecessors` set and the `parent` value are the only authored lineage dire
 
 `blocked_by` names every known Change that must close `Applied`, or resolve through the Change that absorbed it, before this Change is unblocked. The list is mutable, contains canonical Change identities, and contains no duplicate or self reference. A blocker cycle prevents Sliced and Executable Maturity.
 
-A blocker closed `Applied` satisfies the dependency; an open blocker remains a blocker; a blocker closed `Abandoned` that another Change absorbed resolves through the Change that absorbed it, which satisfies the dependency once it closes `Applied`; a blocker closed `Abandoned` that no Change absorbed returns the dependent Change to refinement. Refinement may continue while blockers remain unresolved. Execution requires a Claimed, Executable Leaf whose every predecessor is closed and whose blockers are resolved.
+A blocker closed `Applied` satisfies the dependency; an open blocker remains a blocker; a blocker closed `Abandoned` that another Change absorbed resolves through the Change that absorbed it, which satisfies the dependency once it closes `Applied`; a blocker closed `Abandoned` that no Change absorbed returns the dependent Change to refinement. Refinement may continue while blockers remain unresolved. Application requires a Claimed, Executable Leaf whose every predecessor is closed and whose blockers are resolved.
 
 </rule>
 
@@ -148,9 +148,9 @@ A blocker closed `Applied` satisfies the dependency; an open blocker remains a b
 
 <rule id="spec-mutations">
 
-`## Spec mutations` holds one block for each affected or intended Node, in execution order, providers first. The block opens with `<path>: <malleability before> -> <malleability after>`, which names the Node. From Framed on, the block continues with `<file> states:` and the Node's assertions as bare bullets. Malleability before is the value the Node declares before the Change, `none` for a Node the Change creates. Malleability after is the value the Node declares once the Change is applied: `spec`, `verification`, or `implementation`, an absent field meaning `implementation`. The malleability order from most to least malleable is `spec`, `verification`, `implementation`; the least malleable target is the Malleability after value latest in that order. Malleability is a per-Node fact; the record carries no Change-wide target. Existing paths resolve; an intended Node is labeled as intended.
+`## Spec mutations` holds one block for each affected or intended Node, in application order, providers first. The block opens with `<path>: <malleability before> -> <malleability after>`, which names the Node. From Framed on, the block continues with `<file> states:` and the Node's assertions as bare bullets. Malleability before is the value the Node declares before the Change, `none` for a Node the Change creates. Malleability after is the value the Node declares once the Change is applied: `spec`, `verification`, or `implementation`, an absent field meaning `implementation`. The malleability order from most to least malleable is `spec`, `verification`, `implementation`; the least malleable target is the Malleability after value latest in that order. Malleability is a per-Node fact; the record carries no Change-wide target. Existing paths resolve; an intended Node is labeled as intended.
 
-Execution takes the Governance mutations blocks, then the Spec mutations blocks, each in record order. The record names no result, producer, or Verifier: execution selects each block's results and Verifiers from the merge composition for the Node's malleability after and from the decision-record audit of a record.
+Application takes the Governance mutations blocks, then the Spec mutations blocks, each in record order. The record names no result, producer, or Verifier: application selects each block's results and Verifiers from the merge composition for the Node's malleability after and from the decision-record audit of a record.
 
 </rule>
 
@@ -172,9 +172,9 @@ Execution takes the Governance mutations blocks, then the Spec mutations blocks,
 
 </rule>
 
-<rule id="no-execution-status">
+<rule id="no-application-status">
 
-The record carries no execution status: no Node state, no required state, no `## Artifacts` section or link to produced content, and no progress. Execution records its progress only in its Handoff, which the Executor posts after every completed block and after integration, and which carries transient continuation: branch or changeset with its head commit, the completed Governance mutations and Spec mutations blocks, and the next block, blockers, and non-obvious hazards. Routine command logs, run tokens, verdicts, findings, verification history, and session narrative stay outside the Change.
+The record carries no application status: no Node state, no required state, no `## Artifacts` section or link to produced content, and no progress. Application records its progress only in its Handoff, which the Applier posts after every completed block and after integration, and which carries transient continuation: branch or changeset with its head commit, the completed Governance mutations and Spec mutations blocks, and the next block, blockers, and non-obvious hazards. Routine command logs, run tokens, verdicts, findings, verification history, and session narrative stay outside the Change.
 
 </rule>
 
@@ -192,11 +192,11 @@ Maturity advances past Proposed, Framed, and Sliced only when the target level's
 
 Authority is read from the store and never from the body. The store's field-change event for the Lifecycle move out of `Submitted` gives the actor and the time; no confirmation comment is posted or read.
 
-A Change is submitted only at Proposed, Framed, or Sliced; an Executable Change is never submitted, because no authority follows Executable. `Submitted` means the record waits for the Product's Maintainer's review and is not ready for work at the next Maturity: no session claims, refines, or executes it until the Maintainer moves it out of `Submitted`. A confirming move changes Lifecycle only and writes no Maturity; a rejecting move follows a Maturity lowering as the rule's next paragraph states.
+A Change is submitted only at Proposed, Framed, or Sliced; an Executable Change is never submitted, because no authority follows Executable. `Submitted` means the record waits for the Product's Maintainer's review and is not ready for work at the next Maturity: no session claims, refines, or applies it until the Maintainer moves it out of `Submitted`. A confirming move changes Lifecycle only and writes no Maturity; a rejecting move follows a Maturity lowering as the rule's next paragraph states.
 
 A rejection is an instruction naming what to fix, sent to the Director or the Product's Maintainer or written as a plain comment on the Change; no rejection record exists, and the holder repairs the record and submits it again. A rejection at Framed or Sliced lowers Maturity one level, and whoever rejects writes the lowered Maturity before the Lifecycle move out of `Submitted`, so that move is read at the lowered Maturity under `authority-read` and authorizes leaving only the lowered Maturity, the one the Change held before the rejected stage. The order is one: the holder's release comes first, the rejecting lowering of Maturity second, the rejecting move out of `Submitted` third, and further refinement only after a session claims the Change again. A rejection at Proposed leaves the Change `Submitted`, and it means not now.
 
-A Claimed holder writes a Handoff and releases the Change before the rejecting move lowers Maturity; the Executor's Handoffs after a completed block and after integration leave the Change Claimed. Author, Fixer, and Verifier roles hold no claim and gain no integration authority from editing or auditing the record.
+A Claimed holder writes a Handoff and releases the Change before the rejecting move lowers Maturity; the Applier's Handoffs after a completed block and after integration leave the Change Claimed. Author, Fixer, and Verifier roles hold no claim and gain no integration authority from editing or auditing the record.
 
 </rule>
 
@@ -212,7 +212,7 @@ Store commands, provider identifiers, issue and field identifiers, revision sele
 
 Inventory the front-matter key occurrences before interpreting the body. A candidate is inside the contract only when it carries each of the seven closed-set keys exactly once and no other key, and its body does not open with `# Output`. Stripped front matter, a missing or repeated required key, and any extra key — including `change_ref` — place the candidate outside the contract, and so does a body that opens with `# Output`.
 
-A candidate outside the contract receives no judgment, migration, alias, inferred front matter, or body-line lineage interpretation; report it as outside the contract with the expected and observed key inventories, or with the observed opening heading. A record in the `# Output` form is never converted in place: its next revision authors the record anew in the final format from the proposal it carries, and only that newly authored record is judged against the contract. No revision preserves the `# Output` form. A candidate inside the contract remains judgeable when a value, section, body line, or Maturity-specific requirement violates the record contract or the selected Definition of Ready. Only the final format is written, judged, and executed: a record that carries `## Nodes`, `## Assertion operations`, `## Decisions`, `## Mutations`, `## Activities`, or `## Artifacts` receives no migration, alias, or inferred field, and its next revision authors the record anew from the proposal it carries, before its next execution.
+A candidate outside the contract receives no judgment, migration, alias, inferred front matter, or body-line lineage interpretation; report it as outside the contract with the expected and observed key inventories, or with the observed opening heading. A record in the `# Output` form is never converted in place: its next revision authors the record anew in the final format from the proposal it carries, and only that newly authored record is judged against the contract. No revision preserves the `# Output` form. A candidate inside the contract remains judgeable when a value, section, body line, or Maturity-specific requirement violates the record contract or the selected Definition of Ready. Only the final format is written, judged, and applied: a record that carries `## Nodes`, `## Assertion operations`, `## Decisions`, `## Mutations`, `## Activities`, or `## Artifacts` receives no migration, alias, or inferred field, and its next revision authors the record anew from the proposal it carries, before its next application.
 
 </rule>
 

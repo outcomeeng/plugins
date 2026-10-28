@@ -35,7 +35,7 @@ parent: null
 
 ## Spec mutations
 
-<!-- One block for each affected or intended Node, in execution order, providers first. A Parent carries no block. Use none for the malleability before of a Node the Change creates. -->
+<!-- One block for each affected or intended Node, in application order, providers first. A Parent carries no block. Use none for the malleability before of a Node the Change creates. -->
 
 `spx/[full node path]`: [spec, verification, implementation, or none] -> [spec, verification, or implementation]
 
