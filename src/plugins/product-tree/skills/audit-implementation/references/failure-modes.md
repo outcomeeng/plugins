@@ -116,7 +116,7 @@ projection reported coverage over a scope Claude never read.
 
 How to avoid: Derive every subject body from the resolved `base` and `head`
 retained at stage 1 of `<execution_sequence>`. Read a committed body with
-`git show '{head}:{path}'`, never from a single commit's patch.
+`git -C '{repository-root}' show '{head}:{path}'`, never from a single commit's patch.
 
 **Failure 13: A finding was raised before its governing standards were read**
 

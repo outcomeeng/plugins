@@ -12,6 +12,12 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ## 0.109.8
 
+### Fixed
+
+- **`/audit-implementation` resolves its repository root from the repository that holds the audited target.** The request names a target in another worktree as an absolute directory path beside the selector, and the skill resolves the root with `git -C` from that directory, runs its later git reads against that root, and returns the blocked diagnostic naming the directory when it is no repository checkout or when the resolved head or a changed path does not resolve in it. Before this change, the skill took the root from the session's working directory, so an implementation audit of a target in another worktree resolved no scope and sealed no run.
+
+## 0.109.8
+
 ### Changed
 
 - **The review prompt gives an unchanged subject one `evidence` verdict across heads and counts a stale eval `history.jsonl` no defect.** `review-changes` fixes the criteria of the `evidence` concern to the unit text and its governing context, so an earlier head's verdict and any other review's outcome decide nothing, and two passes over an unchanged subject at any head raise the same `evidence` finding or none. A review raises no finding on the sole ground that an eval's `history.jsonl` records a run on an earlier commit than the head, because evals run in CI only on an operator's dispatch and the file is a trend record the changeset does not owe. Before this change, the prompt fixed no such criteria, so reviews of one unchanged subject on different heads could judge it oppositely and one could cite a stale history file as the defect.

@@ -7,7 +7,7 @@ description: >-
   test, and architecture concerns, finding falsifiability, and completeness of
   the inspection.
 argument-hint: "<HEAD | branch | base...head | worktree:selector>"
-allowed-tools: Read, Bash(python3 "${SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run:*), Write, Glob, Grep
+allowed-tools: Read, Bash(python3 "${SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(git -C * rev-parse:*), Bash(git -C * status:*), Bash(git -C * show:*), Bash(spx verification run:*), Write, Glob, Grep
 ---
 
 <objective>
@@ -107,9 +107,21 @@ Run-driver identity uses the six published producer fields (the
 context, separate from `$ARGUMENTS`. Accept that identity generically; never
 infer it from a role name, installed plugin, or descriptive text.
 
+A target in another worktree reaches the audit as an absolute directory path
+the request names beside the selector, the checkout that holds the audited
+scope. The session's working directory never decides the repository.
+
 Before reading project file bodies:
 
-1. Resolve the repository root with `git rev-parse --show-toplevel`.
+1. Resolve the repository root from the repository that holds the target: with
+   `git -C '{target-directory}' rev-parse --show-toplevel` when the request
+   names a target directory, and with `git rev-parse --show-toplevel` when it
+   names none. Run every later git command against that root with `git -C
+   '{repository-root}'`. Return the `<verdict_format>` blocked diagnostic with
+   `runToken: not-started` naming the target directory when it is no
+   repository checkout, and again when the resolved `head` or any
+   `changed_paths` entry does not resolve in that root; the audit judges no
+   scope outside the repository that holds its target.
 2. For an advisory target, remove only its `worktree:` prefix. Resolve the
    remaining selector through the bundled consumer of `/scope-changeset`:
 
@@ -125,11 +137,10 @@ Before reading project file bodies:
    reproduces reliably, and a dropped path there is invisible to every later
    stage. Quote each substituted argument independently, applying the
    apostrophe splice below.
-3. Read `git status --porcelain=v1 -z --untracked-files=all` at the repository
-   root. An advisory audit includes every reported modified or untracked path,
+3. Read `git -C '{repository-root}' status --porcelain=v1 -z --untracked-files=all`. An advisory audit includes every reported modified or untracked path,
    consuming NUL-delimited paths and both paths of a rename or copy. A committed
    audit includes none of those live changes. Read committed subject bodies with
-   `git show '{head}:{path}'` whenever the working file differs or the selected
+   `git -C '{repository-root}' show '{head}:{path}'` whenever the working file differs or the selected
    head is not the checkout's `HEAD`; never silently audit a different version.
    For a deleted path, inspect its base-side body and the committed deletion.
 4. Validate the generic run-driver identity and retain already-established
