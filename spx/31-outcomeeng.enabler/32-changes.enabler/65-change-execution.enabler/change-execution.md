@@ -5,7 +5,7 @@ malleability: spec
 
 # Change Application
 
-PROVIDES the application of one Applicable Change by its Applier — confirming the claim, running each round's producing skills and Verifiers in agent sessions of their own, integrating the changeset, and closing or releasing the Change
+PROVIDES the application of one Executable Change by its Applier — confirming the claim, running each round's producing skills and Verifiers in agent sessions of their own, integrating the changeset, and closing or releasing the Change
 SO THAT an Applier session started for a Change
 CAN deliver the Change's Output while producing no artifact itself other than a mechanical repair
 
@@ -17,7 +17,7 @@ The product-tree plugin ships one subagent definition per skill an Applier sessi
 
 ### Compliance
 
-- ALWAYS: `/apply-change` confirms that the winning Claim names its worktree root and loads the latest Handoff before it starts, and applies only an Applicable Leaf whose every predecessor is closed and whose blockers are resolved, and refuses a Parent ([audit])
+- ALWAYS: `/apply-change` confirms that the winning Claim names its worktree root and loads the latest Handoff before it starts, and applies only an Executable Leaf whose every predecessor is closed and whose blockers are resolved, and refuses a Parent ([audit])
 - ALWAYS: an Applier whose record and newest Handoff name no working branch works on the branch its assigned worktree has checked out only when that branch is not the default branch and its name ends with the Change number with no digit before it, as `work/change-<N>` and `applier-<N>` do and `work/change-1<N>` does not; otherwise the worktree counts as naming no branch, and the Applier creates the work branch `work/change-<N>` from the Change's number and starts there; a branch the record or the newest Handoff names stays the working branch ([audit])
 - ALWAYS: application launches, for every round, one agent session of the kind that produces the block's result — decisions and specs, verification evidence, tests, implementation, a skill surface, or a subagent definition — and launches each Fixer as a fresh session of the same kind, handed exactly the rejected run's sealed run file, unchanged, and the instruction "attend to every rule the run names and sweep each named class across the whole target" ([audit])
 - NEVER: the Applier adds a summary, a remedy, a class name, or any other interpretation of the findings to a Fixer's input ([audit])

@@ -7,7 +7,7 @@ malleability: spec
 
 PROVIDES the Orchestrator position's duties for one Change — claiming it for an Applier, starting that Applier's agent session, checking its progress, and passing questions up the chain of positions
 SO THAT an operator
-CAN have each Applicable Change applied by its own Applier session without opening that session's pane
+CAN have each Executable Change applied by its own Applier session without opening that session's pane
 
 The Orchestrator is a position, never one of the five Roles: it holds no Role for the Change it orchestrates and produces no artifact of it. The Applier it starts holds the Change and applies it through `spx/31-outcomeeng.enabler/32-changes.enabler/65-change-execution.enabler`.
 
