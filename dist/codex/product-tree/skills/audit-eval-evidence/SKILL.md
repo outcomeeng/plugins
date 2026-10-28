@@ -14,6 +14,12 @@ A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the 
 
 </objective>
 
+<prerequisites>
+
+Use skill `product-tree:eval-evidence-standards`. Apply its complete producer-coupling, oracle-independence, assertion-alignment, falsifiability, run-evidence, and case-provenance rules. A missing standard blocks the audit because `/eval` and this audit must judge from the same definition of sound evidence.
+
+</prerequisites>
+
 <constraints>
 
 - NEVER modify eval artifacts, skill bodies, prompts, cases, history, or any other file — this audit produces a verdict, never a fix or a commit.
@@ -35,7 +41,7 @@ Check the five evidence properties in strict order, producer coupling first: an 
 
 **Step 1: Load context**
 
-Read the evidence model before auditing: `${SKILL_DIR}/references/evidence-model.md`
+Read the audit procedures that extend the shared standard before auditing: `${SKILL_DIR}/references/evidence-model.md`. Where it and `/eval-evidence-standards` both speak to a property, the standard governs.
 
 Use skill `product-tree:contextualize` on the spec node whose eval evidence is being audited. This loads the spec's assertions, ancestor ADRs/PDRs, and hierarchy context.
 
@@ -233,7 +239,7 @@ The verdict is sound when:
 
 <reference_guides>
 
-- `${SKILL_DIR}/references/evidence-model.md` — eval evidence properties, artifact taxonomy, and rejection categories.
+- `${SKILL_DIR}/references/evidence-model.md` — audit procedures for the shared standard's properties, artifact taxonomy, and rejection categories.
 - `${SKILL_DIR}/references/touched-text.md` — touched text, finding key, severity retention, and the `FILED` finding form.
 
 </reference_guides>
