@@ -26,6 +26,8 @@ from outcomeeng.distribution.native_profile_execution import (
     NativeCommandRunner,
 )
 from outcomeeng.validation.implementation_audit_contract import (
+    EVENT_RUN_ID_FIELD,
+    RUN_EVENTS_FIELD,
     RUN_TERMINAL_STATUS_FIELD,
     RUN_TOKEN_FIELD,
     AuditTerminalStatus,
@@ -44,7 +46,8 @@ CONFIGURATION_FILENAME: Final = "configuration.json"
 LOADING_FILENAME: Final = "loading.json"
 RESULT_FILENAME: Final = "result.json"
 BLOCKED_MARKER: Final = "BLOCKED"
-RUN_FILE_PATTERN: Final = re.compile(r"run\s*file\W+(\S+)", re.IGNORECASE)
+RUN_FILE_WORD_PATTERN: Final = re.compile(r"[^\s\"'`<>(){}\[\],]+")
+SENTENCE_PUNCTUATION: Final = ".;:!?"
 
 NATIVE_LAUNCH_COMMANDS: Final[Mapping[Target, tuple[str, ...]]] = {
     Target.CLAUDE: (
@@ -278,7 +281,7 @@ def run_native_auditor_row(
     message = _returned_message(row.target, stdout)
     projection = _rendered_projection(message)
     run_token = projection[RUN_TOKEN_FIELD] if projection else None
-    run_file = _first_group(RUN_FILE_PATTERN, message)
+    run_file = _run_file(message, projection)
     blocked = BLOCKED_MARKER in message
     terminal_condition: str | None = None
     if result.returncode != 0:
@@ -386,9 +389,28 @@ def _rendered_projection(message: str) -> dict[str, object] | None:
     return None
 
 
-def _first_group(pattern: re.Pattern[str], text: str) -> str | None:
-    match = pattern.search(text)
-    return match.group(1) if match else None
+def _run_file(message: str, projection: Mapping[str, object] | None) -> str | None:
+    """The run file a message returns: its longest word ending with the run file name the rendered projection records."""
+    name = _projection_run_file_name(projection)
+    if name is None:
+        return None
+    words = (
+        word.rstrip(SENTENCE_PUNCTUATION)
+        for word in RUN_FILE_WORD_PATTERN.findall(message)
+    )
+    return max((word for word in words if word.endswith(name)), key=len, default=name)
+
+
+def _projection_run_file_name(projection: Mapping[str, object] | None) -> str | None:
+    """The run file name the first rendered event of a projection carries."""
+    events = projection.get(RUN_EVENTS_FIELD) if projection else None
+    if not isinstance(events, list):
+        return None
+    for event in events:
+        name = event.get(EVENT_RUN_ID_FIELD) if isinstance(event, dict) else None
+        if isinstance(name, str) and name:
+            return name
+    return None
 
 
 def _json_lines(stream: str) -> Iterable[dict[str, object]]:

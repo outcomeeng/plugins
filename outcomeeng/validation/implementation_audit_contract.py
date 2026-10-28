@@ -17,6 +17,9 @@ RUN_TERMINAL_STATUS_FIELD: Final = "terminalStatus"
 RUN_SEALED_FIELD: Final = "sealed"
 RUN_FINDING_COUNT_FIELD: Final = "findingCount"
 RUN_RESOLVED_SCOPE_FIELD: Final = "resolvedScope"
+RUN_EVENTS_FIELD: Final = "events"
+EVENT_RUN_ID_FIELD: Final = "runid"
+"""The field of each rendered event that names the run file the event was recorded in."""
 
 
 class ImplementationAuditConcern(StrEnum):

@@ -17,6 +17,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from typing import Final
 
 from outcomeeng.distribution.installation import CLAUDE_EXECUTABLE, CODEX_HOME_ENV
 from outcomeeng.distribution.native_auditor_dispatch import (
@@ -27,6 +28,8 @@ from outcomeeng.distribution.native_auditor_dispatch import (
     native_auditor_rows,
 )
 from outcomeeng.validation.implementation_audit_contract import (
+    EVENT_RUN_ID_FIELD,
+    RUN_EVENTS_FIELD,
     RUN_TERMINAL_STATUS_FIELD,
     RUN_TOKEN_FIELD,
     AuditTerminalStatus,
@@ -54,30 +57,37 @@ from outcomeeng_testing.harnesses.native_profile_launch import (
 )
 
 
-PLANTED_RUN_TOKEN = "run-0001"
-PLANTED_RUN_FILE = "runs/run-0001.json"
+PLANTED_RUN_TOKEN = "2026-01-02_03-04-05-678-0123456789ab"
+PLANTED_RUN_FILE_NAME = f"run-{PLANTED_RUN_TOKEN}.jsonl"
+PLANTED_RUN_FILE = f"runs/{PLANTED_RUN_FILE_NAME}"
 PLANTED_TERMINAL_STATUS = AuditTerminalStatus.APPROVED.value
+PLANTED_PROJECTION: Final[Mapping[str, object]] = {
+    RUN_TOKEN_FIELD: PLANTED_RUN_TOKEN,
+    RUN_TERMINAL_STATUS_FIELD: PLANTED_TERMINAL_STATUS,
+    RUN_EVENTS_FIELD: [{EVENT_RUN_ID_FIELD: PLANTED_RUN_FILE_NAME}],
+}
 
 
 class LaunchReturn(Enum):
     """What the dispatched auditor returns to the parent session."""
 
     RUN_TOKEN = "run-token"
+    FREE_FORM = "free-form"
     PROJECTION_ONLY = "projection-only"
     UNSTRUCTURED = "unstructured"
     BLOCKED = "blocked"
 
 
 def _returned_message(returned: LaunchReturn) -> str:
-    projection = json.dumps(
-        {
-            RUN_TOKEN_FIELD: PLANTED_RUN_TOKEN,
-            RUN_TERMINAL_STATUS_FIELD: PLANTED_TERMINAL_STATUS,
-        }
-    )
+    projection = json.dumps(PLANTED_PROJECTION)
     if returned is LaunchReturn.RUN_TOKEN:
         return (
             f"run token {PLANTED_RUN_TOKEN}\nrun file {PLANTED_RUN_FILE}\n{projection}"
+        )
+    if returned is LaunchReturn.FREE_FORM:
+        return (
+            f"The audit is sealed under token {PLANTED_RUN_TOKEN}. Its record is "
+            f"{PLANTED_RUN_FILE}.\nThe rendered verdict follows.\n{projection}"
         )
     if returned is LaunchReturn.PROJECTION_ONLY:
         return f"Here is the verdict.\n```json\n{projection}\n```"

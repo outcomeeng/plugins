@@ -16,10 +16,6 @@ from outcomeeng.distribution.native_auditor_dispatch import (
     native_auditor_rows,
     record_native_auditor_failure,
 )
-from outcomeeng.validation.implementation_audit_contract import (
-    RUN_TERMINAL_STATUS_FIELD,
-    RUN_TOKEN_FIELD,
-)
 from outcomeeng_testing.harnesses.discovery_auth import CREDENTIAL_ENVIRONMENTS
 from outcomeeng_testing.harnesses.discovery_auth_cases import (
     NATIVE_FAILURE_EXIT_CODE,
@@ -27,9 +23,10 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import (
 )
 from outcomeeng_testing.harnesses.installation import repository_root
 from outcomeeng_testing.harnesses.native_auditor_launch import (
+    PLANTED_PROJECTION,
     PLANTED_RUN_FILE,
+    PLANTED_RUN_FILE_NAME,
     PLANTED_RUN_TOKEN,
-    PLANTED_TERMINAL_STATUS,
     LaunchReturn,
     native_auditor_failure,
     native_auditor_launch,
@@ -89,10 +86,9 @@ def test_every_row_launches_once_from_the_shipped_definition_passing_only_the_se
                 assert result[RESULT_RUN_TOKEN_KEY] == PLANTED_RUN_TOKEN, row.identifier
                 assert result[RESULT_RUN_FILE_KEY] == PLANTED_RUN_FILE, row.identifier
                 assert result[RESULT_BLOCKED_KEY] is False, row.identifier
-                assert result[RESULT_PROJECTION_KEY] == {
-                    RUN_TOKEN_FIELD: PLANTED_RUN_TOKEN,
-                    RUN_TERMINAL_STATUS_FIELD: PLANTED_TERMINAL_STATUS,
-                }, row.identifier
+                assert result[RESULT_PROJECTION_KEY] == PLANTED_PROJECTION, (
+                    row.identifier
+                )
                 assert not row.state_root.exists()
                 if row.target is Target.CLAUDE:
                     assert launch.environment.keys() & STRIPPABLE == {selected}
@@ -121,7 +117,23 @@ def test_dispatch_success_derives_from_the_rendered_projection_whatever_prose_su
             assert item.observation.terminal_condition is None, row.identifier
             result = json.loads(row.result_path.read_text("utf-8"))
             assert result[RESULT_RUN_TOKEN_KEY] == PLANTED_RUN_TOKEN, row.identifier
+            assert result[RESULT_RUN_FILE_KEY] == PLANTED_RUN_FILE_NAME, row.identifier
             assert result[RESULT_BLOCKED_KEY] is False, row.identifier
+
+
+def test_the_run_file_is_recovered_from_a_reply_that_names_no_label() -> None:
+    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
+    with native_auditor_launch(
+        {selected}, returned=LaunchReturn.FREE_FORM
+    ) as observation:
+        assert observation.rows
+        for item in observation.rows:
+            row = item.observation.row
+            assert item.observation.terminal_condition is None, row.identifier
+            result = json.loads(row.result_path.read_text("utf-8"))
+            assert result[RESULT_RUN_TOKEN_KEY] == PLANTED_RUN_TOKEN, row.identifier
+            assert result[RESULT_RUN_FILE_KEY] == PLANTED_RUN_FILE, row.identifier
+            assert result[RESULT_PROJECTION_KEY] == PLANTED_PROJECTION, row.identifier
 
 
 def test_a_reply_without_a_rendered_projection_or_blocked_diagnostic_records_a_terminal_condition() -> (
