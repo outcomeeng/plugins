@@ -1,7 +1,7 @@
 """Command boundary for one change-record audit.
 
 The runner reads one JSON request object on stdin, performs the requested file
-or ``spx verification run`` operation from the repository root, and writes one
+or ``spx verification run`` operation from the Product's checkout root, and writes one
 JSON result object on stdout. It writes no file: the SPX run journal is the only
 state that persists between requests, and every request names the candidate
 path and run token it acts on, so audits of different candidates started from
@@ -56,6 +56,16 @@ process over replayed store pages: it reads the issue's field-change events and
 no comment, a read that ends before the bound returns every event, and a connection that keeps reporting a further page blocks after
 the bound with ``page-bound-reached`` naming it.
 
+Every operation that names a candidate or a record path takes the Product's
+checkout root as ``root``, an absolute path: ``read-candidate``, ``start``,
+``add-scope``, ``add-finding``, ``reconcile``, ``finish``, and ``count-limits``
+resolve the candidate path under that root and run their ``git`` and ``spx``
+commands with that root as the working directory, and ``resolve-reference``
+resolves the path a record names under it, whatever checkout holds the draft
+or runs the audit. A request without ``root``, or one whose ``root`` is no
+repository checkout root, blocks naming it, and the containment check of the
+path stays against that root.
+
 ``read-published`` starts ``gh`` once and returns the issue's published body,
 the empty string when the store holds none.
 
@@ -64,8 +74,8 @@ the named issue's Product and Parent, its Parent's Product, and the issues whose
 Parent is the named issue, and the issues whose Predecessors value names it,
 within the same page bound as ``read-authority``.
 
-``count-limits`` reads the candidate and starts no process beyond the
-repository-root lookup; it returns the title's word count and the Intent
+``count-limits`` reads the candidate under ``root`` and starts no process beyond
+the repository-root lookup of that root; it returns the title's word count and the Intent
 section's word count, labels included, with the limit of each, and lists those
 over their limit.
 """
@@ -113,6 +123,7 @@ class RequestField(StrEnum):
     PAYLOAD = "payload"
     TERMINAL_STATUS = "terminalStatus"
     ISSUE = "issue"
+    ROOT = "root"
 
 
 class ResultField(StrEnum):
@@ -337,28 +348,43 @@ ISSUE_IDENTITY_PATTERN: Final = re.compile(
 
 #: The fields each operation's request carries besides ``operation``.
 REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
-    Operation.READ_CANDIDATE: frozenset({RequestField.PATH}),
-    Operation.RESOLVE_REFERENCE: frozenset({RequestField.PATH}),
+    Operation.READ_CANDIDATE: frozenset({RequestField.PATH, RequestField.ROOT}),
+    Operation.RESOLVE_REFERENCE: frozenset({RequestField.PATH, RequestField.ROOT}),
     Operation.TOOL_VERSION: frozenset(),
-    Operation.START: frozenset({RequestField.PATH, RequestField.CANDIDATE_SHA256}),
-    Operation.ADD_SCOPE: frozenset(
-        {RequestField.PATH, RequestField.RUN_TOKEN, RequestField.PAYLOAD}
+    Operation.START: frozenset(
+        {RequestField.PATH, RequestField.ROOT, RequestField.CANDIDATE_SHA256}
     ),
-    Operation.ADD_FINDING: frozenset(
+    Operation.ADD_SCOPE: frozenset(
         {
             RequestField.PATH,
+            RequestField.ROOT,
             RequestField.RUN_TOKEN,
             RequestField.PAYLOAD,
         }
     ),
-    Operation.RECONCILE: frozenset({RequestField.PATH, RequestField.RUN_TOKEN}),
+    Operation.ADD_FINDING: frozenset(
+        {
+            RequestField.PATH,
+            RequestField.ROOT,
+            RequestField.RUN_TOKEN,
+            RequestField.PAYLOAD,
+        }
+    ),
+    Operation.RECONCILE: frozenset(
+        {RequestField.PATH, RequestField.ROOT, RequestField.RUN_TOKEN}
+    ),
     Operation.FINISH: frozenset(
-        {RequestField.PATH, RequestField.RUN_TOKEN, RequestField.TERMINAL_STATUS}
+        {
+            RequestField.PATH,
+            RequestField.ROOT,
+            RequestField.RUN_TOKEN,
+            RequestField.TERMINAL_STATUS,
+        }
     ),
     Operation.READ_AUTHORITY: frozenset({RequestField.ISSUE}),
     Operation.READ_PUBLISHED: frozenset({RequestField.ISSUE}),
     Operation.READ_RELATIONS: frozenset({RequestField.ISSUE}),
-    Operation.COUNT_LIMITS: frozenset({RequestField.PATH}),
+    Operation.COUNT_LIMITS: frozenset({RequestField.PATH, RequestField.ROOT}),
 }
 
 
@@ -641,6 +667,24 @@ def _reference_path(request: Mapping[str, object]) -> str:
     return named
 
 
+def _checkout_root(request: Mapping[str, object]) -> pathlib.Path:
+    """Return the Product's checkout root a request names, an absolute path."""
+    named = _string(request, RequestField.ROOT)
+    defect = _system_text_defect(named)
+    if defect is not None:
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"root {defect}: {named!r}; pass the absolute path of the Product's checkout root",
+        )
+    root = pathlib.PurePosixPath(named)
+    if not root.is_absolute():
+        raise Blocked(
+            BlockReason.INVALID_REQUEST,
+            f"request field {RequestField.ROOT.value} must be an absolute path, received {named!r}; pass the absolute path of the Product's checkout root",
+        )
+    return pathlib.Path(named)
+
+
 def _candidate_sha256(request: Mapping[str, object]) -> str:
     return _string(request, RequestField.CANDIDATE_SHA256)
 
@@ -721,24 +765,31 @@ def _issue_identity(request: Mapping[str, object]) -> tuple[str, str, str]:
 _REQUEST_CHECKS: Final[
     Mapping[Operation, tuple[Callable[[Mapping[str, object]], object], ...]]
 ] = {
-    Operation.READ_CANDIDATE: (_candidate_path,),
-    Operation.RESOLVE_REFERENCE: (_reference_path,),
+    Operation.READ_CANDIDATE: (_candidate_path, _checkout_root),
+    Operation.RESOLVE_REFERENCE: (_reference_path, _checkout_root),
     Operation.TOOL_VERSION: (),
-    Operation.START: (_candidate_path, _candidate_sha256),
-    Operation.ADD_SCOPE: (_candidate_path, _run_token, _unit_id, _payload_text),
+    Operation.START: (_candidate_path, _checkout_root, _candidate_sha256),
+    Operation.ADD_SCOPE: (
+        _candidate_path,
+        _checkout_root,
+        _run_token,
+        _unit_id,
+        _payload_text,
+    ),
     Operation.ADD_FINDING: (
         _candidate_path,
+        _checkout_root,
         _run_token,
         _unit_id,
         _finding_rule,
         _payload_text,
     ),
-    Operation.RECONCILE: (_candidate_path, _run_token),
-    Operation.FINISH: (_candidate_path, _run_token, _terminal_status),
+    Operation.RECONCILE: (_candidate_path, _checkout_root, _run_token),
+    Operation.FINISH: (_candidate_path, _checkout_root, _run_token, _terminal_status),
     Operation.READ_AUTHORITY: (_issue_identity,),
     Operation.READ_PUBLISHED: (_issue_identity,),
     Operation.READ_RELATIONS: (_issue_identity,),
-    Operation.COUNT_LIMITS: (_candidate_path,),
+    Operation.COUNT_LIMITS: (_candidate_path, _checkout_root),
 }
 
 
@@ -880,7 +931,7 @@ def _read_candidate(
     context: _Context, request: Mapping[str, object]
 ) -> dict[str, object]:
     relative = _candidate_path(request)
-    content = _live_content(_repository_root(context), relative)
+    content = _live_content(_product_root(context, _checkout_root(request)), relative)
     return {
         ResultField.PATH: relative,
         ResultField.SHA256: _sha256(content),
@@ -888,11 +939,33 @@ def _read_candidate(
     }
 
 
+def _product_root(context: _Context, named: pathlib.Path) -> pathlib.Path:
+    """Return the repository checkout root ``named`` names, or block naming it."""
+    if not named.is_dir():
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"root is not a directory: {named}; pass the absolute path of the Product's checkout root",
+        )
+    try:
+        top = _repository_root(_Context(runner=context.runner, cwd=named))
+    except Blocked as exc:
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"root is no repository checkout: {named}; pass the absolute path of the directory that holds the Product's checkout",
+        ) from exc
+    if top.resolve() != named.resolve():
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"root is no repository checkout root: {named}; pass the absolute path of the directory that holds the Product's checkout",
+        )
+    return top
+
+
 def _resolve_reference(
     context: _Context, request: Mapping[str, object]
 ) -> dict[str, object]:
     named = _reference_path(request)
-    root = _repository_root(context)
+    root = _product_root(context, _checkout_root(request))
     if pathlib.PurePosixPath(named).is_absolute():
         resolution = Resolution.ABSOLUTE
     elif not _within(root, root / named, named):
@@ -921,7 +994,7 @@ def _tool_version(
 def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
     relative = _candidate_path(request)
     expected = _candidate_sha256(request)
-    root = _repository_root(context)
+    root = _product_root(context, _checkout_root(request))
     content = _live_content(root, relative)
     if _sha256(content) != expected:
         raise Blocked(
@@ -999,7 +1072,7 @@ def _append(
     stdout = _command(
         context,
         argv,
-        cwd=_repository_root(context),
+        cwd=_product_root(context, _checkout_root(request)),
         stdin=_payload_text(request),
         payload_key=idempotency_key,
     )
@@ -1058,7 +1131,7 @@ def _finding_entries(
 def _reconcile(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
     relative = _candidate_path(request)
     run_token = _run_token(request)
-    root = _repository_root(context)
+    root = _product_root(context, _checkout_root(request))
     retained = _retained_content(context, root, relative, run_token)
     live = _live_content(root, relative)
     if live != retained:
@@ -1111,7 +1184,7 @@ def _finish(context: _Context, request: Mapping[str, object]) -> dict[str, objec
     relative = _candidate_path(request)
     run_token = _run_token(request)
     terminal = _terminal_status(request)
-    root = _repository_root(context)
+    root = _product_root(context, _checkout_root(request))
     finish_argv = [
         *_run_argv(("finish",), relative, run_token),
         "--terminal-status",
@@ -1427,7 +1500,7 @@ def _count_limits(
 ) -> dict[str, object]:
     """Count the title's words and the Intent section's words, labels included."""
     relative = _candidate_path(request)
-    content = _live_content(_repository_root(context), relative)
+    content = _live_content(_product_root(context, _checkout_root(request)), relative)
     front = _FRONT_MATTER_PATTERN.match(content)
     body = content[front.end() :] if front else content
     title_match = _TITLE_PATTERN.search(front.group(1)) if front else None

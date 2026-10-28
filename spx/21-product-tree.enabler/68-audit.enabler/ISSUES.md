@@ -310,7 +310,17 @@ failed invocation rather than approval evidence.
 
 **Evidence**: `instructions:subagent-auditor` finding `f-001` against
 `src/plugins/product-tree/agents/implementation-auditor.md` on Change #76 head
-`843ddd709b058970d414ec755cc10121ff6bb5ff`.
+`843ddd709b058970d414ec755cc10121ff6bb5ff`. `instructions:subagent-auditor` run
+`2026-10-28_14-07-13-828-0c61625726ef` on head
+`d807dae5ddcb0c6b22eff86badd7d3efcff799ca` returned the same gap as a `blocking`
+finding under rule `release_acceptance_evidence` at lines 6, 15 and 33 of the
+definition, over base-ref range
+`c586b167fcb9c91a0a908c0971b9b449fc0b2aa7..d807dae5ddcb0c6b22eff86badd7d3efcff799ca`.
+The Operator set that finding aside on 2026-10-28 under property 6 of
+[`spx/15-merging.pdr.md`](spx/15-merging.pdr.md), because the only evidence that
+satisfies it is a paid live agent run the Operator's standing order bars on this
+machine and this entry already records the gap. The ruling covers that one
+finding on run `2026-10-28_14-07-13-828-0c61625726ef`.
 
 ## The implementation-auditor has no executable agent or eval coverage
 

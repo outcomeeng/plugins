@@ -6,8 +6,8 @@ description: >-
   skill the artifact registry selects for its changed paths, covering code,
   test, and architecture concerns, finding falsifiability, and completeness of
   the inspection.
-argument-hint: "<HEAD | branch | base...head | worktree:selector>"
-allowed-tools: Read, Bash(python3 "${SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run:*), Write, Glob, Grep
+argument-hint: "<HEAD | branch | base...head | worktree:selector> [absolute checkout directory]"
+allowed-tools: Read, Bash(python3 "${SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git -C * rev-parse:*), Bash(git -C * status:*), Bash(git -C * show:*), Bash(spx -C * verification run:*), Write, Glob, Grep
 ---
 
 <objective>
@@ -93,9 +93,9 @@ unfinished reading are never such a cause.
 
 <request_contract>
 
-Bind the target scope selector before discovery. `$ARGUMENTS` supplies it when
-that argument is non-empty; when it is empty, the selector is the one the
-request text carries, and the empty substitution binds nothing. Only a request
+Bind the target scope selector before discovery. `$ARGUMENTS` supplies the
+request tokens when that argument is non-empty; when it is empty, the tokens are
+the ones the request text carries, and the empty substitution binds nothing. Only a request
 that carries no selector is the missing-input case. The target is one scope
 selector: `HEAD`, a branch, or an explicit three-dot range. `worktree:` before
 a selector explicitly requests an advisory audit of that committed scope plus
@@ -107,9 +107,28 @@ Run-driver identity uses the six published producer fields (the
 context, separate from `$ARGUMENTS`. Accept that identity generically; never
 infer it from a role name, installed plugin, or descriptive text.
 
+A target in another worktree reaches the audit as the absolute path of the
+checkout directory that holds the audited scope. The request carries the
+selector first and that directory second, separated by one space; a directory
+path that contains a space is wrapped in double quotes, and a request with one
+token carries the selector alone. Bind each token separately and preserve each
+verbatim. The session's working directory never decides the repository.
+
 Before reading project file bodies:
 
-1. Resolve the repository root with `git rev-parse --show-toplevel`.
+1. Resolve the repository root from the repository that holds the target: with
+   `git -C '{target-directory}' rev-parse --show-toplevel` when the request
+   names a target directory, and with `git rev-parse --show-toplevel` when it
+   names none. Run every later git command against that root with `git -C
+   '{repository-root}'` and every `spx verification run` command with `spx -C
+   '{repository-root}' verification run`, because an unrooted command resolves
+   its scope and store from the session's working directory, which may hold
+   another checkout. Address every file the audit reads or searches by its
+   absolute path beneath that root. Return the `<verdict_format>` blocked diagnostic with
+   `runToken: not-started` naming the target directory when it is no
+   repository checkout, and again when the resolved `head` or any
+   `changed_paths` entry does not resolve in that root; the audit judges no
+   scope outside the repository that holds its target.
 2. For an advisory target, remove only its `worktree:` prefix. Resolve the
    remaining selector through the bundled consumer of `/scope-changeset`:
 
@@ -125,11 +144,10 @@ Before reading project file bodies:
    reproduces reliably, and a dropped path there is invisible to every later
    stage. Quote each substituted argument independently, applying the
    apostrophe splice below.
-3. Read `git status --porcelain=v1 -z --untracked-files=all` at the repository
-   root. An advisory audit includes every reported modified or untracked path,
+3. Read `git -C '{repository-root}' status --porcelain=v1 -z --untracked-files=all`. An advisory audit includes every reported modified or untracked path,
    consuming NUL-delimited paths and both paths of a rename or copy. A committed
    audit includes none of those live changes. Read committed subject bodies with
-   `git show '{head}:{path}'` whenever the working file differs or the selected
+   `git -C '{repository-root}' show '{head}:{path}'` whenever the working file differs or the selected
    head is not the checkout's `HEAD`; never silently audit a different version.
    For a deleted path, inspect its base-side body and the committed deletion.
 4. Validate the generic run-driver identity and retain already-established
@@ -178,7 +196,7 @@ python3 "${SKILL_DIR}/scripts/resolve_scope.py" '{selector}' --repo '{repository
 Then start the run with its own command, passing that file by path:
 
 ```bash
-spx verification run start --verification-type audit --scope-type changeset --scope <base>..<head> --input '<start-input-file>'
+spx -C '{repository-root}' verification run start --verification-type audit --scope-type changeset --scope <base>..<head> --input '<start-input-file>'
 ```
 
 The audit-input file holds one JSON object carrying only the short values the
@@ -202,9 +220,9 @@ field exactly and use that token for every later command, retain the run target 
 enumerates and stage 7 reconciles against. The resolver also recorded, under
 `artifact_selection` in that input, the registered artifacts and audit skills
 each path selects; `<coverage_model>` reads it back with
-`spx verification run input`. Never pass the whole locator as `--run`.
+`spx -C '{repository-root}' verification run input`. Never pass the whole locator as `--run`.
 
-Execute every state-changing `spx verification run` command serially: a tool
+Execute every state-changing `spx -C '{repository-root}' verification run` command serially: a tool
 response or batch contains at most one `start`, `scope add`, `finding add`, or
 `finish` for a run, and the next mutation waits for that command to exit and
 preserves its result. NEVER place two journal mutations in a parallel tool
@@ -223,19 +241,19 @@ Read `${SKILL_DIR}/references/run-payloads.md` before writing the first scope or
 - Send no payload through a heredoc, a pipe, or an inline argument, and remove no payload file.
 
 ```bash
-spx verification run scope add --verification-type audit --scope-type changeset --scope '<base>..<head>' --run '<token>' --idempotency-key '<stable-scope-key>' --payload '<scope-file>'
-spx verification run finding add --verification-type audit --scope-type changeset --scope '<base>..<head>' --run '<token>' --idempotency-key '<stable-scope-key>:<rule>' --payload '<finding-file>'
+spx -C '{repository-root}' verification run scope add --verification-type audit --scope-type changeset --scope '<base>..<head>' --run '<token>' --idempotency-key '<stable-scope-key>' --payload '<scope-file>'
+spx -C '{repository-root}' verification run finding add --verification-type audit --scope-type changeset --scope '<base>..<head>' --run '<token>' --idempotency-key '<stable-scope-key>:<rule>' --payload '<finding-file>'
 ```
 
 ```bash
-spx verification run finish \
+spx -C '{repository-root}' verification run finish \
   --verification-type audit \
   --scope-type changeset \
   --scope <base>..<head> \
   --run <token> \
   --terminal-status <evidence-derived-status>
 
-spx verification run render \
+spx -C '{repository-root}' verification run render \
   --verification-type audit \
   --scope-type changeset \
   --scope <base>..<head> \
@@ -248,7 +266,7 @@ The final response relays the rendered SPX projection, the run token, and the ru
 
 <coverage_model>
 
-Build the expected coverage inventory from the selection the scope resolver recorded in the run's sealed start input, before invoking any concern skill. Read the `artifact_selection` array back from that input — `spx verification run input --verification-type audit --scope-type changeset --scope <base>..<head> --run '{run-token}'`, field `content` — never from a re-run of the resolver and never from a reading of the paths. For each resolved path, and each live path of an advisory audit, it holds the registered artifacts whose detection matches the path, most specific within a kind, kinds in declaration order, a kind with a match adding its detection-less artifacts; each artifact carries its `kind`, `role`, `plugin`, `audit` skill, and `contract`. Dispatch exactly the skills that selection names, validating each against the installed skill inventory this context carries before invoking any concern. The inventory never selects: it decides only whether a selected skill is invoked or recorded as a required `missing-skill` unit, and invoking a skill is dispatch to a selected artifact, never a probe for whether a kind is installed. Never load a write-capable author skill inside the audit — the skill-composition grant cannot be narrowed to names selected at run time, so this rule is the containment — and never create a partition from a file extension, filename, or artifact class the registry did not select.
+Build the expected coverage inventory from the selection the scope resolver recorded in the run's sealed start input, before invoking any concern skill. Read the `artifact_selection` array back from that input — `spx -C '{repository-root}' verification run input --verification-type audit --scope-type changeset --scope <base>..<head> --run '{run-token}'`, field `content` — never from a re-run of the resolver and never from a reading of the paths. For each resolved path, and each live path of an advisory audit, it holds the registered artifacts whose detection matches the path, most specific within a kind, kinds in declaration order, a kind with a match adding its detection-less artifacts; each artifact carries its `kind`, `role`, `plugin`, `audit` skill, and `contract`. Dispatch exactly the skills that selection names, validating each against the installed skill inventory this context carries before invoking any concern. The inventory never selects: it decides only whether a selected skill is invoked or recorded as a required `missing-skill` unit, and invoking a skill is dispatch to a selected artifact, never a probe for whether a kind is installed. Never load a write-capable author skill inside the audit — the skill-composition grant cannot be narrowed to names selected at run time, so this rule is the containment — and never create a partition from a file extension, filename, or artifact class the registry did not select.
 
 Dispatch only a skill whose `contract` is `concern`. A path whose registered artifact's audit skill carries the `artifact-type` contract, a path matching no registered artifact, and a matched path whose selected concern skill returns `NOT_APPLICABLE` stay with their artifact-type auditor and the whole-changeset review; never manufacture a kind, a missing skill, or an unsupported unit for such a path.
 
@@ -281,7 +299,7 @@ Each expected unit carries the scope payload in `${SKILL_DIR}/references/run-pay
 - After a concern returns, queue one path-scoped row per inspected path, carrying a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`. NEVER record fewer rows than the concern returned paths, and NEVER collapse several inspected paths into one representative row — the recorded subject set is the evidence that the inspection happened, so a reduced set is an unverifiable claim.
 - Queue that concern's complete scope rows BEFORE any of its findings. A finding is recorded against coverage already accepted, never in place of it; recording a row only where a finding landed states the findings as the coverage.
 - Queue each returned finding on touched text after those scope rows, associated with its matching path-scoped unit. A finding outside touched text is queued nowhere: it is returned as `filed` under `<verdict_format>`.
-- Persist queued units one `spx verification run scope add` command at a time, ordered by the order each kind first appears in the selection, then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation and stopping at the first nonzero exit, other than the one rerun on an absent-payload diagnostic that the payload rules allow.
+- Persist queued units one `spx -C '{repository-root}' verification run scope add` command at a time, ordered by the order each kind first appears in the selection, then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation and stopping at the first nonzero exit, other than the one rerun on an absent-payload diagnostic that the payload rules allow.
 - Derive the concern's finding count from the accepted finding rows; NEVER emit a custom count SPX discards.
 - A concern returning no complete result for a required unit MUST name the failed operation or absent prerequisite. When it names neither, drive the concern to a final result rather than recording a non-audited status.
 - NEVER manufacture a completed result from Claude's own inspection in place of a concern result.
@@ -300,7 +318,7 @@ The composition contract is the plugin-qualified skill name the selection carrie
 
 <finding_model>
 
-Record each accepted concern finding on touched text through `spx verification run finding add`, using the finding payload shape in `${SKILL_DIR}/references/run-payloads.md`; its `producerIdentity` matches the coverage unit's `expectedProducer`. Finding identity for convergence is content and stable producer identity, not plugin version, so a version change preserves provenance without making the same finding look new. Every `rule` is an identifier from `${SKILL_DIR}/references/rule-catalog.md` or, for a finding a composed concern skill returned, the identifier from that skill's own rule catalog; a finding naming any other identifier is withdrawn. Classify every returned finding as `${SKILL_DIR}/references/touched-text.md` states, record only a finding on touched text, and return each other finding as `filed`.
+Record each accepted concern finding on touched text through `spx -C '{repository-root}' verification run finding add`, using the finding payload shape in `${SKILL_DIR}/references/run-payloads.md`; its `producerIdentity` matches the coverage unit's `expectedProducer`. Finding identity for convergence is content and stable producer identity, not plugin version, so a version change preserves provenance without making the same finding look new. Every `rule` is an identifier from `${SKILL_DIR}/references/rule-catalog.md` or, for a finding a composed concern skill returned, the identifier from that skill's own rule catalog; a finding naming any other identifier is withdrawn. Classify every returned finding as `${SKILL_DIR}/references/touched-text.md` states, record only a finding on touched text, and return each other finding as `filed`.
 
 </finding_model>
 
@@ -318,7 +336,7 @@ If SPX rejects terminal status, report the rejected command and stderr as the au
 
 <verdict_format>
 
-When the run completes, return the exact run token, the exact run file, and the rendered `spx verification run render` projection. The projection's `terminalStatus` is authoritative: `approved` passes and `rejected` requires repair. Do not add an `APPROVED` or `REJECTED` prose envelope.
+When the run completes, return the exact run token, the exact run file, and the rendered `spx -C '{repository-root}' verification run render` projection. The projection's `terminalStatus` is authoritative: `approved` passes and `rejected` requires repair. Do not add an `APPROVED` or `REJECTED` prose envelope.
 
 Return BLOCKED for three causes: target preparation fails before `spx
 verification run start` (a missing selector or identity field, a failed
@@ -356,7 +374,7 @@ the failure evidence — a stale-base refusal is read from its exit code and std
 
 Each finding row names every field of the finding payload shape in `${SKILL_DIR}/references/run-payloads.md`, so a reader sees the producer, unit, rule, severity, location, message, and observed-versus-expected evidence without opening the journal. After the projection, return each `filed` finding on its own line in the form `${SKILL_DIR}/references/touched-text.md` gives, or `filed: none`.
 
-The rendered SPX projection is the inspection surface. Do not hand-format a competing verdict when `spx verification run render` succeeds.
+The rendered SPX projection is the inspection surface. Do not hand-format a competing verdict when `spx -C '{repository-root}' verification run render` succeeds.
 
 </verdict_format>
 
@@ -371,7 +389,7 @@ What happened: Claude received no resolvable scope or run-driver identity.
 Why it failed: Starting a verification run without the required selector fields creates durable audit state that cannot be tied to the intended scope.
 
 How to avoid: Resolve the target and validate the internal identity before
-`spx verification run start`; return the exact missing input or failed command
+`spx -C '{repository-root}' verification run start`; return the exact missing input or failed command
 without a retry or substitute scope.
 
 **Failure 2: A missing concern skill appeared after one concern already ran**

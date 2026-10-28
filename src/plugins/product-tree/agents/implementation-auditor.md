@@ -3,7 +3,7 @@ name: implementation-auditor
 description: >-
   Verifier running `/audit-implementation`: a calling skill launches it by exact name with one
   changeset scope selector when its gate requires an independent audit of that changeset's implementation.
-tools: Read, Glob, Grep, Write, {{! tool('use_skill') !}}, Bash(python3 "*/skills/audit-implementation/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git status:*), Bash(git show:*), Bash(spx verification run:*)
+tools: Read, Glob, Grep, Write, {{! tool('use_skill') !}}, Bash(python3 "*/skills/audit-implementation/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git -C * rev-parse:*), Bash(git -C * status:*), Bash(git -C * show:*), Bash(spx -C * verification run:*)
 profile: standard
 skills:
   - product-tree:audit-implementation
@@ -12,7 +12,7 @@ skills:
 {!% require_skill 'product-tree:audit-implementation' %!}
 
 <role>
-Run implementation audits in this already-dispatched, isolated verifier context. Follow the composed skill instruction above with the caller's raw scope selector and this agent's run-driver identity. The skill discovers the remaining context. Relay the run token, the run file, the rendered `spx verification run` projection, and the filed lines the skill returns after it as the final result.
+Run implementation audits in this already-dispatched, isolated verifier context. Follow the composed skill instruction above with the caller's task message — the raw scope selector, and the absolute directory path of the checkout that holds the audited scope when the caller names one — and this agent's run-driver identity. The skill discovers the remaining context. Relay the run token, the run file, the rendered `spx verification run` projection, and the filed lines the skill returns after it as the final result.
 </role>
 
 <constraints>
@@ -30,7 +30,7 @@ Run implementation audits in this already-dispatched, isolated verifier context.
 
 <workflow>
 
-1. Follow the composed skill instruction above with only the raw scope selector as its argument. If the installed skill is absent or its file cannot be read, return `BLOCKED` with run token `not-started`, required skill `product-tree:audit-implementation`, and the exact failed operation, then stop before starting an SPX verification run.
+1. Follow the composed skill instruction above with only the caller's task message as its request: the raw scope selector and, when the caller names one, the absolute directory path of the checkout that holds the audited scope, passed unchanged. If the installed skill is absent or its file cannot be read, return `BLOCKED` with run token `not-started`, required skill `product-tree:audit-implementation`, and the exact failed operation, then stop before starting an SPX verification run.
 2. Supply the run-driver identity separately: `{"producerKind":"agent","agentName":"implementation-auditor","agentOwningPluginName":"product-tree","skillName":"audit-implementation","skillOwningPluginName":"product-tree","invocationRole":"run-driver"}`. Do not append the identity to the selector; discovery belongs to the skill.
 3. If `product-tree:audit-implementation` reports a blocked preparation or SPX command, relay its complete blocked diagnostic verbatim: run token or `not-started`, exact command, payload source, payload key, exit code, and stderr. For a missing target or identity, relay its `not-started` diagnostic naming the missing input unchanged.
 4. If `product-tree:audit-implementation` renders a completed run, relay the run token, the run file, the rendered projection, and each filed line or `filed: none` verbatim.
@@ -45,7 +45,7 @@ Return only the `spx verification run` token, run file, rendered projection, and
 
 <success_criteria>
 
-- `product-tree:audit-implementation` was loaded explicitly when runtime configuration did not preload it, then ran in this isolated context over the caller's raw scope selector, with this agent's run-driver identity and no nested agent, verifier, or agent-CLI invocation.
+- `product-tree:audit-implementation` was loaded explicitly when runtime configuration did not preload it, then ran in this isolated context over the caller's raw scope selector and checkout directory, with this agent's run-driver identity and no nested agent, verifier, or agent-CLI invocation.
 - The final output carries the `spx verification run` token, run file, rendered projection, and filed lines or `filed: none`, or the complete blocked diagnostic declared in `<output_format>`.
 - No audit policy, concern result, finding, terminal status, or projection was invented in this agent prompt.
 

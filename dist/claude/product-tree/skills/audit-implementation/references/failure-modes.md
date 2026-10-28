@@ -36,7 +36,7 @@ What happened: Claude named a concern finding in text without recording it throu
 
 Why it failed: Prose findings are not durable evidence and cannot appear in the rendered SPX projection.
 
-How to avoid: Record every finding through `spx verification run finding add`; use the rendered projection as the inspection surface.
+How to avoid: Record every finding through `spx -C '{repository-root}' verification run finding add`; use the rendered projection as the inspection surface.
 
 **Failure 6: Scope events were persisted concurrently**
 
@@ -44,7 +44,7 @@ What happened: Claude launched multiple `spx verification run scope add` command
 
 Why it failed: Concurrent mutations raced the journal's sequence assignment, so the rendered event prefix violated the strictly increasing, contiguous sequence contract.
 
-How to avoid: Execute every state-changing `spx verification run` command serially and wait for its exit before issuing the next mutation for that run.
+How to avoid: Execute every state-changing `spx -C '{repository-root}' verification run` command serially and wait for its exit before issuing the next mutation for that run.
 
 **Failure 7: An implementation code scope used semantic aliases instead of SPX fields**
 
@@ -116,7 +116,7 @@ projection reported coverage over a scope Claude never read.
 
 How to avoid: Derive every subject body from the resolved `base` and `head`
 retained at stage 1 of `<execution_sequence>`. Read a committed body with
-`git show '{head}:{path}'`, never from a single commit's patch.
+`git -C '{repository-root}' show '{head}:{path}'`, never from a single commit's patch.
 
 **Failure 13: A finding was raised before its governing standards were read**
 

@@ -6,6 +6,16 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.22.6
+
+### Fixed
+
+- **`/audit-skill` and the `/author-skill` auditor template resolve the repository root from the audited target.** The audit takes the root from the directory that holds the skill target, whatever the session's working directory, runs its git commands against that root, and keeps its containment check of the target against the root it resolved. A target in another worktree reaches the audit as an absolute path, so the task message stays the target alone, the audit's tool grants cover only the `git -C` forms it runs, and an auditor authored from the template resolves its root the same way and grants `git -C * rev-parse` with no bare `git rev-parse`. The audit and the template root every `spx verification run` command at that root with `spx -C '<root>' verification run`, and their tool grants carry the `spx -C *` forms in place of the unrooted ones. Before this change, the audit took the root from the session's working directory and returned `BLOCKED` for a target in another worktree, and its run commands resolved their scope and store from the session's working directory.
+
+- **`/audit-subagent` resolves the repository root from the audited definition.** The audit takes the root from the directory that holds the definition, whatever the session's working directory, runs its git commands against that root, and keeps its containment check of the definition against the root it resolved. A definition in another worktree reaches the audit as an absolute path, the audit roots every `spx verification run` command at that root with `spx -C '<root>' verification run`, and its tool grants cover only the `git -C` and `spx -C *` forms it runs. Before this change, the audit took the root from the session's working directory and returned `BLOCKED` for a definition in another worktree, and its run commands resolved their scope and store from the session's working directory.
+
+- **`skill-auditor` and `subagent-auditor` run the git commands their skills run and pass an absolute target through.** Each definition grants `git -C * rev-parse`, `git -C * diff`, and `git -C * status` in place of the bare forms, grants the six `spx -C * verification run` verbs in place of the unrooted ones, and passes the caller's target path to its skill unchanged, repository-relative or absolute. Before this change, an audit dispatched through either definition could not run the skill's `git -C` commands and could not receive a target in another worktree.
+
 ## 0.22.5
 
 ### Fixed

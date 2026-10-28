@@ -45,6 +45,7 @@ The body carries no attestation, accountable-person, priority, or overrule text;
 - execution-order: Execution takes the Governance mutations blocks, then the Spec mutations blocks, each in record order. The merge composition for the Node's malleability after, and the decision-record audit of a record, select each block's results and Verifiers.
 - applied-leaf: A Leaf closes Applied when the merge commit of the pull request or branch its newest Handoff names is an ancestor of the default branch, every Node holds every result the merge composition for its malleability after selects, every amended or new record holds an approving decision-record audit, and the Intent's Evidence is met.
 - handoff-blocks: A Handoff names the branch or pull request with its head commit, the completed Governance mutations and Spec mutations blocks by path, and the next block, or `refinement: <Maturity> → <next level>` below Executable.
+- change-path-root: A change audit resolves each path a record names, its Governance records and its Spec mutations Nodes, in the repository of the Change's Product, whatever checkout holds the draft or runs the audit.
 
 ## Definitions of Ready
 
@@ -171,4 +172,5 @@ Excluding records without the closed front-matter key set keeps the contract clo
 - NEVER: a Lifecycle skill writes Maturity or a body section, or posts a comment other than its Claim, Handoff, or terminal record.
 - NEVER: a Lifecycle transition performs a later mutation after a required write fails or a readback differs from the intended state; its diagnostic names every completed write, the failed operation, and the observed state.
 - NEVER: a Handoff, Claim, terminal record, or rejection instruction carries a secret value or credential payload.
+- ALWAYS: the change audit resolves each path a record names, its Governance records and its Spec mutations Nodes, in the repository of the Change's Product, whatever checkout holds the draft or runs the audit.
 - ALWAYS: a Change that another Change names in `parent` carries no Governance mutations or Spec mutations block and never reaches Executable; the change audit rejects a record that breaks the rule.

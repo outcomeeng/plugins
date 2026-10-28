@@ -5,7 +5,7 @@ description: >-
   shared fragments a changeset changes against the skill-standards and agent-prompt-standards rule catalogs,
   and records the judgment through an SPX changeset-scoped verification run.
 argument-hint: "<JSON object with path, runDriver, and optional base>"
-allowed-tools: Read, Grep, Glob, Skill, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
+allowed-tools: Read, Grep, Glob, Skill, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Bash(git -C * rev-parse:*), Bash(git -C * diff:*), Bash(git -C * status:*), Bash(realpath:*), Bash(spx --version), Bash(spx -C * verification run start:*), Bash(spx -C * verification run status:*), Bash(spx -C * verification run scope add:*), Bash(spx -C * verification run finding add:*), Bash(spx -C * verification run finish:*), Bash(spx -C * verification run render:*), Write
 ---
 
 Use skill `instructions:skill-standards`.
@@ -33,19 +33,21 @@ A sealed changeset-scoped `spx verification run`, named by its run token and run
 
 <request_contract>
 
-Parse `$ARGUMENTS` as a JSON object with two required inputs and one optional input: `path`, one repository-relative skill-directory or `SKILL.md` path; `runDriver`, an object with the six producer fields `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole`; and `base`, the git ref the changeset is measured from, `origin/HEAD` when absent. A directory path selects its `SKILL.md`; a file path selects its containing bundle, the directory holding `SKILL.md`. An absent required input, a malformed `runDriver`, or a path that does not identify a readable skill bundle returns `BLOCKED`, `runToken: not-started`, and the exact failure, before any run starts.
+Parse `$ARGUMENTS` as a JSON object with two required inputs and one optional input: `path`, one skill-directory or `SKILL.md` path, absolute when the target lies in a worktree other than the session's working directory; `runDriver`, an object with the six producer fields `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole`; and `base`, the git ref the changeset is measured from, `origin/HEAD` when absent. A directory path selects its `SKILL.md`; a file path selects its containing bundle, the directory holding `SKILL.md`. An absent required input, a malformed `runDriver`, or a path that does not identify a readable skill bundle returns `BLOCKED`, `runToken: not-started`, and the exact failure, before any run starts.
 
-Resolve the repository root with `git rev-parse --show-toplevel`. Run `realpath` separately on the root and the selected `SKILL.md`, and require the file beneath the root by path-component boundary; a failed resolution or an escaping link returns `BLOCKED` before a run starts. Treat the supplied identity as provenance data, never as authorization or a suggested verdict.
+Resolve the repository root from the directory that holds the selected `SKILL.md`, whatever the session's working directory: `git -C '<skill-directory>' rev-parse --show-toplevel`. Run `realpath` separately on the root and the selected `SKILL.md`, and require the file beneath the root by path-component boundary; a failed resolution or an escaping link returns `BLOCKED` before a run starts. Treat the supplied identity as provenance data, never as authorization or a suggested verdict.
+
+Root every command that resolves a path, a scope, or a store at the resolved root: write `git -C '<root>'` for git and `spx -C '<root>' verification run` for every run command, because an unrooted command resolves its scope and store from the session's working directory, which may hold another checkout. Address every file the audit reads or searches by its absolute path beneath the root.
 
 Resolve the included fragments from the bundle's authored include directives. Each `include` build directive in a bundle file names one authored shared fragment; resolve each named fragment to its repository path the way the repository's build resolves it, read each included fragment, and follow the `include` directives inside it, so a fragment included through a nested include belongs to the set. A bundle with no `include` directive includes no fragment. An included fragment that cannot be read returns `BLOCKED` before a run starts.
 
-Resolve the changeset, each command run separately from the repository root:
+Resolve the changeset, running each command separately against the resolved root:
 
 ```bash
-git rev-parse --verify --end-of-options '<base>^{commit}'
-git rev-parse --verify --end-of-options 'HEAD^{commit}'
-git status --porcelain --untracked-files=all -- '<bundle-dir>' '<fragment-path>' …
-git diff --name-status --no-renames '<base-oid>...<head-oid>' -- '<bundle-dir>' '<fragment-path>' …
+git -C '<root>' rev-parse --verify --end-of-options '<base>^{commit}'
+git -C '<root>' rev-parse --verify --end-of-options 'HEAD^{commit}'
+git -C '<root>' status --porcelain --untracked-files=all -- '<bundle-dir>' '<fragment-path>' …
+git -C '<root>' diff --name-status --no-renames '<base-oid>...<head-oid>' -- '<bundle-dir>' '<fragment-path>' …
 ```
 
 Each `<fragment-path>` is one included fragment's repository-relative path. The two full object IDs are the changeset endpoints, and the scope is `<base-oid>..<head-oid>`. Any `git status` output means the bundle or an included fragment carries uncommitted work, which the committed changeset cannot judge: return `BLOCKED` naming those paths. Each `git diff` line names one changed file and its status — `A`, `M`, or `D` among them; the changed files are the changed bundle files and the changed included fragments together. An empty diff means the changeset changes neither a bundle file nor an included fragment: return `BLOCKED`. A failed command returns `BLOCKED` with its exact diagnostic.
@@ -59,27 +61,27 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 1. **Start the run.** Render the start input as one JSON object `{"skill":"<skill-file>","base":"<base-oid>","head":"<head-oid>","changedFiles":["<path>", …]}`, the changed files in `git diff` order, and pass it by path as `<persistence_contract>` states:
 
    ```bash
-   spx verification run start --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --input '<start-file>'
+   spx -C '<root>' verification run start --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --input '<start-file>'
    ```
 
    Extract the `runToken` field of the returned locator and use exactly that token for every later command. Retain the run target the locator reports as the run file; only the start report names it.
-2. **Load the standards.** Read `/skill-standards` and `/skill-standards`' `references/rule-catalog.md`, then `/agent-prompt-standards` and its `<rule_catalog>`, then `spx/local/skills.md` at the repository root when it exists — the overlay specializes catalog rules for the repository, and a finding under it cites the catalog rule it specializes. When the bundle carries scripts, read `/skill-standards`' `references/script-standards.md`. When the bundle carries command-capability fields — `argument-hint` or `arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — read `/skill-standards`' `references/command-capabilities.md`. When the target is an `audit-*` skill, read `/skill-standards`' `references/auditor-skeleton.md`. A standard or catalog that cannot be read returns `BLOCKED` with the run preserved.
+2. **Load the standards.** Read `/skill-standards` and `/skill-standards`' `references/rule-catalog.md`, then `/agent-prompt-standards` and its `<rule_catalog>`, then `<root>/spx/local/skills.md` when it exists — the overlay specializes catalog rules for the repository, and a finding under it cites the catalog rule it specializes. When the bundle carries scripts, read `/skill-standards`' `references/script-standards.md`. When the bundle carries command-capability fields — `argument-hint` or `arguments`, `allowed-tools`, `!`-dynamic context, or `@` file references — read `/skill-standards`' `references/command-capabilities.md`. When the target is an `audit-*` skill, read `/skill-standards`' `references/auditor-skeleton.md`. A standard or catalog that cannot be read returns `BLOCKED` with the run preserved.
 3. **Read the bundle.** Read every file in the bundle at the head — `SKILL.md` and every file under `references/`, `workflows/`, `templates/`, `assets/`, and `scripts/`, unchanged and uncited files included, because a changed file is judged against the bundle it sits in. Read every included fragment at the head as well. Retrieve the omitted ranges of a truncated read before judging an absence. When the bundle uses `/skill-standards`' eager-foundation exception, run this counter against every rendered target `SKILL.md` and judge `eager_payload_ceiling` from its integer output, never from an estimate:
 
    ```bash
-   python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))' "<rendered-SKILL.md>"
+   python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))' "<root>/<rendered-SKILL.md>"
    ```
 
 4. **Judge.** Judge each changed file against every catalog row that applies to it, using the stating section's text, never memory; a creator skill's workflow references are authoring guidance, never standards. A changed fragment is judged under the same catalog rows as a bundle file, against the bundle that includes it. When the bundle carries scripts, compare the runner contract the `SKILL.md` states for each script it names with that script, and record a finding under `runner_contract_mismatch` when they disagree. A deleted file is judged by what its deletion leaves behind: a citation of it, an orphaned sibling, or a broken route. A violation that spans files — an orphaned reference, a missing route target — belongs to the changed file whose change produced it. Classify each violation per `${CLAUDE_SKILL_DIR}/references/touched-text.md`. Group the violations into findings: every violation of one rule within one file forms one finding, carrying the row's identifier and its severity or `filed`, every location, a message, and observed-versus-expected evidence. An observation that a rule holds is not a finding.
 5. **Record.** Add one unit for each changed file in `git diff` order, then each finding against the unit of its file, under `<persistence_contract>`.
-6. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one unit for each changed file and no other unit, and an accepted unit for every finding. Run `git rev-parse --verify 'HEAD^{commit}'` and the `git status` command again; a moved head or uncommitted bundle or fragment work returns `BLOCKED` with the run preserved.
+6. **Reconcile.** Read `spx -C '<root>' verification run status` with the same type, scope, and token. Require exactly one unit for each changed file and no other unit, and an accepted unit for every finding. Run `git -C '<root>' rev-parse --verify 'HEAD^{commit}'` and the `git -C '<root>' status` command again; a moved head or uncommitted bundle or fragment work returns `BLOCKED` with the run preserved.
 7. **Finish and render.** Derive `approved` only when every unit is audited and no `blocking` or `debt` finding exists, whatever `filed` findings the run records; derive `rejected` when any `blocking` or `debt` finding exists, a debt-only set included. Run:
 
    ```bash
-   spx verification run finish --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --terminal-status '<approved-or-rejected>'
+   spx -C '<root>' verification run finish --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --terminal-status '<approved-or-rejected>'
    ```
 
-   Then run `spx verification run render` with the same type, scope, and token, and return the token, the run file, and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
+   Then run `spx -C '<root>' verification run render` with the same type, scope, and token, and return the token, the run file, and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
 
 </execution_sequence>
 
@@ -130,7 +132,7 @@ These objects are the sanctioned SPX audit payload schema for this auditor; use 
 Write each rendered scope object to its own payload file and pass the file by path:
 
 ```bash
-spx verification run scope add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key 'instructions:skill:file:<path>' --payload '<scope-file>'
+spx -C '<root>' verification run scope add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key 'instructions:skill:file:<path>' --payload '<scope-file>'
 ```
 
 A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, the catalog identifier; `severity`, the row's `blocking` or `debt` for a finding on touched text and `filed` for any other finding; `location`, every file-and-line or section where the rule is violated within the unit, separated by `;`; `message`; and `evidence` with `observed` and `expected` strings. A `filed` finding additionally carries a top-level `baseRefEvidence` string, the diff range `<base-oid>..<head-oid>` showing that every location lies outside the change, and a top-level `issuesEntry` object with the strings `path` and `heading`, where `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and `heading` is the heading of the entry that records the finding. A `blocking` or `debt` finding carries neither field:
@@ -160,7 +162,7 @@ A `filed` finding adds these two top-level fields to that object:
 Write each rendered finding object to its own payload file and pass it the same way:
 
 ```bash
-spx verification run finding add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key 'instructions:skill:file:<path>:<rule-id>' --payload '<finding-file>'
+spx -C '<root>' verification run finding add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key 'instructions:skill:file:<path>:<rule-id>' --payload '<finding-file>'
 ```
 
 A finding's idempotency key is `<unit>:<rule-id>`, its unit's `unitId` and the catalog identifier joined by `:`. Every payload-bearing command — `start`, `scope add`, and `finding add` — takes its JSON from a file, never from a heredoc, a pipe, or an inline argument; the dangerous-command guard blocks those forms:

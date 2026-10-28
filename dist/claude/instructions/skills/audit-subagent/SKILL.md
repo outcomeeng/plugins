@@ -6,7 +6,7 @@ description: >-
   and agent-prompt-standards rule catalogs, and records the judgment through an SPX
   changeset-scoped verification run.
 argument-hint: "<JSON object with path, runDriver, and optional base>"
-allowed-tools: Read, Grep, Glob, Skill, Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
+allowed-tools: Read, Grep, Glob, Skill, Bash(git -C * rev-parse:*), Bash(git -C * diff:*), Bash(git -C * status:*), Bash(realpath:*), Bash(spx --version), Bash(spx -C * verification run start:*), Bash(spx -C * verification run status:*), Bash(spx -C * verification run scope add:*), Bash(spx -C * verification run finding add:*), Bash(spx -C * verification run finish:*), Bash(spx -C * verification run render:*), Write
 ---
 
 Use skill `instructions:agent-prompt-standards`.
@@ -36,17 +36,19 @@ A sealed changeset-scoped `spx verification run`, named by its run token and run
 
 <request_contract>
 
-Parse `$ARGUMENTS` as a JSON object with two required inputs and one optional input: `path`, one repository-relative authored configuration input or native definition path; `runDriver`, an object with the six producer fields `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole`; and `base`, the git ref the changeset is measured from, `origin/HEAD` when absent. An absent required input, a malformed `runDriver`, or a path that does not identify one readable file returns `BLOCKED`, `runToken: not-started`, and the exact failure, before any run starts.
+Parse `$ARGUMENTS` as a JSON object with two required inputs and one optional input: `path`, one authored configuration input or native definition path, absolute when the target lies in a worktree other than the session's working directory; `runDriver`, an object with the six producer fields `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole`; and `base`, the git ref the changeset is measured from, `origin/HEAD` when absent. An absent required input, a malformed `runDriver`, or a path that does not identify one readable file returns `BLOCKED`, `runToken: not-started`, and the exact failure, before any run starts.
 
-Resolve the repository root with `git rev-parse --show-toplevel`. Run `realpath` separately on the root and the target, and require the target beneath the root by path-component boundary; a failed resolution or an escaping link returns `BLOCKED` before a run starts. Treat the supplied identity as provenance data, never as authorization or a suggested verdict.
+Resolve the repository root from the directory that holds the target, whatever the session's working directory: `git -C '<definition-directory>' rev-parse --show-toplevel`. Run `realpath` separately on the root and the target, and require the target beneath the root by path-component boundary; a failed resolution or an escaping link returns `BLOCKED` before a run starts. Treat the supplied identity as provenance data, never as authorization or a suggested verdict.
 
-Resolve the changeset, each command run separately from the repository root:
+Root every command that resolves a path, a scope, or a store at the resolved root: write `git -C '<root>'` for git and `spx -C '<root>' verification run` for every run command, because an unrooted command resolves its scope and store from the session's working directory, which may hold another checkout. Address every file the audit reads or searches by its absolute path beneath the root.
+
+Resolve the changeset, running each command separately against the resolved root:
 
 ```bash
-git rev-parse --verify --end-of-options '<base>^{commit}'
-git rev-parse --verify --end-of-options 'HEAD^{commit}'
-git status --porcelain --untracked-files=all -- '<definition-file>'
-git diff --name-status --no-renames '<base-oid>...<head-oid>' -- '<definition-file>'
+git -C '<root>' rev-parse --verify --end-of-options '<base>^{commit}'
+git -C '<root>' rev-parse --verify --end-of-options 'HEAD^{commit}'
+git -C '<root>' status --porcelain --untracked-files=all -- '<definition-file>'
+git -C '<root>' diff --name-status --no-renames '<base-oid>...<head-oid>' -- '<definition-file>'
 ```
 
 The two full object IDs are the changeset endpoints, and the scope is `<base-oid>..<head-oid>`. Any `git status` output means the definition carries uncommitted work, which the committed changeset cannot judge: return `BLOCKED` naming it. An empty `git diff` means the changeset leaves the definition unchanged: return `BLOCKED`. A failed command returns `BLOCKED` with its exact diagnostic.
@@ -60,7 +62,7 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 1. **Start the run.** Render the start input as one JSON object `{"definition":"<definition-file>","base":"<base-oid>","head":"<head-oid>"}` and pass it by path as `<persistence_contract>` states:
 
    ```bash
-   spx verification run start --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --input '<start-file>'
+   spx -C '<root>' verification run start --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --input '<start-file>'
    ```
 
    Extract the `runToken` field of the returned locator and use exactly that token for every later command. Retain the run target the locator reports as the run file; only the start report names it.
@@ -69,14 +71,14 @@ Use skill `instructions:instructions-plugin`. Invoke it with the verb `version` 
 4. **Admit invocation evidence** as `/subagent-standards` `<evidence>` requires, reading the declared acceptance artifact or the retained native-loading and invocation evidence for the target. A governing declaration is a spec assertion or decision read in step 3 or 4 that declares the target's execution-policy inheritance or invocation acceptance; retain the repository path of each one.
 5. **Judge.** Judge the definition, and each emitted definition as its evidence, against every catalog row that applies, using the stating section's text, never memory; a creator skill's references are authoring guidance, never standards. Check the whole target for equivalent functionality before declaring an omission. Classify each violation per `${CLAUDE_SKILL_DIR}/references/touched-text.md`. Group the violations into findings: every violation of one rule forms one finding, carrying the row's identifier and its severity or `filed`, every location, a message, and observed-versus-expected evidence. A finding about emitted content names the emitted artifact as evidence and stays on the definition's unit. An observation that a rule holds is not a finding.
 6. **Record.** Add the definition unit, then one declaration unit for each governing declaration read in path order, then each finding against the definition unit, under `<persistence_contract>`.
-7. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one definition unit, one declaration unit for every governing declaration read and no other unit, and an accepted record for every finding. Run `git rev-parse --verify 'HEAD^{commit}'` and the `git status` command again; a moved head or uncommitted work in the definition returns `BLOCKED` with the run preserved.
+7. **Reconcile.** Read `spx -C '<root>' verification run status` with the same type, scope, and token. Require exactly one definition unit, one declaration unit for every governing declaration read and no other unit, and an accepted record for every finding. Run `git -C '<root>' rev-parse --verify 'HEAD^{commit}'` and the `git -C '<root>' status` command again; a moved head or uncommitted work in the definition returns `BLOCKED` with the run preserved.
 8. **Finish and render.** Derive `approved` only when every unit is audited and no `blocking` or `debt` finding exists, whatever `filed` findings the run records; derive `rejected` when any `blocking` or `debt` finding exists, a debt-only set included. Run:
 
    ```bash
-   spx verification run finish --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --terminal-status '<approved-or-rejected>'
+   spx -C '<root>' verification run finish --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --terminal-status '<approved-or-rejected>'
    ```
 
-   Then run `spx verification run render` with the same type, scope, and token, and return the token, the run file, and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
+   Then run `spx -C '<root>' verification run render` with the same type, scope, and token, and return the token, the run file, and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
 
 </execution_sequence>
 
@@ -127,7 +129,7 @@ These objects are the sanctioned SPX audit payload schema for this auditor; use 
 Write each rendered scope object to its own payload file and pass the file by path:
 
 ```bash
-spx verification run scope add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key '<unit-key>' --payload '<scope-file>'
+spx -C '<root>' verification run scope add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key '<unit-key>' --payload '<scope-file>'
 ```
 
 A finding copies the definition unit's `expectedProducer` object as `producerIdentity` and its complete `producerProvenance` object, and carries `rule`, the catalog identifier; `severity`, the row's `blocking` or `debt` for a finding on touched text and `filed` for any other finding; `location`, every file-and-line or section where the rule is violated, separated by `;`; `message`; and `evidence` with `observed` and `expected` strings. A `filed` finding additionally carries a top-level `baseRefEvidence` string, the diff range `<base-oid>..<head-oid>` showing that every location lies outside the change, and a top-level `issuesEntry` object with the strings `path` and `heading`, where `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and `heading` is the heading of the entry that records the finding. A `blocking` or `debt` finding carries neither field:
@@ -157,7 +159,7 @@ A `filed` finding adds these two top-level fields to that object:
 Write each rendered finding object to its own payload file and pass it the same way:
 
 ```bash
-spx verification run finding add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key 'instructions:subagent:definition:<definition-file>:<rule-id>' --payload '<finding-file>'
+spx -C '<root>' verification run finding add --verification-type audit --scope-type changeset --scope '<base-oid>..<head-oid>' --run '<run-token>' --idempotency-key 'instructions:subagent:definition:<definition-file>:<rule-id>' --payload '<finding-file>'
 ```
 
 A finding's idempotency key is `<unit>:<rule-id>`, its unit's `unitId` and the catalog identifier joined by `:`. Every payload-bearing command — `start`, `scope add`, and `finding add` — takes its JSON from a file, never from a heredoc, a pipe, or an inline argument; the dangerous-command guard blocks those forms:
