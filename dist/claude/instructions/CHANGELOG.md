@@ -14,6 +14,8 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 - **`/audit-subagent` resolves the repository root from the audited definition.** The audit takes the root from the directory that holds the definition, whatever the session's working directory, runs its git commands against that root, and keeps its containment check of the definition against the root it resolved. A definition in another worktree reaches the audit as an absolute path, and the audit's tool grants cover only the `git -C` forms it runs. Before this change, the audit took the root from the session's working directory and returned `BLOCKED` for a definition in another worktree.
 
+- **`skill-auditor` and `subagent-auditor` run the git commands their skills run and pass an absolute target through.** Each definition grants `git -C * rev-parse`, `git -C * diff`, and `git -C * status` in place of the bare forms, and passes the caller's target path to its skill unchanged, repository-relative or absolute. Before this change, an audit dispatched through either definition could not run the skill's `git -C` commands and could not receive a target in another worktree.
+
 ## 0.22.5
 
 ### Fixed

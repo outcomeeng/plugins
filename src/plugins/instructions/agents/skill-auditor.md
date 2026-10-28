@@ -3,7 +3,7 @@ name: skill-auditor
 description: >-
   ALWAYS invoke when auditing, reviewing, or evaluating SKILL.md files for best
   practices compliance, or when the user asks to audit a skill.
-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
+tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Bash(git -C * rev-parse:*), Bash(git -C * diff:*), Bash(git -C * status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
 profile: standard
 skills:
   - instructions:audit-skill
@@ -35,7 +35,7 @@ The skill owns standards loading, judgment, coverage, persistence, and rendering
    `runToken: not-started`, required skill `instructions:audit-skill`, and the exact
    availability or loading failure. Do no audit work from remembered methodology.
 2. Invoke the skill with a JSON argument object. Set `path` to the caller's
-   repository-relative skill path unchanged and `runDriver` to
+   skill path unchanged, repository-relative or absolute, and `runDriver` to
    `{"producerKind":"agent","agentName":"skill-auditor","agentOwningPluginName":"instructions","skillName":"audit-skill","skillOwningPluginName":"instructions","invocationRole":"run-driver"}`.
    The caller supplies only the skill target to this wrapper; this wrapper owns
    the explicit producer data. Include no authoring history or suggested verdict.

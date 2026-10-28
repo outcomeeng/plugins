@@ -6,7 +6,7 @@ description: >-
   ALWAYS invoke when auditing, reviewing, or evaluating subagent
   configuration files for best practices compliance, or when the user asks to audit a
   subagent.
-tools: Read, Grep, Glob, Skill, Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
+tools: Read, Grep, Glob, Skill, Bash(git -C * rev-parse:*), Bash(git -C * diff:*), Bash(git -C * status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
 skills:
   - instructions:audit-subagent
 ---
@@ -38,7 +38,7 @@ rendering.
    `runToken: not-started`, required skill `instructions:audit-subagent`, and the exact
    availability or loading failure. Do no audit work from remembered methodology.
 2. Invoke the skill with a JSON argument object. Set `path` to the caller's
-   repository-relative subagent configuration path unchanged and `runDriver` to
+   subagent configuration path unchanged, repository-relative or absolute, and `runDriver` to
    `{"producerKind":"agent","agentName":"subagent-auditor","agentOwningPluginName":"instructions","skillName":"audit-subagent","skillOwningPluginName":"instructions","invocationRole":"run-driver"}`.
    The caller supplies only the configuration target to this wrapper; this wrapper
    owns the explicit producer data. Include no authoring history or suggested verdict.
