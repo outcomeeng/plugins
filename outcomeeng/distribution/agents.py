@@ -90,14 +90,18 @@ TOOLS_GUIDANCE_LIMITATION: Final = (
 DISALLOWED_TOOLS_LIMITATION: Final = "do not enforce Codex permissions"
 PERMISSION_MODE_LIMITATION: Final = "has no direct Codex mapping"
 UNSUPPORTED_FIELDS_LIMITATION: Final = "Review unsupported source agent fields manually"
-CODEX_SKILLS_GUIDANCE_TEMPLATE: Final = (
-    "Source `skills` entries were preserved as prompt guidance. "
-    "The generated Codex `skills.config` entries enable these skills; "
-    f"they are {SKILL_ENABLEMENT_LIMITATION}. Load each of these skills "
+SKILL_LOADING_INSTRUCTION: Final = (
+    "Load each of these skills "
     "through its `Use skill` instruction before relying on this agent's "
     "specialized behavior, and search for no dedicated skill-invocation tool: "
     "the absence of one is no availability failure, while an absent installed "
-    "skill or an unreadable skill file is one: {skills}."
+    "skill or an unreadable skill file is one"
+)
+CODEX_SKILLS_GUIDANCE_TEMPLATE: Final = (
+    "Source `skills` entries were preserved as prompt guidance. "
+    "The generated Codex `skills.config` entries enable these skills; "
+    f"they are {SKILL_ENABLEMENT_LIMITATION}. {SKILL_LOADING_INSTRUCTION}: "
+    "{skills}."
 )
 CODEX_TOOLS_GUIDANCE_TEMPLATE: Final = (
     "Source `tools` allowlists can map only to Codex configuration "
