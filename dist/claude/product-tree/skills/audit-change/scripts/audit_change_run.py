@@ -56,6 +56,12 @@ process over replayed store pages: it reads the issue's field-change events and
 no comment, a read that ends before the bound returns every event, and a connection that keeps reporting a further page blocks after
 the bound with ``page-bound-reached`` naming it.
 
+``resolve-reference`` takes the Product's checkout root as ``root``, an
+absolute path, and resolves the path a record names under that root, whatever
+checkout holds the draft or runs the audit. A request without ``root``, or one
+whose ``root`` is no repository checkout root, blocks naming it, and the
+containment check of the path stays against that root.
+
 ``read-published`` starts ``gh`` once and returns the issue's published body,
 the empty string when the store holds none.
 
@@ -113,6 +119,7 @@ class RequestField(StrEnum):
     PAYLOAD = "payload"
     TERMINAL_STATUS = "terminalStatus"
     ISSUE = "issue"
+    ROOT = "root"
 
 
 class ResultField(StrEnum):
@@ -338,7 +345,7 @@ ISSUE_IDENTITY_PATTERN: Final = re.compile(
 #: The fields each operation's request carries besides ``operation``.
 REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
     Operation.READ_CANDIDATE: frozenset({RequestField.PATH}),
-    Operation.RESOLVE_REFERENCE: frozenset({RequestField.PATH}),
+    Operation.RESOLVE_REFERENCE: frozenset({RequestField.PATH, RequestField.ROOT}),
     Operation.TOOL_VERSION: frozenset(),
     Operation.START: frozenset({RequestField.PATH, RequestField.CANDIDATE_SHA256}),
     Operation.ADD_SCOPE: frozenset(
@@ -641,6 +648,24 @@ def _reference_path(request: Mapping[str, object]) -> str:
     return named
 
 
+def _checkout_root(request: Mapping[str, object]) -> pathlib.Path:
+    """Return the Product's checkout root a request names, an absolute path."""
+    named = _string(request, RequestField.ROOT)
+    defect = _system_text_defect(named)
+    if defect is not None:
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"root {defect}: {named!r}; pass the absolute path of the Product's checkout root",
+        )
+    root = pathlib.PurePosixPath(named)
+    if not root.is_absolute():
+        raise Blocked(
+            BlockReason.INVALID_REQUEST,
+            f"request field {RequestField.ROOT.value} must be an absolute path, received {named!r}; pass the absolute path of the Product's checkout root",
+        )
+    return pathlib.Path(named)
+
+
 def _candidate_sha256(request: Mapping[str, object]) -> str:
     return _string(request, RequestField.CANDIDATE_SHA256)
 
@@ -722,7 +747,7 @@ _REQUEST_CHECKS: Final[
     Mapping[Operation, tuple[Callable[[Mapping[str, object]], object], ...]]
 ] = {
     Operation.READ_CANDIDATE: (_candidate_path,),
-    Operation.RESOLVE_REFERENCE: (_reference_path,),
+    Operation.RESOLVE_REFERENCE: (_reference_path, _checkout_root),
     Operation.TOOL_VERSION: (),
     Operation.START: (_candidate_path, _candidate_sha256),
     Operation.ADD_SCOPE: (_candidate_path, _run_token, _unit_id, _payload_text),
@@ -888,11 +913,33 @@ def _read_candidate(
     }
 
 
+def _product_root(context: _Context, named: pathlib.Path) -> pathlib.Path:
+    """Return the repository checkout root ``named`` names, or block naming it."""
+    if not named.is_dir():
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"root is not a directory: {named}; pass the absolute path of the Product's checkout root",
+        )
+    try:
+        top = _repository_root(_Context(runner=context.runner, cwd=named))
+    except Blocked as exc:
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"root is no repository checkout: {named}; pass the absolute path of the directory that holds the Product's checkout",
+        ) from exc
+    if top.resolve() != named.resolve():
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"root is no repository checkout root: {named}; pass the absolute path of the directory that holds the Product's checkout",
+        )
+    return top
+
+
 def _resolve_reference(
     context: _Context, request: Mapping[str, object]
 ) -> dict[str, object]:
     named = _reference_path(request)
-    root = _repository_root(context)
+    root = _product_root(context, _checkout_root(request))
     if pathlib.PurePosixPath(named).is_absolute():
         resolution = Resolution.ABSOLUTE
     elif not _within(root, root / named, named):
