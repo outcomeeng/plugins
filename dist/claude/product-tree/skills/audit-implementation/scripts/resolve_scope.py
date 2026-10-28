@@ -5,7 +5,9 @@ Tested before this script is bundled by the audit node's
 nonexistent repository) and ``test_implementation_scope.compliance.l1.py``
 (a run-input file whose keys cannot displace the git-resolved scope, an absent
 run-input file, an unreadable run-input path, JSON text passed as the run-input
-value in place of a path, a non-object and a malformed run-input file, a sealed
+value in place of a path, a run-input path given without the scratch directory,
+a run-input file outside that directory and a symbolic link inside it that
+points outside, a non-object and a malformed run-input file, a sealed
 inventory path carrying no recorded scope unit, a required unit outside the final coverage statuses beside
 an optional unit carrying the same status, exact inventory agreement, drift in
 both directions, a recorded subject outside the inventory, a missing-skill unit
@@ -46,6 +48,8 @@ if TYPE_CHECKING:
 
 ERROR_PREFIX = "error: implementation scope resolution failed"
 RECONCILE_PREFIX = "error: implementation audit reconciliation failed"
+# The longest excerpt of a caller-supplied value that a diagnostic echoes.
+EXCERPT_LIMIT = 200
 SPX_COMMAND = "spx"
 RUN_COMMAND_PREFIX = ("verification", "run")
 INPUT_COMMAND = "input"
@@ -166,7 +170,7 @@ def read_run_document(
         except json.JSONDecodeError as exc:
             raise RuntimeError(
                 f"`{command}` wrote a stdout line that is not JSON "
-                f"({exc}): {line[:200]!r}. Update `spx` to a release whose "
+                f"({exc}): {line[:EXCERPT_LIMIT]!r}. Update `spx` to a release whose "
                 "`verification run` commands print JSON documents."
             ) from exc
         if isinstance(document, dict) and field in document:
@@ -314,8 +318,8 @@ def _read_audit_input(
         confined = path.resolve(strict=True)
         if not confined.is_relative_to(root):
             raise RuntimeError(
-                f"{AUDIT_INPUT_OPTION} file {str(path)[:200]!r} lies outside "
-                f"the {SCRATCH_DIR_OPTION} directory {str(scratch_dir)[:200]!r}. "
+                f"{AUDIT_INPUT_OPTION} file {str(path)[:EXCERPT_LIMIT]!r} lies outside "
+                f"the {SCRATCH_DIR_OPTION} directory {str(scratch_dir)[:EXCERPT_LIMIT]!r}. "
                 "Write the object to a file in the session scratch directory "
                 "with the file-write tool and pass that file's path."
             )
@@ -323,14 +327,14 @@ def _read_audit_input(
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise RuntimeError(
             f"{AUDIT_INPUT_OPTION} must name a readable file holding "
-            f"one JSON object, received {str(path)[:200]!r} "
+            f"one JSON object, received {str(path)[:EXCERPT_LIMIT]!r} "
             f"({type(exc).__name__}: {exc}). Write the object to a file in "
             "the session scratch directory with the file-write tool and pass "
             "that file's path."
         ) from exc
     if not isinstance(supplied, dict):
         raise RuntimeError(
-            f"{AUDIT_INPUT_OPTION} file {str(path)[:200]!r} "
+            f"{AUDIT_INPUT_OPTION} file {str(path)[:EXCERPT_LIMIT]!r} "
             f"holds a {type(supplied).__name__}, not a JSON object. Write one "
             "JSON object to the file."
         )
@@ -412,7 +416,7 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
     if not isinstance(live, list) or not all(isinstance(p, str) for p in live):
         print(
             f"{ERROR_PREFIX}: {LIVE_PATHS_KEY} in --audit-input must be a list of "
-            f"path strings, received {json.dumps(live)[:200]}. Pass the modified "
+            f"path strings, received {json.dumps(live)[:EXCERPT_LIMIT]}. Pass the modified "
             "and untracked paths as a JSON array of strings.",
             file=sys.stderr,
         )
