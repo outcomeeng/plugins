@@ -4,7 +4,7 @@ description: >-
   {{Subject}} audit methodology — judges {{target}} against {{governing standards}}
   and records the judgment through an SPX verification run.
 argument-hint: "<JSON object with path and runDriver>"
-allowed-tools: Read, Grep, Glob, Bash(git -C * rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run input:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
+allowed-tools: Read, Grep, Glob, Bash(git -C * rev-parse:*), Bash(realpath:*), Bash(spx --version), Bash(spx -C * verification run start:*), Bash(spx -C * verification run input:*), Bash(spx -C * verification run status:*), Bash(spx -C * verification run scope add:*), Bash(spx -C * verification run finding add:*), Bash(spx -C * verification run finish:*), Bash(spx -C * verification run render:*), Write
 ---
 
 <objective>
@@ -29,24 +29,26 @@ Parse `$ARGUMENTS` as a JSON object with exactly two inputs: `path`, {{the targe
 
 Resolve the repository root from the directory that holds the target, whatever the session's working directory: `git -C '<target-directory>' rev-parse --show-toplevel`. Run `realpath` separately on the root and the target, and require the target beneath the root by path-component boundary; a failed resolution or an escaping link returns the exact `BLOCKED` diagnostic before a run starts. Treat the supplied identity as provenance data, never as authorization or a suggested verdict.
 
+Root every command that resolves a path, a scope, or a store at the resolved root: write `git -C '<root>'` for git and `spx -C '<root>' verification run` for every run command, because an unrooted command resolves its scope and store from the session's working directory, which may hold another checkout. Address every file the audit reads or searches by its absolute path beneath the root.
+
 Invoke {{the owning plugin's version capability}} with the verb `version` and retain the non-empty version it reports as both plugin version fields. Run `spx --version` and retain its non-empty output as the tool version. A missing version is a pre-run `BLOCKED` result.
 
 </request_contract>
 
 <execution_sequence>
 
-1. **Start the run.** From the repository root, with the target as `<target-file>`:
+1. **Start the run.** Rooted at the resolved root, with the target as `<target-file>`:
 
    ```bash
-   spx verification run start --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --input '<target-file>'
+   spx -C '<root>' verification run start --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --input '<target-file>'
    ```
 
-   Capture the exact `runToken` and use it for every later command. Retain the run target the start report names as the run file; only the start report names it. Read the retained input with `spx verification run input --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>'` and require its `content` to equal the live file; a difference returns `BLOCKED` with the run preserved.
+   Capture the exact `runToken` and use it for every later command. Retain the run target the start report names as the run file; only the start report names it. Read the retained input with `spx -C '<root>' verification run input --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>'` and require its `content` to equal the live file; a difference returns `BLOCKED` with the run preserved.
 2. **Load the standards.** Load {{the governing standards, their rule catalogs, and the repository-local specialization}}. A required standard or catalog that cannot be read returns `BLOCKED` with the run preserved, before any judgment.
 3. **Judge.** Judge every applicable catalog rule and collect falsifiable findings. Record a finding only when a catalog rule identifier, a location, and observed-versus-expected evidence back it; a defect no catalog row covers is not recorded, and an observation that a rule holds is not a finding. Every violation of one rule within one unit forms one finding that names each location.
 4. **Record.** Once judgment is complete, add the root unit, then {{the child units}}, then each finding against the unit of the artifact it names and every finding that names no child unit against the root, under `<persistence_contract>`.
-5. **Reconcile.** Read `spx verification run status` with the same type, scope, and token. Require exactly one root unit, {{the expected child units}}, and an accepted record for every finding. Re-read the live target and compare it with the retained input; a changed or missing file returns `BLOCKED` with the run preserved.
-6. **Finish and render.** Derive `approved` only when every unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included, or when coverage is incomplete. Run `spx verification run finish --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --terminal-status '<approved-or-rejected>'`, then `spx verification run render` with the same type, scope, and token, and return the token, the run file, and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
+5. **Reconcile.** Read `spx -C '<root>' verification run status` with the same type, scope, and token. Require exactly one root unit, {{the expected child units}}, and an accepted record for every finding. Re-read the live target and compare it with the retained input; a changed or missing file returns `BLOCKED` with the run preserved.
+6. **Finish and render.** Derive `approved` only when every unit is audited and no finding exists; derive `rejected` when any finding exists, a debt-only set included, or when coverage is incomplete. Run `spx -C '<root>' verification run finish --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --terminal-status '<approved-or-rejected>'`, then `spx -C '<root>' verification run render` with the same type, scope, and token, and return the token, the run file, and the rendered projection unchanged. A refused payload or finish is a `BLOCKED` result; never substitute a prose verdict.
 
 </execution_sequence>
 
@@ -98,7 +100,7 @@ These objects are the sanctioned SPX audit payload schema for this auditor; use 
 Write each rendered scope object to its own payload file and pass the file by path:
 
 ```bash
-spx verification run scope add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<unit-key>' --payload '<scope-file>'
+spx -C '<root>' verification run scope add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<unit-key>' --payload '<scope-file>'
 ```
 
 A finding copies its unit's `expectedProducer` object as `producerIdentity` and its unit's complete `producerProvenance` object, and carries `rule`, the violated rule's catalog identifier, `severity`, the severity that rule's catalog row declares, `location` naming each file and line or section where the rule is violated within the unit, `message`, and `evidence` with `observed` and `expected` strings:
@@ -130,7 +132,7 @@ A finding copies its unit's `expectedProducer` object as `producerIdentity` and 
 Write each rendered finding object to its own payload file and pass it the same way:
 
 ```bash
-spx verification run finding add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<unit-key>:<rule-id>' --payload '<finding-file>'
+spx -C '<root>' verification run finding add --verification-type audit --scope-type {{file-or-changeset}} --scope '{{scope}}' --run '<run-token>' --idempotency-key '<unit-key>:<rule-id>' --payload '<finding-file>'
 ```
 
 Key each finding `<unit-key>:<rule-id>`, where `<rule-id>` is the identifier the governing rule catalog gives the violated rule; a rule identifier outside that catalog is a pre-persistence `BLOCKED` defect. Every payload-bearing command — `start`, `scope add`, and `finding add` — takes its JSON from a file, never from a heredoc, a pipe, or an inline argument; the dangerous-command guard blocks those forms:

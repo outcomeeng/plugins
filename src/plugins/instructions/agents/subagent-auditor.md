@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke when auditing, reviewing, or evaluating {{! term('configured_agent') !}}
   configuration files for best practices compliance, or when the user asks to audit a
   {{! term('configured_agent') !}}.
-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git -C * rev-parse:*), Bash(git -C * diff:*), Bash(git -C * status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
+tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git -C * rev-parse:*), Bash(git -C * diff:*), Bash(git -C * status:*), Bash(realpath:*), Bash(spx --version), Bash(spx -C * verification run start:*), Bash(spx -C * verification run status:*), Bash(spx -C * verification run scope add:*), Bash(spx -C * verification run finding add:*), Bash(spx -C * verification run finish:*), Bash(spx -C * verification run render:*), Write
 profile: standard
 skills:
   - instructions:audit-subagent
