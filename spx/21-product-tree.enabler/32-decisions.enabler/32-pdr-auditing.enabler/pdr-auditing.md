@@ -44,6 +44,7 @@ The distinction: "Sessions expire after 1 hour" is product behavior (PDR). "Sess
 
 - Given a PDR with specific untagged rules directly under `## Verification`, alone or alongside valid routed subsections, when its declaration is audited, then absent draft tags and subsections cause no finding and all other declaration-quality checks remain applicable.
 - NEVER: approval of a PDR declaration establishes that its untagged rules have evidence or that the product exhibits the declared behavior.
+- decision-slug-form: `/audit-pdr` raises a finding on a decision that opens with no slug, a slug outside the grammar, a slug repeated in the file, a compliance rule that states no ALWAYS or NEVER, or a `carries` target that does not resolve.
 
 ### Scenarios
 
