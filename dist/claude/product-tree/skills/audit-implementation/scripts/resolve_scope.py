@@ -4,8 +4,9 @@ Tested before this script is bundled by the audit node's
 ``test_implementation_scope.scenario.l1.py`` (stale-local-base resolution, a
 nonexistent repository) and ``test_implementation_scope.compliance.l1.py``
 (a run-input file whose keys cannot displace the git-resolved scope, an absent
-run-input file, a non-object and a malformed run-input file, a sealed inventory path carrying no
-recorded scope unit, a required unit outside the final coverage statuses beside
+run-input file, an unreadable run-input path, JSON text passed as the run-input
+value in place of a path, a non-object and a malformed run-input file, a sealed
+inventory path carrying no recorded scope unit, a required unit outside the final coverage statuses beside
 an optional unit carrying the same status, exact inventory agreement, drift in
 both directions, a recorded subject outside the inventory, a missing-skill unit
 naming its absent skill, an advisory live path beside the committed inventory, a reconcile request carrying no sealed
@@ -296,6 +297,27 @@ def _reconcile_run(
     return 0 if verdict[ReconcileField.RECONCILED] else EXIT_UNRECONCILED
 
 
+def _read_audit_input(path: pathlib.Path) -> dict[str, object]:
+    """Return the JSON object the audit-input file holds; raise `RuntimeError` naming the failure."""
+    try:
+        supplied = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError(
+            f"{AUDIT_INPUT_OPTION} must name a readable file holding "
+            f"one JSON object, received {str(path)[:200]!r} "
+            f"({type(exc).__name__}: {exc}). Write the object to a file in "
+            "the session scratch directory with the file-write tool and pass "
+            "that file's path."
+        ) from exc
+    if not isinstance(supplied, dict):
+        raise RuntimeError(
+            f"{AUDIT_INPUT_OPTION} file {str(path)[:200]!r} "
+            f"holds a {type(supplied).__name__}, not a JSON object. Write one "
+            "JSON object to the file."
+        )
+    return supplied
+
+
 def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("scope", help="HEAD, a branch, or a three-dot range")
@@ -347,26 +369,10 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
         return _reconcile_run(runner, scope, args, resolved)
     if args.audit_input is not None:
         try:
-            supplied = json.loads(args.audit_input.read_text(encoding="utf-8"))
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-            print(
-                f"{ERROR_PREFIX}: {AUDIT_INPUT_OPTION} must name a readable file holding "
-                f"one JSON object, received {str(args.audit_input)[:200]!r} "
-                f"({type(exc).__name__}: {exc}). Write the object to a file in "
-                "the session scratch directory with the file-write tool and pass "
-                "that file's path.",
-                file=sys.stderr,
-            )
+            resolved = {**_read_audit_input(args.audit_input), **resolved}
+        except RuntimeError as exc:
+            print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
             return EXIT_COMMAND_FAILURE
-        if not isinstance(supplied, dict):
-            print(
-                f"{ERROR_PREFIX}: {AUDIT_INPUT_OPTION} file {str(args.audit_input)[:200]!r} "
-                f"holds a {type(supplied).__name__}, not a JSON object. Write one "
-                "JSON object to the file.",
-                file=sys.stderr,
-            )
-            return EXIT_COMMAND_FAILURE
-        resolved = {**supplied, **resolved}
     # The selection is set after the merge, so no run-input key displaces it.
     try:
         selection = _selection_provider()
