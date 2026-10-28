@@ -5,14 +5,15 @@ malleability: spec
 
 # Migrating
 
-PROVIDES conversion of every citation in a Product Tree to the tree-absolute link form the 4.0 methodology declares
-SO THAT repositories whose trees carry the 3.x citation forms
-CAN adopt the 4.0 methodology without hand-editing each citation
+PROVIDES conversion of every citation in a Product Tree to the tree-absolute link form the 4.0 methodology declares, and of every Assertion and decision to its slugged opening
+SO THAT repositories whose trees carry the 3.x citation forms and unslugged Assertions
+CAN adopt the 4.0 methodology without hand-editing each citation or Assertion
 
 ## Assertions
 
 - ALWAYS: the conversion exits with status 0 when no citation remains unconvertible, with status 3 after printing the complete report when any does, and with status 1 when the root holds no `spx/` or another error stops the run, so a caller learns of leftover work from the exit status alone.
 - ALWAYS: one node-directory pattern serves every check the conversion makes, and it admits every node kind of the 3.x and 4.0 grammars and every fractional index.
+- ALWAYS: the conversion gives each Assertion and decision that opens with no slug a slug derived from its text, unique within its file, rewrites each `[audit:{rule-slug}]` tag to `[audit]` with the rule slug as the leading slug so stored audit result keys stay valid, reports every one it cannot convert, changes no other file, and leaves a converted tree unchanged on a second run.
 - ALWAYS: the conversion ships as one standalone Python file that uses only the standard library and runs on the floor of the supported Python window, per [`spx/12-shipped-scripting.adr.md`](spx/12-shipped-scripting.adr.md).
 
 ### Scenarios
