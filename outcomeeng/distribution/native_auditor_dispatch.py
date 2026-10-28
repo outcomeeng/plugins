@@ -28,6 +28,11 @@ from outcomeeng.distribution.native_profile_execution import (
     EvidenceSanitizer,
     NativeCommandRunner,
 )
+from outcomeeng.validation.implementation_audit_contract import (
+    RUN_TERMINAL_STATUS_FIELD,
+    RUN_TOKEN_FIELD,
+    AuditTerminalStatus,
+)
 
 NATIVE_AUDITOR_ARTIFACTS_DIRECTORY: Final = Path("native-auditor-dispatch")
 AUDITOR_PLUGIN: Final = "instructions"
@@ -42,7 +47,6 @@ CONFIGURATION_FILENAME: Final = "configuration.json"
 LOADING_FILENAME: Final = "loading.json"
 RESULT_FILENAME: Final = "result.json"
 BLOCKED_MARKER: Final = "BLOCKED"
-RUN_TOKEN_PATTERN: Final = re.compile(r"run\s*token\W+([a-z0-9_.:-]+)", re.IGNORECASE)
 RUN_FILE_PATTERN: Final = re.compile(r"run\s*file\W+(\S+)", re.IGNORECASE)
 
 NATIVE_LAUNCH_COMMANDS: Final[Mapping[Target, tuple[str, ...]]] = {
@@ -67,6 +71,7 @@ NATIVE_LAUNCH_COMMANDS: Final[Mapping[Target, tuple[str, ...]]] = {
 
 RESULT_RUN_TOKEN_KEY: Final = "run_token"
 RESULT_RUN_FILE_KEY: Final = "run_file"
+RESULT_PROJECTION_KEY: Final = "projection"
 RESULT_BLOCKED_KEY: Final = "blocked"
 RESULT_TERMINAL_CONDITION_KEY: Final = "terminal_condition"
 CONFIGURATION_SHIPPED_SHA256_KEY: Final = "shipped_definition_sha256"
@@ -80,6 +85,7 @@ RESULT_DOCUMENT_KEYS: Final = (
     "returned_message",
     RESULT_RUN_TOKEN_KEY,
     RESULT_RUN_FILE_KEY,
+    RESULT_PROJECTION_KEY,
     RESULT_BLOCKED_KEY,
 )
 """The fields a dispatched row's result document carries before a failure is recorded."""
@@ -276,16 +282,15 @@ def run_native_auditor_row(
     stdout = sanitize(result.stdout)
     stderr = sanitize(result.stderr)
     message = _returned_message(row.target, stdout)
-    run_token = _first_group(RUN_TOKEN_PATTERN, message)
+    projection = _rendered_projection(message)
+    run_token = projection[RUN_TOKEN_FIELD] if projection else None
     run_file = _first_group(RUN_FILE_PATTERN, message)
     blocked = BLOCKED_MARKER in message
     terminal_condition: str | None = None
     if result.returncode != 0:
         terminal_condition = f"native parent session exited {result.returncode}"
-    elif run_token is None and not blocked:
-        terminal_condition = (
-            "auditor dispatch returned neither a run token nor a blocked diagnostic"
-        )
+    elif projection is None and not blocked:
+        terminal_condition = "auditor dispatch returned neither a rendered projection nor a blocked diagnostic"
     _write_json(
         row.loading_path,
         {
@@ -308,6 +313,7 @@ def run_native_auditor_row(
             "returned_message": message,
             RESULT_RUN_TOKEN_KEY: run_token,
             RESULT_RUN_FILE_KEY: run_file,
+            RESULT_PROJECTION_KEY: projection,
             RESULT_BLOCKED_KEY: blocked,
             RESULT_TERMINAL_CONDITION_KEY: terminal_condition,
         },
@@ -364,6 +370,26 @@ def _returned_message(target: Target, stream: str) -> str:
         ):
             message = item["text"]
     return message
+
+
+def _rendered_projection(message: str) -> dict[str, object] | None:
+    """The rendered SPX projection a message carries: the first JSON object with a run token and a terminal status."""
+    decoder = json.JSONDecoder()
+    for start, character in enumerate(message):
+        if character != "{":
+            continue
+        try:
+            document, _ = decoder.raw_decode(message, start)
+        except json.JSONDecodeError:
+            continue
+        if (
+            isinstance(document, dict)
+            and isinstance(document.get(RUN_TOKEN_FIELD), str)
+            and document.get(RUN_TERMINAL_STATUS_FIELD)
+            in {status.value for status in AuditTerminalStatus}
+        ):
+            return document
+    return None
 
 
 def _first_group(pattern: re.Pattern[str], text: str) -> str | None:

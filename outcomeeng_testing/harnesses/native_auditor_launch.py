@@ -28,6 +28,11 @@ from outcomeeng.distribution.native_auditor_dispatch import (
     NativeAuditorDispatchObservation,
     native_auditor_rows,
 )
+from outcomeeng.validation.implementation_audit_contract import (
+    RUN_TERMINAL_STATUS_FIELD,
+    RUN_TOKEN_FIELD,
+    AuditTerminalStatus,
+)
 from outcomeeng_testing.harnesses.discovery_auth import (
     AUTH_FILENAME,
     CODEX_LOGIN_SUBCOMMAND,
@@ -51,18 +56,33 @@ from outcomeeng_testing.harnesses.native_profile_launch import ambient_environme
 
 PLANTED_RUN_TOKEN = "run-0001"
 PLANTED_RUN_FILE = "runs/run-0001.json"
+PLANTED_TERMINAL_STATUS = AuditTerminalStatus.APPROVED.value
 
 
 class LaunchReturn(Enum):
     """What the dispatched auditor returns to the parent session."""
 
     RUN_TOKEN = "run-token"
+    PROJECTION_ONLY = "projection-only"
+    UNSTRUCTURED = "unstructured"
     BLOCKED = "blocked"
 
 
 def _returned_message(returned: LaunchReturn) -> str:
+    projection = json.dumps(
+        {
+            RUN_TOKEN_FIELD: PLANTED_RUN_TOKEN,
+            RUN_TERMINAL_STATUS_FIELD: PLANTED_TERMINAL_STATUS,
+        }
+    )
     if returned is LaunchReturn.RUN_TOKEN:
-        return f"run token {PLANTED_RUN_TOKEN}\nrun file {PLANTED_RUN_FILE}"
+        return (
+            f"run token {PLANTED_RUN_TOKEN}\nrun file {PLANTED_RUN_FILE}\n{projection}"
+        )
+    if returned is LaunchReturn.PROJECTION_ONLY:
+        return f"Here is the verdict.\n```json\n{projection}\n```"
+    if returned is LaunchReturn.UNSTRUCTURED:
+        return f"The audit finished with token {PLANTED_RUN_TOKEN} and file {PLANTED_RUN_FILE}."
     return f"{BLOCKED_MARKER}: the auditor could not start the run"
 
 

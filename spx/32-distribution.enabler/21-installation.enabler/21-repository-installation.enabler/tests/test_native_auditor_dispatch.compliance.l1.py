@@ -8,10 +8,15 @@ from outcomeeng.distribution.native_auditor_dispatch import (
     AUDITOR_FIXTURES,
     CONFIGURATION_SHIPPED_SHA256_KEY,
     RESULT_BLOCKED_KEY,
+    RESULT_PROJECTION_KEY,
     RESULT_RUN_FILE_KEY,
     RESULT_RUN_TOKEN_KEY,
     RESULT_TERMINAL_CONDITION_KEY,
     native_auditor_rows,
+)
+from outcomeeng.validation.implementation_audit_contract import (
+    RUN_TERMINAL_STATUS_FIELD,
+    RUN_TOKEN_FIELD,
 )
 from outcomeeng_testing.harnesses.discovery_auth import CREDENTIAL_ENVIRONMENTS
 from outcomeeng_testing.harnesses.discovery_auth_cases import (
@@ -22,6 +27,7 @@ from outcomeeng_testing.harnesses.installation import repository_root
 from outcomeeng_testing.harnesses.native_auditor_launch import (
     PLANTED_RUN_FILE,
     PLANTED_RUN_TOKEN,
+    PLANTED_TERMINAL_STATUS,
     LaunchReturn,
     native_auditor_failure,
     native_auditor_launch,
@@ -81,6 +87,10 @@ def test_every_row_launches_once_from_the_shipped_definition_passing_only_the_se
                 assert result[RESULT_RUN_TOKEN_KEY] == PLANTED_RUN_TOKEN, row.identifier
                 assert result[RESULT_RUN_FILE_KEY] == PLANTED_RUN_FILE, row.identifier
                 assert result[RESULT_BLOCKED_KEY] is False, row.identifier
+                assert result[RESULT_PROJECTION_KEY] == {
+                    RUN_TOKEN_FIELD: PLANTED_RUN_TOKEN,
+                    RUN_TERMINAL_STATUS_FIELD: PLANTED_TERMINAL_STATUS,
+                }, row.identifier
                 assert not row.state_root.exists()
                 if row.target is Target.CLAUDE:
                     assert launch.environment.keys() & STRIPPABLE == {selected}
@@ -94,6 +104,38 @@ def test_every_row_launches_once_from_the_shipped_definition_passing_only_the_se
                 for call in item.calls:
                     if call is not launch:
                         assert not call.environment.keys() & STRIPPABLE, call.argv
+
+
+def test_dispatch_success_derives_from_the_rendered_projection_whatever_prose_surrounds_it() -> (
+    None
+):
+    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
+    with native_auditor_launch(
+        {selected}, returned=LaunchReturn.PROJECTION_ONLY
+    ) as observation:
+        assert observation.rows
+        for item in observation.rows:
+            row = item.observation.row
+            assert item.observation.terminal_condition is None, row.identifier
+            result = json.loads(row.result_path.read_text("utf-8"))
+            assert result[RESULT_RUN_TOKEN_KEY] == PLANTED_RUN_TOKEN, row.identifier
+            assert result[RESULT_BLOCKED_KEY] is False, row.identifier
+
+
+def test_a_reply_without_a_rendered_projection_or_blocked_diagnostic_records_a_terminal_condition() -> (
+    None
+):
+    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
+    with native_auditor_launch(
+        {selected}, returned=LaunchReturn.UNSTRUCTURED
+    ) as observation:
+        assert observation.rows
+        for item in observation.rows:
+            row = item.observation.row
+            assert item.observation.terminal_condition is not None, row.identifier
+            result = json.loads(row.result_path.read_text("utf-8"))
+            assert result[RESULT_RUN_TOKEN_KEY] is None, row.identifier
+            assert result[RESULT_PROJECTION_KEY] is None, row.identifier
 
 
 def test_a_blocked_dispatch_diagnostic_is_a_returned_result_without_a_terminal_condition() -> (
