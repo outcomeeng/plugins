@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Changed
 
-- **`/understand` names the Applier and Applicable in its coordination model.** The foundation's coordination model says a Change's Maturity advances Proposed, Framed, Sliced, Applicable, and that the Applier holds the Change during application, takes the mutation blocks in application order, and makes a mechanical repair directly. A Change record carries no application status, and a Parent never reaches Applicable. Before this change, the foundation named the Maturity Executable and the Role Executor, and called the phase execution.
+- **`/understand` names the Applier in its coordination model.** The foundation's coordination model says the Applier holds the Change during application, takes the mutation blocks in application order, and makes a mechanical repair directly. A Change record carries no application status. Before this change, the foundation named the Role Executor and called the phase execution.
 
 ## 0.109.5
 
