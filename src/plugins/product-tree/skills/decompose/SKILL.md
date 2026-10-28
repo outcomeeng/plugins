@@ -45,9 +45,8 @@ If the target is `spx/`:
 
 1. Read the product document and product-level ADRs/PDRs.
 2. Read `{{! file('root_guide') !}}` if present.
-3. Read `spx/PLAN.md` and `spx/ISSUES.md` if present.
-4. Enumerate existing top-level children.
-5. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `/understand` `references/artifact-placement.md` `<test_artifact_boundaries>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
+3. Enumerate existing top-level children.
+4. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `/understand` `references/artifact-placement.md` `<test_artifact_boundaries>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
 
 If the target is a node address:
 

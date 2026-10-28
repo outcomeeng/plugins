@@ -47,6 +47,6 @@ After the projection, return each `filed` finding on its own line, or `filed: no
 filed: <finding-key> | rule: <rule> | severity: <blocking|debt> | run: <run-token> | baseRefEvidence: <base>..<head> | issuesEntry: <path>#<heading>
 ```
 
-The line carries the key, the rule identifier, the run token, `baseRefEvidence` (the diff range showing every location lies outside the change), and `issuesEntry`, an object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and whose `heading` is the heading of the entry that records the finding.
+The line carries the key, the rule identifier, the run token, `baseRefEvidence` (the diff range showing every location lies outside the change), and `issuesEntry`, an object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content — when no node governs it, the finding carries no `issuesEntry` and names the artifact as a coverage gap — and whose `heading` is the heading of the entry that records the finding.
 
 </filed_line>

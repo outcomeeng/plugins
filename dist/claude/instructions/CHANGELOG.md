@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.22.7
+
+### Changed
+
+- `/audit-skill` and `/audit-subagent` give a `filed` finding on an artifact no node governs no `issuesEntry` and name the artifact as a coverage gap; the product root carries no `ISSUES.md`.
+
 ## 0.22.6
 
 ### Fixed

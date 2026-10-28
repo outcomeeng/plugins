@@ -60,6 +60,6 @@ After the projection, return each `filed` finding on its own line, or `filed: no
 filed: <finding-key> | rule: <rule> | severity: <blocking|debt> | run: <run-token> | baseRefEvidence: <base-commit>; <diff-command>... | issuesEntry: <path>#<heading>
 ```
 
-`baseRefEvidence` names the base as a full commit identity and each `git diff --unified=0 <base> -- <path>` command for the paths the finding's locations lie in, and states that the diff leaves every location untouched in the audited tree. `issuesEntry` gives the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and the heading of the entry that records the finding.
+`baseRefEvidence` names the base as a full commit identity and each `git diff --unified=0 <base> -- <path>` command for the paths the finding's locations lie in, and states that the diff leaves every location untouched in the audited tree. `issuesEntry` gives the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content — when no node governs it, the finding carries no `issuesEntry` and names the artifact as a coverage gap — and the heading of the entry that records the finding.
 
 </filed_line>

@@ -89,10 +89,6 @@ Read: CLAUDE.md  (if exists)
 Glob: "spx/*-*.adr.md"
 Glob: "spx/*-*.pdr.md"
 
-# Check for product-level coordination notes
-Glob: "spx/PLAN.md"
-Glob: "spx/ISSUES.md"
-
 # Enumerate local overlays
 Glob: "spx/local/*.md"
 
@@ -106,7 +102,7 @@ Read: spx/local/merging.md  (if exists)
 
 **Guide files**: Read `CLAUDE.md` when present and record it in the manifest. A freshly bootstrapped tree may lack the guide; absence is normal.
 
-**Coordination notes**: Read product-level `ISSUES.md` when present, and any `PLAN.md` a tree authored under a 3.x version still carries — the methodology admits `ISSUES.md` as the only note and routes work ordering to a Change. Reconcile them against product truth before use, and never scan their prose for cited governance decisions.
+**Notes**: The product root carries no `ISSUES.md`; an `ISSUES.md` belongs to the node it describes. Read no note at the product root.
 
 **Local overlays**: Record the list of files returned by `spx/local/*.md` for the manifest. Read `spx/local/merging.md` when present because default-branch lifecycle routing governs whether local implementation, validation, and commits are terminal. Do not read the other local overlays here — they are consumed by the relevant language skill, not by the context loader.
 
@@ -199,7 +195,7 @@ Glob: "$target/ISSUES.md"
 
 **Do not read test file bodies.** Record the test links visible in the target spec and whether co-located test files exist. Context loading does not infer implementation state from test imports. When the next workflow needs test details, route to `/test`, `/audit-tests`, or `/apply`.
 
-For the product-root target, the product document and product-level decisions and coordination notes were already read in Step 1. Enumerate top-level child nodes with `Glob: "spx/*-*.*/"`, list test links from the product document, check `Glob: "spx/tests/*"` without reading test bodies, and skip node-spec and node-decision lookup. Report the target as `spx/ (product root)` and render the hierarchy as `{product-name} ← TARGET`.
+For the product-root target, the product document and product-level decisions were already read in Step 1. Enumerate top-level child nodes with `Glob: "spx/*-*.*/"`, list test links from the product document, check `Glob: "spx/tests/*"` without reading test bodies, and skip node-spec and node-decision lookup. Report the target as `spx/ (product root)` and render the hierarchy as `{product-name} ← TARGET`.
 
 </step>
 
@@ -328,11 +324,7 @@ Claude ran a base sync before reading the tree, and the rebase replaced the head
 
 Claude loaded the structural ancestor context for a plugin-shipping node and saw full-path citations to methodology-governance decisions under an independent sibling subtree, but did not read the cited PDRs because they were outside the structural ancestor path. The answer used an incomplete methodology model. Scan loaded specs and decision records for full-path ADR/PDR citations, including citations from newly read cited decisions, before emitting `<PRODUCT_TREE_CONTEXT>`.
 
-**Failure 10: Omitted product-level coordination notes**
-
-Claude checked `PLAN.md` and `ISSUES.md` only inside node directories, so product-level coordination disappeared from every target context even though it applied tree-wide. Check and read product-level coordination notes before walking the node path, then list them with the ancestor and target notes in the context manifest.
-
-**Failure 11: Rejected the canonical product-root target**
+**Failure 10: Rejected the canonical product-root target**
 
 Claude required at least one node-directory segment after `spx/`, so the parent of a top-level node could not be contextualized even though `spx/` is the canonical product-root address. Treat exact `spx/` as product-root mode, walk zero node segments, and emit product-level context without attempting node-spec lookup.
 
@@ -347,7 +339,7 @@ The emitted `<PRODUCT_TREE_CONTEXT target="...">` marker is sound when:
 - [ ] At every level it names, the ADR and PDR read counts equal their glob counts
 - [ ] It lists the product document, every ancestor spec, and every lower-index sibling spec as read, and no higher-index sibling spec as read
 - [ ] Every full-path ADR/PDR cited by a loaded spec or decision appears with its citing file, and no cited decision comes from a coordination note
-- [ ] Every guide file and coordination note present at the product root, on the path, and at the target is listed
+- [ ] Every guide file present at the product root, on the path, and at the target, and every `ISSUES.md` on the path and at the target, is listed
 - [ ] Test links and co-located test files are listed, implementation state reads `unknown` unless a prior workflow established it, and no test body was read
 - [ ] Local overlays are listed, and when `spx/local/merging.md` exists the lifecycle continuation fields carry its routing
 - [ ] Every node, ADR, PDR, test, and coordination-note reference is a full path from `spx/`
