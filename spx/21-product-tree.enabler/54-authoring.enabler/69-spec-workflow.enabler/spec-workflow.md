@@ -11,6 +11,8 @@ CAN move from intent to aligned Product Tree truth through one interactive, cont
 
 ## Assertions
 
+- spec-slug-handoff: `/spec` hands `/author` each declaration with its slug and leaves the slug unchanged when a declaration moves
+
 ### Compliance
 
 - ALWAYS: `/spec` invokes `/understand`, resolves the affected tree area, and invokes `/contextualize` before proposing or mutating a declaration ([audit])
