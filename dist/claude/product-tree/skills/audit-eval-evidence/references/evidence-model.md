@@ -1,8 +1,8 @@
 <overview>
 
-Detailed evidence model for eval auditing. Read this before auditing any `[eval]` assertion or eval suite.
+Audit procedures for eval evidence. Read this before auditing any `[eval]` assertion or eval suite.
 
-Five properties define eval evidence: producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence. This reference provides the taxonomy and procedures for each, and for the standard's case-provenance rule, which is judged beside oracle independence.
+`/eval-evidence-standards` defines the evidence properties and the case-provenance rule. This reference provides the taxonomy and procedures that apply them in an audit; the case-provenance rule is judged beside oracle independence.
 
 </overview>
 
@@ -20,19 +20,12 @@ Five properties define eval evidence: producer coupling, oracle independence, as
 
 <artifact_model>
 
-Eval evidence consists of:
+`/eval-evidence-standards` states the role of `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, and the producer. An audit also reads two artifacts that the standard does not list:
 
-| Artifact        | Role                                                                                               |
-| --------------- | -------------------------------------------------------------------------------------------------- |
-| Spec assertion  | Product truth the eval claims to prove                                                             |
-| `eval.toml`     | Suite definition, thresholds, trials, prompt and case paths                                        |
-| `prompt.md`     | Model-facing task prompt                                                                           |
-| `cases.jsonl`   | Durable case data plus deterministic expected verdict fields                                       |
-| `history.jsonl` | Committed append-only run summaries                                                                |
-| `runs/`         | Full transcripts, typically gitignored                                                             |
-| Producer        | The skill, agent, classifier, script, or command whose structured verdict the eval claims to score |
-
-Eval evidence proves producer behavior only when the case set drives the producer and the grader checks the producer's structured output against expectations derived from the assertion.
+| Artifact       | Role                                   |
+| -------------- | -------------------------------------- |
+| Spec assertion | Product truth the eval claims to prove |
+| `runs/`        | Full transcripts, typically gitignored |
 
 </artifact_model>
 
