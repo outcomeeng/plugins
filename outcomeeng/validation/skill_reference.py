@@ -85,12 +85,7 @@ HARNESS_COMMANDS: Final = frozenset(
 CHANGE_IDENTITY: Final = re.compile(r"outcomeeng/changes#[0-9]+")
 # Each exempted reference to a skill no marketplace plugin ships yet, mapped to
 # the Change that ships the skill and removes the exemption.
-EXEMPTED_REFERENCES: Final[Mapping[str, str]] = {
-    "/probe": "outcomeeng/changes#363",
-    "product-tree:probe": "outcomeeng/changes#363",
-    "/eval": "outcomeeng/changes#514",
-    "product-tree:eval": "outcomeeng/changes#514",
-}
+EXEMPTED_REFERENCES: Final[Mapping[str, str]] = {}
 # Top-level filesystem directories, which a slash-prefixed token names as a path.
 FILESYSTEM_ROOTS: Final = frozenset(
     {
