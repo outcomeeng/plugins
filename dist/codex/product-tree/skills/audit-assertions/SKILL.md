@@ -18,6 +18,7 @@ A sealed `spx verification run` on one node spec, with one root scope unit for t
 <constraints>
 
 - NEVER modify the target spec, its subjects, or any other product file — the only state the audit changes is its payload files in the session scratch directory and the SPX run journal its own recording commands write, and the file-write tool writes payload files only.
+- NEVER invoke `product-tree:contextualize` or `product-tree:sync-base`, because both rebase the audited branch; read context at the head as it stands, so the audit changes no checkout state.
 - NEVER judge an assertion that carries another tag (`[test]`, `[eval]`, `[probe]`) or no tag — those verification types belong to their own evidence.
 - NEVER judge how an assertion is declared or selected: declaration form, heading placement, and tag fit belong to `/audit-specs`.
 - ALWAYS judge an assertion against the subject it names — the artifact, behavior, or constraint its text identifies — read from the product, never against the spec's wording alone or the conversation.
@@ -44,7 +45,7 @@ Use skill `product-tree:product-tree-plugin`. Invoke it with the verb `version` 
 
 <execution_sequence>
 
-1. **Load context.** Use skill `product-tree:understand` when the live `<PRODUCT_TREE_FOUNDATION>` marker is absent, then use skill `product-tree:contextualize` on the directory containing the spec. Read the spec at `path`. A target that is absent or is not a node spec returns `BLOCKED` with the exact failure.
+1. **Load context read-only.** Use skill `product-tree:understand` when the live `<PRODUCT_TREE_FOUNDATION>` marker is absent. Load the target spec's context by reading, in this order, and starting no audit phase before every read completes: the product document at `spx/`; at each directory from `spx/` down to the directory containing the spec, that directory's spec, then every decision record (`*.adr.md`, `*.pdr.md`) in it, leaving the target spec itself to the next read; then every decision a loaded spec or decision cites by full `spx/` path, repeating for each newly read decision until none is unread. A citation to a missing decision file returns `BLOCKED` naming the citation and the citing file. Read the spec at `path`. A target that is absent or is not a node spec returns `BLOCKED` with the exact failure.
 2. **Enumerate.** List every assertion under `## Assertions` in document order, numbering each from one. Select those tagged `[audit:{rule-slug}]` and the pathless `[audit]`. A selected assertion's designator is its slug, or `ordinal-<n>` with `<n>` its position in that list when pathless; its unit key is `assertion:<designator>:<path>`.
 3. **Open the run.** Start the run before judging anything:
 
@@ -212,6 +213,8 @@ diagnostic: <configuration error naming the refused path, or none>
 **Failure 2: Claude minted a rule identifier per finding.** Claude keyed a finding by the assertion's rule slug or by a phrase it coined for the violation, so the same defect carried a different key in each run and the recorded severity and disposition never matched. Key every finding with an identifier from the rule catalog, and carry the slug in the unit key and the message.
 
 **Failure 3: Claude rejected the run on a defect in text the changeset left alone.** Claude found a real violation in an unchanged subject passage and recorded it on the unit, so the run rejected a changeset that did not cause the defect. Classify each finding by its location, record only findings on touched text, and return every other finding as `filed`.
+
+**Failure 4: Claude ran the context loader that rebases the audited branch.** Claude invoked `product-tree:contextualize` to load context, so the head under audit was replaced by another commit before any assertion was judged. Load the context by reading files at the head as it stands.
 
 </failure_modes>
 
