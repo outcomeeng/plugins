@@ -31,7 +31,7 @@ Audit procedures for eval evidence. Read this before auditing any `[eval]` asser
 
 <producer_coupling>
 
-Coupling is the first gate. An eval that does not reach the real producer is a simulation, even when its cases and grader are well-formed.
+Coupling is the first gate. The table classifies how the eval reaches the producer.
 
 | Category         | Definition                                                                                         | Verdict                                                              |
 | ---------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
@@ -42,9 +42,9 @@ Coupling is the first gate. An eval that does not reach the real producer is a s
 | False            | Metadata names the producer but prompt or harness never uses it.                                   | REJECT                                                               |
 | Unknown          | Artifact path cannot establish how the producer is reached.                                        | REJECT                                                               |
 
-`prompt_source.kind = "producer-section"` in `eval.toml` is a supported Prompt-loaded coupling mode. Verify that the producer file, named section, and prompt template exist, and that the committed `prompt.md` is current with the source-derived materialization. The selected producer section is the artifact under audit for the suite: mutating that section changes the materialized prompt. Do not require the eval runner to invoke the whole skill, agent, classifier, script, or command when the assertion is about the selected section's behavior; the loaded section is the producer artifact for that suite. A hand-authored prompt that copies the same rules without `prompt_source` is Simulation.
+`prompt_source.kind = "producer-section"` in `eval.toml` is a Prompt-loaded coupling mode. Verify that the producer file, named section, and prompt template exist, and that the committed `prompt.md` is current with the source-derived materialization. The selected producer section is the artifact under audit for the suite, and the runner need not invoke the whole skill, agent, classifier, script, or command. A hand-authored prompt that copies the same rules without `prompt_source` is Simulation.
 
-For claims about skill, agent, classifier, script, or command behavior, replacing the producer with unrelated text must change the eval result. Assess this counterfactual by reading the producer, materialization logic, cases, and grading rules. For `producer-section` suites, identify a mutation that removes behavior the cases exercise and trace how it would change the materialized prompt and the suite's result; do not edit the section, materialize a prompt, or execute the suite. If the eval would still pass after that producer mutation, it is not coupled.
+Apply the standard's producer-replacement test by reading the producer, materialization logic, cases, and grading rules. For `producer-section` suites, identify a mutation that removes behavior the cases exercise and trace how it would change the materialized prompt and the suite's result; do not edit the section, materialize a prompt, or execute the suite. If the eval would still pass after that producer mutation, it is not coupled.
 
 </producer_coupling>
 
@@ -74,25 +74,22 @@ An input found verbatim, or as a near copy, in the producer's text or its record
 
 <alignment_model>
 
-Assertion alignment checks whether the suite proves the spec assertion, not an adjacent behavior.
-
 Procedure:
 
 1. Read the `[eval]` assertion text.
 2. Read each case's scenario and expected verdict fields.
-3. Map every expected field to a claim in the assertion.
-4. Confirm negative cases target the assertion's failure mode.
-5. Ask whether the assertion could be unfulfilled while every case still passes.
+3. Map every expected field to a claim in the assertion, and list each unmapped field.
+4. Judge the mapping against the standard's assertion-alignment property.
 
-If the assertion could be unfulfilled while the suite passes, REJECT as misaligned.
+A suite that fails that property is REJECT as misaligned.
 
 </alignment_model>
 
 <falsifiability_model>
 
-For each suite, name one concrete mutation to the producer that would fail at least one case. For `producer-section` suites, the mutation targets the selected producer section and reaches the eval through prompt materialization.
+For each suite, record the mutation that the standard's falsifiability property requires. For `producer-section` suites, the mutation targets the selected producer section and reaches the eval through prompt materialization.
 
-Valid mutation:
+Example:
 
 ```text
 Producer: the producing audit skill named by the eval assertion
@@ -100,28 +97,13 @@ Mutation: remove the invalid-tag rule from the audit workflow
 Expected eval impact: the invalid-tag case returns PASS instead of REJECT, so the grader fails it
 ```
 
-Invalid mutation:
-
-```text
-Producer: prompt.md
-Mutation: edit the prompt answer key
-Problem: falsifies the eval prompt, not the real producer
-```
-
-If no producer mutation changes the result, the suite is unfalsifiable for the assertion.
+A suite for which no such mutation exists is REJECT as unfalsifiable.
 
 </falsifiability_model>
 
 <run_evidence>
 
-Run evidence shows the current eval definition has passed at least once.
-
-Read `history.jsonl` and the referenced run summary when available. Confirm:
-
-- The run uses the current `eval.toml`, prompt, cases, threshold, and producer.
-- The run completed enough cases/trials to satisfy the threshold.
-- The recorded outcome is passing.
-- The row is not budget-exhausted, timed out, interrupted, or infrastructure-failed.
+Read `history.jsonl` and the referenced run summary when available, and judge them against the standard's run-evidence property.
 
 When the newest passing row's `git_sha` names a direct ancestor of HEAD, inspect
 the diff from that SHA to HEAD before rejecting it as stale. Accept the row only
@@ -137,7 +119,7 @@ the complete change, including whether the history modification is append-only.
 Treat an unavailable commit or failed inspection as unavailable provenance,
 never as proof that the exception applies.
 
-Budget-exhausted and other operational failures are neither passes nor behavioral rejections. They only show the suite did not produce complete evidence.
+An operational failure is never a pass and never a behavioral rejection of the assertion. It leaves run evidence missing.
 
 </run_evidence>
 

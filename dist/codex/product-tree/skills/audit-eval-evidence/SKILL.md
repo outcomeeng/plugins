@@ -10,7 +10,7 @@ allowed-tools: Read, Grep, Glob, Bash(git merge-base:*), Bash(git diff:*), Bash(
 
 <objective>
 
-A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the eval-evidence model, with each finding on touched text naming the assertion or eval artifact, the failed property, and the evidentiary gap, and every other finding returned as `FILED`.
+A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the eval-evidence model, with findings grouped in five gates (producer coupling, oracle quality, assertion alignment, falsifiability, and run evidence), each finding on touched text naming the assertion or eval artifact, the failed property, and the evidentiary gap, and every other finding returned as `FILED`.
 
 </objective>
 
@@ -19,7 +19,7 @@ A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the 
 - NEVER modify eval artifacts, skill bodies, prompts, cases, history, or any other file — this audit produces a verdict, never a fix or a commit.
 - NEVER run evals, tests, validation, coverage, linters, type-checkers, or other deterministic verification inside the audit — establish evidence quality by reading `eval.toml`, `prompt.md`, `cases.jsonl`, `history.jsonl`, relevant run summaries, and the producing artifact.
 - ALWAYS name the assertion, the failed property, and the evidentiary gap in every REJECT finding — the author repairs from the finding alone, and a finding missing any of the three leaves the repair unbounded.
-- NEVER approve prompt-only simulation as evidence for skill, agent, classifier, script, or command behavior — a prompt that simulates the producer scores the simulation, never the shipped producer the assertion governs.
+- NEVER approve prompt-only simulation as evidence for skill, agent, classifier, script, or command behavior.
 - NEVER issue a finding the evidence model does not support — drop an unbacked finding rather than reject the eval evidence for it.
 - NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding with severity `FILED`, and NEVER raise a recorded finding's severity or let a `FILED` finding start to reject unless the run names a changed basis. `${SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `FILED` form.
 
@@ -29,7 +29,7 @@ A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the 
 
 Bind the spec-node target: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the target is the one the request text carries, and the empty substitution binds nothing. If the request carries no target, return `UNKNOWN` with all five gate rows `UNKNOWN`, each carrying one `REJECT` finding with rule `missing-target`, this skill's file as `file`, `line: null`, and a message naming the required spec-node path. Preserve the supplied target string and set `metadata.branch` to JSON `null`; never inspect an inferred scope.
 
-Check the five evidence properties in strict order, producer coupling first: an eval that never exercises the actual producing skill, agent, classifier, script, or command passes regardless of what that producer contains, and a prompt that merely asks for a simulated verdict while restating the desired rules is not evidence about the skill. A suite missing any property has zero evidentiary value for the assertion it claims to verify. The standard's case-provenance rule is judged beside oracle independence, in Step 3b.
+Judge the five evidence properties in the order `/eval-evidence-standards` states, producer coupling first. The standard's case-provenance rule is judged beside oracle independence, in Step 3b.
 
 <step name="load_context">
 
@@ -71,7 +71,7 @@ When the target has no `[eval]` assertions, return `UNKNOWN` with all five gate 
 
 **Step 3a: Producer coupling**
 
-Classify how the eval reaches the producer into one category of the evidence model's `<producer_coupling>` table, including the `prompt_source.kind = "producer-section"` case, and apply that table's verdict for the category. Apply the evidence model's `<producer_coupling>` counterfactual reading procedure. If the eval would still pass after the identified producer mutation, classify as Simulation or False and REJECT.
+Classify how the eval reaches the producer into one category of the evidence model's `<producer_coupling>` table, including the `prompt_source.kind = "producer-section"` case, and apply that table's verdict for the category. Apply the evidence model's `<producer_coupling>` producer-replacement procedure. If the eval would still pass after the identified producer mutation, classify as Simulation or False and REJECT.
 
 </step>
 
@@ -91,13 +91,9 @@ Then read each case input against the producer's text and its recorded output, a
 
 **Step 3c: Assertion alignment**
 
-Read the spec assertion, the eval cases, and the expected verdict fields. Answer:
+Read the spec assertion, the eval cases, and the expected verdict fields, and apply the evidence model's `<alignment_model>` procedure.
 
-1. Does each expected verdict field correspond to behavior the assertion claims?
-2. Do the negative cases target the assertion's failure mode?
-3. Could the assertion be unfulfilled while the eval suite passes?
-
-If the assertion could be unfulfilled while the suite passes, REJECT — "misaligned."
+A suite that fails the standard's assertion-alignment property is REJECT — "misaligned."
 
 </step>
 
@@ -105,7 +101,7 @@ If the assertion could be unfulfilled while the suite passes, REJECT — "misali
 
 **Step 3d: Falsifiability**
 
-Name a concrete mutation to the producing artifact that would make at least one case fail, as the evidence model's `<falsifiability_model>` defines. Write it down:
+Record the producer mutation that the evidence model's `<falsifiability_model>` requires, in this form:
 
 ```text
 Producer: the /manage-pr skill's post-merge guidance section
@@ -113,7 +109,7 @@ Mutation: replace the post-merge marketplace sync rule with unrelated text
 Impact: the post-merge-sync-required case returns REJECT because the producer omits the required follow-up
 ```
 
-Cannot name a mutation to the producer that changes the eval result -> REJECT — "unfalsifiable."
+A suite with no recordable mutation is REJECT — "unfalsifiable."
 
 </step>
 
@@ -121,9 +117,7 @@ Cannot name a mutation to the producer that changes the eval result -> REJECT �
 
 **Step 3e: Run evidence**
 
-Read `history.jsonl` and, when available, the referenced run summary. Check that the committed history contains a successful run for the current eval definition, threshold, and case set.
-
-Budget-exhausted, timeout, interrupted, or infrastructure-failed runs are operational evidence only. They do not prove behavior. A passing history row for a stale prompt, stale case set, or different producer does not prove the current assertion.
+Read `history.jsonl` and, when available, the referenced run summary, and apply the evidence model's `<run_evidence>` procedure.
 
 Missing or stale run evidence is REJECT — "missing run evidence" or "stale run evidence."
 
@@ -218,7 +212,7 @@ How to avoid: Step 3a checks producer coupling first. Prompt-only simulation is 
 
 Claude read a budget-exhausted eval run and treated the failed suite as evidence the rule was wrong. The run never completed enough cases to prove behavior.
 
-How to avoid: Step 3e separates operational failures from behavioral pass evidence. Budget, timeout, and interruption rows never prove assertion fulfillment.
+How to avoid: Step 3e applies the evidence model's `<run_evidence>`, which classes a budget, timeout, or interruption row as missing run evidence, never as a pass or a behavioral rejection.
 
 </failure_modes>
 
