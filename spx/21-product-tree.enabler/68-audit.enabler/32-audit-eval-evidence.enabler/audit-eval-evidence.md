@@ -11,6 +11,8 @@ CAN reject eval suites that would still pass when the real producer is broken or
 
 ## Assertions
 
+- ALWAYS: the audit checks case provenance beside oracle independence — a case input copied from the producer's own text or its recorded output is rejected, because such a case cannot disagree with the producer
+
 ### Compliance
 
 - ALWAYS: the `audit-eval-evidence` skill is an agent-preloaded audit skill that names no caller and stays invocable on its own; the author-context isolation an audit verdict requires binds the author context per [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md), never this skill ([audit])
