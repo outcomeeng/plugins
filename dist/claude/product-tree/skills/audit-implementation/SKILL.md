@@ -26,7 +26,7 @@ An authoritative SPX projection, raw run token, and run file for the requested i
 - NEVER end a run because work remains, time has passed, context is tight, or reading is unfinished — a stop names the failed command with its exit code and stderr, or the absent prerequisite.
 - NEVER assign `incomplete` or `skipped` to a required coverage unit; neither describes an admissible terminal state for required coverage.
 - NEVER derive a subject body from a single commit's patch, or leave a truncated read unrecovered — a partial read is re-issued, never converted into coverage evidence.
-- NEVER hand-transcribe the resolved changed-path set into a payload — the resolver takes its audit input from a file and writes the run-start input to a file that the run-start command takes by path, because a retyped inventory drops and substitutes paths without any later step noticing.
+- NEVER hand-transcribe the resolved changed-path set into a payload — the resolver takes its audit input from a file in the session scratch directory and writes the run-start input to a file that the run-start command takes by path, because a retyped inventory drops and substitutes paths without any later step noticing.
 - NEVER select a skill from the installed skill inventory, and NEVER invoke a skill to discover whether a kind is installed — the registry selection in the run's sealed start input is the only selection source; the inventory this context carries decides only whether a selected skill runs or is recorded as `missing-skill`, and a failed invocation is not selection evidence.
 - ALWAYS record coverage as `<coverage_model>` states; a run that narrows a set or records a unit only where it found something states its findings as its coverage.
 - NEVER let a raised finding or a rejected terminal status shorten the inspection: rejection is a verdict about what was inspected, never permission to leave a concern or a resolved path unrecorded.
@@ -185,8 +185,11 @@ The audit-input file holds one JSON object carrying only the short values the
 invocation supplies: the original selector, the resolved repository root, the
 discovered live file list under `live_paths` for an advisory audit, available
 deterministic verification facts, generic run-driver identity, and advisory
-status. Write it with the file-write tool and pass its path exactly as the
-file-write result reports it; teach and use no inline JSON argument for it. The
+status. Write it with the file-write tool into the session scratch directory and pass
+its path exactly as the file-write result reports it; pass no inline JSON
+argument. The resolver refuses a file that resolves outside the directory named
+by `--scratch-dir` and exits nonzero, which returns the `<verdict_format>`
+blocked diagnostic with `runToken: not-started`. The
 resolver merges the object beneath the resolved scope,
 so a key that collides with `base`, `head`, or `changed_paths` is discarded
 rather than honored — the resolved scope is authoritative and unforgeable at
