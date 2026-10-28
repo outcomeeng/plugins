@@ -165,7 +165,7 @@ audit from its beginning:
 Have the resolver write the run-start input to a file, so the resolved `base`,
 `head`, and complete `changed_paths` enter the run exactly as git produced them.
 Name two paths in the session scratch directory, each unique to this run: the
-audit-input file, such as `<run-id>-audit-input.json`, which you write with the
+audit-input file, such as `<run-id>-audit-input.json`, written with the
 file-write tool, and the resolver's output file, such as
 `<run-id>-start-input.json`. Pass the audit-input file as the resolver's
 `--audit-input` path and the output file as its `--output` path:
