@@ -22,7 +22,7 @@ from typing import Final
 from hypothesis import given, seed, settings
 
 from outcomeeng.distribution.instruction_block import JUSTFILE_NAME
-from outcomeeng.validation import SUMMARY_KEY_LABEL
+from outcomeeng.validation import SUMMARY_KEY_LABEL, VALIDATION_ENTRY_COMMAND
 from outcomeeng.validation.__main__ import main as run_validation_entry
 from outcomeeng.validation.infrastructure_index import PRODUCT_TREE_ROOT
 from outcomeeng.validation.selected_gate import RECIPE_MARKDOWN_LANE
@@ -46,7 +46,6 @@ MARKDOWN_SCOPE_WORD: Final = "Markdown"
 CODE_SPAN: Final = re.compile(r"`([^`]+)`")
 JUST_COMMAND: Final = "just"
 LAUNCHER: Final = ("uv", "run")
-VALIDATION_ENTRY: Final = ("python3", "-m", "outcomeeng.validation")
 DIRECTORY_SUFFIX: Final = "/"
 ROOT_PREFIX: Final = ""
 
@@ -111,7 +110,7 @@ def _expand_validation_recipe(
 ) -> tuple[tuple[str, ...], ...]:
     """The command lines a line runs; the Markdown lane recipe runs the lines its run spawns."""
 
-    if line == (*VALIDATION_ENTRY, RECIPE_MARKDOWN_LANE):
+    if line == (*VALIDATION_ENTRY_COMMAND, RECIPE_MARKDOWN_LANE):
         return markdown_lane_run().command_lines
     return (line,)
 
