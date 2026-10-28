@@ -12,7 +12,7 @@ allowed-tools: Read, Grep, Glob, Write, Bash(spx verification run:*), Bash(git m
 
 <objective>
 
-A sealed `spx verification run` on one PDR file, with one root scope unit for the PDR and one child scope unit per evidence-model property (content classification, property quality, tag validity, atemporal voice, consistency), whose verdict records every finding on touched text on its child unit, returned as the run token, the run file, and the rendered projection, whose `terminalStatus` is `approved` or `rejected`, followed by each other finding as a `filed` line; or the complete `BLOCKED` diagnostic when the run cannot finish.
+A sealed `spx verification run` on one PDR file judged against the PDR evidence model, whose `terminalStatus` is `approved` or `rejected` and whose findings on touched text sit under their catalog rule on one of five child units (content classification, property quality, tag validity, atemporal voice, consistency), returned as the run token, the run file, and the rendered projection followed by each standing finding as a `filed` line; or the complete `BLOCKED` diagnostic when the run cannot finish.
 
 </objective>
 
@@ -349,28 +349,39 @@ How to avoid: Step 5 asks "Is this falsifiable from the user's perspective?"
 
 Claude saw a `### Testing` rule "ALWAYS: every export conforms to RFC 4180 ([scenario])" and approved it because the prose read like a concrete interaction. `ALWAYS` is a universal claim, and a single scenario cannot establish a claim about every case — the tag should be `mapping`, `conformance`, `property`, or `compliance`. The mismatch is `assertion-type-mismatch`, not `invalid-tag`.
 
+Why it failed: Claude judged the rule's prose as one concrete interaction and never read its quantifier.
+
 How to avoid: Step 6 reads the quantifier first and separates a quantifier mismatch from a structural tag problem.
 
 **Failure 4: Flagged a tooling product's observable state as architecture**
 
 Claude audited a PDR for a command-line tool whose product document declares its audience operates the product through a CLI and an on-disk layout. The PDR described the repository layout the audience inspects on disk and the version-control state it observes. Claude saw git commands and filesystem paths, applied the end-user-application reflex ("a user does not see git"), and rejected the statements as `architecture-content`. That is a false positive: the declared audience operates exactly that surface, so the layout is observable product behavior.
 
+Why it failed: Claude judged "observable" against a generic end user instead of the audience the product document declares.
+
 How to avoid: Step 4 reads the product document's declared audience first and judges "observable" against it.
 
 **Failure 5: Rejected the run on a defect in text the changeset left alone**
 
-Claude found a real violation in an unchanged PDR passage and recorded it on the unit, so the run rejected a changeset that did not cause the defect. Classify each finding by its location, record only findings on touched text, and return every other finding as `filed`.
+Claude found a real violation in an unchanged PDR passage and recorded it on the unit, so the run rejected a changeset that did not cause the defect.
+
+Why it failed: Claude treated every defect found in the PDR as caused by the changeset, without sorting findings by location.
+
+How to avoid: Classify each finding by its location, record only findings on touched text, and return every other finding as `filed`.
 
 **Failure 6: Moved the checkout while loading context**
 
-Claude ran the context loader that rebases the audited branch, so the head under audit was replaced by another commit. Load the context by reading files at the head as it stands.
+Claude ran the context loader that rebases the audited branch, so the head under audit was replaced by another commit.
+
+Why it failed: Claude assumed the context loader only reads, though it rebases a behind-base branch.
+
+How to avoid: Load the context by reading files at the head as it stands.
 
 </failure_modes>
 
 <success_criteria>
 
-- The run holds one `audited` root scope unit for the PDR and one child unit under its key for each of content classification, property quality, tag validity, atemporal voice, and consistency, and every unit names the root.
-- Every PDR rule was judged with none skipped — content classification, property quality (observability, falsifiability, and stability), per-rule tag validity and assertion-type fit, atemporal voice, and consistency.
+- Every unit is `audited` and no PDR statement, property, or rule was skipped, whether its unit holds or carries findings; property quality covers observability, falsifiability, and stability, and tag validity covers per-rule assertion-type fit.
 - Every recorded finding lies on touched text and sits on an accepted unit, is keyed by a catalog identifier, and names the location, the violated rule, and observed-versus-expected evidence.
 - Every standing finding appears as a `filed` line carrying its key, `baseRefEvidence`, and `issuesEntry`, and rejects no run.
 - An absent or empty Verification section is recorded on the tag-validity unit and an unmet property-quality criterion on the property-quality unit; neither condition can disappear through an empty iteration or leave the run `approved`.
