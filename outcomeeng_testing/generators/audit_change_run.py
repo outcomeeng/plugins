@@ -261,7 +261,8 @@ def _wrong_field_set_requests(draw: st.DrawFn, runner: ModuleType) -> dict[str, 
     operation = draw(st.sampled_from(tuple(runner.Operation)))
     operation_field = runner.RequestField.OPERATION.value
     required = sorted(field.value for field in runner.REQUIRED_FIELDS[operation])
-    taken = {*required, operation_field}
+    optional = runner.OPTIONAL_FIELDS.get(operation, frozenset())
+    taken = {*required, *(field.value for field in optional), operation_field}
     dropped = draw(st.sets(st.sampled_from(required))) if required else set()
     undeclared = st.one_of(
         st.sampled_from(
