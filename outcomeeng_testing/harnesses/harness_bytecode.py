@@ -23,6 +23,10 @@ CONFORMING_DIRECTORY = FIXTURE_DIRECTORY / "conforming"
 SHIPPED_SCRIPT_FIXTURE = FIXTURE_DIRECTORY / "shipped_script.py.txt"
 SHIPPED_SCRIPT_NAME = "shipped_script.py"
 
+DISTRIBUTION_DIRECTORY_NAME = "dist"
+CACHE_DIRECTORY_NAME = "__pycache__"
+BYTECODE_SUFFIX = ".pyc"
+
 _FLAG_PROGRAM = (
     f"import {harnesses_package.__name__}, sys; print(sys.dont_write_bytecode)"
 )
@@ -46,6 +50,18 @@ def conforming_launch_fixtures() -> tuple[Path, ...]:
 def harness_module_paths() -> tuple[Path, ...]:
     """Every harness module under the harness package directory."""
     return tuple(sorted(HARNESS_DIRECTORY.glob("*.py")))
+
+
+def bytecode_entries_under_dist() -> tuple[str, ...]:
+    """Repository-relative path of every ``__pycache__`` directory and ``.pyc`` file under ``dist/``."""
+    distribution = REPOSITORY_ROOT / DISTRIBUTION_DIRECTORY_NAME
+    return tuple(
+        sorted(
+            str(path.relative_to(REPOSITORY_ROOT))
+            for path in distribution.rglob("*")
+            if path.name == CACHE_DIRECTORY_NAME or path.suffix == BYTECODE_SUFFIX
+        )
+    )
 
 
 def _fresh_interpreter(program: str, *arguments: str) -> str:
