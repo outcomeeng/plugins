@@ -153,6 +153,10 @@ verify-marketplace-installation:
 verify-native-profile-execution artifact_directory *args:
     @uv run python -m outcomeeng_testing.harnesses.native_profile_execution "{{artifact_directory}}" {{args}}
 
+# Capture one native dispatch record for every shipped auditor on every supported harness
+verify-native-auditor-dispatch artifact_directory *args:
+    @uv run python -m outcomeeng_testing.harnesses.native_auditor_dispatch "{{artifact_directory}}" {{args}}
+
 # Run the writable-roots probe protocol for one fresh Codex thread and capture its status screens
 probe-writable-roots-codex *args:
     @uv run python -m outcomeeng_testing.harnesses.writable_roots_probe {{args}}

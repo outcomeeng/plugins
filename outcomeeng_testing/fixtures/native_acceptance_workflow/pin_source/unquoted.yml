@@ -1,0 +1,12 @@
+name: Quality Gate
+on:
+  pull_request:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      CLAUDE_CLI_VERSION: 2.1.168
+      CODEX_CLI_VERSION: 0.162.1
+      SPX_COMMIT: dfba7ca375232e30d3aefe3af2614f8ad74569e9
+    steps:
+      - run: "true"
