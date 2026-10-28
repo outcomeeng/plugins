@@ -382,12 +382,17 @@ class AuditWorkspace:
         field = runner.RequestField
         operation = runner.Operation
         read = self.invoke(
-            {field.OPERATION: operation.READ_CANDIDATE, field.PATH: relative}
+            {
+                field.OPERATION: operation.READ_CANDIDATE,
+                field.PATH: relative,
+                field.ROOT: str(self.root),
+            }
         )
         started = self.invoke(
             {
                 field.OPERATION: operation.START,
                 field.PATH: relative,
+                field.ROOT: str(self.root),
                 field.CANDIDATE_SHA256: read.result.get(runner.ResultField.SHA256),
             }
         )
@@ -420,14 +425,24 @@ class AuditWorkspace:
             ),
         )
 
-    def invoke(self, request: Mapping[str, object]) -> RunnerCall:
-        """Run the runner's entry point with ``request`` on stdin."""
-        return self.invoke_text(json.dumps(request))
+    def invoke(
+        self, request: Mapping[str, object], *, launched_from: Path | None = None
+    ) -> RunnerCall:
+        """Run the runner's entry point with ``request`` on stdin.
 
-    def invoke_text(self, request_text: str) -> RunnerCall:
+        The process starts in ``launched_from``, the repository root by
+        default, as a session working in another directory would start it.
+        """
+        return self.invoke_text(json.dumps(request), launched_from=launched_from)
+
+    def invoke_text(
+        self, request_text: str, *, launched_from: Path | None = None
+    ) -> RunnerCall:
         """Run the runner's entry point with ``request_text`` on stdin, unparsed."""
         return self._observe(
-            request_text, request_text.encode(load_runner().TEXT_ENCODING)
+            request_text,
+            request_text.encode(load_runner().TEXT_ENCODING),
+            launched_from=launched_from,
         )
 
     def invoke_utf16(self, request: Mapping[str, object]) -> RunnerCall:
@@ -443,12 +458,18 @@ class AuditWorkspace:
         environment[_GH_TELEMETRY_VARIABLE] = _GH_TELEMETRY_OFF
         return environment
 
-    def _observe(self, request_text: str, request_bytes: bytes) -> RunnerCall:
+    def _observe(
+        self,
+        request_text: str,
+        request_bytes: bytes,
+        *,
+        launched_from: Path | None = None,
+    ) -> RunnerCall:
         handle, report = mkstemp(dir=self.observation_directory, suffix=_REPORT_SUFFIX)
         os.close(handle)
         completed = subprocess.run(  # noqa: S603
             [sys.executable, str(OBSERVER_SCRIPT), str(RUNNER_SCRIPT), report],
-            cwd=self.root,
+            cwd=self.root if launched_from is None else launched_from,
             env=self._environment(),
             input=request_bytes,
             capture_output=True,

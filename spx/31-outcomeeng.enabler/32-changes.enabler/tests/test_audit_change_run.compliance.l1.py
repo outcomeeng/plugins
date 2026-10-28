@@ -79,6 +79,7 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
                 {
                     Field.OPERATION: Operation.ADD_SCOPE,
                     Field.PATH: relative,
+                    Field.ROOT: str(workspace.root),
                     Field.RUN_TOKEN: run_token,
                     Field.PAYLOAD: scope,
                 }
@@ -90,6 +91,7 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
                 {
                     Field.OPERATION: Operation.ADD_FINDING,
                     Field.PATH: relative,
+                    Field.ROOT: str(workspace.root),
                     Field.RUN_TOKEN: run_token,
                     Field.PAYLOAD: finding,
                 }
@@ -100,6 +102,7 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
             {
                 Field.OPERATION: Operation.RECONCILE,
                 Field.PATH: relative,
+                Field.ROOT: str(workspace.root),
                 Field.RUN_TOKEN: run_token,
             }
         )
@@ -109,6 +112,7 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
             {
                 Field.OPERATION: Operation.FINISH,
                 Field.PATH: relative,
+                Field.ROOT: str(workspace.root),
                 Field.RUN_TOKEN: run_token,
                 Field.TERMINAL_STATUS: Terminal.REJECTED,
             }
@@ -217,7 +221,11 @@ def test_a_candidate_edited_before_the_run_starts_blocks_without_a_run_or_a_file
     with audit_workspace() as workspace:
         relative = workspace.place(CAPTURED_CHANGE_RECORD)
         read = workspace.invoke(
-            {Field.OPERATION: Operation.READ_CANDIDATE, Field.PATH: relative}
+            {
+                Field.OPERATION: Operation.READ_CANDIDATE,
+                Field.PATH: relative,
+                Field.ROOT: str(workspace.root),
+            }
         )
         workspace.edit(relative)
         before = workspace.snapshot()
@@ -226,6 +234,7 @@ def test_a_candidate_edited_before_the_run_starts_blocks_without_a_run_or_a_file
             {
                 Field.OPERATION: Operation.START,
                 Field.PATH: relative,
+                Field.ROOT: str(workspace.root),
                 Field.CANDIDATE_SHA256: read.result[Result.SHA256],
             }
         )
@@ -255,6 +264,7 @@ def test_a_candidate_edited_during_the_run_blocks_reconciliation_without_a_file(
             {
                 Field.OPERATION: Operation.RECONCILE,
                 Field.PATH: relative,
+                Field.ROOT: str(workspace.root),
                 Field.RUN_TOKEN: opened.run_token,
             }
         )
@@ -281,6 +291,7 @@ def test_a_payload_spx_rejects_blocks_with_its_command_diagnostic_and_no_file() 
             {
                 Field.OPERATION: Operation.ADD_SCOPE,
                 Field.PATH: relative,
+                Field.ROOT: str(workspace.root),
                 Field.RUN_TOKEN: opened.run_token,
                 Field.PAYLOAD: payload,
             }
@@ -339,7 +350,11 @@ def test_a_request_that_is_not_utf8_text_blocks_on_stdout_without_a_file() -> No
         before = workspace.snapshot()
 
         blocked = workspace.invoke_utf16(
-            {Field.OPERATION: Operation.READ_CANDIDATE, Field.PATH: relative}
+            {
+                Field.OPERATION: Operation.READ_CANDIDATE,
+                Field.PATH: relative,
+                Field.ROOT: str(workspace.root),
+            }
         )
         changes = workspace.changes_since(before)
 
@@ -431,6 +446,59 @@ def test_a_reference_resolution_whose_root_is_no_repository_blocks_naming_the_ro
         assert changes.in_runner_home_directory == ()
 
 
+def test_an_audit_launched_from_another_directory_seals_its_run_in_the_named_root() -> (
+    None
+):
+    with audit_workspace() as workspace:
+        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        launched_from = workspace.outside_directory
+        before = workspace.snapshot()
+
+        read = workspace.invoke(
+            {
+                Field.OPERATION: Operation.READ_CANDIDATE,
+                Field.PATH: relative,
+                Field.ROOT: str(workspace.root),
+            },
+            launched_from=launched_from,
+        )
+        started = workspace.invoke(
+            {
+                Field.OPERATION: Operation.START,
+                Field.PATH: relative,
+                Field.ROOT: str(workspace.root),
+                Field.CANDIDATE_SHA256: read.result[Result.SHA256],
+            },
+            launched_from=launched_from,
+        )
+        run_token = started.result[Result.RUN_TOKEN]
+        finished = workspace.invoke(
+            {
+                Field.OPERATION: Operation.FINISH,
+                Field.PATH: relative,
+                Field.ROOT: str(workspace.root),
+                Field.RUN_TOKEN: run_token,
+                Field.TERMINAL_STATUS: Terminal.REJECTED,
+            },
+            launched_from=launched_from,
+        )
+        changes = workspace.changes_since(before)
+
+        assert read.result[Result.STATUS] == Status.OK
+        assert read.result[Result.CONTENT] == workspace.content(relative)
+        assert started.result[Result.STATUS] == Status.OK
+        assert finished.result[Result.STATUS] == Status.OK
+        run_fields = finished.result[Result.RUN]
+        assert isinstance(run_fields, dict)
+        assert run_fields[SpxField.RUN_TOKEN] == run_token
+        assert [call.runner_writes for call in (read, started, finished)] == [()] * 3
+        assert _started_executables([read, started, finished]) <= PERMITTED_EXECUTABLES
+        assert changes.in_spx_store != ()
+        assert changes.in_repository_outside_store == ()
+        assert changes.in_runner_temporary_directory == ()
+        assert changes.in_runner_home_directory == ()
+
+
 @pytest.mark.parametrize("condition", tuple(CandidateCondition))
 def test_a_candidate_the_runner_cannot_take_blocks_on_stdout_without_a_file(
     condition: CandidateCondition,
@@ -440,7 +508,11 @@ def test_a_candidate_the_runner_cannot_take_blocks_on_stdout_without_a_file(
         before = workspace.snapshot()
 
         blocked = workspace.invoke(
-            {Field.OPERATION: Operation.READ_CANDIDATE, Field.PATH: relative}
+            {
+                Field.OPERATION: Operation.READ_CANDIDATE,
+                Field.PATH: relative,
+                Field.ROOT: str(workspace.root),
+            }
         )
         changes = workspace.changes_since(before)
 
@@ -476,6 +548,7 @@ def test_a_refused_request_naming_a_started_run_blocks_with_its_run_token_and_no
                 **dict.fromkeys(Field),
                 Field.OPERATION: operation,
                 Field.PATH: relative,
+                Field.ROOT: str(workspace.root),
                 Field.RUN_TOKEN: run_token,
             }
         )
