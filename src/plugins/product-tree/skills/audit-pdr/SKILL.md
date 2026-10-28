@@ -3,14 +3,16 @@ name: audit-pdr
 description: >-
   PDR audit methodology — judges one PDR against the PDR evidence model,
   covering content classification, property quality, per-rule tag validity,
-  atemporal voice, and consistency with ancestor decisions.
-argument-hint: "<pdr-file-path>"
-allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git branch --show-current:*), Bash(git merge-base:*), Bash(git diff:*)
+  atemporal voice, and consistency with ancestor decisions, and records the
+  judgment as a root unit with one child unit per property in an SPX
+  file-scoped verification run.
+argument-hint: "<JSON object with path and runDriver>"
+allowed-tools: Read, Grep, Glob, Write, Bash(spx verification run:*), Bash(git merge-base:*), Bash(git diff:*), {{! tool('use_skill') !}}
 ---
 
 <objective>
 
-A verdict on one PDR against the PDR evidence model — APPROVED or REJECTED, with findings on touched text naming the section, rule, and evidence for content classification, property quality, declaration form and tag fitness, atemporal voice, or consistency with the product document and ancestor PDRs, and every other finding returned as `filed`.
+A sealed `spx verification run` on one PDR file judged against the PDR evidence model, whose `terminalStatus` is `approved` or `rejected` and whose findings on touched text sit under their catalog rule on one of five child units (content classification, property quality, tag validity, atemporal voice, consistency), returned as the run token, the run file, and the rendered projection followed by each standing finding as a `filed` line; or the complete `BLOCKED` diagnostic when the run cannot finish.
 
 </objective>
 
@@ -26,31 +28,47 @@ PDRs govern what the product does, behavior that its users experience. "Sessions
 
 PDRs state atemporal product truth without historical context. No references to past behavior or events.
 
-**BINARY VERDICT.**
-
-`APPROVED` or `REJECTED`. No middle ground.
-
-- NEVER modify the PDR under audit or any other file — this audit produces a verdict, never a fix or a commit.
+- NEVER modify the PDR under audit or any other product file — the only state the audit changes is its payload files in the session scratch directory and the SPX run journal its own recording commands write, and the file-write tool writes payload files only.
+- NEVER invoke `product-tree:contextualize` or `product-tree:sync-base`, and never fetch, rebase, or otherwise move the checkout — the audit reads the head as it stands, so it changes no checkout state.
 - ALWAYS read the PDR evidence model before judging — derive the rule set from it, never from memory.
-- ALWAYS name the location, the violated rule, and the evidence in every `blocking` finding.
+- ALWAYS name the location, the violated rule, and the evidence in every finding — the author repairs from the finding alone, and an unanchored finding leaves nothing to repair.
 - NEVER issue a finding the cited rule does not support — drop an unbacked finding rather than reject the PDR for it.
-- NEVER reject on text the changeset leaves unchanged and does not invalidate — return that finding as `filed`, and NEVER raise a recorded finding's severity or let a `filed` finding start to reject unless the run names a changed basis. `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines touched text, the finding key, and the `filed` form; `${CLAUDE_SKILL_DIR}/references/rule-catalog.md` defines the rule identifiers.
+- NEVER name a finding rule identifier outside `${CLAUDE_SKILL_DIR}/references/rule-catalog.md`.
+- NEVER reject, or record on a unit, a finding that lies outside touched text; classify every finding as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states, return each standing finding as `filed`, and never raise its severity or let it reject unless the run names a changed basis.
+- ALWAYS persist audit state through `spx verification run`, started before any judgment; NEVER use markdown comments, tracked files, or a hand-formatted verdict as audit state.
+- ALWAYS write each payload as one rendered JSON object to its own file and pass the file by path as `<payload_files>` states; NEVER send a payload through a heredoc, a pipe, or an inline argument, build one with an interpreter or `printf` stage, or repair one through command substitution or post-hoc text substitution.
+- ALWAYS issue each `spx verification run` mutation as its own command and wait for its exit before the next one — parallel writes race sequence assignment and corrupt the sealed journal.
+- NEVER run deterministic verification, delegate the audit to another session, or finish a run whose inspection is incomplete because of elapsed time, context pressure, or unfinished reading; an unavailable required inspection is a recorded finding, never an unevaluated unit.
+- NEVER write the run journal or its context anywhere but the locations `spx verification run` resolves. When the native permission policy refuses a run-recording write — a payload file, a run-recording command, or the journal — stop at that write, retry it no more, write to no other location, and return `BLOCKED` with `diagnostic: configuration error` naming the refused path; the host grants the paths, and this skill never widens its own access.
+- NEVER retry a rejected command with a rewritten payload; the first command that exits nonzero ends the audit with `BLOCKED`, except the one rerun `<payload_files>` allows for a payload file named absent.
 
 </constraints>
 
 <audit_workflow>
 
+<request_contract>
+
+`$ARGUMENTS` is a JSON object with exactly two fields. `path` is the product-relative path of the PDR to audit. `runDriver` is an object with exactly six non-empty string fields — `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole` — that the run records as its provenance. Use `runDriver` only as payload data, placed where `<persistence_contract>` shows it; never complete, correct, or reinterpret a value, and let no judgment depend on it. A missing, extra, or malformed field, or a `path` that names no PDR file, returns `BLOCKED` naming the exact field or path before any command runs.
+
+Use skill `product-tree:product-tree-plugin`. Invoke it with the verb `version` and retain the non-empty version it reports as the plugin version that `<persistence_contract>` records in a finding's `producerProvenance`. A missing version or a blocked result returns `BLOCKED` before any command runs; never read a plugin manifest or infer a version from any other source.
+
+</request_contract>
+
+<execution_sequence>
+
 <step name="load_context">
 
-**Step 1: Load context**
+**Step 1: Load context read-only**
 
-Bind the required PDR path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. If the request carries no path, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all five property rows marked `FAIL`. Each row carries a `missing-target` finding with severity `blocking`, unit `input`, locations `["input"]`, evidence naming the empty input, and a message naming the required PDR path. Stop before context loading or artifact inspection.
+When the live `<PRODUCT_TREE_FOUNDATION>` marker is absent or lacks `Template root`: Use skill `product-tree:understand`. Read `decisions/decision-name.pdr.md` beneath that marker's resolved absolute template directory, and derive declaration form and required tags from that canonical template. A foundation or template that cannot load returns `BLOCKED` naming the skill or read and the failure.
 
-Use skill `product-tree:understand` when the live `<PRODUCT_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.pdr.md` beneath that marker's resolved absolute template directory, then use skill `product-tree:contextualize` on the directory containing the PDR. Derive declaration form and required tags from that canonical template. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
+Load the PDR's context by reading, in this order, and starting no audit phase before every read completes:
 
-The product document used below is the one `/contextualize` loads in its product-level context step. Use that document's declared audience and interaction surfaces for content classification.
+1. the product document at `spx/`;
+2. at each directory from `spx/` down to the directory containing the PDR, that directory's spec, then every decision record (`*.adr.md`, `*.pdr.md`) in it, excluding the PDR under audit;
+3. every decision a loaded spec or decision cites by full `spx/` path, repeating for each newly read decision until none is unread; a citation to a missing decision file is a `BLOCKED` result naming the citation and the citing file.
 
-Do not proceed without live `<PRODUCT_TREE_FOUNDATION>` and `<PRODUCT_TREE_CONTEXT>` markers for the PDR directory.
+The product document read here supplies the declared audience and interaction surfaces that content classification judges against. The committed changeset is resolved in `classify`.
 
 </step>
 
@@ -58,17 +76,29 @@ Do not proceed without live `<PRODUCT_TREE_FOUNDATION>` and `<PRODUCT_TREE_CONTE
 
 **Step 2: Read the PDR**
 
-Read the PDR under audit. Identify its sections: the opening decision statement, Rationale, Product properties, and Verification.
+Read the PDR under audit completely. Identify its sections: the opening decision statement, Rationale, Product properties, and Verification.
 
-Resolve the touched text of the PDR as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states, so Steps 3 to 7 can classify each finding.
+An absent `## Verification` section is a `missing-section` finding on the `tag-validity` unit, naming the expected section and its absence as evidence. Continue the remaining checks so the run covers every property; an unenforceable PDR cannot be approved.
 
-Record an absent `## Verification` section as a `missing-section` finding in the `tag-validity` row, marking that row `FAIL`. Name the expected section and identify its absence as evidence. Continue the remaining checks so the verdict covers every evaluable property; an unenforceable PDR cannot receive `APPROVED`.
+</step>
+
+<step name="open_run">
+
+**Step 3: Open the run**
+
+Start the run before judging anything:
+
+```bash
+spx verification run start --verification-type audit --scope-type file --scope <path> --input <path>
+```
+
+A file-scoped run takes the audited path as its input, passed by path, so the retained input equals the audited file and no start payload is built. The command prints a JSON locator; take its `runToken` exactly and use it for every later command. Retain the run target the locator reports as the run file; only the start report names it. Never pass the whole locator as `--run`.
 
 </step>
 
 <step name="audit_content">
 
-**Step 3: Content classification**
+**Step 4: Content classification**
 
 First, read the product document loaded in Step 1 and name its declared audience and the interaction surfaces through which that audience operates the product. Then read every statement in the PDR and classify it by the evidence model's content classification, judging "observable" against that audience:
 
@@ -81,31 +111,31 @@ First, read the product document loaded in Step 1 and name its declared audience
 | Data structure or schema           | ADR            | `architecture-content`                                 |
 | Performance implementation         | ADR            | `architecture-content` (a guarantee is a PDR property) |
 
-Record each `architecture-content` finding in the `content-classification` row.
+Record each `architecture-content` finding on the `content-classification` unit.
 
 </step>
 
 <step name="audit_properties">
 
-**Step 4: Property quality**
+**Step 5: Property quality**
 
 Judge each product property against the evidence model's observable, falsifiable, and stable criteria. Stability covers failure and boundary conditions; never silently limit a guarantee to the successful case.
 
-A non-observable or unfalsifiable property is a `non-observable-property` finding, and an unstable property is an `unstable-property` finding. Record either violation in `property-quality` and mark that row `FAIL`. Name the property and the context that breaks the guarantee; a stability finding requires evidence, and an unevaluable criterion follows `<verdict_format>`'s missing-evidence rule.
+A non-observable or unfalsifiable property is a `non-observable-property` finding, and an unstable property is an `unstable-property` finding. Record either violation on the `property-quality` unit. Name the property and the context that breaks the guarantee; a stability finding requires evidence, and an unevaluable criterion is a recorded finding naming the missing evidence, never an unjudged unit.
 
 </step>
 
 <step name="audit_verification">
 
-**Step 5: Per-rule verification tag validity**
+**Step 6: Per-rule verification tag validity**
 
-Rules live under `## Verification`. Preserve Step 2's failed `tag-validity` row when the section is absent; an empty rule loop never clears that finding. If the section contains no rules, mark `tag-validity` as `FAIL` with `missing-verification-rules`. An untagged rule directly under the section has the canonical authoring form and may coexist with routed subsections. For every such rule, identify its subject, the observable condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in `property-quality`, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Select no evidence type or tag during these checks; an absent draft tag alone causes no finding.
+Rules live under `## Verification`. Keep Step 2's `missing-section` finding when the section is absent; an empty rule loop never clears it. If the section contains no rules, record `missing-verification-rules` on the `tag-validity` unit. An untagged rule directly under the section has the canonical authoring form and may coexist with routed subsections. For every such rule, identify its subject, the observable condition it constrains, and a concrete observation that would violate it. Record a vague, ambiguous, or unfalsifiable rule as `invalid-draft-rule` on the `property-quality` unit, quoting the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Select no evidence type or tag during these checks; an absent draft tag alone causes no finding.
 
-A tagged rule requires its matching routed subsection. When `### Testing` contains rules, use skill `product-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, emit a `test-standards-unavailable` finding and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the PDR during this audit.
+A tagged rule requires its matching routed subsection. When `### Testing` contains rules, use skill `product-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, record a `test-standards-unavailable` finding on the `tag-validity` unit. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the PDR during this audit.
 
 For each routed rule, judge tag validity and assertion-type fit as the evidence model's tag validity states. Under `### Testing`, apply the loaded foundation's assertion-type definitions and the shared litmus to the declared claim and tag: reject a declared type whose required domain or oracle contradicts the claim, citing the claim and the loaded criterion, and do not choose among compatible types or require executable evidence for a declaration.
 
-A routed rule with a missing, unsupported, duplicate, repeated-slug, or subsection-mismatched tag, or one that is unverifiable or vague, is an `invalid-tag` finding in `tag-validity`; mark the row `FAIL`, quote the rule, and identify the missing observable condition or ambiguous criterion. An assertion type that contradicts the claim's shape is an `assertion-type-mismatch` finding.
+A routed rule with a missing, unsupported, duplicate, repeated-slug, or subsection-mismatched tag, or one that is unverifiable or vague, is an `invalid-tag` finding on the `tag-validity` unit; quote the rule and identify the missing observable condition or ambiguous criterion. An assertion type that contradicts the claim's shape is an `assertion-type-mismatch` finding.
 
 Apply content classification, property quality, voice, and consistency to draft and routed declarations alike. Approval establishes declaration quality only; it supplies no evidence result, implementation claim, or Passing state for an untagged rule.
 
@@ -113,7 +143,7 @@ Apply content classification, property quality, voice, and consistency to draft 
 
 <step name="audit_voice">
 
-**Step 6: Atemporal voice**
+**Step 7: Atemporal voice**
 
 Check EVERY section for temporal language:
 
@@ -124,13 +154,13 @@ Check EVERY section for temporal language:
 | "After customer feedback, we decided" | "The product does X to meet customer expectations" |
 | "The existing implementation lacks"   | (omit — PDR doesn't reference code)                |
 
-Any temporal language in any section is a `temporal-voice` finding.
+Any temporal language in any section is a `temporal-voice` finding on the `atemporal-voice` unit.
 
 </step>
 
 <step name="audit_consistency">
 
-**Step 7: Consistency**
+**Step 8: Consistency**
 
 Compare the PDR against:
 
@@ -138,56 +168,162 @@ Compare the PDR against:
 2. **Ancestor PDRs** — Does the PDR contradict constraints from PDRs higher in the tree?
 3. **Sibling ADRs** — Does the PDR overlap with architecture concerns?
 
-A contradiction with the product document or an ancestor PDR is a `consistency-violation` finding. A statement that overlaps a sibling ADR's architecture concern is an `architecture-content` finding, judged under Step 3.
+A contradiction with the product document or an ancestor PDR is a `consistency-violation` finding on the `consistency` unit. A statement that overlaps a sibling ADR's architecture concern is an `architecture-content` finding on the `content-classification` unit, judged under Step 4.
 
 </step>
 
-<step name="verdict">
+<step name="classify">
 
-**Step 8: Issue verdict**
+**Step 9: Classify**
 
-Classify every finding per `${CLAUDE_SKILL_DIR}/references/touched-text.md`: a finding on touched text keeps severity `blocking`; every other finding becomes `filed`. If any property row holds a `blocking` finding: REJECTED. Otherwise: APPROVED, whatever `filed` findings the rows carry.
+Resolve the base and run the diff commands as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states, and sort every finding into touched text or standing text.
 
 </step>
+
+<step name="record">
+
+**Step 10: Record**
+
+Add the root scope unit first, because a run admits one root and every child names it, then one child scope unit per property, then each finding on touched text on its child unit, per `<persistence_contract>`. Every unit is `audited` whether its property holds or carries findings. A standing finding is recorded nowhere in the run.
+
+</step>
+
+<step name="finish">
+
+**Step 11: Finish**
+
+Derive `rejected` when a finding on touched text exists and `approved` otherwise, whatever standing findings exist. Run the finish and render commands:
+
+```bash
+spx verification run finish --verification-type audit --scope-type file --scope <path> --run <token> --terminal-status <approved-or-rejected>
+spx verification run render --verification-type audit --scope-type file --scope <path> --run <token>
+```
+
+</step>
+
+</execution_sequence>
+
+<persistence_contract>
+
+Add a scope unit with `spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload <payload-file> --idempotency-key '<unitId>'`, the payload file written per `<payload_files>`. The root unit's `unitId` is the audited `<path>`, its concern partition is `pdr`, and it omits `parentUnitId`; the run admits one root. Each child unit's `unitId` is `pdr:<designator>:<path>` and its `parentUnitId` is the root's `unitId`. The designator is `content-classification`, `property-quality`, `tag-validity`, `atemporal-voice`, or `consistency`. The class `spec` and kind `pdr` are the pair `spx` accepts for a PDR subject.
+
+The root unit:
+
+```json
+{
+  "unitId": "<path>",
+  "auditClass": "spec",
+  "auditKind": "pdr",
+  "subject": "<path>",
+  "coverageRequirement": "required",
+  "coverageStatus": "audited",
+  "priorContext": {
+    "changedFilePartition": "<path>",
+    "concernPartition": "pdr"
+  },
+  "expectedProducer": {
+    "producerKind": "skill",
+    "agentName": "<runDriver.agentName>",
+    "agentOwningPluginName": "<runDriver.agentOwningPluginName>",
+    "skillName": "audit-pdr",
+    "skillOwningPluginName": "product-tree",
+    "invocationRole": "leaf-skill"
+  },
+  "recordedByRunDriver": {
+    "producerKind": "<runDriver.producerKind>",
+    "agentName": "<runDriver.agentName>",
+    "agentOwningPluginName": "<runDriver.agentOwningPluginName>",
+    "skillName": "<runDriver.skillName>",
+    "skillOwningPluginName": "<runDriver.skillOwningPluginName>",
+    "invocationRole": "<runDriver.invocationRole>"
+  }
+}
+```
+
+A child unit carries the same fields with `unitId` `pdr:<designator>:<path>`, `parentUnitId` `<path>`, `coverageStatus` `audited`, and `priorContext.concernPartition` the designator:
+
+```json
+{
+  "unitId": "pdr:<designator>:<path>",
+  "parentUnitId": "<path>",
+  "auditClass": "spec",
+  "auditKind": "pdr",
+  "subject": "<path>",
+  "coverageRequirement": "required",
+  "coverageStatus": "audited",
+  "priorContext": {
+    "changedFilePartition": "<path>",
+    "concernPartition": "<designator>"
+  },
+  "expectedProducer": "<the root unit's expectedProducer object, repeated exactly>",
+  "recordedByRunDriver": "<the root unit's recordedByRunDriver object, repeated exactly>"
+}
+```
+
+Add a finding with `spx verification run finding add` and the same selectors, `--payload <payload-file>` per `<payload_files>`, and `--idempotency-key '<unitId>:<rule>'`, the finding key `${CLAUDE_SKILL_DIR}/references/touched-text.md` defines. Its payload names an accepted child unit; `producerIdentity` repeats that unit's `expectedProducer`; `producerProvenance` carries the plugin version `<request_contract>` retained in both version fields, and no `toolVersion`; `rule` is an identifier from `${CLAUDE_SKILL_DIR}/references/rule-catalog.md`, and `location` lists every section, property, or rule text where that rule is violated, separated by `;`.
+
+```json
+{
+  "unitId": "<accepted-unit-key>",
+  "producerIdentity": "<the unit's expectedProducer object, repeated exactly>",
+  "producerProvenance": {
+    "agentOwningPluginVersion": "<product-tree-plugin-version>",
+    "skillOwningPluginVersion": "<product-tree-plugin-version>"
+  },
+  "rule": "<catalog-rule-id>",
+  "severity": "<blocking-or-debt>",
+  "location": "<section-property-or-rule-text>[; <further-location>...]",
+  "message": "<designator>: <finding-message>",
+  "evidence": {
+    "observed": "<observed-state>",
+    "expected": "<state the rule requires>"
+  }
+}
+```
+
+These objects are the sanctioned payload schema for this audit; never derive a replacement from command help or CLI source.
+
+</persistence_contract>
+
+<payload_files>
+
+Quote every idempotency key as one single-quoted argument; encode a literal apostrophe with the splice `'"'"'`.
+
+- ALWAYS copy the scratch directory the harness names for the session into each payload path character for character, and write each scope and finding payload with the file-write tool to its own file there, under a name unique to this run and payload, such as `<run-token>-scope-<n>.json` and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
+- ALWAYS write only payload files with the file-write tool.
+- ALWAYS stop before the command that reads a payload file when the file-write result reports a path that the scratch directory does not contain by whole path components, returning the `<verdict_format>` diagnostic naming the reported path.
+- ALWAYS pass `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped from memory.
+- ALWAYS pass the file as the value of `--payload`, its path written out literally:
+
+  ```bash
+  spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload <scope-file> --idempotency-key '<unitId>'
+  ```
+
+- ALWAYS add each scope unit and each finding with its own literal command and its own payload file, one at a time, and stop the audit at the first command that exits nonzero, other than the one rerun on an absent-payload diagnostic that the next bullet allows, returning the `<verdict_format>` diagnostic.
+- A permission refusal is no absent payload file and takes no rerun.
+- ALWAYS, when a command exits nonzero with a diagnostic that names its payload file as absent, run that command once more with the path copied from the file-write result; on a second failure, stop with the `<verdict_format>` diagnostic naming the run token.
+- NEVER remove a payload file; the harness clears its scratch directory.
+
+</payload_files>
 
 </audit_workflow>
 
 <verdict_format>
 
-Emit the verdict as a single JSON object. This JSON is the skill's entire output; never a prose or markdown verdict.
+Return the run token, the run file, and the unchanged `spx verification run render` output; its `terminalStatus` is authoritative. Add no `APPROVED` or `REJECTED` envelope and no restated findings. After the projection, return each standing finding on its own line in the form `${CLAUDE_SKILL_DIR}/references/touched-text.md` gives, or `filed: none`.
 
-The skill's `overall` is `APPROVED` iff every property row is `PASS`; otherwise it is `REJECTED`. A required property that cannot be evaluated is a `FAIL` row with a `blocking` finding naming the missing evidence. Findings within each row carry severity `blocking` for violations on touched text and `filed` for a finding outside touched text. A `filed` finding fails no row and additionally carries `key` (`<pdr-file-path>:<rule-id>`), `baseRefEvidence`, and `issuesEntry` (`path`, `heading`).
+When a command exits nonzero or a prerequisite is absent, return:
 
-```json
-{
-  "schema_version": 1,
-  "skill": "audit-pdr",
-  "target": "<pdr-file-path>",
-  "overall": "APPROVED | REJECTED",
-  "rows": [
-    {
-      "name": "content-classification",
-      "status": "PASS | FAIL",
-      "findings": [
-        {
-          "rule": "<rule-id>",
-          "severity": "blocking | filed",
-          "locations": ["<section, property, or rule text>"],
-          "evidence": "<quoted artifact evidence>",
-          "message": "<one-line detail>"
-        }
-      ]
-    },
-    { "name": "property-quality", "status": "PASS | FAIL", "findings": [] },
-    { "name": "tag-validity", "status": "PASS | FAIL", "findings": [] },
-    { "name": "atemporal-voice", "status": "PASS | FAIL", "findings": [] },
-    { "name": "consistency", "status": "PASS | FAIL", "findings": [] }
-  ],
-  "metadata": { "branch": "<branch>" }
-}
+```text
+BLOCKED
+runToken: <exact-token-if-start-succeeded-or-not-started>
+command: <exact-command-attempted>
+payloadSource: <payload-file-path|none>
+payloadKey: <unitId-or-finding-idempotency-key-or-none>
+exitCode: <exact-exit-code-or-none>
+stderr: <exact-stderr-or-none>
+diagnostic: <configuration error naming the refused path, or none>
 ```
-
-Each finding is keyed `<pdr-file-path>:<rule-id>` and carries `rule` (the `<rule-id>`), `severity`, `locations` (every location in the PDR where that rule is violated), `evidence` (the quoted artifact evidence), and `message` (the one-line detail). Every `<rule-id>` comes from `${CLAUDE_SKILL_DIR}/references/rule-catalog.md`, and a finding names no identifier outside it. A passing row carries an empty `findings` array or only `filed` findings.
 
 </verdict_format>
 
@@ -199,7 +335,7 @@ Claude saw a well-structured PDR with a clear decision statement and a Verificat
 
 Why it failed: Claude treated structural completeness as proof of correct content classification.
 
-How to avoid: Step 3 classifies every statement. "Would a user be able to determine this?" is the test.
+How to avoid: Step 4 classifies every statement. "Would a user be able to determine this?" is the test.
 
 **Failure 2: Accepted non-observable properties**
 
@@ -207,31 +343,50 @@ Claude saw "Product properties: Database connections are pooled with a maximum o
 
 Why it failed: Claude treated an implementation detail measurable by a specialist as a guarantee observable by the product's users.
 
-How to avoid: Step 4 asks "Is this falsifiable from the user's perspective?"
+How to avoid: Step 5 asks "Is this falsifiable from the user's perspective?"
 
 **Failure 3: Approved a universal claim tagged as a scenario**
 
 Claude saw a `### Testing` rule "ALWAYS: every export conforms to RFC 4180 ([scenario])" and approved it because the prose read like a concrete interaction. `ALWAYS` is a universal claim, and a single scenario cannot establish a claim about every case — the tag should be `mapping`, `conformance`, `property`, or `compliance`. The mismatch is `assertion-type-mismatch`, not `invalid-tag`.
 
-How to avoid: Step 5 reads the quantifier first and separates a quantifier mismatch from a structural tag problem.
+Why it failed: Claude judged the rule's prose as one concrete interaction and never read its quantifier.
+
+How to avoid: Step 6 reads the quantifier first and separates a quantifier mismatch from a structural tag problem.
 
 **Failure 4: Flagged a tooling product's observable state as architecture**
 
 Claude audited a PDR for a command-line tool whose product document declares its audience operates the product through a CLI and an on-disk layout. The PDR described the repository layout the audience inspects on disk and the version-control state it observes. Claude saw git commands and filesystem paths, applied the end-user-application reflex ("a user does not see git"), and rejected the statements as `architecture-content`. That is a false positive: the declared audience operates exactly that surface, so the layout is observable product behavior.
 
-How to avoid: Step 3 reads the product document's declared audience first and judges "observable" against it.
+Why it failed: Claude judged "observable" against a generic end user instead of the audience the product document declares.
+
+How to avoid: Step 4 reads the product document's declared audience first and judges "observable" against it.
+
+**Failure 5: Rejected the run on a defect in text the changeset left alone**
+
+Claude found a real violation in an unchanged PDR passage and recorded it on the unit, so the run rejected a changeset that did not cause the defect.
+
+Why it failed: Claude treated every defect found in the PDR as caused by the changeset, without sorting findings by location.
+
+How to avoid: Classify each finding by its location, record only findings on touched text, and return every other finding as `filed`.
+
+**Failure 6: Moved the checkout while loading context**
+
+Claude ran the context loader that rebases the audited branch, so the head under audit was replaced by another commit.
+
+Why it failed: Claude assumed the context loader only reads, though it rebases a behind-base branch.
+
+How to avoid: Load the context by reading files at the head as it stands.
 
 </failure_modes>
 
 <success_criteria>
 
-The verdict is sound when:
-
-- Every PDR rule was judged with none skipped — content classification, property quality (observability, falsifiability, and stability), per-rule tag validity and assertion-type fit, atemporal voice, and consistency (coverage-complete).
-- The verdict states an overall APPROVED/REJECTED, every property row carrying its determination, with no rule left unevaluated.
-- Each `blocking` finding lies on touched text, and every finding outside touched text appears as `filed` with its key, `baseRefEvidence`, and `issuesEntry`.
-- Each `blocking` finding is falsifiable: it names the location, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable, unfalsifiable, or unstable property, absent verification section or rules, the unverifiable rule or mismatched tag, the temporal phrase, or the contradicted product document or ancestor PDR.
-- An absent or empty Verification section fails `tag-validity`; an unmet property-quality criterion fails `property-quality`. Neither condition can disappear through an empty iteration or receive an overall `APPROVED` verdict.
-- The same PDR yields the same verdict.
+- Every unit is `audited` and no PDR statement, property, or rule was skipped, whether its unit holds or carries findings; property quality covers observability, falsifiability, and stability, and tag validity covers per-rule assertion-type fit.
+- Every recorded finding lies on touched text and sits on an accepted unit, is keyed by a catalog identifier, and names the location, the violated rule, and observed-versus-expected evidence.
+- Every standing finding appears as a `filed` line carrying its key, `baseRefEvidence`, and `issuesEntry`, and rejects no run.
+- An absent or empty Verification section is recorded on the tag-validity unit and an unmet property-quality criterion on the property-quality unit; neither condition can disappear through an empty iteration or leave the run `approved`.
+- The `terminalStatus` is `rejected` exactly when a finding on touched text is recorded and `approved` otherwise, whatever standing findings exist.
+- The checkout's head is the same before and after the audit.
+- The same PDR, context, and base yield the same units, finding keys, and terminal status.
 
 </success_criteria>

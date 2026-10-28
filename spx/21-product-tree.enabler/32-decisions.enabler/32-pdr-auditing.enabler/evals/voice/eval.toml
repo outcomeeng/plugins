@@ -17,5 +17,7 @@ kind = "producer-files"
 producers = [
   "dist/claude/product-tree/skills/audit-pdr/SKILL.md",
   "dist/claude/product-tree/skills/audit-pdr/references/pdr-evidence-model.md",
+  "dist/claude/product-tree/skills/audit-pdr/references/rule-catalog.md",
+  "dist/claude/product-tree/skills/audit-pdr/references/touched-text.md",
 ]
 template = "prompt.template.md"
