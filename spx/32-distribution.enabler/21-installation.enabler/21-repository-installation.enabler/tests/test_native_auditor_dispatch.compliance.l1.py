@@ -15,6 +15,9 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import (
 )
 from outcomeeng_testing.harnesses.installation import repository_root
 from outcomeeng_testing.harnesses.native_auditor_launch import (
+    PLANTED_RUN_FILE,
+    PLANTED_RUN_TOKEN,
+    LaunchReturn,
     native_auditor_failure,
     native_auditor_launch,
 )
@@ -67,6 +70,12 @@ def test_every_row_launches_once_from_the_shipped_definition_passing_only_the_se
                 )
                 assert row.loading_path.is_file()
                 assert row.result_path.is_file()
+                assert item.observation.terminal_condition is None, row.identifier
+                result = json.loads(row.result_path.read_text("utf-8"))
+                assert result["terminal_condition"] is None, row.identifier
+                assert result["run_token"] == PLANTED_RUN_TOKEN, row.identifier
+                assert result["run_file"] == PLANTED_RUN_FILE, row.identifier
+                assert result["blocked"] is False, row.identifier
                 assert not row.state_root.exists()
                 if row.target is Target.CLAUDE:
                     assert launch.environment.keys() & STRIPPABLE == {selected}
@@ -79,6 +88,25 @@ def test_every_row_launches_once_from_the_shipped_definition_passing_only_the_se
                 for call in item.calls:
                     if call is not launch:
                         assert not call.environment.keys() & STRIPPABLE, call.argv
+
+
+def test_a_blocked_dispatch_diagnostic_is_a_returned_result_without_a_terminal_condition() -> (
+    None
+):
+    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
+    with native_auditor_launch(
+        {selected}, returned=LaunchReturn.BLOCKED
+    ) as observation:
+        assert observation.rows
+        for item in observation.rows:
+            row = item.observation.row
+            assert item.observation.launch_exit_code == 0, row.identifier
+            assert item.observation.terminal_condition is None, row.identifier
+            result = json.loads(row.result_path.read_text("utf-8"))
+            assert result["blocked"] is True, row.identifier
+            assert result["run_token"] is None, row.identifier
+            assert result["run_file"] is None, row.identifier
+            assert result["terminal_condition"] is None, row.identifier
 
 
 def test_a_failed_launch_records_its_terminal_condition_without_a_retry() -> None:

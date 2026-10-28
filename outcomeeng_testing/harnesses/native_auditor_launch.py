@@ -11,16 +11,19 @@ harness exposes observations only.
 
 from __future__ import annotations
 
+import json
 import subprocess
 from collections.abc import Collection, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from outcomeeng.distribution.installation import CODEX_HOME_ENV
+from outcomeeng.distribution.installation import CLAUDE_EXECUTABLE, CODEX_HOME_ENV
 from outcomeeng.distribution.native_auditor_dispatch import (
     AGENTS_DIRECTORY,
+    BLOCKED_MARKER,
     FIXTURE_DIRECTORY,
     NativeAuditorDispatchObservation,
     native_auditor_rows,
@@ -41,6 +44,35 @@ from outcomeeng_testing.harnesses.native_profile_execution import (
 )
 from outcomeeng_testing.harnesses.native_profile_failures import NativeFailureRunner
 from outcomeeng_testing.harnesses.native_profile_launch import ambient_environment
+
+
+PLANTED_RUN_TOKEN = "run-0001"
+PLANTED_RUN_FILE = "runs/run-0001.json"
+
+
+class LaunchReturn(Enum):
+    """What the dispatched auditor returns to the parent session."""
+
+    RUN_TOKEN = "run-token"
+    BLOCKED = "blocked"
+
+
+def _returned_message(returned: LaunchReturn) -> str:
+    if returned is LaunchReturn.RUN_TOKEN:
+        return f"run token {PLANTED_RUN_TOKEN}\nrun file {PLANTED_RUN_FILE}"
+    return f"{BLOCKED_MARKER}: the auditor could not start the run"
+
+
+def _machine_stream(argv: Sequence[str], message: str) -> str:
+    """The parent session's machine stream carrying `message` as its last assistant text."""
+    if argv[0] == CLAUDE_EXECUTABLE:
+        event: dict[str, object] = {"type": "result", "result": message}
+    else:
+        event = {
+            "type": "item.completed",
+            "item": {"type": "agent_message", "text": message},
+        }
+    return json.dumps(event) + "\n"
 
 
 @dataclass(frozen=True)
@@ -69,6 +101,7 @@ class AuditorLaunchRunner:
     credentials: NativeCredentialRunner
     launch_exit_code: int
     launches: frozenset[tuple[str, ...]]
+    returned: LaunchReturn = LaunchReturn.RUN_TOKEN
     calls: list[DispatchCall] = field(default_factory=list)
 
     def __call__(
@@ -90,7 +123,12 @@ class AuditorLaunchRunner:
         )
         is_launch = any(set(launch) <= set(argv) for launch in self.launches)
         return subprocess.CompletedProcess(
-            argv, self.launch_exit_code if is_launch else 0, "", ""
+            argv,
+            self.launch_exit_code if is_launch else 0,
+            _machine_stream(argv, _returned_message(self.returned))
+            if is_launch
+            else "",
+            "",
         )
 
 
@@ -127,6 +165,7 @@ def _row_calls(
 def native_auditor_launch(
     claude_credentials: Collection[str] = CLAUDE_CREDENTIAL_VARIABLES,
     launch_exit_code: int = 0,
+    returned: LaunchReturn = LaunchReturn.RUN_TOKEN,
 ) -> Iterator[DispatchLaunchObservation]:
     """Run every row with `claude_credentials` planted beside every other strippable name."""
     with (
@@ -139,6 +178,7 @@ def native_auditor_launch(
             frozenset(
                 row.launch_command for row in native_auditor_rows(repository_root())
             ),
+            returned,
         )
         environment = ambient_environment(
             credentials.original_environment, claude_credentials=claude_credentials
