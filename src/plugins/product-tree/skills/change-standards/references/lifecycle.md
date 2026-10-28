@@ -7,7 +7,7 @@
 
 <scope>
 
-This reference operationalizes the Lifecycle, authority, and Handoff rules of the Change chapter `<authority>` names, for the store `spx/local/coordination.md` declares; it replaces nothing in the chapter. The relation of Lifecycle to Maturity is stated in `maturity-and-authority`.
+This reference operationalizes the Lifecycle, authority, and Handoff rules of the Changes chapter `<authority>` names, for the store `spx/local/coordination.md` declares; it replaces nothing in the chapter. The relation of Lifecycle to Maturity is stated in `maturity-and-authority`.
 
 </scope>
 
