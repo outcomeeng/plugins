@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.13.3
+
+### Fixed
+
+- **The generated Codex definition of `prose-auditor` loads its skill through its `Use skill` instruction and searches for no dedicated skill-invocation tool.** Its manual-review guidance states that the absence of such a tool is no availability failure, and that an absent installed skill or an unreadable skill file is one. Before this change, the guidance said to invoke or load the skill and named no loading route.
+
 ## 0.13.2
 
 ### Changed

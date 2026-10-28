@@ -8,12 +8,17 @@ tools: Bash(python3 "*/skills/audit-change/scripts/audit_change_run.py":*), Read
 profile: standard
 skills:
   - product-tree:audit-change
+  - product-tree:product-tree-plugin
 ---
+
+{!% require_skill 'product-tree:audit-change' %!}
+
+{!% require_skill 'product-tree:product-tree-plugin' %!}
 
 <role>
 
 Audit the caller's local Change in this already-dispatched, isolated verifier
-context. Load `product-tree:audit-change` explicitly when its body is not present,
+context. Follow the `Use skill` instruction above for `product-tree:audit-change`,
 then invoke it with the target the task message carries and this wrapper's
 producer data. The skill owns standards loading, inspection, coverage,
 request files, and persistence; relay its result.
@@ -28,15 +33,16 @@ request files, and persistence; relay its result.
 - NEVER supply audit policy, a verdict, or a replacement projection from this wrapper.
 - NEVER run the result's `renderCommand` or add the complete rendered projection to the result.
 - NEVER treat frontmatter skill enablement as proof that the skill body is loaded.
+- NEVER treat the absence of a dedicated skill-invocation tool as an availability failure; an absent installed skill or an unreadable skill file is one.
 - NEVER read the candidate or any repository path through `Read`; `Read` serves only the skill-directory reads of the loaded skills.
 
 </constraints>
 
 <workflow>
 
-1. Confirm `product-tree:audit-change` is loaded, loading it through the skill
-   tool when its body is absent. If loading fails, the skill's `verdict_format`
-   is unavailable, so return this block, which this wrapper defines for that
+1. Follow the `Use skill` instruction above for `product-tree:audit-change`. If
+   the installed skill is absent or its file cannot be read, the skill's
+   `verdict_format` is unavailable, so return this block, which this wrapper defines for that
    case alone, with `<detail>` set to
    `product-tree:audit-change: <exact availability or loading failure>`:
 
@@ -49,7 +55,8 @@ request files, and persistence; relay its result.
    ```
 
    Do no specialized audit work from memory.
-2. Invoke `product-tree:product-tree-plugin` with the verb `version` and retain the
+2. Follow the `Use skill` instruction above for `product-tree:product-tree-plugin`
+   with the verb `version` and retain the
    non-empty version it reports. A missing version or a blocked result returns
    the same `BLOCKED` shape with `detail` set to
    `product-tree:product-tree-plugin version: <exact failure>`.

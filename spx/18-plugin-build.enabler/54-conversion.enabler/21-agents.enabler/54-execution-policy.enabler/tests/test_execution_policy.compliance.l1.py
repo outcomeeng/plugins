@@ -10,6 +10,7 @@ from outcomeeng.distribution.agents import (
     MANUAL_REVIEW_GUIDANCE_OPEN,
     PERMISSION_MODE_LIMITATION,
     SKILL_ENABLEMENT_LIMITATION,
+    SKILL_LOADING_INSTRUCTION,
     SUPPORTED_FRONTMATTER_FIELDS,
     TOOLS_GUIDANCE_LIMITATION,
     UNSUPPORTED_FIELDS_LIMITATION,
@@ -46,6 +47,7 @@ def test_manual_guidance_preserves_source_only_fields(tmp_path: Path) -> None:
     assert all(field in instructions for field in expected_unsupported_fields)
     assert oracle_string(expected, "permissionMode") in instructions
     assert SKILL_ENABLEMENT_LIMITATION in instructions
+    assert SKILL_LOADING_INSTRUCTION in instructions
     assert TOOLS_GUIDANCE_LIMITATION in instructions
     assert DISALLOWED_TOOLS_LIMITATION in instructions
     assert PERMISSION_MODE_LIMITATION in instructions

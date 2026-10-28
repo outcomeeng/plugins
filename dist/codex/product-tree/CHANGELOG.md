@@ -10,6 +10,14 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.109.7
+
+### Fixed
+
+- **`change-auditor` loads `audit-change` and `product-tree-plugin` through the `Use skill` instruction on every agent, `audit-change` owns the load of `change-standards`, and the wrapper's instructions name no skill tool as an available capability.** A native dispatch of the Change Auditor on Codex returns the `finish` result with `run.sealed` true. The definition treats the absence of a dedicated skill-invocation tool as no availability failure and reserves the `BLOCKED` diagnostic for an absent installed skill or an unreadable skill file. Before this change, its workflow told Claude to load the skills through the skill tool, so a Codex dispatch, which has none, returned the pre-run `BLOCKED` diagnostic for a missing skill tool and sealed no run.
+- **Every generated Codex agent that composes skills loads them through the `Use skill` instruction and treats the absence of a dedicated skill-invocation tool as no availability failure.** The Codex conversion states this in each such agent's manual-review guidance, so the agents without their own statement no longer report a missing skill tool as an availability failure.
+- **`instruction-block-updater` follows the `Use skill` instruction to load `update-instruction-block` and treats the absence of a dedicated skill-invocation tool as no availability failure.** Before this change, its role told Claude to load the skill through the skill tool, so a Codex dispatch, which has none, named a capability the agent lacks.
+
 ## 0.109.6
 
 ### Changed
