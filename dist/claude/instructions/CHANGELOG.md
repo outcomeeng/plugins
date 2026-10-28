@@ -6,6 +6,16 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.22.4
+
+### Added
+
+- **`/skill-standards` carries the `runner_contract_mismatch` rule, and `/audit-skill` enforces it.** A skill whose `SKILL.md` states a contract for a bundled script — its operations, request fields, result fields, and block reasons — must match what the script does, and a mismatch is a blocking finding. `/audit-skill` compares each such contract with the script it names and records the finding under the new identifier; the finding rejects when the changeset changed the contract text or the script behavior it states, and is filed otherwise. Before this change, the catalog had no rule for it, so a skill whose contract and script disagreed passed the audit.
+
+### Changed
+
+- **`/skill-standards` states the dangerous-command guard-block rule without a payload-pipe exemption.** A block on a command holding a pipe between two operations ends its command family, and a payload reaches a command through a file, so a skill never builds a pipe to carry one. The `<guard_block_partition>` reference, the `SKILL.md` guard-block paragraph, and the `unbounded_guard_rerun` catalog row now match the rule the generated router states, and an input redirect from a payload scratch file counts as one operation beside the heredoc.
+
 ## 0.22.3
 
 ### Changed
