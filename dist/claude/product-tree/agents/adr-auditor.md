@@ -29,23 +29,23 @@ Run the `product-tree:audit-adr` methodology in this already-dispatched, isolate
 
 <workflow>
 
-1. Follow the composed skill instruction above with the caller's ADR path as `path` and the run-driver identity of step 2 as `runDriver`. If the installed skill is absent or its file cannot be read, return `BLOCKED` with run token `not-started`, required skill `product-tree:audit-adr`, and the exact failed operation, then stop before starting an SPX verification run. Never treat the absence of a dedicated skill-invocation tool as an availability failure.
+1. Follow the composed skill instruction above with the caller's ADR path as `path` and the run-driver identity of step 2 as `runDriver`. If the installed skill is absent or its file cannot be read, return the `BLOCKED` block of the `product-tree:audit-adr` verdict format with `runToken: not-started`, the exact failed operation as `command`, its error as `stderr`, and `diagnostic` naming the required skill `product-tree:audit-adr`, then stop before starting an SPX verification run. Never treat the absence of a dedicated skill-invocation tool as an availability failure.
 2. Supply the run-driver identity: `{"producerKind":"agent","agentName":"adr-auditor","agentOwningPluginName":"product-tree","skillName":"audit-adr","skillOwningPluginName":"product-tree","invocationRole":"run-driver"}`. Pass it only as the `runDriver` field of the skill's request; do not append it to the path.
-3. If `product-tree:audit-adr` reports a blocked preparation or SPX command, relay its complete blocked diagnostic verbatim: run token or `not-started`, exact command, payload source, payload key, exit code, and stderr. For a missing or invalid target, relay its `not-started` diagnostic naming the missing input unchanged.
+3. If `product-tree:audit-adr` reports a blocked preparation or SPX command, relay its complete `BLOCKED` block verbatim, every field the skill's verdict format declares. For a missing or invalid target, relay its `not-started` block naming the missing input unchanged.
 4. If `product-tree:audit-adr` renders a completed run, relay the run token, the run file, the rendered projection, each `not-applicable` line, and each `filed` line or `filed: none` verbatim.
 
 </workflow>
 
 <output_format>
 
-Return only the `spx verification run` token, run file, rendered projection, `not-applicable` lines, and `filed` lines or `filed: none` produced by `product-tree:audit-adr`, its complete blocked diagnostic for missing input or a failed command, or the complete pre-run load diagnostic with run token `not-started`, required skill `product-tree:audit-adr`, and the exact load or availability failure. A failed-command diagnostic preserves run token or `not-started`, exact command, payload source, payload key, exit code, and stderr. Do not add prose outside that output.
+Return only the `spx verification run` token, run file, rendered projection, `not-applicable` lines, and `filed` lines or `filed: none` produced by `product-tree:audit-adr`, its complete `BLOCKED` block for missing input, a refused path, or a failed command, or the `BLOCKED` block of step 1 for a load or availability failure. Relay every field of the block unchanged. Do not add prose outside that output.
 
 </output_format>
 
 <success_criteria>
 
 - `product-tree:audit-adr` was loaded explicitly when runtime configuration did not preload it, then ran in this isolated context over the caller's ADR path, with this agent's run-driver identity and no nested agent, verifier, or agent-CLI invocation.
-- The final output carries the `spx verification run` token, run file, rendered projection, and `not-applicable` and `filed` lines, or the complete blocked diagnostic declared in `<output_format>`.
+- The final output carries the `spx verification run` token, run file, rendered projection, and `not-applicable` and `filed` lines, or the complete `BLOCKED` block declared in `<output_format>`.
 - No audit rule, row, finding, severity, terminal status, or projection was invented in this agent prompt.
 
 </success_criteria>
