@@ -47,6 +47,11 @@ The body carries no attestation, accountable-person, priority, or overrule text;
 - handoff-blocks: A Handoff names the branch or pull request with its head commit, the completed Governance mutations and Spec mutations blocks by path, and the next block, or `refinement: <Maturity> → <next level>` below Executable.
 - change-path-root: A change audit resolves each path a record names, its Governance records and its Spec mutations Nodes, in the repository of the Change's Product, whatever checkout holds the draft or runs the audit.
 
+## Slugs
+
+- migration-first: The slug migration is no diff-line Change; `migrate-3-to-4` runs on a Product's tree before any diff-line Change against that tree reaches Sliced, so every `-` line names a slug that exists.
+- slug-stability: A slug is the stable name of its Assertion or decision; a move, extraction, or consolidation keeps it; every `carries` reference whose target identity, path or slug, changes is rewritten in the same move, a Decision Record that moves to a new path with its slugs unchanged included; a slug a move would repeat in the destination file changes in that move; the migration keeps each `[audit:{rule-slug}]` rule slug as the leading slug, so a stored audit result key keeps identifying the same Assertion; an audit result whose slug a collision rename changes is remapped only when the unchanged text and path prove the subject and is otherwise invalidated, and a destination's existing result under the same slug is never reused; an audit result for a slug whose text changed is invalid and produced again.
+
 ## Definitions of Ready
 
 Each Definition of Ready is an independently loadable criterion set, and the sets are cumulative: a level's Definition of Ready includes every criterion of the preceding level's. No criterion is an audit verdict, and no criterion requires a body authority line.
@@ -174,3 +179,6 @@ Excluding records without the closed front-matter key set keeps the contract clo
 - NEVER: a Handoff, Claim, terminal record, or rejection instruction carries a secret value or credential payload.
 - ALWAYS: the change audit resolves each path a record names, its Governance records and its Spec mutations Nodes, in the repository of the Change's Product, whatever checkout holds the draft or runs the audit.
 - ALWAYS: a Change that another Change names in `parent` carries no Governance mutations or Spec mutations block and never reaches Executable; the change audit rejects a record that breaks the rule.
+- ALWAYS: the slug migration runs on a Product's tree before any diff-line Change against that tree reaches Sliced, and it is itself no diff-line Change.
+- ALWAYS: a move, extraction, or consolidation keeps each Assertion's and decision's slug and rewrites every `carries` reference whose target path or slug changes in the same move.
+- NEVER: a collision rename reuses a destination's existing audit result under the same slug, and an audit result for a slug whose text changed stays valid.
