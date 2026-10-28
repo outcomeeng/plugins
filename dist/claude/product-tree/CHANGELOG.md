@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Changed
 
-- **The review prompt gives an unchanged subject one `evidence` verdict across heads and counts a stale eval `history.jsonl` no defect.** `review-changes` fixes the criteria of the `evidence` concern to the unit text and its governing context, so two passes over an unchanged subject at any head raise the same `evidence` finding or none, and no pass reads another pass's verdict. A review raises no finding on the sole ground that an eval's `history.jsonl` records a run on an earlier commit than the head, because evals run in CI only on an operator's dispatch and the file is a trend record the changeset does not owe. Before this change, the prompt fixed no such criteria, so reviews of one unchanged subject on different heads could judge it oppositely and one could cite a stale history file as the defect.
+- **The review prompt gives an unchanged subject one `evidence` verdict across heads and counts a stale eval `history.jsonl` no defect.** `review-changes` fixes the criteria of the `evidence` concern to the unit text and its governing context, so an earlier head's verdict and any other review's outcome decide nothing, and two passes over an unchanged subject at any head raise the same `evidence` finding or none. A review raises no finding on the sole ground that an eval's `history.jsonl` records a run on an earlier commit than the head, because evals run in CI only on an operator's dispatch and the file is a trend record the changeset does not owe. Before this change, the prompt fixed no such criteria, so reviews of one unchanged subject on different heads could judge it oppositely and one could cite a stale history file as the defect.
 
 ## 0.109.7
 
