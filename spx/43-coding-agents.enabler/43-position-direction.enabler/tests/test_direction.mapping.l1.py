@@ -336,7 +336,7 @@ def test_every_acting_subcommand_stops_without_authority_naming_the_fix(
     ("front_matter", "named"),
     [
         ("positions = 5\n", "key positions"),
-        ('executor_groups = "x"\n', "key executor_groups"),
+        ('applier_groups = "x"\n', "key applier_groups"),
         ("launchers = 3\n", "key launchers"),
         ("untouchable_panes = 3\n", "key untouchable_panes"),
         (
@@ -1076,13 +1076,13 @@ def test_doorbell_skips_a_failing_position_and_rings_the_healthy_one(
     assert "w1:p1" in result["skipped"][0]["detail"]
 
 
-def test_executor_group_matches_its_prefix_and_omits_exclusions(
+def test_applier_group_matches_its_prefix_and_omits_exclusions(
     tmp_path: Path,
 ) -> None:
     _override(
         tmp_path,
         "Lead Director",
-        '+++\n[[executor_groups]]\nlabel = "Executors"\nenvironment = "herdr"\n'
+        '+++\n[[applier_groups]]\nlabel = "Appliers"\nenvironment = "herdr"\n'
         'cwd_prefix = "/work/exec"\nexclusions = ["/work/exec-main"]\n+++\n',
     )
     panes = [

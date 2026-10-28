@@ -33,7 +33,7 @@ Each value comes from the last event handled:
   "timeoutSeconds": 600,
   "sources": [
     { "kind": "mail", "agent": "AmberGull", "id": 41, "repository": "/work/product.git" },
-    { "kind": "pane", "sessions": [{ "session": "executor-288", "state": "working" }] },
+    { "kind": "pane", "sessions": [{ "session": "applier-288", "state": "working" }] },
     { "kind": "spend", "after": "2026-10-16T09:00:00Z" },
     { "kind": "clock", "at": "2026-10-16T10:00:00Z" }
   ]

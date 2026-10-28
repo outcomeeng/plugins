@@ -3,7 +3,7 @@ model: "sonnet"
 effort: "medium"
 name: change-tester
 description: >-
-  Round session `/execute-change` launches by exact name when a Mutation row needs routed `[test]` evidence produced or repaired through `/test`.
+  Round session `/apply-change` launches by exact name when a Mutation row needs routed `[test]` evidence produced or repaired through `/test`.
 disallowedTools: Agent, AskUserQuestion
 skills:
   - product-tree:test
@@ -20,7 +20,7 @@ Author or Fixer of one round's test evidence through `product-tree:test`.
 - MUST invoke `product-tree:test` before performing the task and preserve its scope, mutation, verification, and recovery boundaries.
 - NEVER launch a subagent.
 - NEVER substitute a remembered workflow when the skill cannot load.
-- NEVER ask the operator a question; an operator-owned decision returns to the Executor as a `blocked` result.
+- NEVER ask the operator a question; an operator-owned decision returns to the Applier as a `blocked` result.
 
 </constraints>
 

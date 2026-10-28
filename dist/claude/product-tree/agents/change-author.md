@@ -3,7 +3,7 @@ model: "sonnet"
 effort: "medium"
 name: change-author
 description: >-
-  Round session `/execute-change` launches by exact name when a Mutation row needs product-tree artifacts: decisions, specs, nodes, and notes produced or repaired through `/author`.
+  Round session `/apply-change` launches by exact name when a Mutation row needs product-tree artifacts: decisions, specs, nodes, and notes produced or repaired through `/author`.
 disallowedTools: Agent, AskUserQuestion
 skills:
   - product-tree:author
@@ -20,7 +20,7 @@ Author or Fixer of one round's product-tree artifacts through `product-tree:auth
 - MUST invoke `product-tree:author` before performing the task and preserve its scope, mutation, verification, and recovery boundaries.
 - NEVER launch a subagent.
 - NEVER substitute a remembered workflow when the skill cannot load.
-- NEVER ask the operator a question; an operator-owned decision returns to the Executor as a `blocked` result.
+- NEVER ask the operator a question; an operator-owned decision returns to the Applier as a `blocked` result.
 
 </constraints>
 
