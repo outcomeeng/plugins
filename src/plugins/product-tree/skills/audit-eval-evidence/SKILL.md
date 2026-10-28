@@ -35,7 +35,7 @@ A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the 
 
 Bind the spec-node target: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the target is the one the request text carries, and the empty substitution binds nothing. If the request carries no target, return `UNKNOWN` with all five gate rows `UNKNOWN`, each carrying one `REJECT` finding with rule `missing-target`, this skill's file as `file`, `line: null`, and a message naming the required spec-node path. Preserve the supplied target string and set `metadata.branch` to JSON `null`; never inspect an inferred scope.
 
-Check the five evidence properties in strict order, producer coupling first: an eval that never exercises the actual producing skill, agent, classifier, or script passes regardless of what that producer contains, and a prompt that merely asks for a simulated verdict while restating the desired rules is not evidence about the skill. A suite missing any property has zero evidentiary value for the assertion it claims to verify.
+Check the five evidence properties in strict order, producer coupling first: an eval that never exercises the actual producing skill, agent, classifier, or script passes regardless of what that producer contains, and a prompt that merely asks for a simulated verdict while restating the desired rules is not evidence about the skill. A suite missing any property has zero evidentiary value for the assertion it claims to verify. The standard's case-provenance rule is judged beside oracle independence, in Step 3b.
 
 <step name="load_context">
 
@@ -81,13 +81,15 @@ Classify how the eval reaches the producer into one category of the evidence mod
 
 <step name="audit_oracle_independence">
 
-**Step 3b: Oracle independence**
+**Step 3b: Oracle independence and case provenance**
 
 Read `prompt.md` and `cases.jsonl` side by side. Check whether the prompt sent to the producer leaks the expected verdict, expected finding IDs, exact answer table, or rule mapping in a way that makes the case self-answering.
 
 Expected fields belong in the grader input, not in the task prompt the producer answers. A case may include expected verdict data for deterministic scoring; the model-facing prompt must still require the producer to infer the verdict from the scenario and its own methodology.
 
 Self-answering prompt or case construction is REJECT — "oracle leakage."
+
+Then read each case input against the producer's text and its recorded output, applying the evidence model's `<case_provenance>` procedure. A case input copied from either is REJECT — "case provenance." Both findings sit in `gate-2-oracle-quality`.
 
 </step>
 
@@ -230,7 +232,7 @@ How to avoid: Step 3e separates operational failures from behavioral pass eviden
 
 The verdict is sound when:
 
-- Every `[eval]` assertion's suite was judged on all five evidence properties with none skipped — producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence.
+- Every `[eval]` assertion's suite was judged on all five evidence properties with none skipped — producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence — and on the case-provenance rule beside oracle independence.
 - The verdict states an overall PASS/FAIL/UNKNOWN through the JSON `overall` field and every applicable gate row carries its determination.
 - Each REJECT finding lies on touched text and is falsifiable: it names the assertion or eval artifact, the failed evidence property, the evidentiary gap, and how the eval could pass while the assertion is unfulfilled; every finding outside touched text appears as `FILED` with its key, `baseRefEvidence`, and `issuesEntry`.
 - The same target, governing requirements, eval artifacts, and run evidence produce the same gate statuses and overall verdict.

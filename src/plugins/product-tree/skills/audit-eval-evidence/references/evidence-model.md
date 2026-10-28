@@ -2,7 +2,7 @@
 
 Detailed evidence model for eval auditing. Read this before auditing any `[eval]` assertion or eval suite.
 
-Five properties define eval evidence: producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence. This reference provides the taxonomy and procedures for each.
+Five properties define eval evidence: producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence. This reference provides the taxonomy and procedures for each, and for the standard's case-provenance rule, which is judged beside oracle independence.
 
 </overview>
 
@@ -10,6 +10,7 @@ Five properties define eval evidence: producer coupling, oracle independence, as
 - `artifact_model`
 - `producer_coupling`
 - `oracle_independence`
+- `case_provenance`
 - `alignment_model`
 - `falsifiability_model`
 - `run_evidence`
@@ -74,6 +75,20 @@ Rejected:
 Oracle leakage is a REJECT finding even when the run history passes.
 
 </oracle_independence>
+
+<case_provenance>
+
+Case provenance asks where each case input came from. A case input copied from the producer's text or from its prior output cannot disagree with the producer, so the case proves nothing about it.
+
+Procedure:
+
+1. Read each case input in `cases.jsonl`.
+2. Search the producer artifact and the recorded run output for the input's distinctive text.
+3. Trace each input to the assertion and the scenario's real-world shape.
+
+An input found verbatim, or as a near copy, in the producer's text or its recorded output is REJECT as `case-provenance`. An input that traces to the assertion and the scenario passes. An input whose source the artifacts cannot establish is reported as `INFO`, never rejected without a located copy.
+
+</case_provenance>
 
 <alignment_model>
 
@@ -154,6 +169,7 @@ Use these `rule` values in findings:
 | `missing-target`      | Request carries no spec-node target to audit                           |
 | `producer-coupling`   | Suite does not reach the real producer                                 |
 | `oracle-leakage`      | Prompt or case input exposes the expected answer                       |
+| `case-provenance`     | Case input is copied from the producer's text or its recorded output   |
 | `assertion-alignment` | Expected verdict fields do not prove the assertion                     |
 | `falsifiability`      | No mutation to the producer changes the result                         |
 | `run-evidence`        | Passing run evidence is missing, stale, or operationally incomplete    |
