@@ -11,6 +11,8 @@ CAN route every assertion to test, evaluate, probe, or audit before a specialist
 
 ## Assertions
 
+- verify-writes-tag: `/verify` selects the verification type of an Assertion and writes it as the tag the line grammar states, and writes `[audit]` with no slug or path.
+
 ### Scenarios
 
 - Given an assertion whose real subject produces deterministic behavior, structured producer output, a claim only an executed observation of the running node settles, or no deterministic verdict, when `/verify` classifies it, then the assertion routes respectively to `/test`, `/eval`, a probe protocol link, or an audit requirement ([eval](evals/routing/eval.toml))
