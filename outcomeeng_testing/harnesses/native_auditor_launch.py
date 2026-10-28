@@ -12,13 +12,11 @@ harness exposes observations only.
 from __future__ import annotations
 
 import json
-import subprocess
 from collections.abc import Collection, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.installation import CLAUDE_EXECUTABLE, CODEX_HOME_ENV
 from outcomeeng.distribution.native_auditor_dispatch import (
@@ -33,15 +31,11 @@ from outcomeeng.validation.implementation_audit_contract import (
     RUN_TOKEN_FIELD,
     AuditTerminalStatus,
 )
-from outcomeeng_testing.harnesses.discovery_auth import (
-    AUTH_FILENAME,
-    CODEX_LOGIN_SUBCOMMAND,
-)
+from outcomeeng_testing.harnesses.discovery_auth import AUTH_FILENAME
 from outcomeeng_testing.harnesses.discovery_auth_cases import (
     NativeCall,
     NativeCredentialRunner,
     NativeFault,
-    authentication_case,
 )
 from outcomeeng_testing.harnesses.installation import repository_root
 from outcomeeng_testing.harnesses.native_auditor_dispatch import (
@@ -51,7 +45,13 @@ from outcomeeng_testing.harnesses.native_profile_execution import (
     CLAUDE_CREDENTIAL_VARIABLES,
 )
 from outcomeeng_testing.harnesses.native_profile_failures import NativeFailureRunner
-from outcomeeng_testing.harnesses.native_profile_launch import ambient_environment
+from outcomeeng_testing.harnesses.native_profile_launch import (
+    RecordingRunner,
+    RowLaunch,
+    ambient_environment,
+    launch_case,
+    row_launches,
+)
 
 
 PLANTED_RUN_TOKEN = "run-0001"
@@ -124,61 +124,39 @@ def _materialized_state(state_root: Path) -> dict[Path, bytes]:
     }
 
 
-@dataclass
-class AuditorLaunchRunner:
-    """Complete and record every non-login command; fail the dispatch launch on request."""
-
-    credentials: NativeCredentialRunner
-    launch_exit_code: int
-    launches: frozenset[tuple[str, ...]]
-    returned: LaunchReturn = LaunchReturn.RUN_TOKEN
-    calls: list[DispatchCall] = field(default_factory=list)
-
-    def __call__(
-        self,
-        argv: Sequence[str],
-        *,
-        cwd: Path,
-        env: Mapping[str, str],
-        input_text: str | None,
-        timeout: float,
-    ) -> subprocess.CompletedProcess[str]:
-        if CODEX_LOGIN_SUBCOMMAND in argv:
-            return self.credentials(
-                argv, cwd=cwd, env=env, input_text=input_text, timeout=timeout
-            )
-        home = Path(env[CODEX_HOME_ENV])
-        self.calls.append(
-            DispatchCall(
-                tuple(argv),
-                home,
-                dict(env),
-                _materialized_state(home.parent),
-                _saved_login(home),
-            )
-        )
-        is_launch = any(set(launch) <= set(argv) for launch in self.launches)
-        return subprocess.CompletedProcess(
-            argv,
-            self.launch_exit_code if is_launch else 0,
-            _machine_stream(argv, _returned_message(self.returned))
-            if is_launch
-            else "",
-            "",
-        )
+def _record_dispatch_call(
+    argv: Sequence[str], env: Mapping[str, str], input_text: str | None
+) -> DispatchCall:
+    del input_text
+    home = Path(env[CODEX_HOME_ENV])
+    return DispatchCall(
+        tuple(argv),
+        home,
+        dict(env),
+        _materialized_state(home.parent),
+        _saved_login(home),
+    )
 
 
-@dataclass(frozen=True)
-class DispatchRowLaunch:
-    """One row's retained observation and every command issued for its state."""
+def auditor_launch_runner(
+    credentials: NativeCredentialRunner,
+    launch_exit_code: int,
+    launches: frozenset[tuple[str, ...]],
+    returned: LaunchReturn = LaunchReturn.RUN_TOKEN,
+) -> RecordingRunner[DispatchCall]:
+    """A recording runner that completes every command and fails the dispatch launch on request."""
 
-    observation: NativeAuditorDispatchObservation
-    calls: tuple[DispatchCall, ...]
+    def complete(argv: Sequence[str]) -> tuple[int, str]:
+        if any(set(launch) <= set(argv) for launch in launches):
+            return launch_exit_code, _machine_stream(argv, _returned_message(returned))
+        return 0, ""
+
+    return RecordingRunner(credentials, _record_dispatch_call, complete)
 
 
 @dataclass(frozen=True)
 class DispatchLaunchObservation:
-    rows: tuple[DispatchRowLaunch, ...]
+    rows: tuple[RowLaunch[NativeAuditorDispatchObservation, DispatchCall], ...]
     environment: Mapping[str, str]
     """The ambient environment the run received, every strippable name planted."""
     saved_login: bytes
@@ -192,13 +170,6 @@ class DispatchFailureObservation:
     environment: Mapping[str, str]
 
 
-def _row_calls(
-    observation: NativeAuditorDispatchObservation, calls: Sequence[DispatchCall]
-) -> tuple[DispatchCall, ...]:
-    state_root = observation.row.state_root.resolve()
-    return tuple(call for call in calls if call.home.is_relative_to(state_root))
-
-
 @contextmanager
 def native_auditor_launch(
     claude_credentials: Collection[str] = CLAUDE_CREDENTIAL_VARIABLES,
@@ -206,12 +177,9 @@ def native_auditor_launch(
     returned: LaunchReturn = LaunchReturn.RUN_TOKEN,
 ) -> Iterator[DispatchLaunchObservation]:
     """Run every row with `claude_credentials` planted beside every other strippable name."""
-    with (
-        TemporaryDirectory() as temporary_directory,
-        authentication_case() as credentials,
-    ):
-        runner = AuditorLaunchRunner(
-            credentials.runner,
+    with launch_case() as case:
+        runner = auditor_launch_runner(
+            case.credentials.runner,
             launch_exit_code,
             frozenset(
                 row.launch_command for row in native_auditor_rows(repository_root())
@@ -219,37 +187,32 @@ def native_auditor_launch(
             returned,
         )
         environment = ambient_environment(
-            credentials.original_environment, claude_credentials=claude_credentials
+            case.credentials.original_environment, claude_credentials=claude_credentials
         )
         rows = run_native_auditor_dispatch(
-            Path(temporary_directory) / "artifacts",
+            case.artifact_root,
             checkout=repository_root(),
             environment=environment,
             runner=runner,
         )
         yield DispatchLaunchObservation(
-            tuple(
-                DispatchRowLaunch(row, _row_calls(row, runner.calls)) for row in rows
-            ),
+            row_launches(rows, runner.calls),
             environment,
-            credentials.initial.encode("utf-8"),
+            case.credentials.initial.encode("utf-8"),
         )
 
 
 @contextmanager
 def native_auditor_failure(fault: NativeFault) -> Iterator[DispatchFailureObservation]:
     """Expose retained evidence after the production harness removes its state."""
-    with (
-        TemporaryDirectory() as temporary_directory,
-        authentication_case() as credentials,
-    ):
+    with launch_case() as case:
         runner = NativeFailureRunner(fault)
         environment = ambient_environment(
-            credentials.original_environment,
+            case.credentials.original_environment,
             claude_credentials=CLAUDE_CREDENTIAL_VARIABLES,
         )
         rows = run_native_auditor_dispatch(
-            Path(temporary_directory) / "artifacts",
+            case.artifact_root,
             checkout=repository_root(),
             environment=environment,
             runner=runner,

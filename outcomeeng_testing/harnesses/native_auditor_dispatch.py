@@ -5,17 +5,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 from outcomeeng.distribution.contracts import Target
-from outcomeeng.distribution.installation import (
-    InstallationFailure,
-    build_isolated_installation_plan,
-    execute_installation,
-)
 from outcomeeng.distribution.native_auditor_dispatch import (
     NativeAuditorDispatchObservation,
     NativeAuditorRow,
@@ -24,65 +17,13 @@ from outcomeeng.distribution.native_auditor_dispatch import (
     record_native_auditor_failure,
     run_native_auditor_row,
 )
-from outcomeeng_testing.harnesses.discovery_auth import (
-    CredentialRedactor,
-    DiscoveryAuthentication,
-    DiscoveryAuthenticationError,
-    ProbeRunner,
-    select_authentication,
-)
-from outcomeeng_testing.harnesses.installation import mirror_installation_inputs
+from outcomeeng_testing.harnesses.discovery_auth import ProbeRunner
 from outcomeeng_testing.harnesses.native_profile_execution import (
-    CLAUDE_CREDENTIAL_VARIABLES,
     NativeProfileInterval,
-    isolated_environment,
+    execute_native_row,
+    run_native_rows,
     run_profile_process,
 )
-
-
-def _execute_row(
-    row: NativeAuditorRow,
-    checkout: Path,
-    environment: Mapping[str, str],
-    interval: NativeProfileInterval,
-) -> NativeAuditorDispatchObservation:
-    if row.target is Target.CODEX:
-        interval.authentication = DiscoveryAuthentication(
-            select_authentication(environment), interval.runner
-        )
-    plan = build_isolated_installation_plan(
-        checkout, row.state_root, isolated_environment(environment)
-    )
-    execute_installation(plan, interval.install)
-    child_environment = dict(plan.commands[0].environment)
-    if interval.authentication is not None:
-        with interval.authentication.authenticated_home(
-            plan.roots.codex_home, cwd=checkout, env=child_environment
-        ):
-            return run_native_auditor_row(
-                row,
-                checkout=checkout,
-                environment=child_environment,
-                parent=interval.parent,
-                sanitize=interval.sanitize,
-            )
-    selected = tuple(
-        name for name in CLAUDE_CREDENTIAL_VARIABLES if environment.get(name)
-    )
-    if len(selected) != 1:
-        raise DiscoveryAuthenticationError(
-            "Claude auditor dispatch requires exactly one selected native credential."
-        )
-    name = selected[0]
-    interval.redactor.add(environment[name])
-    child_environment[name] = environment[name]
-    return run_native_auditor_row(
-        row,
-        checkout=checkout,
-        environment=child_environment,
-        parent=interval.parent,
-        sanitize=interval.sanitize,
-    )
 
 
 def run_native_auditor_dispatch(
@@ -93,41 +34,39 @@ def run_native_auditor_dispatch(
     runner: ProbeRunner = run_profile_process,
     target: Target | None = None,
 ) -> tuple[NativeAuditorDispatchObservation, ...]:
-    """Retain every row's observations while removing its disposable state."""
-    artifact_root.mkdir(parents=True, exist_ok=False)
-    observations: list[NativeAuditorDispatchObservation] = []
-    with TemporaryDirectory() as temporary_checkout:
-        mirror = Path(temporary_checkout) / "checkout"
-        mirror_installation_inputs(checkout, mirror)
-        for index in range(len(native_auditor_rows(checkout))):
-            with TemporaryDirectory() as temporary_state:
-                row = native_auditor_rows(
-                    checkout, artifact_root, Path(temporary_state)
-                )[index]
-                if target is not None and row.target is not target:
-                    continue
-                interval = NativeProfileInterval(runner, redactor=CredentialRedactor())
-                try:
-                    materialize_native_auditor(row)
-                    observation = _execute_row(row, mirror, environment, interval)
-                except (
-                    OSError,
-                    ValueError,
-                    InstallationFailure,
-                    DiscoveryAuthenticationError,
-                    subprocess.TimeoutExpired,
-                ) as error:
-                    observation = record_native_auditor_failure(
-                        row,
-                        interval.sanitize(str(error)),
-                        install_exit_code=(
-                            error.result.exit_code
-                            if isinstance(error, InstallationFailure)
-                            else None
-                        ),
-                    )
-                observations.append(observation)
-    return tuple(observations)
+    """Retain every auditor row's observations while removing its disposable state."""
+
+    def plan(state_root: Path) -> tuple[NativeAuditorRow, ...]:
+        return native_auditor_rows(checkout, artifact_root, state_root)
+
+    def execute(
+        row: NativeAuditorRow, mirror: Path, interval: NativeProfileInterval
+    ) -> NativeAuditorDispatchObservation:
+        def run(
+            auditor_row: NativeAuditorRow, child_environment: Mapping[str, str]
+        ) -> NativeAuditorDispatchObservation:
+            return run_native_auditor_row(
+                auditor_row,
+                checkout=mirror,
+                environment=child_environment,
+                parent=interval.parent,
+                sanitize=interval.sanitize,
+            )
+
+        return execute_native_row(
+            row, mirror, environment, interval, subject="auditor dispatch", run=run
+        )
+
+    return run_native_rows(
+        artifact_root,
+        checkout=checkout,
+        plan=plan,
+        materialize=materialize_native_auditor,
+        execute=execute,
+        record_failure=record_native_auditor_failure,
+        runner=runner,
+        target=target,
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:

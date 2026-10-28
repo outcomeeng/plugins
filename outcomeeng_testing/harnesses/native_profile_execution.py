@@ -8,10 +8,11 @@ import os
 import signal
 import subprocess
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory, TemporaryFile
+from typing import Protocol
 
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
@@ -215,12 +216,38 @@ def isolated_environment(environment: Mapping[str, str]) -> dict[str, str]:
     }
 
 
-def _execute_row(
-    row: NativeProfileRow,
+class NativeRow(Protocol):
+    """The part of a native row the shared row drivers read."""
+
+    @property
+    def target(self) -> Target: ...
+
+    @property
+    def state_root(self) -> Path: ...
+
+
+class FailureRecorder[Row, Observation](Protocol):
+    """Retain a harness failure as one row's terminal condition."""
+
+    def __call__(
+        self, row: Row, condition: str, /, *, install_exit_code: int | None = None
+    ) -> Observation: ...
+
+
+def execute_native_row[Row: NativeRow, Observation](
+    row: Row,
     checkout: Path,
     environment: Mapping[str, str],
     interval: NativeProfileInterval,
-) -> NativeProfileExecutionObservation:
+    *,
+    subject: str,
+    run: Callable[[Row, Mapping[str, str]], Observation],
+) -> Observation:
+    """Install one row's disposable state, authenticate its harness, and run it once.
+
+    `subject` names the evidence in the diagnostic a missing or ambiguous Claude
+    credential raises; `run` receives the row and the isolated child environment.
+    """
     if row.target is Target.CODEX:
         interval.authentication = DiscoveryAuthentication(
             select_authentication(environment), interval.runner
@@ -230,54 +257,55 @@ def _execute_row(
     )
     execute_installation(plan, interval.install)
     child_environment = dict(plan.commands[0].environment)
-    runners = NativeExecutionRunners(
-        interval.parent, interval.thread, interval.sanitize
-    )
     if interval.authentication is not None:
         with interval.authentication.authenticated_home(
             plan.roots.codex_home, cwd=checkout, env=child_environment
         ):
-            return run_native_profile_row(
-                row, checkout=checkout, environment=child_environment, runners=runners
-            )
+            return run(row, child_environment)
     selected = tuple(
         name for name in CLAUDE_CREDENTIAL_VARIABLES if environment.get(name)
     )
     if len(selected) != 1:
         raise DiscoveryAuthenticationError(
-            "Claude profile execution requires exactly one selected native credential."
+            f"Claude {subject} requires exactly one selected native credential."
         )
     name = selected[0]
     interval.redactor.add(environment[name])
     child_environment[name] = environment[name]
-    return run_native_profile_row(
-        row, checkout=checkout, environment=child_environment, runners=runners
-    )
+    return run(row, child_environment)
 
 
-def run_native_profile_execution(
+def run_native_rows[Row: NativeRow, Observation](
     artifact_root: Path,
     *,
     checkout: Path,
-    environment: Mapping[str, str],
-    runner: ProbeRunner = run_profile_process,
-    target: Target | None = None,
-) -> tuple[NativeProfileExecutionObservation, ...]:
-    """Retain every row's observations while removing its disposable state."""
+    plan: Callable[[Path], tuple[Row, ...]],
+    materialize: Callable[[Row], None],
+    execute: Callable[[Row, Path, NativeProfileInterval], Observation],
+    record_failure: FailureRecorder[Row, Observation],
+    runner: ProbeRunner,
+    target: Target | None,
+) -> tuple[Observation, ...]:
+    """Retain every row's observations while removing its disposable state.
+
+    A row's paths derive from its state root, so `plan` projects the rows again
+    against each row's own disposable state. `execute` receives the row, the
+    mirrored checkout, and the row's interval.
+    """
     artifact_root.mkdir(parents=True, exist_ok=False)
-    observations: list[NativeProfileExecutionObservation] = []
+    observations: list[Observation] = []
     with TemporaryDirectory() as temporary_checkout:
         mirror = Path(temporary_checkout) / "checkout"
         mirror_installation_inputs(checkout, mirror)
-        for index in range(len(native_profile_rows())):
+        for index in range(len(plan(Path()))):
             with TemporaryDirectory() as temporary_state:
-                row = native_profile_rows(artifact_root, Path(temporary_state))[index]
+                row = plan(Path(temporary_state))[index]
                 if target is not None and row.target is not target:
                     continue
                 interval = NativeProfileInterval(runner)
                 try:
-                    materialize_native_profile(row)
-                    observation = _execute_row(row, mirror, environment, interval)
+                    materialize(row)
+                    observation = execute(row, mirror, interval)
                 except (
                     OSError,
                     ValueError,
@@ -285,7 +313,7 @@ def run_native_profile_execution(
                     DiscoveryAuthenticationError,
                     subprocess.TimeoutExpired,
                 ) as error:
-                    observation = record_native_profile_failure(
+                    observation = record_failure(
                         row,
                         interval.sanitize(str(error)),
                         install_exit_code=(
@@ -296,6 +324,52 @@ def run_native_profile_execution(
                     )
                 observations.append(observation)
     return tuple(observations)
+
+
+def run_native_profile_execution(
+    artifact_root: Path,
+    *,
+    checkout: Path,
+    environment: Mapping[str, str],
+    runner: ProbeRunner = run_profile_process,
+    target: Target | None = None,
+) -> tuple[NativeProfileExecutionObservation, ...]:
+    """Retain every profile row's observations while removing its disposable state."""
+
+    def plan(state_root: Path) -> tuple[NativeProfileRow, ...]:
+        return native_profile_rows(artifact_root, state_root)
+
+    def execute(
+        row: NativeProfileRow, mirror: Path, interval: NativeProfileInterval
+    ) -> NativeProfileExecutionObservation:
+        runners = NativeExecutionRunners(
+            interval.parent, interval.thread, interval.sanitize
+        )
+
+        def run(
+            profile_row: NativeProfileRow, child_environment: Mapping[str, str]
+        ) -> NativeProfileExecutionObservation:
+            return run_native_profile_row(
+                profile_row,
+                checkout=mirror,
+                environment=child_environment,
+                runners=runners,
+            )
+
+        return execute_native_row(
+            row, mirror, environment, interval, subject="profile execution", run=run
+        )
+
+    return run_native_rows(
+        artifact_root,
+        checkout=checkout,
+        plan=plan,
+        materialize=materialize_native_profile,
+        execute=execute,
+        record_failure=record_native_profile_failure,
+        runner=runner,
+        target=target,
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:

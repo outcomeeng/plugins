@@ -6,18 +6,22 @@ exception: the evidence concerns the shape and environment of the commands the
 producer issues, which a real parent session would hide behind a model turn and
 a credentialed account. Saved-login writes go to the credential runner the
 authentication case already owns. The harness exposes observations only.
+
+The recording runner, the per-row call pairing, and the launch workspace are
+shared with the native auditor-dispatch launch harness.
 """
 
 from __future__ import annotations
 
-import subprocess
 import json
 import os
+import subprocess
 from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Protocol
 from uuid import uuid4
 
 from outcomeeng.distribution.contracts import Target
@@ -32,9 +36,10 @@ from outcomeeng.distribution.native_profile_execution import (
 from outcomeeng_testing.harnesses.discovery_auth import (
     CODEX_LOGIN_SUBCOMMAND,
     CREDENTIAL_ENVIRONMENTS,
+    AuthenticationMode,
 )
-from outcomeeng_testing.harnesses.discovery_auth import AuthenticationMode
 from outcomeeng_testing.harnesses.discovery_auth_cases import (
+    AuthenticationCase,
     NativeCall,
     NativeCredentialRunner,
     authentication_case,
@@ -43,6 +48,7 @@ from outcomeeng_testing.harnesses.installation import repository_root
 from outcomeeng_testing.harnesses.native_profile_execution import (
     CLAUDE_CREDENTIAL_VARIABLES,
     NATIVE_PROFILE_AMBIENT_ENVIRONMENT_VARIABLES,
+    NativeRow,
     run_native_profile_execution,
 )
 
@@ -68,23 +74,40 @@ def ambient_environment(
     }
 
 
-def _silent(argv: Sequence[str]) -> str:
-    """No command output: the runner's default for every completed command."""
-    del argv
-    return ""
+@dataclass(frozen=True)
+class LaunchCase:
+    """The artifact root and authentication case one launch run shares."""
+
+    artifact_root: Path
+    credentials: AuthenticationCase
+
+
+@contextmanager
+def launch_case(
+    mode: AuthenticationMode = AuthenticationMode.SUBSCRIPTION,
+) -> Iterator[LaunchCase]:
+    """A disposable artifact root beside an authentication case in `mode`."""
+    with (
+        TemporaryDirectory() as temporary_directory,
+        authentication_case(mode) as credentials,
+    ):
+        yield LaunchCase(Path(temporary_directory) / "artifacts", credentials)
 
 
 @dataclass
-class NativeLaunchRunner:
+class RecordingRunner[Call]:
     """Complete and record every non-login native command; logins go to `credentials`.
 
-    `stdout` supplies each completed command's output from its argv, so a
-    caller can give the parent session the stream a real one would print.
+    `record` builds the recorded call from a command, its environment, and its
+    input; `complete` supplies each completed command's exit code and output
+    from its argv, so a caller can give the parent session the stream a real
+    one would print.
     """
 
     credentials: NativeCredentialRunner
-    stdout: Callable[[Sequence[str]], str] = _silent
-    calls: list[NativeCall] = field(default_factory=list)
+    record: Callable[[Sequence[str], Mapping[str, str], str | None], Call]
+    complete: Callable[[Sequence[str]], tuple[int, str]]
+    calls: list[Call] = field(default_factory=list)
 
     def __call__(
         self,
@@ -99,33 +122,79 @@ class NativeLaunchRunner:
             return self.credentials(
                 argv, cwd=cwd, env=env, input_text=input_text, timeout=timeout
             )
-        self.calls.append(
-            NativeCall(tuple(argv), Path(env[CODEX_HOME_ENV]), dict(env), input_text)
-        )
-        return subprocess.CompletedProcess(argv, 0, self.stdout(argv), "")
+        self.calls.append(self.record(argv, env, input_text))
+        exit_code, stdout = self.complete(argv)
+        return subprocess.CompletedProcess(argv, exit_code, stdout, "")
+
+
+class HomedCall(Protocol):
+    """A recorded command that names the Codex home it ran under."""
+
+    @property
+    def home(self) -> Path: ...
+
+
+class RowObservation(Protocol):
+    """A retained observation that names its row."""
+
+    @property
+    def row(self) -> NativeRow: ...
 
 
 @dataclass(frozen=True)
-class NativeRowLaunch:
+class RowLaunch[Observation, Call]:
     """One row's retained observation and every recorded command issued for its state."""
 
-    observation: NativeProfileExecutionObservation
-    calls: tuple[NativeCall, ...]
+    observation: Observation
+    calls: tuple[Call, ...]
+
+
+def row_launches[Observation: RowObservation, Call: HomedCall](
+    observations: Sequence[Observation], calls: Sequence[Call]
+) -> tuple[RowLaunch[Observation, Call], ...]:
+    """Pair each observation with the recorded commands whose Codex home lies beneath its row's state root."""
+    return tuple(
+        RowLaunch(
+            observation,
+            tuple(
+                call
+                for call in calls
+                if call.home.is_relative_to(observation.row.state_root.resolve())
+            ),
+        )
+        for observation in observations
+    )
+
+
+def _silent(argv: Sequence[str]) -> str:
+    """No command output: the runner's default for every completed command."""
+    del argv
+    return ""
+
+
+def _record_native_call(
+    argv: Sequence[str], env: Mapping[str, str], input_text: str | None
+) -> NativeCall:
+    return NativeCall(tuple(argv), Path(env[CODEX_HOME_ENV]), dict(env), input_text)
+
+
+def native_launch_runner(
+    credentials: NativeCredentialRunner,
+    stdout: Callable[[Sequence[str]], str] = _silent,
+) -> RecordingRunner[NativeCall]:
+    """A recording runner that completes every non-login command with `stdout`'s output."""
+
+    def complete(argv: Sequence[str]) -> tuple[int, str]:
+        return 0, stdout(argv)
+
+    return RecordingRunner(credentials, _record_native_call, complete)
 
 
 @dataclass(frozen=True)
 class NativeLaunchObservation:
-    rows: tuple[NativeRowLaunch, ...]
+    rows: tuple[RowLaunch[NativeProfileExecutionObservation, NativeCall], ...]
     environment: Mapping[str, str]
     """The ambient environment the run received, every strippable name planted."""
-
-
-def _row_calls(
-    observation: NativeProfileExecutionObservation, calls: Sequence[NativeCall]
-) -> tuple[NativeCall, ...]:
-    """The recorded commands whose Codex home lies beneath the row's state root."""
-    state_root = observation.row.state_root.resolve()
-    return tuple(call for call in calls if call.home.is_relative_to(state_root))
 
 
 @contextmanager
@@ -133,24 +202,18 @@ def native_profile_launch(
     claude_credentials: Collection[str] = CLAUDE_CREDENTIAL_VARIABLES,
 ) -> Iterator[NativeLaunchObservation]:
     """Run every row with `claude_credentials` planted beside every other strippable name."""
-    with (
-        TemporaryDirectory() as temporary_directory,
-        authentication_case() as credentials,
-    ):
-        runner = NativeLaunchRunner(credentials.runner)
+    with launch_case() as case:
+        runner = native_launch_runner(case.credentials.runner)
         environment = ambient_environment(
-            credentials.original_environment, claude_credentials=claude_credentials
+            case.credentials.original_environment, claude_credentials=claude_credentials
         )
         rows = run_native_profile_execution(
-            Path(temporary_directory) / "artifacts",
+            case.artifact_root,
             checkout=repository_root(),
             environment=environment,
             runner=runner,
         )
-        yield NativeLaunchObservation(
-            tuple(NativeRowLaunch(row, _row_calls(row, runner.calls)) for row in rows),
-            environment,
-        )
+        yield NativeLaunchObservation(row_launches(rows, runner.calls), environment)
 
 
 def _absent_parent_stream(argv: Sequence[str]) -> str:
@@ -171,23 +234,17 @@ def native_profile_absent_child() -> Iterator[NativeLaunchObservation]:
     condition comes from the real listing. API login keeps that state free of
     a saved-login link the app-server could try to refresh.
     """
-    with (
-        TemporaryDirectory() as temporary_directory,
-        authentication_case(AuthenticationMode.API) as credentials,
-    ):
-        runner = NativeLaunchRunner(credentials.runner, _absent_parent_stream)
+    with launch_case(AuthenticationMode.API) as case:
+        runner = native_launch_runner(case.credentials.runner, _absent_parent_stream)
         environment = {
-            **credentials.original_environment,
+            **case.credentials.original_environment,
             "PATH": os.environ["PATH"],
         }
         rows = run_native_profile_execution(
-            Path(temporary_directory) / "artifacts",
+            case.artifact_root,
             checkout=repository_root(),
             environment=environment,
             runner=runner,
             target=Target.CODEX,
         )
-        yield NativeLaunchObservation(
-            tuple(NativeRowLaunch(row, _row_calls(row, runner.calls)) for row in rows),
-            environment,
-        )
+        yield NativeLaunchObservation(row_launches(rows, runner.calls), environment)
