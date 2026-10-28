@@ -14,6 +14,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import outcomeeng_testing.harnesses as harnesses_package
+from outcomeeng.distribution.contracts import DIST_DIR_NAME
 
 HARNESS_DIRECTORY = Path(harnesses_package.__file__).parent
 REPOSITORY_ROOT = HARNESS_DIRECTORY.parent.parent
@@ -23,7 +24,6 @@ CONFORMING_DIRECTORY = FIXTURE_DIRECTORY / "conforming"
 SHIPPED_SCRIPT_FIXTURE = FIXTURE_DIRECTORY / "shipped_script.py.txt"
 SHIPPED_SCRIPT_NAME = "shipped_script.py"
 
-DISTRIBUTION_DIRECTORY_NAME = "dist"
 CACHE_DIRECTORY_NAME = "__pycache__"
 BYTECODE_SUFFIX = ".pyc"
 
@@ -54,7 +54,7 @@ def harness_module_paths() -> tuple[Path, ...]:
 
 def bytecode_entries_under_dist() -> tuple[str, ...]:
     """Repository-relative path of every ``__pycache__`` directory and ``.pyc`` file under ``dist/``."""
-    distribution = REPOSITORY_ROOT / DISTRIBUTION_DIRECTORY_NAME
+    distribution = REPOSITORY_ROOT / DIST_DIR_NAME
     return tuple(
         sorted(
             str(path.relative_to(REPOSITORY_ROOT))
