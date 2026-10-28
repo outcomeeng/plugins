@@ -1,0 +1,7 @@
+name: Violating native acceptance workflow
+on: [workflow_dispatch, push]
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo acceptance

@@ -1,0 +1,9 @@
+name: Violating native acceptance workflow
+on:
+  push:
+    branches: [main]
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo acceptance

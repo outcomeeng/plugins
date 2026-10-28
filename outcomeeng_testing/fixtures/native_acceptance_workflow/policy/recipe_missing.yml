@@ -1,0 +1,17 @@
+name: Violating native acceptance workflow
+on:
+  workflow_dispatch:
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    env:
+      ARTIFACT_ROOT: native-acceptance
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      SUBAGENT_DISCOVERY_AUTH_MODE: api
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - run: just verify-native-profile-execution "${ARTIFACT_ROOT}/profiles"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-profile-acceptance
+          path: ${{ env.ARTIFACT_ROOT }}
