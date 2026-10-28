@@ -10,14 +10,11 @@ tools: Bash(python3 "*/skills/audit-change/scripts/audit_change_run.py":*), Read
 skills:
   - product-tree:audit-change
   - product-tree:product-tree-plugin
-  - product-tree:change-standards
 ---
 
 Use skill `product-tree:audit-change`.
 
 Use skill `product-tree:product-tree-plugin`.
-
-Use skill `product-tree:change-standards`.
 
 <role>
 

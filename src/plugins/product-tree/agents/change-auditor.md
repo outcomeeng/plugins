@@ -9,14 +9,11 @@ profile: standard
 skills:
   - product-tree:audit-change
   - product-tree:product-tree-plugin
-  - product-tree:change-standards
 ---
 
 {!% require_skill 'product-tree:audit-change' %!}
 
 {!% require_skill 'product-tree:product-tree-plugin' %!}
-
-{!% require_skill 'product-tree:change-standards' %!}
 
 <role>
 

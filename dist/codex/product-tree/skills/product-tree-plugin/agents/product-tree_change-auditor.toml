@@ -7,8 +7,6 @@ developer_instructions = """Use skill `product-tree:audit-change`.
 
 Use skill `product-tree:product-tree-plugin`.
 
-Use skill `product-tree:change-standards`.
-
 <role>
 
 Audit the caller's local Change in this already-dispatched, isolated verifier
@@ -100,7 +98,7 @@ projection from the sealed run, and save no projection.
 </success_criteria>
 
 <manual_review_guidance>
-Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Load each of these skills through its `Use skill` instruction before relying on this agent's specialized behavior, and search for no dedicated skill-invocation tool: the absence of one is no availability failure, while an absent installed skill or an unreadable skill file is one: `product-tree:audit-change`, `product-tree:product-tree-plugin`, `product-tree:change-standards`.
+Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Load each of these skills through its `Use skill` instruction before relying on this agent's specialized behavior, and search for no dedicated skill-invocation tool: the absence of one is no availability failure, while an absent installed skill or an unreadable skill file is one: `product-tree:audit-change`, `product-tree:product-tree-plugin`.
 
 Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Bash(python3 "*/skills/audit-change/scripts/audit_change_run.py":*)`, `Read`, `Write`.
 </manual_review_guidance>
@@ -115,10 +113,6 @@ enabled = true
 
 [[skills.config]]
 name = "product-tree:product-tree-plugin"
-enabled = true
-
-[[skills.config]]
-name = "product-tree:change-standards"
 enabled = true
 
 [shell_environment_policy]
