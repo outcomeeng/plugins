@@ -6,6 +6,11 @@ import json
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.native_auditor_dispatch import (
     AUDITOR_FIXTURES,
+    CONFIGURATION_SHIPPED_SHA256_KEY,
+    RESULT_BLOCKED_KEY,
+    RESULT_RUN_FILE_KEY,
+    RESULT_RUN_TOKEN_KEY,
+    RESULT_TERMINAL_CONDITION_KEY,
     native_auditor_rows,
 )
 from outcomeeng_testing.harnesses.discovery_auth import CREDENTIAL_ENVIRONMENTS
@@ -65,17 +70,17 @@ def test_every_row_launches_once_from_the_shipped_definition_passing_only_the_se
                     == (AUDITOR_FIXTURES[row.auditor][1])
                 )
                 configuration = json.loads(row.configuration_path.read_text("utf-8"))
-                assert configuration["shipped_definition_sha256"] == (
+                assert configuration[CONFIGURATION_SHIPPED_SHA256_KEY] == (
                     hashlib.sha256(row.shipped_definition_path.read_bytes()).hexdigest()
                 )
                 assert row.loading_path.is_file()
                 assert row.result_path.is_file()
                 assert item.observation.terminal_condition is None, row.identifier
                 result = json.loads(row.result_path.read_text("utf-8"))
-                assert result["terminal_condition"] is None, row.identifier
-                assert result["run_token"] == PLANTED_RUN_TOKEN, row.identifier
-                assert result["run_file"] == PLANTED_RUN_FILE, row.identifier
-                assert result["blocked"] is False, row.identifier
+                assert result[RESULT_TERMINAL_CONDITION_KEY] is None, row.identifier
+                assert result[RESULT_RUN_TOKEN_KEY] == PLANTED_RUN_TOKEN, row.identifier
+                assert result[RESULT_RUN_FILE_KEY] == PLANTED_RUN_FILE, row.identifier
+                assert result[RESULT_BLOCKED_KEY] is False, row.identifier
                 assert not row.state_root.exists()
                 if row.target is Target.CLAUDE:
                     assert launch.environment.keys() & STRIPPABLE == {selected}
@@ -85,6 +90,7 @@ def test_every_row_launches_once_from_the_shipped_definition_passing_only_the_se
                     )
                 else:
                     assert not launch.environment.keys() & STRIPPABLE, row.identifier
+                    assert launch.saved_login == observation.saved_login, row.identifier
                 for call in item.calls:
                     if call is not launch:
                         assert not call.environment.keys() & STRIPPABLE, call.argv
@@ -103,10 +109,10 @@ def test_a_blocked_dispatch_diagnostic_is_a_returned_result_without_a_terminal_c
             assert item.observation.launch_exit_code == 0, row.identifier
             assert item.observation.terminal_condition is None, row.identifier
             result = json.loads(row.result_path.read_text("utf-8"))
-            assert result["blocked"] is True, row.identifier
-            assert result["run_token"] is None, row.identifier
-            assert result["run_file"] is None, row.identifier
-            assert result["terminal_condition"] is None, row.identifier
+            assert result[RESULT_BLOCKED_KEY] is True, row.identifier
+            assert result[RESULT_RUN_TOKEN_KEY] is None, row.identifier
+            assert result[RESULT_RUN_FILE_KEY] is None, row.identifier
+            assert result[RESULT_TERMINAL_CONDITION_KEY] is None, row.identifier
 
 
 def test_a_failed_launch_records_its_terminal_condition_without_a_retry() -> None:
@@ -123,7 +129,10 @@ def test_a_failed_launch_records_its_terminal_condition_without_a_retry() -> Non
             assert item.observation.launch_exit_code == NATIVE_FAILURE_EXIT_CODE
             assert item.observation.terminal_condition is not None
             result = json.loads(row.result_path.read_text("utf-8"))
-            assert result["terminal_condition"] == item.observation.terminal_condition
+            assert (
+                result[RESULT_TERMINAL_CONDITION_KEY]
+                == item.observation.terminal_condition
+            )
             assert (
                 launches[0].state_files[
                     row.native_definition_path.relative_to(row.state_root)

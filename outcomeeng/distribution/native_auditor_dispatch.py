@@ -65,6 +65,12 @@ NATIVE_LAUNCH_COMMANDS: Final[Mapping[Target, tuple[str, ...]]] = {
 }
 """Each harness's headless launch command, before the dispatch prompt is placed."""
 
+RESULT_RUN_TOKEN_KEY: Final = "run_token"
+RESULT_RUN_FILE_KEY: Final = "run_file"
+RESULT_BLOCKED_KEY: Final = "blocked"
+RESULT_TERMINAL_CONDITION_KEY: Final = "terminal_condition"
+CONFIGURATION_SHIPPED_SHA256_KEY: Final = "shipped_definition_sha256"
+
 RESULT_DOCUMENT_KEYS: Final = (
     "identifier",
     "parent_command",
@@ -72,9 +78,9 @@ RESULT_DOCUMENT_KEYS: Final = (
     "stdout",
     "stderr",
     "returned_message",
-    "run_token",
-    "run_file",
-    "blocked",
+    RESULT_RUN_TOKEN_KEY,
+    RESULT_RUN_FILE_KEY,
+    RESULT_BLOCKED_KEY,
 )
 """The fields a dispatched row's result document carries before a failure is recorded."""
 
@@ -219,7 +225,7 @@ def materialize_native_auditor(row: NativeAuditorRow) -> None:
             "auditor": row.auditor,
             "native_name": row.native_name,
             "shipped_definition_path": str(row.shipped_definition_path),
-            "shipped_definition_sha256": hashlib.sha256(
+            CONFIGURATION_SHIPPED_SHA256_KEY: hashlib.sha256(
                 row.shipped_definition_path.read_bytes()
             ).hexdigest(),
             "native_definition_path": str(row.native_definition_path),
@@ -300,10 +306,10 @@ def run_native_auditor_row(
             "stdout": stdout,
             "stderr": stderr,
             "returned_message": message,
-            "run_token": run_token,
-            "run_file": run_file,
-            "blocked": blocked,
-            "terminal_condition": terminal_condition,
+            RESULT_RUN_TOKEN_KEY: run_token,
+            RESULT_RUN_FILE_KEY: run_file,
+            RESULT_BLOCKED_KEY: blocked,
+            RESULT_TERMINAL_CONDITION_KEY: terminal_condition,
         },
     )
     return NativeAuditorDispatchObservation(
@@ -328,7 +334,7 @@ def record_native_auditor_failure(
         document.update(
             (key, retained[key]) for key in RESULT_DOCUMENT_KEYS if key in retained
         )
-    document["terminal_condition"] = condition
+    document[RESULT_TERMINAL_CONDITION_KEY] = condition
     document["install_exit_code"] = install_exit_code
     _write_json(row.result_path, document)
     launch_exit_code = document.get("exit_code")

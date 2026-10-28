@@ -4,7 +4,10 @@ import tomllib
 from itertools import product
 from pathlib import Path
 
-from outcomeeng.distribution.agents import NATIVE_AGENT_PLUGIN_SEPARATOR
+from outcomeeng.distribution.agents import (
+    AGENT_NAME_FIELD,
+    NATIVE_AGENT_PLUGIN_SEPARATOR,
+)
 from outcomeeng.distribution.contracts import DIST_DIR_NAME, Target
 from outcomeeng.distribution.installation import (
     ISOLATED_CLAUDE_CONFIG_DIRECTORY,
@@ -13,6 +16,7 @@ from outcomeeng.distribution.installation import (
 from outcomeeng.distribution.native_auditor_dispatch import (
     AGENTS_DIRECTORY,
     AUDITOR_PLUGIN,
+    CODEX_AGENT_SUFFIX,
     CONFIGURATION_FILENAME,
     FIXTURE_DIRECTORY,
     LOADING_FILENAME,
@@ -22,7 +26,7 @@ from outcomeeng.distribution.native_auditor_dispatch import (
 )
 from outcomeeng_testing.harnesses.installation import repository_root
 
-FRONT_MATTER_NAME_PREFIX = "name: "
+FRONT_MATTER_NAME_PREFIX = f"{AGENT_NAME_FIELD}: "
 
 
 def shipped_definitions(checkout: Path, target: Target, auditor: str) -> list[Path]:
@@ -40,8 +44,8 @@ def shipped_definitions(checkout: Path, target: Target, auditor: str) -> list[Pa
 
 def declared_name(definition: Path) -> str:
     text = definition.read_text(encoding="utf-8")
-    if definition.suffix == ".toml":
-        return str(tomllib.loads(text)["name"])
+    if definition.suffix == CODEX_AGENT_SUFFIX:
+        return str(tomllib.loads(text)[AGENT_NAME_FIELD])
     return next(
         line.removeprefix(FRONT_MATTER_NAME_PREFIX)
         for line in text.splitlines()

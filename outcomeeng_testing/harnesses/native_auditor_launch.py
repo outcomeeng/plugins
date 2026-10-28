@@ -28,7 +28,10 @@ from outcomeeng.distribution.native_auditor_dispatch import (
     NativeAuditorDispatchObservation,
     native_auditor_rows,
 )
-from outcomeeng_testing.harnesses.discovery_auth import CODEX_LOGIN_SUBCOMMAND
+from outcomeeng_testing.harnesses.discovery_auth import (
+    AUTH_FILENAME,
+    CODEX_LOGIN_SUBCOMMAND,
+)
 from outcomeeng_testing.harnesses.discovery_auth_cases import (
     NativeCall,
     NativeCredentialRunner,
@@ -84,6 +87,13 @@ class DispatchCall:
     environment: Mapping[str, str]
     state_files: Mapping[Path, bytes] = field(repr=False)
     """Bytes of every file under an `agents` or `fixture` directory of the row's state, keyed relative to it."""
+    saved_login: bytes | None = field(default=None, repr=False)
+    """Bytes the command's Codex home resolves its saved login to, when it holds one."""
+
+
+def _saved_login(home: Path) -> bytes | None:
+    login = home / AUTH_FILENAME
+    return login.read_bytes() if login.is_file() else None
 
 
 def _materialized_state(state_root: Path) -> dict[Path, bytes]:
@@ -119,7 +129,13 @@ class AuditorLaunchRunner:
             )
         home = Path(env[CODEX_HOME_ENV])
         self.calls.append(
-            DispatchCall(tuple(argv), home, dict(env), _materialized_state(home.parent))
+            DispatchCall(
+                tuple(argv),
+                home,
+                dict(env),
+                _materialized_state(home.parent),
+                _saved_login(home),
+            )
         )
         is_launch = any(set(launch) <= set(argv) for launch in self.launches)
         return subprocess.CompletedProcess(
@@ -145,6 +161,8 @@ class DispatchLaunchObservation:
     rows: tuple[DispatchRowLaunch, ...]
     environment: Mapping[str, str]
     """The ambient environment the run received, every strippable name planted."""
+    saved_login: bytes
+    """Bytes of the selected Codex authentication's saved login."""
 
 
 @dataclass(frozen=True)
@@ -194,6 +212,7 @@ def native_auditor_launch(
                 DispatchRowLaunch(row, _row_calls(row, runner.calls)) for row in rows
             ),
             environment,
+            credentials.initial.encode("utf-8"),
         )
 
 
