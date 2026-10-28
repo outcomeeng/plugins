@@ -11,7 +11,7 @@ CAN construct `[eval]` evidence through one portable lifecycle without embedding
 
 ## Assertions
 
-- ALWAYS: the product-tree plugin ships the generic eval specialist as the skill `/eval`, the skill `/verify` routes an evaluate assertion to
+- ALWAYS: the product-tree plugin ships the generic eval specialist as the skill `/eval`, the skill to which `/verify` routes an evaluate assertion
 
 ### Compliance
 

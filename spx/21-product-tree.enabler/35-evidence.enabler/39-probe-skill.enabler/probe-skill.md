@@ -11,7 +11,7 @@ CAN construct `[probe]` evidence through one portable lifecycle without conflati
 
 ## Assertions
 
-- ALWAYS: the product-tree plugin ships the probe specialist as the skill `/probe`, the skill `/verify` routes a probe assertion to
+- ALWAYS: the product-tree plugin ships the probe specialist as the skill `/probe`, the skill to which `/verify` routes a probe assertion
 - ALWAYS: `/probe` writes the probe protocol at `probes/{probe-slug}/probe.md` from the probe template and links every retained artifact of the attested run
 - ALWAYS: `/probe` records the Author's verdict and the inspectable artifacts of the executed protocol, and the verification run supplies the actor provenance
 - NEVER: `/probe` lets an attested result stand in for a deterministic or agentic verdict
