@@ -42,6 +42,7 @@ from outcomeeng_testing.harnesses.implementation_scope import (
     RENDER_COMMAND,
     REQUIRED_COVERAGE,
     SCOPE_IDENTITY_OPTION,
+    SCRATCH_DIR_OPTION,
     SENTINEL_SCOPE_IDENTITY,
     audit_scope_unit,
     feature_paths_repo,
@@ -106,7 +107,10 @@ def test_an_absent_audit_input_file_is_rejected_naming_the_path(
     absent = tmp_path / absent_name
     with stale_local_base_repo() as stale:
         completed = run_implementation_scope(
-            stale.repo, CHANGESET_SCOPE.HEAD_REF, audit_input_path=absent
+            stale.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            audit_input_path=absent,
+            scratch_dir=tmp_path,
         )
 
     assert completed.returncode == EXIT_COMMAND_FAILURE
@@ -118,15 +122,72 @@ def test_an_absent_audit_input_file_is_rejected_naming_the_path(
 def test_an_unreadable_audit_input_path_is_rejected_naming_the_path(
     tmp_path: pathlib.Path,
 ) -> None:
+    (directory_name,) = distinct_subject_paths(1)
+    unreadable = tmp_path / directory_name
+    unreadable.mkdir()
     with stale_local_base_repo() as stale:
         completed = run_implementation_scope(
-            stale.repo, CHANGESET_SCOPE.HEAD_REF, audit_input_path=tmp_path
+            stale.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            audit_input_path=unreadable,
+            scratch_dir=tmp_path,
         )
 
     assert completed.returncode == EXIT_COMMAND_FAILURE
     assert completed.stderr.startswith(ERROR_PREFIX)
-    assert str(tmp_path) in completed.stderr
+    assert str(unreadable) in completed.stderr
     assert not completed.stdout
+
+
+def test_an_audit_input_path_without_a_scratch_directory_is_rejected(
+    tmp_path: pathlib.Path,
+) -> None:
+    (name,) = distinct_subject_paths(1)
+    readable = tmp_path / name
+    readable.write_text(json.dumps({}), encoding="utf-8")
+    with stale_local_base_repo() as stale:
+        completed = run_implementation_scope(
+            stale.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            audit_input_path=readable,
+            without_scratch_dir=True,
+        )
+
+    assert completed.returncode == EXIT_COMMAND_FAILURE
+    assert completed.stderr.startswith(ERROR_PREFIX)
+    assert SCRATCH_DIR_OPTION in completed.stderr
+    assert not completed.stdout
+
+
+def test_an_audit_input_file_outside_the_scratch_directory_is_rejected(
+    tmp_path: pathlib.Path,
+) -> None:
+    scratch_name, outside_name, file_name = distinct_subject_paths(3)
+    scratch = tmp_path / scratch_name
+    scratch.mkdir()
+    outside = tmp_path / outside_name
+    outside.write_text(json.dumps({}), encoding="utf-8")
+    inside_link = scratch / file_name
+    inside_link.symlink_to(outside)
+    with stale_local_base_repo() as stale:
+        direct = run_implementation_scope(
+            stale.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            audit_input_path=outside,
+            scratch_dir=scratch,
+        )
+        through_link = run_implementation_scope(
+            stale.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            audit_input_path=inside_link,
+            scratch_dir=scratch,
+        )
+
+    for completed, named in ((direct, outside), (through_link, inside_link)):
+        assert completed.returncode == EXIT_COMMAND_FAILURE
+        assert completed.stderr.startswith(ERROR_PREFIX)
+        assert str(named) in completed.stderr
+        assert not completed.stdout
 
 
 def test_json_text_passed_as_the_audit_input_value_is_rejected_without_a_payload() -> (

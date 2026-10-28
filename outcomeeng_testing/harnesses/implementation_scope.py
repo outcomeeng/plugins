@@ -64,6 +64,7 @@ RENDER_COMMAND = cast(str, _MODULE["RENDER_COMMAND"])
 SCOPE_OPTION = cast(str, _MODULE["SCOPE_OPTION"])
 LIVE_PATHS_KEY = cast(str, _MODULE["LIVE_PATHS_KEY"])
 AUDIT_INPUT_OPTION = cast(str, _MODULE["AUDIT_INPUT_OPTION"])
+SCRATCH_DIR_OPTION = cast(str, _MODULE["SCRATCH_DIR_OPTION"])
 # The file name is the harness's own scratch handle for the document it writes.
 AUDIT_INPUT_FILE_NAME = "audit-input.json"
 # Handles for a run that was never started: any well-formed token no run has,
@@ -283,6 +284,8 @@ def run_implementation_scope(
     reconcile_run: str | None = None,
     scope_identity: str | None = None,
     output_path: pathlib.Path | None = None,
+    scratch_dir: pathlib.Path | None = None,
+    without_scratch_dir: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     """Capture the real CLI result while keeping cwd separate from --repo.
 
@@ -291,7 +294,9 @@ def run_implementation_scope(
     to the resolver. ``audit_input_path`` names a path directly, so a test can
     supply a path that holds no readable document. ``audit_input_value`` is
     passed verbatim as the option's value, so a test can supply text where the
-    resolver expects a path.
+    resolver expects a path. ``scratch_dir`` names the directory the resolver
+    confines the audit-input path to; it defaults to the harness's own scratch
+    directory, and ``without_scratch_dir`` omits the option altogether.
     """
     if (
         sum(
@@ -313,6 +318,12 @@ def run_implementation_scope(
         audit_input_argv = (
             () if option_value is None else (AUDIT_INPUT_OPTION, option_value)
         )
+        confining_directory = scratch if scratch_dir is None else scratch_dir
+        scratch_argv = (
+            ()
+            if without_scratch_dir or option_value is None
+            else (SCRATCH_DIR_OPTION, str(confining_directory))
+        )
         reconcile_argv = (
             () if reconcile_run is None else ("--reconcile-run", reconcile_run)
         )
@@ -326,6 +337,7 @@ def run_implementation_scope(
                 "--repo",
                 str(repo if repo_override is None else repo_override),
                 *audit_input_argv,
+                *scratch_argv,
                 *reconcile_argv,
                 *output_argv,
             ),
