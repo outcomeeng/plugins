@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.109.8
+
+### Changed
+
+- **The review prompt gives an unchanged subject one `evidence` verdict across heads and counts a stale eval `history.jsonl` no defect.** `review-changes` fixes the criteria of the `evidence` concern to the unit text and its governing context, so an earlier head's verdict and any other review's outcome decide nothing, and two passes over an unchanged subject at any head raise the same `evidence` finding or none. A review raises no finding on the sole ground that an eval's `history.jsonl` records a run on an earlier commit than the head, because evals run in CI only on an operator's dispatch and the file is a trend record the changeset does not owe. Before this change, the prompt fixed no such criteria, so reviews of one unchanged subject on different heads could judge it oppositely and one could cite a stale history file as the defect.
+
 ## 0.109.7
 
 ### Fixed
