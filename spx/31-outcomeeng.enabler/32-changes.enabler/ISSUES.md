@@ -234,3 +234,19 @@ Evidence: `product-tree:spec-auditor` launch 2 on `spx/31-outcomeeng.enabler/32-
 Impact: a later spec audit of the node raises the finding again, and the five assertions key no audit result in a status claim until each carries a slug.
 
 Revisit and settlement condition: each of the five assertions carries `[audit:{rule-slug}]` with a slug unique within the spec, and one spec audit of the node raises no `invalid-tag` finding.
+
+## DEBT [performance]: the audit-change runner reads and hashes the whole candidate on every read-candidate call
+
+Defect class: `performance`.
+
+Entry key: `src/plugins/product-tree/skills/audit-change/scripts/audit_change_run.py`, unit `read-candidate`, rule `performance`.
+
+Finding: `_read_candidate` in `src/plugins/product-tree/skills/audit-change/scripts/audit_change_run.py` reads and UTF-8 decodes the entire candidate through `_live_content`, and `_candidate_piece` hashes it again, on every `read-candidate` request. A candidate that needs k pieces takes k full reads, decodes, and SHA-256 hashes, so the total cost of reading it grows with the square of its length divided by the 16,000-character piece limit.
+
+Evidence: the CI review of [PR 721](https://github.com/outcomeeng/plugins/pull/721#issuecomment-6473968952) on head `fdb5018b7bddfa0cd36d8b83d6765448511a28c6` raised it as a `DEBT` finding under the performance concern, against the `read-candidate` operation of the runner.
+
+Reason it stays: the Properties assertion for `read-candidate` in [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) states that each piece carries the candidate's `sha256` and `length`, and the `read-candidate-whole-judgment` assertion has the auditor block when a piece reports another `sha256`. The runner holds no state between requests and writes no file, so each request recomputes both values from the whole candidate. A bound on the cost to the piece changes the request and response fields of that contract, which governing Change outcomeeng/changes#852 states in exact text, and [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) returns a valid finding on such text `filed`.
+
+Impact: each request costs one read, one decode, and one hash of the whole candidate. A record of 61.8KB takes four requests.
+
+Revisit and settlement condition: a Change amends the piece contract so that a request after the first carries what the first piece returned, the runner reads only the byte range of the requested piece, a linked case asserts that the read and hash cost of a piece does not grow with the candidate's length, and one CI review raises no `performance` finding against the `read-candidate` operation.
