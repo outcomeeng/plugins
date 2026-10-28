@@ -41,9 +41,7 @@ A Role does not identify a subagent definition. A configured Verifier names a su
 
 **Refiner.** The role of the Change's holder during refinement. The agent session in conversation with the operator holds it, realized by loading into that conversation the refinement skills the Change's Maturity routes to; the role is never dispatched as a subagent and never loaded from an agent definition.
 
-**Applier.** The role of the Change's holder during application. The Applier takes a Leaf's `## Governance mutations` blocks and then its `## Spec mutations` blocks, each in record order, delegates production and verification, integrates the changeset, and escalates a reopened product or architecture judgment to the operator. The Applier produces no artifact.
-
-A mechanical repair fixes a finding and changes no behavior or decision: a path or link, a typo, a wording the finding states, or a renamed identifier. A mechanical repair never covers decision-record text. The Applier makes it directly, with no Fixer round, and every other repair goes to a Fixer.
+**Applier.** The role of the Change's holder during application. The Applier takes a Leaf's `## Governance mutations` blocks and then its `## Spec mutations` blocks, each in record order, delegates production and verification, integrates the changeset, and escalates a reopened product or architecture judgment to the operator. The Applier produces no artifact other than a mechanical repair. A mechanical repair fixes a finding and changes no behavior or decision: a path or link, a typo, a wording the finding states, or a renamed identifier. A mechanical repair never covers decision-record text. The Applier makes it directly, with no Fixer round, and every other repair goes to a Fixer.
 
 **Author.** The role held by the agent session that produces the artifacts of one round: decisions, specs, verification artifacts, or implementation.
 
