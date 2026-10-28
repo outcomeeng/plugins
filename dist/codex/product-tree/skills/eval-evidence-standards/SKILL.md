@@ -7,7 +7,7 @@ allowed-tools: Read
 ---
 
 <objective>
-The shared eval-evidence standards that keep an `[eval]` suite coupled to the real producer, its expected verdicts outside the model-facing task, and its run evidence current, so eval authoring and eval-evidence auditing judge one definition of sound evidence.
+The shared eval-evidence standards for an `[eval]` suite: five ordered properties — producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence — that define sound eval evidence.
 </objective>
 
 <repo_local_overlay>
@@ -43,3 +43,12 @@ A suite lacking any property has no evidentiary value for the assertion it claim
 Derive case inputs from the assertion and the scenario's real-world shape, never from the producer's own text or its prior output. A case whose input was copied from the producer cannot disagree with it.
 
 </case_provenance>
+
+<success_criteria>
+
+- A judgment against these standards evaluates the five properties in the stated order and names each property a suite lacks.
+- A suite counts as evidence for its assertion only when it holds all five properties.
+- Every case input traces to the assertion and the scenario's real-world shape, never to the producer's text or output.
+- The repo-local overlay, when present, is read after this reference and weakens no property.
+
+</success_criteria>
