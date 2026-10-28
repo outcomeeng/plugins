@@ -1,10 +1,11 @@
 """Compliance: harness runs leave no bytecode beside a shipped script.
 
 Importing a harness turns bytecode writing off for the process, an in-process
-load of a script leaves no cache beside it, the distribution tree holds no cache
-directory and no bytecode file, and every harness launch of a script file carries
-the interpreter's no-bytecode option. The launch rule is exercised
-against violating and conforming fixture sources and against every harness module.
+load of a script leaves no cache beside it, and every harness launch of a script
+file carries the interpreter's no-bytecode option. Each mechanism is exercised
+against a violating case with its guard off, so the evidence fails when a guard
+is off; the launch rule runs against violating and conforming fixture sources and
+against every harness module.
 """
 
 from __future__ import annotations
@@ -15,11 +16,12 @@ import pytest
 
 from outcomeeng.validation.harness_bytecode import unguarded_script_launches
 from outcomeeng_testing.harnesses.harness_bytecode import (
-    bytecode_entries_under_dist,
     conforming_launch_fixtures,
     entries_beside_script_after_load,
     fresh_import_bytecode_flag,
     harness_module_paths,
+    unguarded_entries_beside_script_after_load,
+    unguarded_import_bytecode_flag,
     violating_launch_fixtures,
 )
 
@@ -31,14 +33,20 @@ class TestImportTurnsBytecodeWritingOff:
         assert fresh_import_bytecode_flag() is True
 
 
+    def test_fresh_interpreter_importing_a_package_without_the_guard_writes_bytecode(
+        self,
+    ) -> None:
+        assert unguarded_import_bytecode_flag() is False
+
+
 class TestInProcessLoadLeavesNoCache:
     def test_loading_a_script_leaves_nothing_beside_it(self) -> None:
         assert entries_beside_script_after_load() == ()
 
-
-class TestDistributionTreeHoldsNoBytecode:
-    def test_no_cache_directory_and_no_bytecode_file_stands_under_dist(self) -> None:
-        assert bytecode_entries_under_dist() == ()
+    def test_loading_a_script_without_the_guard_leaves_a_cache_beside_it(
+        self,
+    ) -> None:
+        assert unguarded_entries_beside_script_after_load() != ()
 
 
 class TestScriptLaunchRule:

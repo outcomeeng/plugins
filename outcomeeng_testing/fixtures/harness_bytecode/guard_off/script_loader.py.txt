@@ -1,0 +1,11 @@
+"""A script loader that executes the module with bytecode writing as found."""
+
+import importlib.util
+from pathlib import Path
+
+
+def load(name: str, path: Path) -> None:
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)

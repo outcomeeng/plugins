@@ -1,0 +1,1 @@
+"""A harness package whose import leaves the interpreter's bytecode writing as found."""
