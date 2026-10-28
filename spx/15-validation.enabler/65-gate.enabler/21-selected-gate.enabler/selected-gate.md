@@ -6,8 +6,6 @@ CAN run the deterministic gate steps that prove the current slice without spendi
 
 ## Assertions
 
-- For a changeset whose every changed path a Markdown lane in `spx/local/merging.md` covers, every step the selected gate selects maps to a declared Markdown lane that runs it
-
 ### Mappings
 
 - Changed repository paths map to a deterministic ordered subset of source-owned validation steps, with each selected step carrying a human-readable reason for inclusion: a Markdown or spec path selects the formatting check and the spx Markdown validation with the Markdown reason; a workflow or shell path selects actionlint and ShellCheck with the workflow reason; a Python path selects ruff format and ruff check, and a path of an importable product package also selects mypy and pyright, each with the Python reason; a plugin skill, shared fragment, or generated runtime path selects the steps the gate names as its skill surface with the skill reason; an instruction-block source path selects the instruction-block diff with the instruction-block reason; an eval prompt path selects the eval-prompt check with the eval reason; and a Product Tree path selects the evidence-link check with the evidence-link reason ([test](tests/test_selected_gate.mapping.l1.py))
@@ -22,6 +20,7 @@ CAN run the deterministic gate steps that prove the current slice without spendi
 
 ### Properties
 
+- For a changeset whose every changed path a Markdown lane in `spx/local/merging.md` covers, every step the selected gate selects maps to a declared Markdown lane that runs it ([test](tests/test_markdown_lane_coverage.property.l1.py))
 - Gate selection is deterministic for any ordering or duplication of the same changed-path set ([test](tests/test_selected_gate.property.l1.py))
 - For any set of changed test files drawn across every execution level, the planned pytest step targets exactly the files other than L3 tests, and no pytest step is planned when every file is an L3 test ([test](tests/test_selected_gate.property.l1.py))
 - For any chain of test-infrastructure modules in which each imports the next and an executed test imports the first, every module in the chain reaches that test ([test](tests/test_infrastructure_index.property.l1.py))
