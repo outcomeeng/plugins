@@ -65,11 +65,11 @@ result.
 head `843ddd709b058970d414ec755cc10121ff6bb5ff`. The same audit approved the
 corrected least-privilege tool and profile configuration.
 
-## The shipped coherence audit, its wrapper and its eval still produce the structured JSON verdict
+## The coherence eval suite still scores the structured JSON verdict
 
-The assertions state the sealed-run verdict model: the audit run's terminal status is `approved` or `rejected`, an undecidable unit is `incomplete`, and the wrapper relays the run token, the run file and the rendered projection. The shipped `audit-changeset-coherence` skill, the `changeset-coherence-auditor` wrapper and the `evals/coherence-verdict` suite still produce and score the `APPROVED`, `REJECTED` and `UNKNOWN` JSON verdict, so the `[eval]` expectations and the `[audit]` wrapper assertion describe behavior the shipped producer does not yet have.
+The assertions state the sealed-run verdict model: the audit run's terminal status is `approved` or `rejected`, an undecidable unit is `incomplete`, and the wrapper relays the run token, the run file and the rendered projection. The shipped `audit-changeset-coherence` skill and the `changeset-coherence-auditor` wrapper seal and relay that run. The `evals/coherence-verdict` suite, its `cases.jsonl` expectations and its generated `prompt.md` still carry the `APPROVED`, `REJECTED` and `UNKNOWN` JSON verdict, so the `[eval]` assertions score a result shape the shipped producer no longer returns.
 
-**Settlement condition.** outcomeeng/changes#513 rewrites the skill and wrapper onto one `spx verification run` over the exact committed scope and migrates the producer-coupled eval expectations, under an unchanged semantic verdict model.
+**Settlement condition.** The `evals/coherence-verdict` case expectations score the sealed run's terminal status, review-unit children and finding evidence, with the prompt regenerated from the shipped producer, under an unchanged semantic verdict model.
 
 ## The compliance section holds eleven assertions
 
