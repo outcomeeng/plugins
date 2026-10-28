@@ -40,6 +40,7 @@ from itertools import islice
 from tempfile import TemporaryDirectory
 from types import ModuleType
 
+from outcomeeng.distribution.shipped_scripts import NO_BYTECODE_OPTION
 from outcomeeng_testing.generators.changeset_scope import (
     ChangesetScopeCase,
     RemediationCase,
@@ -659,7 +660,7 @@ def run_merge_classifier(
 ) -> subprocess.CompletedProcess[str]:
     """Run a merge classifier script and return its observable process result."""
     return subprocess.run(
-        (sys.executable, str(script)),
+        (sys.executable, NO_BYTECODE_OPTION, str(script)),
         cwd=repo,
         env=None if env is None else dict(env),
         text=True,
@@ -676,7 +677,7 @@ def _run_scope_cli(
     repo_override: pathlib.Path | None,
 ) -> subprocess.CompletedProcess[str]:
     """Capture one shipped scope command without interpreting its result."""
-    argv = [sys.executable, str(script), scope]
+    argv = [sys.executable, NO_BYTECODE_OPTION, str(script), scope]
     if repo_override is not None:
         argv.extend(("--repo", str(repo_override)))
     return subprocess.run(

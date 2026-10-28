@@ -34,6 +34,7 @@ from typing import Final
 
 from hypothesis import given, seed, settings
 
+from outcomeeng.distribution.shipped_scripts import NO_BYTECODE_OPTION
 from outcomeeng_testing.generators.link_conversion import (
     GeneratedTree,
     link_conversion_trees,
@@ -153,7 +154,13 @@ def convert_product_root(root: Path, *paths: str) -> ConversionObservation:
     """
     fields = load_link_conversion_module().ResultField
     completed = subprocess.run(  # noqa: S603 — argv is the script's own command contract.
-        [sys.executable, str(CONVERSION_SCRIPT_PATH), str(root), *paths],
+        [
+            sys.executable,
+            NO_BYTECODE_OPTION,
+            str(CONVERSION_SCRIPT_PATH),
+            str(root),
+            *paths,
+        ],
         capture_output=True,
         text=True,
         check=False,

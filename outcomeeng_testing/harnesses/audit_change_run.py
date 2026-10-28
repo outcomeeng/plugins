@@ -65,6 +65,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     implementation_audit_provenance,
     implementation_audit_scope_payload,
 )
+from outcomeeng.distribution.shipped_scripts import NO_BYTECODE_OPTION
 from outcomeeng_testing.generators.audit_change_run import (
     malformed_request_objects,
     rule_identifiers,
@@ -468,7 +469,13 @@ class AuditWorkspace:
         handle, report = mkstemp(dir=self.observation_directory, suffix=_REPORT_SUFFIX)
         os.close(handle)
         completed = subprocess.run(  # noqa: S603
-            [sys.executable, str(OBSERVER_SCRIPT), str(RUNNER_SCRIPT), report],
+            [
+                sys.executable,
+                NO_BYTECODE_OPTION,
+                str(OBSERVER_SCRIPT),
+                str(RUNNER_SCRIPT),
+                report,
+            ],
             cwd=self.root if launched_from is None else launched_from,
             env=self._environment(),
             input=request_bytes,

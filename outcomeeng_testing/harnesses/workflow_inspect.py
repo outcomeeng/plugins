@@ -23,6 +23,7 @@ from typing import Any, Final, Protocol, cast
 from hypothesis import given, seed, settings
 from hypothesis.strategies import SearchStrategy
 
+from outcomeeng.distribution.shipped_scripts import NO_BYTECODE_OPTION
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
@@ -143,7 +144,7 @@ def run_real_runner(command: tuple[str, ...] | list[str]) -> tuple[int, str, str
 def run_script_process(args: list[str]) -> ProcessObservation:
     """Run the script as a real ``python3`` subprocess."""
     proc = subprocess.run(
-        [sys.executable, str(SCRIPT_PATH), *args],
+        [sys.executable, NO_BYTECODE_OPTION, str(SCRIPT_PATH), *args],
         capture_output=True,
         text=True,
         stdin=subprocess.DEVNULL,

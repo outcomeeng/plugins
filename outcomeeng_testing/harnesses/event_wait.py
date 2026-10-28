@@ -24,7 +24,10 @@ from typing import Any, Literal, cast
 
 from hypothesis import given, seed, settings
 
-from outcomeeng.distribution.shipped_scripts import load_shipped_module
+from outcomeeng.distribution.shipped_scripts import (
+    NO_BYTECODE_OPTION,
+    load_shipped_module,
+)
 from outcomeeng_testing.generators.event_wait import (
     MailReading,
     PaneReading,
@@ -698,7 +701,7 @@ def real_quiet_run() -> RealRunObservation:
         with wait_workspace() as workspace:
             started = time.monotonic()
             process = subprocess.Popen(
-                [sys.executable, str(WAIT_EVENT_PATH)],
+                [sys.executable, NO_BYTECODE_OPTION, str(WAIT_EVENT_PATH)],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,

@@ -18,7 +18,10 @@ from types import ModuleType
 from typing import Any, Literal, cast
 
 from outcomeeng.distribution.contracts import DIST_DIR_NAME, SKILLS_SUBDIR_NAME, Target
-from outcomeeng.distribution.shipped_scripts import load_shipped_module
+from outcomeeng.distribution.shipped_scripts import (
+    NO_BYTECODE_OPTION,
+    load_shipped_module,
+)
 from outcomeeng.validation.audit_artifacts import IMPLEMENTATION_AUDIT_SCOPE_ENTRYPOINT
 from outcomeeng.validation.implementation_audit_contract import (
     IMPLEMENTATION_AUDIT_SKILL_NAME,
@@ -332,6 +335,7 @@ def run_implementation_scope(
         return subprocess.run(
             (
                 sys.executable,
+                NO_BYTECODE_OPTION,
                 str(SCRIPT_PATH),
                 selector,
                 "--repo",

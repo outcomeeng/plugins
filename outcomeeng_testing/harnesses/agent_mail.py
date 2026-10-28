@@ -21,6 +21,7 @@ from typing import Protocol, cast
 from hypothesis import assume, given, seed, settings
 from hypothesis import strategies as st
 
+from outcomeeng.distribution.shipped_scripts import NO_BYTECODE_OPTION
 from outcomeeng_testing.generators.agent_mail import (
     COMMON_DIR_EXACT,
     COMMON_DIR_SHAPES,
@@ -1353,6 +1354,7 @@ def run_cli_project_key(
     completed = subprocess.run(
         [
             sys.executable,
+            NO_BYTECODE_OPTION,
             str(AGENT_MAIL_PATH),
             module.CliOperation.PROJECT_KEY,
             *repository_arguments,
@@ -1600,7 +1602,12 @@ def run_cli_with_only_adapter_programs(
             )
             stub.chmod(0o755)
         completed = subprocess.run(
-            [sys.executable, str(AGENT_MAIL_PATH), module.CliOperation.RUN],
+            [
+                sys.executable,
+                NO_BYTECODE_OPTION,
+                str(AGENT_MAIL_PATH),
+                module.CliOperation.RUN,
+            ],
             input=json.dumps(request),
             env={"PATH": str(stub_path)},
             cwd=ROOT,
@@ -1674,7 +1681,12 @@ def run_cli_without_executables(
     module = _load()
     with TemporaryDirectory() as empty_path:
         completed = subprocess.run(
-            [sys.executable, str(AGENT_MAIL_PATH), module.CliOperation.RUN],
+            [
+                sys.executable,
+                NO_BYTECODE_OPTION,
+                str(AGENT_MAIL_PATH),
+                module.CliOperation.RUN,
+            ],
             input=json.dumps(request),
             env={
                 "PATH": empty_path,
@@ -2173,6 +2185,7 @@ def run_cli_project_key_recording_opens(
         completed = subprocess.run(
             [
                 sys.executable,
+                NO_BYTECODE_OPTION,
                 "-c",
                 OPEN_AUDIT_SOURCE,
                 str(AGENT_MAIL_PATH),

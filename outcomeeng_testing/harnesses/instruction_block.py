@@ -41,7 +41,10 @@ from typing import Final, cast
 from hypothesis import given, seed, settings
 
 from outcomeeng.distribution import instruction_block as distribution
-from outcomeeng.distribution.shipped_scripts import load_shipped_module
+from outcomeeng.distribution.shipped_scripts import (
+    NO_BYTECODE_OPTION,
+    load_shipped_module,
+)
 from outcomeeng_testing.generators.instruction_block import (
     DelegationCandidateCase,
     InstructionBlockCases,
@@ -447,7 +450,15 @@ def run_script_with_agent_tokens_file(
     )
     stage_agent_tokens_file(scripts_dir, tokens=tokens, make_directory=make_directory)
     return subprocess.run(
-        [sys.executable, "-I", str(script), "--check", "--template", str(script)],
+        [
+            sys.executable,
+            "-I",
+            NO_BYTECODE_OPTION,
+            str(script),
+            "--check",
+            "--template",
+            str(script),
+        ],
         capture_output=True,
         text=True,
         check=False,

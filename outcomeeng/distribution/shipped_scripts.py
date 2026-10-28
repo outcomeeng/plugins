@@ -11,6 +11,9 @@ import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType
+from typing import Final
+
+NO_BYTECODE_OPTION: Final = "-B"
 
 
 def load_shipped_module(name: str, path: Path) -> ModuleType:

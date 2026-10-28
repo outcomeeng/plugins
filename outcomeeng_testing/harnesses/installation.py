@@ -159,6 +159,7 @@ from outcomeeng.distribution.installation import (
     marketplace_plugin_identifier,
     marketplace_plugin_name,
 )
+from outcomeeng.distribution.shipped_scripts import NO_BYTECODE_OPTION
 from outcomeeng_testing.generators.installation import (
     MigrationActivation,
     foreign_marketplace_name,
@@ -644,7 +645,12 @@ class PluginLifecycleHarness:
         )
 
     def run(self, *, check: bool = False) -> PluginLifecycleRun:
-        argv = [sys.executable, str(self.script_path), *self.arguments(check=check)]
+        argv = [
+            sys.executable,
+            NO_BYTECODE_OPTION,
+            str(self.script_path),
+            *self.arguments(check=check),
+        ]
         result = subprocess.run(
             argv,
             cwd=self.checkout,
