@@ -29,8 +29,8 @@ The skills-about-skills cluster is three peers with distinct roles:
 - ALWAYS: `/audit-skill` compares the runner contract a SKILL.md states with the bundled script it names and records a finding under that catalog rule when the two disagree ([audit])
 - ALWAYS: `/audit-skill` rejects only on touched text inside each changed file, and returns each other finding as `filed`, per [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) ([audit])
 - ALWAYS: `/author-skill`'s repair workflow repairs each supplied finding across every instance the cited clause covers and nothing the clause does not require, checks every same-class site and every dependency the repair changes before it returns the repaired bundle, and returns with the bundle, for each repair, the clause it applies and the check that shows the class closed ([audit])
-- ALWAYS: `/audit-skill` and the auditor template of `/author-skill` resolve the repository root from the directory that holds the audited skill target, whatever the session's working directory, and keep the containment check of the target against the root they resolved, so a skill audit of a target in another worktree seals its run ([audit])
-- ALWAYS: a skill target in another worktree reaches `/audit-skill` as an absolute path, so the task message stays the target alone ([audit])
+- ALWAYS: `/audit-skill` and the auditor template of `/author-skill` resolve the repository root from the directory that holds the audited skill target, whatever the session's working directory, and keep the containment check of the target against the root they resolved, so a skill audit of a target in another worktree seals its run ([audit:skill-audit-repository-root])
+- ALWAYS: a skill target in another worktree reaches `/audit-skill` as an absolute path, so the task message stays the target alone ([audit:skill-audit-absolute-target])
 
 - ALWAYS: skill-authoring and audit guidance forbids model and reasoning
   overrides in skill frontmatter; a skill retains its invoking agent session's
