@@ -1,6 +1,6 @@
 # Verification
 
-This product adopts the verification taxonomy declared in the inline `/understand` `<verification_model>`: six types — validate, test, evaluate, probe, audit, review — across two orthogonal axes, verdict mode (Deterministic, Agentic, Attested) and purpose (conformance / correctness). Four types back the tag an assertion carries: `[test]` by test, `[eval]` by evaluate, `[probe]` by probe, `[audit:{rule-slug}]` by audit.
+This product adopts the verification taxonomy declared in the inline `/understand` `<verification_model>`: six types — validate, test, evaluate, probe, audit, review — across two orthogonal axes, verdict mode (Deterministic, Agentic, Attested) and purpose (conformance / correctness). Four types back the tag an assertion carries: `[test]` by test, `[eval]` by evaluate, `[probe]` by probe, `[audit]` by audit.
 
 ## Rationale
 
@@ -29,8 +29,8 @@ An output node declares its **malleability** — `spec`, `verification`, or `imp
 
 ## Product properties
 
-1. Verification is the six marketplace types — validate, test, evaluate, probe, audit, review — across two axes, verdict mode and purpose. Four back the tag an assertion carries: `[test]` by test, `[eval]` by evaluate, `[probe]` by probe, `[audit:{rule-slug}]` by audit.
-2. Each path-bearing evidence link resolves to its target — a `[test]` link to an executable test, an `[eval]` link to an eval definition, a `[probe]` link to a probe protocol — and the `[audit:{rule-slug}]` tag carries the rule slug that keys its result and no path.
+1. Verification is the six marketplace types — validate, test, evaluate, probe, audit, review — across two axes, verdict mode and purpose. Four back the tag an assertion carries: `[test]` by test, `[eval]` by evaluate, `[probe]` by probe, `[audit]` by audit.
+2. Each path-bearing evidence link resolves to its target — a `[test]` link to an executable test, an `[eval]` link to an eval definition, a `[probe]` link to a probe protocol — and the `[audit]` tag carries no slug and no path: the leading slug of the Assertion or decision that carries it is its one name, and the status claim keys the audit result by that slug.
 3. Every audit and review starts in a Verifier's agent session without the Author's conversation, reasoning, summaries, or suggested verdict. A separate session alone does not establish isolation when it inherits authoring history. The calling skill selects the exact configured role and supplies only the target; the Verifier independently discovers evidence from that target and its configured instructions. Accepted requirements are persisted in decisions and specs before verification, so the Verifier reads them independently. The Author never grades its own work in place. A Verifier isolated from Author context may compose further verification within its configured workflow.
 4. The agent owns all six verification types and runs each applicable one locally, over the changeset, before any external or CI review.
 5. Validate and test run over the changeset locally and over the CI scope in CI; evaluate runs over the changeset locally and in CI only on operator dispatch; agentic verification (review, audit) runs over the changeset both locally and in CI; attested verification (probe) runs over the changeset locally, and CI checks its pins, per the Scope table.
@@ -48,6 +48,9 @@ An output node declares its **malleability** — `spec`, `verification`, or `imp
 17. A Fixer runs in an agent session of its own and receives exactly two inputs: the rejected run's sealed run file, unchanged, and the instruction "attend to every rule the run names and sweep each named class across the whole target". No session adds a summary, a remedy, a class name, or any other interpretation of the findings.
 
 ## Verification
+
+- audit-tag-form: ALWAYS an `[audit]` tag carries no slug and no path; the leading slug of the Assertion or decision that carries it is its one name.
+- audit-result-key: ALWAYS the status claim keys an audit result by the leading slug of the Assertion or decision judged, unique within its file.
 
 ### Audit
 
