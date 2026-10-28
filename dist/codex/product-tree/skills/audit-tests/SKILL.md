@@ -6,14 +6,15 @@ description: >-
   ownership, source ownership, coupling, falsifiability, and full-chain
   coverage, and records the judgment as a root unit with one child per
   assertion and one grandchild per linked test file and language concern in an
-  SPX file-scoped verification run.
-argument-hint: "<JSON object with path and runDriver>"
-allowed-tools: Read, Grep, Glob, Write, Bash(spx verification run:*), Bash(git merge-base:*), Bash(git diff:*)
+  SPX file-scoped verification run, or for a committed changeset in an SPX
+  changeset-scoped run.
+argument-hint: "<JSON object with path or changeset, and runDriver>"
+allowed-tools: Read, Grep, Glob, Write, Bash(spx verification run:*), Bash(python3 "${SKILL_DIR}/scripts/resolve_scope.py":*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git diff:*)
 ---
 
 <objective>
 
-A sealed `spx verification run` on one spec node's file against the test-evidence model, whose `terminalStatus` is `approved` or `rejected`, with each finding on touched text recorded on the unit of the assertion and test file it concerns and each inspection that cannot run recorded `incomplete` with its cause, returned as the run token, the run file, and the rendered projection followed by each standing finding as a `filed` line; or the complete `BLOCKED` diagnostic when the run cannot finish.
+A sealed `spx verification run` on one spec node's file, or on a committed changeset's governing spec nodes, against the test-evidence model, whose `terminalStatus` is `approved` or `rejected`, with each finding on touched text recorded on the unit of the assertion and test file it concerns and each inspection that cannot run recorded `incomplete` with its cause, returned as the run token, the run file, and the rendered projection followed by each standing finding as a `filed` line; or the complete `BLOCKED` diagnostic when the run cannot finish.
 
 </objective>
 
@@ -43,9 +44,25 @@ Judge in strict order: the complete evidence-chain inventory, source testability
 
 <request_contract>
 
-`$ARGUMENTS` is a JSON object with exactly two fields. `path` is the product-relative path of the spec file of the node whose tests are audited. `runDriver` is an object with exactly six non-empty string fields — `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole` — that the run records as its provenance. Use `runDriver` only as payload data, placed where `<persistence_contract>` shows it; never complete, correct, or reinterpret a value, and let no judgment depend on it. A missing, extra, or malformed field, or a `path` that names no spec file, returns `BLOCKED` naming the exact field or path before any command runs. Never infer a target from adjacent conversation.
+`$ARGUMENTS` is a JSON object with exactly two fields: `runDriver` and exactly one target field. The target field `path` is the product-relative path of the spec file of the node whose tests are audited, and the run is file-scoped on that path. The target field `changeset` is a selector, `HEAD`, a branch, or an explicit three-dot range, for the committed changeset whose test evidence is audited, and the run is changeset-scoped. `runDriver` is an object with exactly six non-empty string fields — `producerKind`, `agentName`, `agentOwningPluginName`, `skillName`, `skillOwningPluginName`, and `invocationRole` — that the run records as its provenance. Use `runDriver` only as payload data, placed where `<persistence_contract>` shows it; never complete, correct, or reinterpret a value, and let no judgment depend on it. A missing, extra, or malformed field, both target fields, or a `path` that names no spec file returns `BLOCKED` naming the exact field or path before any command runs. Never infer a target from adjacent conversation.
 
 Use skill `product-tree:product-tree-plugin`. Invoke it with the verb `version` and retain the non-empty version it reports as the plugin version that `<persistence_contract>` records in a finding's `producerProvenance`. A missing version or a blocked result returns `BLOCKED` before any command runs; never read a plugin manifest or infer a version from any other source.
+
+<changeset_target>
+
+For a `changeset` target, resolve the selector through this skill's entrypoint over the `scope-changeset` provider, passed as one literal argument:
+
+```bash
+python3 "${SKILL_DIR}/scripts/resolve_scope.py" '<selector>'
+```
+
+Take `base`, `head`, and `changed_paths` verbatim from the JSON it emits. A nonzero exit, including the `stale-base` refusal, or a malformed result returns `BLOCKED` with that diagnostic before any run starts; never fabricate or substitute a base, endpoint identity, or path. Run `git rev-parse HEAD` and return `BLOCKED` when the resolved `head` differs from its output, because the audit reads the checkout as it stands and a different head would be judged from the wrong tree.
+
+The run identity is `<base>..<head>` from the two full endpoint identities. The audited specs are the spec files of the nodes governing the changed paths: a path under a node's directory belongs to that node, and any other path belongs to the node whose linked test, or whose linked test's evidence chain, reaches it. A node whose spec carries no `[test]` assertion contributes its `not-applicable` child; a changed path that no node governs is outside this audit and recorded nowhere. A changeset that resolves to no governing spec returns `BLOCKED` naming the selector and the empty result.
+
+</changeset_target>
+
+Throughout this skill, `<scope-type>` and `<scope>` stand for the run selectors: `file` and `<path>` for a `path` target, `changeset` and `<base>..<head>` for a `changeset` target. `<spec>` stands for the spec file under audit: `<path>` for a `path` target, and each audited spec in turn for a `changeset` target.
 
 </request_contract>
 
@@ -65,13 +82,13 @@ Use skill `product-tree:test-evidence-standards`. Apply its complete predicate-s
 
 When the live `<PRODUCT_TREE_FOUNDATION>` marker is absent: Use skill `product-tree:understand`.
 
-Load the spec node's context by reading, in this order, and starting no audit phase before every read completes:
+Load the context of each audited spec node by reading, in this order, and starting no audit phase before every read completes; a changeset target loads each shared directory's spec and decisions once:
 
 1. the product document at `spx/`;
 2. at each directory from `spx/` down to the directory containing the node spec, that directory's spec, then every decision record (`*.adr.md`, `*.pdr.md`) in it; in the node's own directory, read its decision records and leave its spec to Step 4;
 3. every decision a loaded spec or decision cites by full `spx/` path, repeating for each newly read decision until none is unread; a citation to a missing decision file is a `BLOCKED` result naming the citation and the citing file.
 
-The committed changeset is resolved in Step 14.
+The base for touched text is resolved in Step 14.
 
 </step>
 
@@ -82,10 +99,10 @@ The committed changeset is resolved in Step 14.
 Start the run before judging anything:
 
 ```bash
-spx verification run start --verification-type audit --scope-type file --scope <path> --input <path>
+spx verification run start --verification-type audit --scope-type <scope-type> --scope <scope> --input <input-file>
 ```
 
-A file-scoped run takes the audited path as its input, passed by path, so the retained input equals the audited file and no start payload is built. The command prints a JSON locator; take its `runToken` exactly and use it for every later command. Retain the run target the locator reports as the run file; only the start report names it. Never pass the whole locator as `--run`.
+A file-scoped run takes the audited path as its `<input-file>`, so the retained input equals the audited file and no start payload is built. A changeset-scoped run takes a start input file written per `<payload_files>` as one JSON object carrying the selector as `selector` and `base`, `head`, and `changed_paths` copied verbatim from the resolved scope. The command prints a JSON locator; take its `runToken` exactly and use it for every later command. Retain the run target the locator reports as the run file; only the start report names it. Never pass the whole locator as `--run`.
 
 </step>
 
@@ -93,7 +110,7 @@ A file-scoped run takes the audited path as its input, passed by path, so the re
 
 **Step 4: Map assertions to test files**
 
-Read the spec's Assertions section. Only assertions carrying `[test]` evidence enter this audit. Skip assertions tagged `[eval]`, `[audit:{rule-slug}]`, or the pathless `[audit]` that the foundation admits for a toolchain without slug support; their evidence belongs to other verification workflows. Number each included assertion by its ordinal among all the spec's assertions, counted from 1 in document order, for the unit identifiers of `<persistence_contract>`.
+For each audited spec, read its Assertions section. Only assertions carrying `[test]` evidence enter this audit. Skip assertions tagged `[eval]`, `[audit:{rule-slug}]`, or the pathless `[audit]` that the foundation admits for a toolchain without slug support; their evidence belongs to other verification workflows. Number each included assertion by its ordinal among all the spec's assertions, counted from 1 in document order, for the unit identifiers of `<persistence_contract>`.
 
 For each included assertion, extract:
 
@@ -106,7 +123,7 @@ For each included assertion, extract:
 
 **Missing test file = finding** with rule `missing-test-file` against the missing path. Record it and continue to the next assertion.
 
-When the spec carries no `[test]` assertion, no evidence is applicable: record one `not-applicable` child per `<persistence_contract>` and judge nothing further.
+When a spec carries no `[test]` assertion, no evidence is applicable: record one `not-applicable` child per `<persistence_contract>` and judge nothing further.
 
 </step>
 
@@ -343,7 +360,7 @@ Before recording, inspect every finding as a complete record: its unit, rule, `l
 
 **Step 15: Record**
 
-Add the root scope unit first, because a run admits one root and every child names it, then each assertion child, then each grandchild under its assertion in the order of Step 4, then each `not-applicable` child, then each finding on touched text on its unit, per `<persistence_contract>`. A unit whose inspection ran is `audited` whether its properties hold or carry findings; a unit whose required inspection was unavailable is `incomplete` and carries a finding that records its cause. A standing finding is recorded nowhere in the run.
+Add the root scope unit first, because a run admits one root and every child names it, then, for a `changeset` target, each node child, then each assertion child, then each grandchild under its assertion in the order of Step 4, then each `not-applicable` child, then each finding on touched text on its unit, per `<persistence_contract>`. A unit whose inspection ran is `audited` whether its properties hold or carry findings; a unit whose required inspection was unavailable is `incomplete` and carries a finding that records its cause. A standing finding is recorded nowhere in the run.
 
 </step>
 
@@ -354,8 +371,8 @@ Add the root scope unit first, because a run admits one root and every child nam
 Derive `rejected` when a finding on touched text exists or any unit is `incomplete`, and `approved` otherwise, whatever standing findings exist. Run the finish and render commands:
 
 ```bash
-spx verification run finish --verification-type audit --scope-type file --scope <path> --run <token> --terminal-status <approved-or-rejected>
-spx verification run render --verification-type audit --scope-type file --scope <path> --run <token>
+spx verification run finish --verification-type audit --scope-type <scope-type> --scope <scope> --run <token> --terminal-status <approved-or-rejected>
+spx verification run render --verification-type audit --scope-type <scope-type> --scope <scope> --run <token>
 ```
 
 </step>
@@ -364,14 +381,15 @@ spx verification run render --verification-type audit --scope-type file --scope 
 
 <persistence_contract>
 
-Add a scope unit with `spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload <payload-file> --idempotency-key '<unitId>'`, the payload file written per `<payload_files>`. The class `spec` and kind `tests` are the pair `spx` accepts for this audit. The units form three levels:
+Add a scope unit with `spx verification run scope add --verification-type audit --scope-type <scope-type> --scope <scope> --run <token> --payload <payload-file> --idempotency-key '<unitId>'`, the payload file written per `<payload_files>`. The class `spec` and kind `tests` are the pair `spx` accepts for this audit. The units form three levels for a `path` target. A `changeset` target adds one node level: its root unit is `<base>..<head>`, and each audited spec has a node child below it whose assertion children and `not-applicable` child hang from it.
 
 | Level      | `unitId`                                    | `parentUnitId`        | Created for                                                                                                                                                                                                          |
 | ---------- | ------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Root       | `<path>`                                    | omitted               | The audited spec file; the run admits one root                                                                                                                                                                       |
-| Child      | `tests:assertion-<n>:<path>`                | the root's `unitId`   | Each `[test]` assertion, `<n>` its ordinal from Step 4                                                                                                                                                               |
+| Root       | `<path>` or `<base>..<head>`                | omitted               | The audited spec file, or the committed changeset; the run admits one root                                                                                                                                           |
+| Node       | `tests:node:<spec>`                         | the root's `unitId`   | Each audited spec of a `changeset` target; a `path` target has none                                                                                                                                                  |
+| Child      | `tests:assertion-<n>:<spec>`                | the root, or the node | Each `[test]` assertion of `<spec>`, `<n>` its ordinal from Step 4; the parent is the node child for a `changeset` target                                                                                            |
 | Grandchild | `tests:assertion-<n>:<concern>:<test-path>` | the assertion's child | Each linked test file, once with `<concern>` `evidence` for the language-neutral concerns, and once per language partition of that file with `<concern>` the language name (`python`, `typescript`, `go`, or `rust`) |
-| Child      | `tests:not-applicable:<subject>`            | the root's `unitId`   | Each retired path a language audit reports `NOT_APPLICABLE`, and the spec with no `[test]` assertion, whose `<subject>` is `<path>`                                                                                  |
+| Child      | `tests:not-applicable:<subject>`            | the root, or the node | Each retired path a language audit reports `NOT_APPLICABLE`, and the spec with no `[test]` assertion, whose `<subject>` is `<spec>`; the parent is the node child for a `changeset` target                           |
 
 An evidence-chain artifact that several assertions reach is recorded once, on the unit of the first assertion whose linked test reaches it, with the artifact in the finding's `location`. The language-neutral findings sit on the `evidence` grandchild, and composed language findings sit on the language grandchild.
 
@@ -379,14 +397,14 @@ The root unit:
 
 ```json
 {
-  "unitId": "<path>",
+  "unitId": "<path-or-base..head>",
   "auditClass": "spec",
   "auditKind": "tests",
-  "subject": "<path>",
+  "subject": "<path-or-base..head>",
   "coverageRequirement": "required",
   "coverageStatus": "audited",
   "priorContext": {
-    "changedFilePartition": "<path>",
+    "changedFilePartition": "<path-or-base..head>",
     "concernPartition": "tests"
   },
   "expectedProducer": {
@@ -408,7 +426,7 @@ The root unit:
 }
 ```
 
-A child or grandchild unit carries the same fields with its `unitId`, its `parentUnitId`, `coverageStatus` `audited`, `incomplete`, or, for a `not-applicable` child, `not-applicable`, and `priorContext.concernPartition` the part of its `unitId` after `tests:` and before the final `:<path>` (`assertion-<n>`, `assertion-<n>:<concern>`, or `not-applicable`). A grandchild's `changedFilePartition` is its `<test-path>`, and every other unit's is `<path>`:
+A child or grandchild unit carries the same fields with its `unitId`, its `parentUnitId`, `coverageStatus` `audited`, `incomplete`, or, for a `not-applicable` child, `not-applicable`, and `priorContext.concernPartition` the part of its `unitId` after `tests:` and before the final `:<spec>` (`assertion-<n>`, `assertion-<n>:<concern>`, or `not-applicable`); a node child's `concernPartition` is `node`. A child's or grandchild's `subject` is `<spec>`. A grandchild's `changedFilePartition` is its `<test-path>`, and every other unit's is `<spec>`:
 
 ```json
 {
@@ -416,11 +434,11 @@ A child or grandchild unit carries the same fields with its `unitId`, its `paren
   "parentUnitId": "<parent-unit-key>",
   "auditClass": "spec",
   "auditKind": "tests",
-  "subject": "<path>",
+  "subject": "<spec>",
   "coverageRequirement": "required",
   "coverageStatus": "audited | incomplete | not-applicable",
   "priorContext": {
-    "changedFilePartition": "<path-or-test-path>",
+    "changedFilePartition": "<spec-or-test-path>",
     "concernPartition": "<concern-partition>"
   },
   "expectedProducer": "<the root unit's expectedProducer object, repeated exactly>",
@@ -457,14 +475,14 @@ These objects are the sanctioned payload schema for this audit; never derive a r
 
 Quote every idempotency key as one single-quoted argument; encode a literal apostrophe with the splice `'"'"'`.
 
-- ALWAYS copy the scratch directory the harness names for the session into each payload path character for character, and write each scope and finding payload with the file-write tool to its own file there, under a name unique to this run and payload, such as `<run-token>-scope-<n>.json` and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
+- ALWAYS copy the scratch directory the harness names for the session into each payload path character for character, and write the changeset start input, each scope payload, and each finding payload with the file-write tool to its own file there, under a name unique to this run and payload, such as `<selector-slug>-start.json` for the start input, which exists before a run token does, and `<run-token>-scope-<n>.json` and `<run-token>-finding-<n>.json`. Where the harness names no scratch directory, use the one the hosting environment designates, such as `$RUNNER_TEMP` on a hosted runner.
 - ALWAYS write only payload files with the file-write tool.
 - ALWAYS stop before the command that reads a payload file when the file-write result reports a path that the scratch directory does not contain by whole path components, returning the `<verdict_format>` diagnostic naming the reported path.
 - ALWAYS pass `--payload` the path exactly as the file-write tool's result reports it, copied from that result, never retyped from memory.
 - ALWAYS pass the file as the value of `--payload`, its path written out literally:
 
   ```bash
-  spx verification run scope add --verification-type audit --scope-type file --scope <path> --run <token> --payload <scope-file> --idempotency-key '<unitId>'
+  spx verification run scope add --verification-type audit --scope-type <scope-type> --scope <scope> --run <token> --payload <scope-file> --idempotency-key '<unitId>'
   ```
 
 - ALWAYS add each scope unit and each finding with its own literal command and its own payload file, one at a time, and stop the audit at the first command that exits nonzero, other than the one rerun on an absent-payload diagnostic that the next bullet allows, returning the `<verdict_format>` diagnostic.
@@ -585,6 +603,7 @@ How to avoid: Classify each finding by its location, record only findings on tou
 
 <success_criteria>
 
+- A `changeset` target resolves through `product-tree:scope-changeset` at a head equal to the checkout's `HEAD`, runs on the changeset scope `<base>..<head>`, and records each audited spec under its own node child.
 - Every in-scope assertion has a child unit, every linked test file has an `evidence` grandchild, and every required language concern has a language grandchild, with no evidence partition left unevaluated.
 - Every imported evidence artifact was inspected before approval; an artifact that could not be resolved left its unit `incomplete` with the cause recorded, and the run sealed `rejected`.
 - Every protocol and domain value resolves to its production or platform owner; generated variable data resolves to a generator, inert whole payloads to fixtures, setup policy to harnesses, and curated examples to eval cases.

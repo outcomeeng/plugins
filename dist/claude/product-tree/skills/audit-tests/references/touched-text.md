@@ -22,6 +22,8 @@ git diff --unified=0 <base> -- <artifact-path>
 
 The diff compares the base with the working tree, staged and unstaged changes included; a `<base>..HEAD` range is no endpoint, because it leaves those changes out.
 
+For a `changeset` target the base is the merge-base of the resolved `base` and `head`, which equals the merge-base above for the selectors `HEAD` and a branch; the head equals the checkout's `HEAD`, so the same diff command applies.
+
 The inventoried artifacts are the spec's assertions, each linked test, and every harness, generator, fixture, discovery artifact, and governed production source of the evidence chain. The enclosing unit is the assertion with its tag and link in the spec, the test function or callback in a test, and the declaration in infrastructure or production source. An artifact absent at the base is touched in full. A diff that cannot be resolved makes every inventoried artifact touched, and the run names the failed command.
 
 Invalidated text is:
