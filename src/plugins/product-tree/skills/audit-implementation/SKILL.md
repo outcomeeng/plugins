@@ -168,10 +168,11 @@ Name two paths in the session scratch directory, each unique to this run: the
 audit-input file, such as `<run-id>-audit-input.json`, written with the
 file-write tool, and the resolver's output file, such as
 `<run-id>-start-input.json`. Pass the audit-input file as the resolver's
-`--audit-input` path and the output file as its `--output` path:
+`--audit-input` path, the session scratch directory as its `--scratch-dir` path,
+and the output file as its `--output` path:
 
 ```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py" '{selector}' --repo '{repository-root}' --audit-input '<audit-input-file>' --output '<start-input-file>'
+python3 "${CLAUDE_SKILL_DIR}/scripts/resolve_scope.py" '{selector}' --repo '{repository-root}' --audit-input '<audit-input-file>' --scratch-dir '<scratch-directory>' --output '<start-input-file>'
 ```
 
 Then start the run with its own command, passing that file by path:

@@ -57,6 +57,9 @@ OUTPUT_OPTION = "--output"
 # The option naming the file that holds the audit input merged beneath the
 # resolved scope.
 AUDIT_INPUT_OPTION = "--audit-input"
+# The option naming the session scratch directory that must contain the
+# audit-input file once symbolic links are followed.
+SCRATCH_DIR_OPTION = "--scratch-dir"
 # Audit-input key under which an advisory (`worktree:`) audit carries its live
 # modified and untracked paths; a committed audit omits it.
 LIVE_PATHS_KEY = "live_paths"
@@ -297,10 +300,26 @@ def _reconcile_run(
     return 0 if verdict[ReconcileField.RECONCILED] else EXIT_UNRECONCILED
 
 
-def _read_audit_input(path: pathlib.Path) -> dict[str, object]:
-    """Return the JSON object the audit-input file holds; raise `RuntimeError` naming the failure."""
+def _read_audit_input(
+    path: pathlib.Path, scratch_dir: pathlib.Path | None
+) -> dict[str, object]:
+    """Return the JSON object the audit-input file inside `scratch_dir` holds; raise `RuntimeError` naming the failure."""
+    if scratch_dir is None:
+        raise RuntimeError(
+            f"{AUDIT_INPUT_OPTION} requires {SCRATCH_DIR_OPTION}, the session "
+            "scratch directory that holds the audit-input file."
+        )
     try:
-        supplied = json.loads(path.read_text(encoding="utf-8"))
+        root = scratch_dir.resolve(strict=True)
+        confined = path.resolve(strict=True)
+        if not confined.is_relative_to(root):
+            raise RuntimeError(
+                f"{AUDIT_INPUT_OPTION} file {str(path)[:200]!r} lies outside "
+                f"the {SCRATCH_DIR_OPTION} directory {str(scratch_dir)[:200]!r}. "
+                "Write the object to a file in the session scratch directory "
+                "with the file-write tool and pass that file's path."
+            )
+        supplied = json.loads(confined.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise RuntimeError(
             f"{AUDIT_INPUT_OPTION} must name a readable file holding "
@@ -326,6 +345,11 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
         AUDIT_INPUT_OPTION,
         type=pathlib.Path,
         help="file holding a JSON object merged beneath the resolved scope to form a run-start input",
+    )
+    parser.add_argument(
+        SCRATCH_DIR_OPTION,
+        type=pathlib.Path,
+        help="session scratch directory that must contain the audit-input file",
     )
     parser.add_argument(
         "--reconcile-run",
@@ -369,7 +393,10 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
         return _reconcile_run(runner, scope, args, resolved)
     if args.audit_input is not None:
         try:
-            resolved = {**_read_audit_input(args.audit_input), **resolved}
+            resolved = {
+                **_read_audit_input(args.audit_input, args.scratch_dir),
+                **resolved,
+            }
         except RuntimeError as exc:
             print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
             return EXIT_COMMAND_FAILURE
