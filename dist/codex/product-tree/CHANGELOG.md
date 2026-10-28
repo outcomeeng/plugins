@@ -18,6 +18,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/audit-change` resolves each path a record names in the repository of the Change's Product.** The request carries `checkoutRoot`, the absolute path of the Product's checkout root, which the caller resolves from the coordination overlay, and the skill passes it as `root` on every `resolve-reference` request. The runner resolves the Governance records and Spec mutations Nodes the record names under that root, keeps its containment check against it, and returns a blocked result naming the root when the request carries none or the directory is no repository checkout root. Before this change, the runner took the root from the session's working directory, so a change audit of a record whose Product's checkout is another worktree found no path and sealed no run.
 
+- **The `change-auditor` agent passes the Product's checkout root to `/audit-change`.** The agent reads the checkout root as the second token of its task message, after the candidate path, sets it as `checkoutRoot` in the skill's argument object, and returns a blocked result naming `checkoutRoot` when the task message carries none; the canonical store reference moves to the third token. Before this change, the agent built the skill's argument without `checkoutRoot`, so every audit through the agent returned a blocked result naming `root` at `resolve-reference`.
+
 ## 0.109.8
 
 ### Changed

@@ -3,7 +3,8 @@ name: change-auditor
 description: >-
   Audits one local Outcome Engineering Change record in an isolated verifier
   context. The owning skill, author-change, invokes it by exact name with the
-  record's path before publication or after refinement.
+  record's path and its Product's checkout root before publication or after
+  refinement.
 tools: Bash(python3 "*/skills/audit-change/scripts/audit_change_run.py":*), Read, Write, {{! tool('use_skill') !}}
 profile: standard
 skills:
@@ -61,9 +62,13 @@ request files, and persistence; relay its result.
    the same `BLOCKED` shape with `detail` set to
    `product-tree:product-tree-plugin version: <exact failure>`.
 3. Invoke the skill with a JSON argument object. Set `path` to the caller's
-   repository-relative file path unchanged. When the task message carries a
-   second token after the path, set `issue` to that canonical `owner/repo#N`
-   store reference unchanged, and set no `issue` otherwise. Set `runDriver` to
+   repository-relative file path unchanged, and `checkoutRoot` to the absolute
+   checkout root of the Change's Product, which the task message carries as the
+   second token after the path, unchanged. When the task message carries a
+   third token, set `issue` to that canonical `owner/repo#N` store reference
+   unchanged, and set no `issue` otherwise. A task message without a second
+   token returns the same `BLOCKED` shape as step 1 with `detail` set to
+   `checkoutRoot: missing from the task message`. Set `runDriver` to
    `{"producerKind":"agent","agentName":"change-auditor","agentOwningPluginName":"product-tree","skillName":"audit-change","skillOwningPluginName":"product-tree","invocationRole":"run-driver"}`,
    and `agentOwningPluginVersion` to the version step 2 retained. Include no
    authoring history or suggested verdict.
