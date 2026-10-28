@@ -222,3 +222,15 @@ Evidence: `instructions:skill-auditor` run `2026-10-17_18-16-04-154-bd168bad0aee
 Impact: a later audit of `change-standards` can raise the finding again.
 
 Revisit and settlement condition: `inert-stdin` in `lifecycle.md` states the instruction in imperative voice or names Claude as its subject, and one typed skill audit of `change-standards` raises no `banned_subject` finding on it.
+
+## DEBT [invalid-tag]: Pathless audit tags
+
+Defect class: `invalid-tag`.
+
+Finding: five assertions of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) carry the pathless `[audit]` tag, while the repository declares methodology 4.0 and the other assertions of the node carry `[audit:{rule-slug}]` with a slug unique within the spec. The five are the assertions that open "ALWAYS: `author-change` repairs a valid change-audit finding across every instance", "ALWAYS: `audit-change` treats a new record as touched text in full", "`confirm-change` moves a `Submitted` Change to `Available`", "`audit-change` reads every authority event from the store's field-change events", and "ALWAYS: `audit-change` judges a revision of a published record only on the sections the revision changes".
+
+Evidence: `product-tree:spec-auditor` launch 2 on `spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`, rule `invalid-tag`, severity `filed`, `baseRefEvidence` `dd3ddc1766da65127aea58fd3f9d95838c10faa6..784f9a9b6896a816a14716472d0619b8109d0e22`, in the same result that rejected the touched assertion carrying the pathless tag on the `author-change` dispatch of the `change-auditor`.
+
+Impact: a later spec audit of the node raises the finding again, and the five assertions key no audit result in a status claim until each carries a slug.
+
+Revisit and settlement condition: each of the five assertions carries `[audit:{rule-slug}]` with a slug unique within the spec, and one spec audit of the node raises no `invalid-tag` finding.
