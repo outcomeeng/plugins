@@ -30,13 +30,13 @@
 
 **Settlement condition.** Each condition is stated once at its point of action and cross-referenced by tag name elsewhere, per `/skill-standards` `<conciseness>`. [Change #95](https://github.com/outcomeeng/changes/issues/95) carries the `/apply` pass that owns it.
 
-## `apply` Step 5 names a skill the product-tree plugin does not ship
+## `apply` Step 5 guards the name of a skill the product-tree plugin ships
 
-**Evidence.** `src/plugins/product-tree/skills/apply/SKILL.md:206` says `/verify` routes eval work through a dedicated eval skill "when that capability is installed"; no such skill ships in the product-tree plugin and `<skill_map>` carries no row for it. `instructions:skill-auditor` finding rule `unguarded_capability_name`, severity `WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76.
+**Evidence.** `src/plugins/product-tree/skills/apply/SKILL.md:208` says `/verify` routes eval work through `/eval` "when that capability is installed", and `<skill_map>` carries no row for `/eval`. The product-tree plugin ships `/eval`, so the name resolves in a consumer checkout. `instructions:skill-auditor` finding rule `unguarded_capability_name`, severity `WARNING`, on head `524b9c46c7960a106d84ef856b4020a0ce904b16` during Change #76.
 
-**Impact.** The name resolves nowhere in a consumer checkout, and `/audit-skill`'s broken-reference check flags it once the conditional is read literally.
+**Impact.** The condition "when that capability is installed" guards a skill the same plugin ships, so Step 5 states a doubt that the plugin settles.
 
-**Settlement condition.** Step 5 names only `/verify`'s own eval routing, or the unshipped skill name is gone. [Change #95](https://github.com/outcomeeng/changes/issues/95) carries the `/apply` pass that owns it.
+**Settlement condition.** Step 5 names `/eval` without the installation condition, or names only `/verify`'s own eval routing. [Change #95](https://github.com/outcomeeng/changes/issues/95) carries the `/apply` pass that owns it.
 
 ## `apply` Step 8 opens with a hard-wrapped paragraph
 
