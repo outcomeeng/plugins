@@ -102,9 +102,7 @@ def resolve_environment_references(text: str, environment: Mapping[str, str]) ->
     def substitute(match: re.Match[str]) -> str:
         return environment.get(match.group(1), match.group(0))
 
-    return _EXPRESSION_VARIABLE.sub(
-        substitute, _SHELL_VARIABLE.sub(substitute, text)
-    )
+    return _EXPRESSION_VARIABLE.sub(substitute, _SHELL_VARIABLE.sub(substitute, text))
 
 
 def recipe_artifact_directories(job: WorkflowJob, recipe: str) -> tuple[Path, ...]:

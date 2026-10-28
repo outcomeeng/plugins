@@ -58,8 +58,7 @@ def _materialized_state(state_root: Path) -> dict[Path, bytes]:
     return {
         path.relative_to(state_root): path.read_bytes()
         for path in state_root.rglob("*")
-        if path.is_file()
-        and {AGENTS_DIRECTORY, FIXTURE_DIRECTORY} & set(path.parts)
+        if path.is_file() and {AGENTS_DIRECTORY, FIXTURE_DIRECTORY} & set(path.parts)
     }
 
 
@@ -87,9 +86,7 @@ class AuditorLaunchRunner:
             )
         home = Path(env[CODEX_HOME_ENV])
         self.calls.append(
-            DispatchCall(
-                tuple(argv), home, dict(env), _materialized_state(home.parent)
-            )
+            DispatchCall(tuple(argv), home, dict(env), _materialized_state(home.parent))
         )
         is_launch = any(set(launch) <= set(argv) for launch in self.launches)
         return subprocess.CompletedProcess(
@@ -153,7 +150,9 @@ def native_auditor_launch(
             runner=runner,
         )
         yield DispatchLaunchObservation(
-            tuple(DispatchRowLaunch(row, _row_calls(row, runner.calls)) for row in rows),
+            tuple(
+                DispatchRowLaunch(row, _row_calls(row, runner.calls)) for row in rows
+            ),
             environment,
         )
 

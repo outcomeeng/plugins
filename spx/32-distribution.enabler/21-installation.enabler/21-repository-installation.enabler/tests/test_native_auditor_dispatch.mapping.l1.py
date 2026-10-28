@@ -65,7 +65,9 @@ def test_each_row_derives_identifier_and_definition_from_the_shipped_definition(
     tmp_path: Path,
 ) -> None:
     checkout = repository_root()
-    for row in native_auditor_rows(checkout, tmp_path / "artifacts", tmp_path / "state"):
+    for row in native_auditor_rows(
+        checkout, tmp_path / "artifacts", tmp_path / "state"
+    ):
         definitions = shipped_definitions(checkout, row.target, row.auditor)
 
         assert definitions == [row.shipped_definition_path]
@@ -83,7 +85,9 @@ def test_each_row_derives_artifact_and_state_paths_from_its_identifier(
     tmp_path: Path,
 ) -> None:
     artifacts, state = tmp_path / "artifacts", tmp_path / "state"
-    rows = native_auditor_rows(checkout=repository_root(), artifact_root=artifacts, state_root=state)
+    rows = native_auditor_rows(
+        checkout=repository_root(), artifact_root=artifacts, state_root=state
+    )
     isolated_home = {
         Target.CLAUDE: ISOLATED_CLAUDE_CONFIG_DIRECTORY,
         Target.CODEX: ISOLATED_CODEX_HOME_DIRECTORY,
@@ -91,7 +95,10 @@ def test_each_row_derives_artifact_and_state_paths_from_its_identifier(
 
     assert len({row.identifier for row in rows}) == len(rows)
     for row in rows:
-        assert row.configuration_path == artifacts / row.identifier / CONFIGURATION_FILENAME
+        assert (
+            row.configuration_path
+            == artifacts / row.identifier / CONFIGURATION_FILENAME
+        )
         assert row.loading_path == artifacts / row.identifier / LOADING_FILENAME
         assert row.result_path == artifacts / row.identifier / RESULT_FILENAME
         assert row.state_root == state / row.identifier

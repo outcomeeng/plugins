@@ -55,9 +55,12 @@ def test_every_row_launches_once_from_the_shipped_definition_passing_only_the_se
                 assert launch.state_files[
                     row.native_definition_path.relative_to(row.state_root)
                 ] == (row.shipped_definition_path.read_bytes())
-                assert launch.state_files[
-                    row.fixture_path.relative_to(row.state_root)
-                ].decode("utf-8") == (AUDITOR_FIXTURES[row.auditor][1])
+                assert (
+                    launch.state_files[
+                        row.fixture_path.relative_to(row.state_root)
+                    ].decode("utf-8")
+                    == (AUDITOR_FIXTURES[row.auditor][1])
+                )
                 configuration = json.loads(row.configuration_path.read_text("utf-8"))
                 assert configuration["shipped_definition_sha256"] == (
                     hashlib.sha256(row.shipped_definition_path.read_bytes()).hexdigest()
@@ -85,9 +88,7 @@ def test_a_failed_launch_records_its_terminal_condition_without_a_retry() -> Non
         for item in observation.rows:
             row = item.observation.row
             launches = [
-                call
-                for call in item.calls
-                if set(row.launch_command) <= set(call.argv)
+                call for call in item.calls if set(row.launch_command) <= set(call.argv)
             ]
             assert len(launches) == 1, row.identifier
             assert item.calls[-1] is launches[0]
