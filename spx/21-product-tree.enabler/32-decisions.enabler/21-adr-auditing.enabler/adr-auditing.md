@@ -31,6 +31,7 @@ A `### Testing` rule's assertion-type tag is chosen from the rule's claim shape 
 - Given an ADR with specific untagged rules directly under `## Verification`, alone or alongside valid routed subsections, when its declaration is audited, then absent draft tags and subsections cause no finding and all other declaration-quality checks remain applicable.
 - Given an ADR with an untagged rule inside a routed verification subsection, when audited, then the run records an `invalid-tag` finding against that rule.
 - NEVER: approval of an ADR declaration establishes that its untagged rules have evidence or that the governed implementation complies.
+- decision-slug-form: `/audit-adr` raises a finding on a decision that opens with no slug, a slug outside the grammar, a slug repeated in the file, a compliance rule that states no ALWAYS or NEVER, or a `carries` target that does not resolve.
 
 ### Scenarios
 
