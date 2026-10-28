@@ -62,7 +62,7 @@ The body carries no attestation, accountable-person, priority, or overrule text;
 - execution-order: Execution takes the Verification subsections in record order, which is Application order. The merge composition for the Node's malleability after, and the decision-record audit of a record, select each subsection's results and Verifiers.
 - applied-leaf: A Leaf closes Applied when the merge commit of the pull request or branch its newest Handoff names is an ancestor of the default branch, every Node holds every result the merge composition for its malleability after selects, every amended or new record holds an approving decision-record audit, and the Intent's Evidence is met.
 - handoff-blocks: A Handoff names the branch or pull request with its head commit, the completed Verification subsections by path, and the next one, or `refinement: <Maturity> → <next level>` below Applicable.
-- change-path-root: A change audit resolves each path a record names, its Governance records and its Spec mutations Nodes, in the repository of the Change's Product, whatever checkout holds the draft or runs the audit.
+- change-path-root: A change audit resolves each path a record names, its Governance records and the Nodes of its Verification subsections, in the repository of the Change's Product, whatever checkout holds the draft or runs the audit.
 
 ## Slugs
 
@@ -191,7 +191,7 @@ Authoring a record in another form anew from its proposal leaves no inferred fie
 - lifecycle-skills-scope: NEVER a Lifecycle skill writes Maturity or a body section, or posts a comment other than its Claim, Handoff, or terminal record.
 - no-write-after-failure: NEVER a Lifecycle transition performs a later mutation after a required write fails or a readback differs from the intended state; its diagnostic names every completed write, the failed operation, and the observed state.
 - no-secrets: NEVER a Handoff, Claim, terminal record, or rejection instruction carries a secret value or credential payload.
-- change-path-root-compliance: ALWAYS the change audit resolves each path a record names, its Governance records and its Spec mutations Nodes, in the repository of the Change's Product, whatever checkout holds the draft or runs the audit.
+- change-path-root-compliance: ALWAYS the change audit resolves each path a record names, its Governance records and the Nodes of its Verification subsections, in the repository of the Change's Product, whatever checkout holds the draft or runs the audit.
 - parent-no-verification: ALWAYS a Change that another Change names in `parent` carries no `## Verification` and never reaches Applicable; the change audit rejects a record that breaks the rule.
 - audit-at-applicable-compliance: ALWAYS `author-change` dispatches the change audit once, when a Leaf reaches Applicable, and a revision below Applicable takes only a deterministic check of the record's form.
 - migration-first-compliance: ALWAYS the slug migration runs on a Product's tree before any diff-line Change against that tree reaches Sliced, and it is itself no diff-line Change.
