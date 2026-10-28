@@ -26,8 +26,9 @@ from outcomeeng.validation.ci_gate import (
 )
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
+WORKFLOWS_DIRECTORY: Final = Path(".github") / "workflows"
 NATIVE_ACCEPTANCE_WORKFLOW: Final = (
-    REPO_ROOT / ".github" / "workflows" / "native-profile-acceptance.yml"
+    REPO_ROOT / WORKFLOWS_DIRECTORY / "native-profile-acceptance.yml"
 )
 FIXTURE_ROOT: Final = (
     Path(__file__).resolve().parents[1] / "fixtures" / "native_acceptance_workflow"
@@ -36,8 +37,9 @@ TRIGGER_FIXTURES: Final = FIXTURE_ROOT / "triggers"
 POLICY_FIXTURES: Final = FIXTURE_ROOT / "policy"
 PIN_SOURCE_FIXTURES: Final = FIXTURE_ROOT / "pin_source"
 PIN_READ_STEP_NAME: Final = "Read tool pins from the quality gate workflow"
-PIN_SOURCE_WORKFLOW: Final = REPO_ROOT / ".github" / "workflows" / "check.yml"
-PIN_SOURCE_RELATIVE_PATH: Final = Path(".github") / "workflows" / "check.yml"
+PIN_SOURCE_RELATIVE_PATH: Final = WORKFLOWS_DIRECTORY / "check.yml"
+PIN_SOURCE_WORKFLOW: Final = REPO_ROOT / PIN_SOURCE_RELATIVE_PATH
+_YAML_FILE_PATTERN: Final = "*.yml"
 _SHELL: Final = "bash"
 _GITHUB_ENV_VARIABLE: Final = "GITHUB_ENV"
 _ENVIRONMENT_ASSIGNMENT: Final = re.compile(r"^(\w+)=(.*)$")
@@ -76,12 +78,12 @@ class AcceptanceWorkflow:
 
 def violating_trigger_workflow_paths() -> tuple[Path, ...]:
     """Return the inert workflow files that each declare a forbidden trigger."""
-    return tuple(sorted(TRIGGER_FIXTURES.glob("*.yml")))
+    return tuple(sorted(TRIGGER_FIXTURES.glob(_YAML_FILE_PATTERN)))
 
 
 def violating_policy_workflow_paths() -> tuple[Path, ...]:
     """Return the inert workflow files that each violate one run policy."""
-    return tuple(sorted(POLICY_FIXTURES.glob("*.yml")))
+    return tuple(sorted(POLICY_FIXTURES.glob(_YAML_FILE_PATTERN)))
 
 
 def observe_acceptance_workflow(path: Path | None = None) -> AcceptanceWorkflow:
@@ -164,7 +166,7 @@ class PinReadRun:
 
 def violating_pin_source_paths() -> tuple[Path, ...]:
     """Return the inert quality gate workflow files that each format their pins differently."""
-    return tuple(sorted(PIN_SOURCE_FIXTURES.glob("*.yml")))
+    return tuple(sorted(PIN_SOURCE_FIXTURES.glob(_YAML_FILE_PATTERN)))
 
 
 def observe_pin_source_environment(path: Path | None = None) -> Mapping[str, str]:
