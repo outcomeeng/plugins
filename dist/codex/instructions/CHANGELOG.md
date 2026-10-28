@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## Unreleased
+
+### Changed
+
+- **`/audit-skill` records its run from a session whose harness names no scratch directory.** The audit selects one payload directory before its first payload: the scratch directory the harness names, `$RUNNER_TEMP` on a hosted runner, or, where the harness names neither, the one directory a single `mktemp -d` command prints at the start of the run, which stays in place. It writes every start input, scope-add payload, and finding-add payload there, passes each by the path the file-write result reports, or by the path it gave the file-write tool when the result reports none, and stops with the `BLOCKED` configuration error when the payload directory or a payload write is refused. Its tool grant adds the one `mktemp -d` command. Before this change, a Codex dispatch whose harness named no scratch directory stopped before any run started, with no payload path and a file write that returned no path.
+
 ## 0.22.4
 
 ### Added
