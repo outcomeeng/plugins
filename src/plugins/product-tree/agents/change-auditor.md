@@ -69,11 +69,16 @@ request files, and persistence; relay its result.
    unchanged, and set no `issue` otherwise. A task message without a second
    token returns the same `BLOCKED` shape as step 1 with `detail` set to
    `checkoutRoot: missing from the task message`. The task message separates
-   its tokens with single spaces, so a message of more than three tokens, whose
-   second token is no absolute path, or whose third token is no canonical
-   `owner/repo#N` reference, carries a path or a checkout root with
-   whitespace; it returns the same `BLOCKED` shape with `detail` set to
-   `task message: the path or the checkout root carries whitespace`. Set `runDriver` to
+   its tokens with single spaces. Each of three conditions returns the same
+   `BLOCKED` shape with its own `detail`, checked in this order:
+
+   - A message of more than three tokens: `task message: more than three tokens`.
+   - A second token that does not begin with a slash:
+     `task message: the second token is no absolute path`.
+   - A third token that is no canonical `owner/repo#N` reference:
+     `task message: the third token is no canonical store reference`.
+
+   Set `runDriver` to
    `{"producerKind":"agent","agentName":"change-auditor","agentOwningPluginName":"product-tree","skillName":"audit-change","skillOwningPluginName":"product-tree","invocationRole":"run-driver"}`,
    and `agentOwningPluginVersion` to the version step 2 retained. Include no
    authoring history or suggested verdict.
