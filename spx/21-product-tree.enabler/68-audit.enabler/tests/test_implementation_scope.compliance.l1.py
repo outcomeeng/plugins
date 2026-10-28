@@ -142,6 +142,27 @@ def test_an_unreadable_audit_input_path_is_rejected_naming_the_path(
     assert not completed.stdout
 
 
+def test_an_audit_input_file_that_is_not_utf8_is_rejected_naming_the_path(
+    tmp_path: pathlib.Path,
+) -> None:
+    (name,) = distinct_subject_paths(1)
+    undecodable = tmp_path / name
+    undecodable.write_bytes(b"\xff\xfe")
+    with stale_local_base_repo() as stale:
+        completed = run_implementation_scope(
+            stale.repo,
+            CHANGESET_SCOPE.HEAD_REF,
+            audit_input_path=undecodable,
+            scratch_dir=tmp_path,
+        )
+
+    assert completed.returncode == EXIT_COMMAND_FAILURE
+    assert completed.stderr.startswith(ERROR_PREFIX)
+    assert UnicodeDecodeError.__name__ in completed.stderr
+    assert str(undecodable) in completed.stderr
+    assert not completed.stdout
+
+
 def test_an_audit_input_path_without_a_scratch_directory_is_rejected(
     tmp_path: pathlib.Path,
 ) -> None:
