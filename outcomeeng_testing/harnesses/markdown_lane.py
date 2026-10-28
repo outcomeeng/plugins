@@ -20,6 +20,10 @@ from typing import Final
 from hypothesis import given, seed, settings
 
 from outcomeeng.validation.infrastructure_index import PRODUCT_TREE_ROOT
+from outcomeeng.validation.selected_gate import (
+    RECIPE_MARKDOWN_LANE,
+    markdown_lane_steps,
+)
 from outcomeeng_testing.generators.markdown_lane import markdown_lane_changesets
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 
@@ -34,6 +38,7 @@ MARKDOWN_SCOPE_WORD: Final = "Markdown"
 CODE_SPAN: Final = re.compile(r"`([^`]+)`")
 JUST_COMMAND: Final = "just"
 LAUNCHER: Final = ("uv", "run")
+VALIDATION_ENTRY: Final = ("python3", "-m", "outcomeeng.validation")
 DIRECTORY_SUFFIX: Final = "/"
 ROOT_PREFIX: Final = ""
 
@@ -63,6 +68,16 @@ def without_launcher(argv: tuple[str, ...]) -> tuple[str, ...]:
     return argv
 
 
+def _expand_validation_recipe(
+    line: tuple[str, ...],
+) -> tuple[tuple[str, ...], ...]:
+    """The command lines a line runs; the Markdown lane recipe runs the selector's steps."""
+
+    if line == (*VALIDATION_ENTRY, RECIPE_MARKDOWN_LANE):
+        return tuple(without_launcher(step.argv) for step in markdown_lane_steps())
+    return (line,)
+
+
 def _recipe_lines(recipe: str) -> tuple[tuple[str, ...], ...]:
     header = re.compile(rf"^{re.escape(recipe)}(\s[^:]*)?:\s*$")
     lines = JUSTFILE_PATH.read_text(encoding="utf-8").splitlines()
@@ -75,7 +90,11 @@ def _recipe_lines(recipe: str) -> tuple[tuple[str, ...], ...]:
                 break
             stripped = candidate.strip().lstrip("@-")
             if stripped and not stripped.startswith("#"):
-                body.append(without_launcher(tuple(shlex.split(stripped))))
+                body.extend(
+                    _expand_validation_recipe(
+                        without_launcher(tuple(shlex.split(stripped)))
+                    )
+                )
         return tuple(body)
     raise LaneDeclarationError(f"recipe {recipe!r} is absent from {JUSTFILE_PATH}")
 

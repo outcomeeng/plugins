@@ -4,6 +4,7 @@ Usage::
 
     python3 -m outcomeeng.validation check
     python3 -m outcomeeng.validation check-full
+    python3 -m outcomeeng.validation markdown-lane
     python3 -m outcomeeng.validation validation
     python3 -m outcomeeng.validation test -- -k gate
     python3 -m outcomeeng.validation test-l3
@@ -23,6 +24,8 @@ from typing import TextIO
 from outcomeeng.validation import ProcessSpawner, ProductionSpawner, run_recipe
 from outcomeeng.validation.selected_gate import (
     RECIPE_CHECK_FULL,
+    RECIPE_MARKDOWN_LANE,
+    markdown_lane_recipe,
     run_full_check,
     run_selected_check,
 )
@@ -47,6 +50,7 @@ def _parser() -> argparse.ArgumentParser:
         choices=(
             RECIPE_CHECK,
             RECIPE_CHECK_FULL,
+            RECIPE_MARKDOWN_LANE,
             RECIPE_VALIDATION,
             RECIPE_TEST,
             RECIPE_TEST_L3,
@@ -96,6 +100,10 @@ def main(
             spawner=bound_spawner,
             sink=bound_sink,
             recipe=l3_recipe(discover_l3_tests(bound_repo)),
+        )
+    if parsed.recipe == RECIPE_MARKDOWN_LANE:
+        return run_recipe(
+            spawner=bound_spawner, sink=bound_sink, recipe=markdown_lane_recipe()
         )
     if parsed.recipe == RECIPE_CHECK_FULL:
         return run_full_check(spawner=bound_spawner, sink=bound_sink, repo=bound_repo)

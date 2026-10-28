@@ -125,6 +125,10 @@ fmt-check:
 eval-links:
     uv run python -m outcomeeng.validation.eval_links
 
+# Run every validation step the selected gate chooses for a Markdown changeset
+check-markdown:
+    python3 -m outcomeeng.validation markdown-lane
+
 # Run selected local gate steps through the signal-safe recipe orchestrator
 check:
     python3 -m outcomeeng.validation check

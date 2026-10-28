@@ -268,6 +268,42 @@ VALIDATION_LANES: Final[Mapping[PathCategory, ValidationLane]] = MappingProxyTyp
     }
 )
 
+# The Markdown lane runs every validation step the selector chooses for a
+# Markdown changeset: the categories a Markdown path can fall in, each read
+# from `VALIDATION_LANES`, so the lane and the selected gate share one selection.
+MARKDOWN_LANE_CATEGORIES: Final = (
+    PathCategory.MARKDOWN,
+    PathCategory.SKILL,
+    PathCategory.INSTRUCTION_BLOCK,
+    PathCategory.EVAL_PROMPT,
+    PathCategory.EVIDENCE_LINK,
+)
+RECIPE_MARKDOWN_LANE: Final = "markdown-lane"
+
+
+def markdown_lane_steps() -> tuple[Step, ...]:
+    """Every validation step the selector chooses for a Markdown changeset."""
+
+    argvs = {
+        argv
+        for category in MARKDOWN_LANE_CATEGORIES
+        for argv in VALIDATION_LANES[category].argvs
+    }
+    return tuple(step for step in VALIDATION_STEPS if step.argv in argvs)
+
+
+def markdown_lane_recipe() -> Recipe:
+    """The recipe a Markdown lane runs in place of a later `just check`."""
+
+    return Recipe(
+        name=RECIPE_MARKDOWN_LANE,
+        verification_type=None,
+        purpose=None,
+        preflight_steps=PREFLIGHT_STEPS,
+        steps=markdown_lane_steps(),
+    )
+
+
 GIT_DIFF_BRANCH_ARGV_PREFIX: Final = (
     "git",
     "diff",
