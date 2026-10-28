@@ -51,6 +51,49 @@ anywhere and every process it starts:
 None of these writes a file outside the SPX store, and none starts a process
 other than ``git`` and ``spx``; the generated requests start none.
 
+``read-candidate`` returns the candidate in pieces. A request without ``offset``
+starts at character 0; each piece holds the longest run of the remaining
+characters that is at most ``PIECE_CHARACTER_LIMIT`` characters and whose
+complete serialized response, the line terminator ``main`` writes after it
+included, takes at most ``PIECE_BYTE_LIMIT`` bytes of UTF-8, and never fewer
+than one. A piece carries the whole candidate's ``sha256`` and
+``length`` in characters, its own ``offset``, and ``next``, the offset of the
+following piece, ``null`` after the last. An ``offset`` of 0 is accepted for
+every candidate, and a positive ``offset`` at or past the ``length``, an empty
+candidate included, blocks as ``invalid-request``.
+
+``read-candidate`` pieces are tested apart from those runs, with these inputs:
+
+- a captured Change record repeated past twice ``PIECE_CHARACTER_LIMIT`` and
+  held in a Git repository, read through the entry point without
+  ``offset`` and then at each ``next`` offset until it is ``null``: every
+  response is one sorted JSON line that, with its line terminator, takes at most
+  ``PIECE_BYTE_LIMIT`` bytes of output, and the pieces concatenate to the
+  candidate file;
+- the same repository read at an ``offset`` equal to the candidate's ``length``
+  and at one past it, each blocked as ``invalid-request``;
+- an empty candidate held in a Git repository, read through the entry point at
+  ``offset`` 0, which returns one empty piece whose ``next`` is ``null``, and at
+  ``offset`` 1, which is blocked as ``invalid-request``;
+- generated candidate texts of escaped and wide characters, read through the
+  entry point piece by piece: each call writes exactly the bytes the text seam
+  reconstructs for that piece, within ``PIECE_BYTE_LIMIT``;
+- generated candidate texts from the empty text to several pieces long, varying
+  in length, in UTF-8 width (ASCII, two- and three-byte characters, characters
+  outside the Basic Multilingual Plane), and in characters that JSON escapes,
+  read on the text seam from offset 0 and then at each ``next`` offset: each
+  piece fits both limits, holds at least one character unless the candidate is
+  empty, and is the longest run that fits, the pieces concatenate to the
+  candidate, and ``next`` is ``null`` after the last;
+- generated one-byte-per-character candidates past 100,000 characters read on
+  the text seam at every offset that leaves from 15,500 to 16,000 characters,
+  so the final piece sits at the byte limit with a ``next`` that is a number or
+  ``null``;
+- generated request objects whose ``offset`` is not a non-negative integer (a
+  negative integer, a number with a fractional part, a string, a boolean,
+  ``null``, an array, or an object), each refused by ``validate_request`` as
+  ``invalid-request``.
+
 ``read-authority`` starts ``gh`` and is tested apart from those runs, in this
 process over replayed store pages: it reads the issue's field-change events and
 no comment, a read that ends before the bound returns every event, and a connection that keeps reporting a further page blocks after
@@ -118,6 +161,7 @@ class RequestField(StrEnum):
 
     OPERATION = "operation"
     PATH = "path"
+    OFFSET = "offset"
     CANDIDATE_SHA256 = "candidateSha256"
     RUN_TOKEN = "runToken"
     PAYLOAD = "payload"
@@ -137,6 +181,9 @@ class ResultField(StrEnum):
     PATH = "path"
     CONTENT = "content"
     SHA256 = "sha256"
+    LENGTH = "length"
+    OFFSET = "offset"
+    NEXT = "next"
     RESOLUTION = "resolution"
     TOOL_VERSION = "toolVersion"
     IDEMPOTENCY_KEY = "idempotencyKey"
@@ -386,6 +433,20 @@ REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
     Operation.READ_RELATIONS: frozenset({RequestField.ISSUE}),
     Operation.COUNT_LIMITS: frozenset({RequestField.PATH, RequestField.ROOT}),
 }
+
+
+#: The optional fields an operation's request may carry besides its required ones.
+OPTIONAL_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
+    Operation.READ_CANDIDATE: frozenset({RequestField.OFFSET}),
+}
+
+#: The most characters one ``read-candidate`` piece holds.
+PIECE_CHARACTER_LIMIT: Final = 16_000
+#: The most UTF-8 bytes the complete serialized response of one piece takes,
+#: the line terminator ``main`` writes after it included.
+PIECE_BYTE_LIMIT: Final = 16_000
+#: The terminator ``main`` writes after every serialized result.
+LINE_TERMINATOR: Final = "\n"
 
 
 @dataclass(frozen=True)
@@ -656,6 +717,21 @@ def _candidate_path(request: Mapping[str, object]) -> str:
     return _normalized_path(_string(request, RequestField.PATH))
 
 
+def _piece_offset(request: Mapping[str, object]) -> int:
+    """Return the requested start of a piece; an absent ``offset`` starts at 0."""
+    if RequestField.OFFSET not in request:
+        return 0
+    value = request[RequestField.OFFSET]
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise Blocked(
+            BlockReason.INVALID_REQUEST,
+            f"request field {RequestField.OFFSET.value} must be a non-negative JSON integer, "
+            f"received {_received(request, RequestField.OFFSET)}; omit it for the first piece "
+            f"or pass the {ResultField.NEXT.value} a piece returned",
+        )
+    return value
+
+
 def _reference_path(request: Mapping[str, object]) -> str:
     named = _string(request, RequestField.PATH)
     defect = _system_text_defect(named)
@@ -765,7 +841,7 @@ def _issue_identity(request: Mapping[str, object]) -> tuple[str, str, str]:
 _REQUEST_CHECKS: Final[
     Mapping[Operation, tuple[Callable[[Mapping[str, object]], object], ...]]
 ] = {
-    Operation.READ_CANDIDATE: (_candidate_path, _checkout_root),
+    Operation.READ_CANDIDATE: (_candidate_path, _checkout_root, _piece_offset),
     Operation.RESOLVE_REFERENCE: (_reference_path, _checkout_root),
     Operation.TOOL_VERSION: (),
     Operation.START: (_candidate_path, _checkout_root, _candidate_sha256),
@@ -815,8 +891,9 @@ def validate_request(request: Mapping[str, object]) -> Operation:
             BlockReason.INVALID_REQUEST,
             f"{RequestField.OPERATION} must be one of {', '.join(Operation)}, received {request.get(RequestField.OPERATION)!r}; name one of those operations",
         )
-    allowed = REQUIRED_FIELDS[operation] | {RequestField.OPERATION}
-    missing = sorted(field.value for field in allowed if field not in request)
+    required = REQUIRED_FIELDS[operation] | {RequestField.OPERATION}
+    allowed = required | OPTIONAL_FIELDS.get(operation, frozenset())
+    missing = sorted(field.value for field in required if field not in request)
     unexpected = sorted(str(field) for field in request if field not in allowed)
     if missing or unexpected:
         raise Blocked(
@@ -931,12 +1008,74 @@ def _read_candidate(
     context: _Context, request: Mapping[str, object]
 ) -> dict[str, object]:
     relative = _candidate_path(request)
+    offset = _piece_offset(request)
     content = _live_content(_product_root(context, _checkout_root(request)), relative)
-    return {
-        ResultField.PATH: relative,
-        ResultField.SHA256: _sha256(content),
-        ResultField.CONTENT: content,
-    }
+    length = len(content)
+    if offset > 0 and offset >= length:
+        raise Blocked(
+            BlockReason.INVALID_REQUEST,
+            f"request field {RequestField.OFFSET.value} is {offset}, at or past the candidate's "
+            f"{length} characters; pass the {ResultField.NEXT.value} of the previous piece, "
+            "and stop when it is null",
+        )
+    return _candidate_piece(content, relative, offset)
+
+
+def _candidate_piece(content: str, relative: str, offset: int) -> dict[str, object]:
+    """Return the largest piece of ``content`` from ``offset`` whose response fits the byte limit."""
+    length = len(content)
+    digest = _sha256(content)
+
+    def piece(size: int) -> dict[str, object]:
+        end = offset + size
+        return {
+            ResultField.PATH: relative,
+            ResultField.SHA256: digest,
+            ResultField.LENGTH: length,
+            ResultField.OFFSET: offset,
+            ResultField.NEXT: end if end < length else None,
+            ResultField.CONTENT: content[offset:end],
+        }
+
+    def fits(size: int) -> bool:
+        return _piece_bytes(piece(size)) <= PIECE_BYTE_LIMIT
+
+    size = _largest_fitting(min(PIECE_CHARACTER_LIMIT, length - offset), fits)
+    return piece(size)
+
+
+def _piece_bytes(values: Mapping[str, object]) -> int:
+    """Size everything ``main`` writes for ``values``: the serialized response and its line terminator."""
+    written = (
+        _response_text(_ok_result(Operation.READ_CANDIDATE, values)) + LINE_TERMINATOR
+    )
+    return len(written.encode(TEXT_ENCODING))
+
+
+def _largest_fitting(ceiling: int, fits: Callable[[int], bool]) -> int:
+    """Return the largest size up to ``ceiling`` that fits, and never less than one.
+
+    The ceiling is probed first, because the ``next`` offset becomes null at the
+    end of the candidate and can make that response smaller than every shorter
+    one. A binary search then finds the boundary below it, and a step each way
+    settles the sizes around it where the ``next`` offset's digit count makes a
+    response one byte smaller or larger than its neighbours.
+    """
+    if fits(max(ceiling, 1)):
+        return max(ceiling, 1)
+    low, high = 1, max(ceiling, 1)
+    while low < high:
+        middle = (low + high + 1) // 2
+        if fits(middle):
+            low = middle
+        else:
+            high = middle - 1
+    size = low
+    while size < ceiling and fits(size + 1):
+        size += 1
+    while size > 1 and not fits(size):
+        size -= 1
+    return size
 
 
 def _product_root(context: _Context, named: pathlib.Path) -> pathlib.Path:
@@ -1622,11 +1761,23 @@ def execute(
         values = _HANDLERS[validated](_Context(runner=runner, cwd=cwd), request)
     except Blocked as blocked:
         return _blocked_result(operation, blocked, request_token)
-    return ExitCode.OK, {
+    return ExitCode.OK, _ok_result(operation, values)
+
+
+def _ok_result(
+    operation: Operation | None, values: Mapping[str, object]
+) -> dict[str, object]:
+    """Wrap an operation's ``values`` in the ``ok`` envelope every success prints."""
+    return {
         ResultField.OPERATION: operation,
         ResultField.STATUS: ResultStatus.OK,
         **values,
     }
+
+
+def _response_text(result: Mapping[str, object]) -> str:
+    """Serialize ``result`` as the line ``main`` prints, before its line terminator."""
+    return json.dumps(result, sort_keys=True)
 
 
 def _read_request(stdin: TextIO | None) -> str:
@@ -1638,7 +1789,7 @@ def _read_request(stdin: TextIO | None) -> str:
 def _serialized(code: ExitCode, result: Mapping[str, object]) -> tuple[ExitCode, str]:
     """Serialize one result, blocking when the output it carries nests too deeply."""
     try:
-        return code, json.dumps(result, sort_keys=True)
+        return code, _response_text(result)
     except RecursionError:
         named = result.get(ResultField.OPERATION)
         token = result.get(ResultField.RUN_TOKEN)
@@ -1650,7 +1801,7 @@ def _serialized(code: ExitCode, result: Mapping[str, object]) -> tuple[ExitCode,
             ),
             token if isinstance(token, str) else NOT_STARTED,
         )
-        return code, json.dumps(blocked, sort_keys=True)
+        return code, _response_text(blocked)
 
 
 def main(
@@ -1685,7 +1836,7 @@ def main(
         code, result = execute(request_text, cwd=pathlib.Path(), runner=runner)
     code, text = _serialized(code, result)
     sink.write(text)
-    sink.write("\n")
+    sink.write(LINE_TERMINATOR)
     return int(code)
 
 
