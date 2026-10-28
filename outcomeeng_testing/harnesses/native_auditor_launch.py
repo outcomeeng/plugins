@@ -66,6 +66,10 @@ PLANTED_PROJECTION: Final[Mapping[str, object]] = {
     RUN_TERMINAL_STATUS_FIELD: PLANTED_TERMINAL_STATUS,
     RUN_EVENTS_FIELD: [{EVENT_RUN_ID_FIELD: PLANTED_RUN_FILE_NAME}],
 }
+PLANTED_PROJECTION_QUOTING_BLOCKED: Final[Mapping[str, object]] = {
+    **PLANTED_PROJECTION,
+    "summary": f"A finding quotes the word {BLOCKED_MARKER}.",
+}
 
 
 class LaunchReturn(Enum):
@@ -73,6 +77,7 @@ class LaunchReturn(Enum):
 
     RUN_TOKEN = "run-token"
     FREE_FORM = "free-form"
+    PROJECTION_QUOTING_BLOCKED = "projection-quoting-blocked"
     PROJECTION_ONLY = "projection-only"
     UNSTRUCTURED = "unstructured"
     BLOCKED = "blocked"
@@ -89,6 +94,8 @@ def _returned_message(returned: LaunchReturn) -> str:
             f"The audit is sealed under token {PLANTED_RUN_TOKEN}. Its record is "
             f"{PLANTED_RUN_FILE}.\nThe rendered verdict follows.\n{projection}"
         )
+    if returned is LaunchReturn.PROJECTION_QUOTING_BLOCKED:
+        return f"Here is the verdict.\n{json.dumps(PLANTED_PROJECTION_QUOTING_BLOCKED)}"
     if returned is LaunchReturn.PROJECTION_ONLY:
         return f"Here is the verdict.\n```json\n{projection}\n```"
     if returned is LaunchReturn.UNSTRUCTURED:

@@ -24,6 +24,7 @@ from outcomeeng_testing.harnesses.discovery_auth_cases import (
 from outcomeeng_testing.harnesses.installation import repository_root
 from outcomeeng_testing.harnesses.native_auditor_launch import (
     PLANTED_PROJECTION,
+    PLANTED_PROJECTION_QUOTING_BLOCKED,
     PLANTED_RUN_FILE,
     PLANTED_RUN_FILE_NAME,
     PLANTED_RUN_TOKEN,
@@ -134,6 +135,26 @@ def test_the_run_file_is_recovered_from_a_reply_that_names_no_label() -> None:
             assert result[RESULT_RUN_TOKEN_KEY] == PLANTED_RUN_TOKEN, row.identifier
             assert result[RESULT_RUN_FILE_KEY] == PLANTED_RUN_FILE, row.identifier
             assert result[RESULT_PROJECTION_KEY] == PLANTED_PROJECTION, row.identifier
+
+
+def test_a_rendered_projection_that_quotes_the_blocked_word_is_not_a_blocked_result() -> (
+    None
+):
+    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
+    with native_auditor_launch(
+        {selected}, returned=LaunchReturn.PROJECTION_QUOTING_BLOCKED
+    ) as observation:
+        assert observation.rows
+        for item in observation.rows:
+            row = item.observation.row
+            assert item.observation.terminal_condition is None, row.identifier
+            result = json.loads(row.result_path.read_text("utf-8"))
+            assert result[RESULT_BLOCKED_KEY] is False, row.identifier
+            assert result[RESULT_RUN_TOKEN_KEY] == PLANTED_RUN_TOKEN, row.identifier
+            assert result[RESULT_RUN_FILE_KEY] == PLANTED_RUN_FILE_NAME, row.identifier
+            assert result[RESULT_PROJECTION_KEY] == (
+                PLANTED_PROJECTION_QUOTING_BLOCKED
+            ), row.identifier
 
 
 def test_a_reply_without_a_rendered_projection_or_blocked_diagnostic_records_a_terminal_condition() -> (

@@ -282,7 +282,7 @@ def run_native_auditor_row(
     projection = _rendered_projection(message)
     run_token = projection[RUN_TOKEN_FIELD] if projection else None
     run_file = _run_file(message, projection)
-    blocked = BLOCKED_MARKER in message
+    blocked = projection is None and BLOCKED_MARKER in message
     terminal_condition: str | None = None
     if result.returncode != 0:
         terminal_condition = f"native parent session exited {result.returncode}"
