@@ -3,9 +3,13 @@
 Tested before this script is bundled by the audit node's
 ``test_implementation_scope.scenario.l1.py`` (stale-local-base resolution, a
 nonexistent repository) and ``test_implementation_scope.compliance.l1.py``
-(a run-input object whose keys cannot displace the git-resolved scope, a
-non-object and a malformed run-input value, a sealed inventory path carrying no
-recorded scope unit, a required unit outside the final coverage statuses beside
+(a run-input file whose keys cannot displace the git-resolved scope, an absent
+run-input file, an unreadable run-input path, JSON text passed as the run-input
+value in place of a path, a run-input path given without the scratch directory,
+a scratch directory that names no directory, a run-input file outside that
+directory and a symbolic link inside it that points outside, a non-object and a
+malformed run-input file, a sealed
+inventory path carrying no recorded scope unit, a required unit outside the final coverage statuses beside
 an optional unit carrying the same status, exact inventory agreement, drift in
 both directions, a recorded subject outside the inventory, a missing-skill unit
 naming its absent skill, an advisory live path beside the committed inventory, a reconcile request carrying no sealed
@@ -45,6 +49,8 @@ if TYPE_CHECKING:
 
 ERROR_PREFIX = "error: implementation scope resolution failed"
 RECONCILE_PREFIX = "error: implementation audit reconciliation failed"
+# The longest excerpt of a caller-supplied value that a diagnostic echoes.
+EXCERPT_LIMIT = 200
 SPX_COMMAND = "spx"
 RUN_COMMAND_PREFIX = ("verification", "run")
 INPUT_COMMAND = "input"
@@ -53,6 +59,12 @@ SCOPE_OPTION = "--scope"
 # The option naming the file that receives the complete run-start input in
 # place of standard output.
 OUTPUT_OPTION = "--output"
+# The option naming the file that holds the audit input merged beneath the
+# resolved scope.
+AUDIT_INPUT_OPTION = "--audit-input"
+# The option naming the session scratch directory that must contain the
+# audit-input file once symbolic links are followed.
+SCRATCH_DIR_OPTION = "--scratch-dir"
 # Audit-input key under which an advisory (`worktree:`) audit carries its live
 # modified and untracked paths; a committed audit omits it.
 LIVE_PATHS_KEY = "live_paths"
@@ -159,7 +171,7 @@ def read_run_document(
         except json.JSONDecodeError as exc:
             raise RuntimeError(
                 f"`{command}` wrote a stdout line that is not JSON "
-                f"({exc}): {line[:200]!r}. Update `spx` to a release whose "
+                f"({exc}): {line[:EXCERPT_LIMIT]!r}. Update `spx` to a release whose "
                 "`verification run` commands print JSON documents."
             ) from exc
         if isinstance(document, dict) and field in document:
@@ -293,13 +305,65 @@ def _reconcile_run(
     return 0 if verdict[ReconcileField.RECONCILED] else EXIT_UNRECONCILED
 
 
+def _read_audit_input(
+    path: pathlib.Path, scratch_dir: pathlib.Path | None
+) -> dict[str, object]:
+    """Return the JSON object the audit-input file inside `scratch_dir` holds; raise `RuntimeError` naming the failure."""
+    if scratch_dir is None:
+        raise RuntimeError(
+            f"{AUDIT_INPUT_OPTION} requires {SCRATCH_DIR_OPTION}, the session "
+            "scratch directory that holds the audit-input file."
+        )
+    try:
+        root = scratch_dir.resolve(strict=True)
+        if not root.is_dir():
+            raise NotADirectoryError(str(root))
+    except OSError as exc:
+        raise RuntimeError(
+            f"{SCRATCH_DIR_OPTION} must name an existing directory, received "
+            f"{str(scratch_dir)[:EXCERPT_LIMIT]!r} ({type(exc).__name__}: {exc}). "
+            "Pass the session scratch directory."
+        ) from exc
+    try:
+        confined = path.resolve(strict=True)
+        if not confined.is_relative_to(root):
+            raise RuntimeError(
+                f"{AUDIT_INPUT_OPTION} file {str(path)[:EXCERPT_LIMIT]!r} lies outside "
+                f"the {SCRATCH_DIR_OPTION} directory {str(scratch_dir)[:EXCERPT_LIMIT]!r}. "
+                "Write the object to a file in the session scratch directory "
+                "with the file-write tool and pass that file's path."
+            )
+        supplied = json.loads(confined.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError(
+            f"{AUDIT_INPUT_OPTION} must name a readable file holding "
+            f"one JSON object, received {str(path)[:EXCERPT_LIMIT]!r} "
+            f"({type(exc).__name__}: {exc}). Write the object to a file in "
+            "the session scratch directory with the file-write tool and pass "
+            "that file's path."
+        ) from exc
+    if not isinstance(supplied, dict):
+        raise RuntimeError(
+            f"{AUDIT_INPUT_OPTION} file {str(path)[:EXCERPT_LIMIT]!r} "
+            f"holds a {type(supplied).__name__}, not a JSON object. Write one "
+            "JSON object to the file."
+        )
+    return supplied
+
+
 def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("scope", help="HEAD, a branch, or a three-dot range")
     parser.add_argument("--repo", type=pathlib.Path, default=pathlib.Path.cwd())
     parser.add_argument(
-        "--audit-input",
-        help="JSON object merged beneath the resolved scope to form a run-start input",
+        AUDIT_INPUT_OPTION,
+        type=pathlib.Path,
+        help="file holding a JSON object merged beneath the resolved scope to form a run-start input",
+    )
+    parser.add_argument(
+        SCRATCH_DIR_OPTION,
+        type=pathlib.Path,
+        help="session scratch directory that must contain the audit-input file",
     )
     parser.add_argument(
         "--reconcile-run",
@@ -343,15 +407,12 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
         return _reconcile_run(runner, scope, args, resolved)
     if args.audit_input is not None:
         try:
-            resolved = {**json.loads(args.audit_input), **resolved}
-        except (json.JSONDecodeError, TypeError) as exc:
-            print(
-                f"{ERROR_PREFIX}: --audit-input must be one JSON object such as "
-                f"""'{{"selector": "HEAD"}}', received """
-                f"{args.audit_input[:200]!r} ({type(exc).__name__}: {exc}). "
-                "Pass the object as a single-quoted argument.",
-                file=sys.stderr,
-            )
+            resolved = {
+                **_read_audit_input(args.audit_input, args.scratch_dir),
+                **resolved,
+            }
+        except RuntimeError as exc:
+            print(f"{ERROR_PREFIX}: {exc}", file=sys.stderr)
             return EXIT_COMMAND_FAILURE
     # The selection is set after the merge, so no run-input key displaces it.
     try:
@@ -365,7 +426,7 @@ def main(argv: list[str] | None = None, runner: Runner = subprocess.run) -> int:
     if not isinstance(live, list) or not all(isinstance(p, str) for p in live):
         print(
             f"{ERROR_PREFIX}: {LIVE_PATHS_KEY} in --audit-input must be a list of "
-            f"path strings, received {json.dumps(live)[:200]}. Pass the modified "
+            f"path strings, received {json.dumps(live)[:EXCERPT_LIMIT]}. Pass the modified "
             "and untracked paths as a JSON array of strings.",
             file=sys.stderr,
         )

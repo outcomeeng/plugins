@@ -11,6 +11,7 @@ import json
 import pathlib
 import subprocess
 import sys
+import tempfile
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from types import ModuleType
@@ -62,6 +63,10 @@ INPUT_COMMAND = cast(str, _MODULE["INPUT_COMMAND"])
 RENDER_COMMAND = cast(str, _MODULE["RENDER_COMMAND"])
 SCOPE_OPTION = cast(str, _MODULE["SCOPE_OPTION"])
 LIVE_PATHS_KEY = cast(str, _MODULE["LIVE_PATHS_KEY"])
+AUDIT_INPUT_OPTION = cast(str, _MODULE["AUDIT_INPUT_OPTION"])
+SCRATCH_DIR_OPTION = cast(str, _MODULE["SCRATCH_DIR_OPTION"])
+# The file name is the harness's own scratch handle for the document it writes.
+AUDIT_INPUT_FILE_NAME = "audit-input.json"
 # Handles for a run that was never started: any well-formed token no run has,
 # and a scope identity no commit can match.
 ABSENT_RUN_TOKEN = "1999-01-01_00-00-00-000-000000000000"
@@ -274,32 +279,73 @@ def run_implementation_scope(
     *,
     repo_override: pathlib.Path | None = None,
     audit_input: str | None = None,
+    audit_input_path: pathlib.Path | None = None,
+    audit_input_value: str | None = None,
     reconcile_run: str | None = None,
     scope_identity: str | None = None,
     output_path: pathlib.Path | None = None,
+    scratch_dir: pathlib.Path | None = None,
+    without_scratch_dir: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    """Capture the real CLI result while keeping cwd separate from --repo."""
-    output_argv = () if output_path is None else (output_option(), str(output_path))
-    audit_input_argv = () if audit_input is None else ("--audit-input", audit_input)
-    reconcile_argv = () if reconcile_run is None else ("--reconcile-run", reconcile_run)
-    if scope_identity is not None:
-        reconcile_argv = (*reconcile_argv, SCOPE_IDENTITY_OPTION, scope_identity)
-    return subprocess.run(
-        (
-            sys.executable,
-            str(SCRIPT_PATH),
-            selector,
-            "--repo",
-            str(repo if repo_override is None else repo_override),
-            *audit_input_argv,
-            *reconcile_argv,
-            *output_argv,
-        ),
-        cwd=repo,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+    """Capture the real CLI result while keeping cwd separate from --repo.
+
+    ``audit_input`` is the text of the audit-input document: the harness writes
+    it to a file in a scratch directory it owns for the run and names that file
+    to the resolver. ``audit_input_path`` names a path directly, so a test can
+    supply a path that holds no readable document. ``audit_input_value`` is
+    passed verbatim as the option's value, so a test can supply text where the
+    resolver expects a path. ``scratch_dir`` names the directory the resolver
+    confines the audit-input path to; it defaults to the harness's own scratch
+    directory, and ``without_scratch_dir`` omits the option altogether.
+    """
+    if (
+        sum(
+            item is not None
+            for item in (audit_input, audit_input_path, audit_input_value)
+        )
+        > 1
+    ):
+        raise ValueError(
+            "supply one of audit_input, audit_input_path, or audit_input_value"
+        )
+    with tempfile.TemporaryDirectory() as scratch:
+        named_input = audit_input_path
+        if audit_input is not None:
+            named_input = pathlib.Path(scratch, AUDIT_INPUT_FILE_NAME)
+            named_input.write_text(audit_input, encoding="utf-8")
+        output_argv = () if output_path is None else (output_option(), str(output_path))
+        option_value = audit_input_value if named_input is None else str(named_input)
+        audit_input_argv = (
+            () if option_value is None else (AUDIT_INPUT_OPTION, option_value)
+        )
+        confining_directory = scratch if scratch_dir is None else scratch_dir
+        scratch_argv = (
+            ()
+            if without_scratch_dir or option_value is None
+            else (SCRATCH_DIR_OPTION, str(confining_directory))
+        )
+        reconcile_argv = (
+            () if reconcile_run is None else ("--reconcile-run", reconcile_run)
+        )
+        if scope_identity is not None:
+            reconcile_argv = (*reconcile_argv, SCOPE_IDENTITY_OPTION, scope_identity)
+        return subprocess.run(
+            (
+                sys.executable,
+                str(SCRIPT_PATH),
+                selector,
+                "--repo",
+                str(repo if repo_override is None else repo_override),
+                *audit_input_argv,
+                *scratch_argv,
+                *reconcile_argv,
+                *output_argv,
+            ),
+            cwd=repo,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
 
 
 def output_option() -> str:
