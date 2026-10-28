@@ -7,7 +7,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Bash, request_user_input
 ---
 
 <objective>
-Product Tree `[eval]` evidence that is bound to the repository's own eval command, routed to the specialist for its producer kind, current against its producer, converged one case at a time, and aggregated into one deterministic suite result.
+Product Tree `[eval]` evidence that is bound to the repository's own eval command, authored for its producer kind, current against its producer, converged one case at a time, and aggregated into one deterministic suite result.
 </objective>
 
 <prerequisites>
@@ -58,9 +58,9 @@ Resolve the repository's commands for running one eval suite, one eval case, and
 
 <step name="route_producer">
 
-**Step 4: Route by producer kind**
+**Step 4: Author by producer kind**
 
-Classify each assertion's producer as a skill, agent, classifier, script, or command. Load the installed eval specialist for that producer kind and let it author the prompt, cases, and `eval.toml` under `/eval-evidence-standards`. When no installed skill serves the kind, preserve the assertion's `[eval]` evidence shape and report `capability-required` naming the assertion and the producer kind. A producer defect an eval exposes returns to the workflow that owns the producer; never edit the producer to make a case pass.
+Classify each assertion's producer as a skill, agent, classifier, script, or command. Author the prompt, cases, and `eval.toml` for that producer kind under `/eval-evidence-standards`. A producer defect an eval exposes returns to the workflow that owns the producer; never edit the producer to make a case pass.
 
 </step>
 
@@ -93,10 +93,10 @@ After every case has converged, run the bound suite command once. Take its pass 
 **Step 8: Report**
 
 ```markdown
-| # | Assertion | Producer kind | Suite  | Freshness | Result              |
-| - | --------- | ------------- | ------ | --------- | ------------------- |
-| 1 | {text}    | skill         | {path} | current   | Pass                |
-| 2 | {text}    | script        | —      | absent    | capability-required |
+| # | Assertion | Producer kind | Suite  | Freshness | Result |
+| - | --------- | ------------- | ------ | --------- | ------ |
+| 1 | {text}    | skill         | {path} | current   | Pass   |
+| 2 | {text}    | script        | {path} | stale     | Fail   |
 ```
 
 </step>
@@ -106,7 +106,7 @@ After every case has converged, run the bound suite command once. Take its pass 
 <success_criteria>
 
 - Every eval command run is the repository's own bound command, run at its default ceilings under the wait-for-load guard line.
-- Every assertion's suite is routed to the specialist for its producer kind, or reported `capability-required` with the producer kind.
+- Every assertion's suite is authored for its classified producer kind under `/eval-evidence-standards`.
 - Every suite's freshness is judged from its history against the current definition and producer before any run.
 - Every suite result comes from serial one-case convergence followed by one deterministic aggregate run.
 - No product runner, recipe, path, authentication mode, or model appears in this skill.
