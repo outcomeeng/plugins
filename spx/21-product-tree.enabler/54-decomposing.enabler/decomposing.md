@@ -11,6 +11,8 @@ CAN compose top-level product children or split nodes into focused children with
 
 ## Assertions
 
+- move-keeps-slug: `/decompose` moves each Assertion with its slug, resolves a slug that repeats in the destination file before the move, and rewrites every `carries` reference whose target path or slug it changes.
+
 ### Compliance
 
 - ALWAYS: treat more than roughly 7 assertions as a signal requiring decomposition analysis, not as an automatic split ([audit])
