@@ -3,6 +3,8 @@
 import json
 import pathlib
 
+import pytest
+
 from outcomeeng.validation.implementation_audit_contract import (
     AuditCoverageRequirement,
     AuditCoverageStatus,
@@ -191,11 +193,15 @@ def test_an_audit_input_file_outside_the_scratch_directory_is_rejected(
         assert not completed.stdout
 
 
-def test_a_scratch_directory_that_does_not_exist_is_rejected_naming_the_directory(
+@pytest.mark.parametrize("exists_as_regular_file", [False, True])
+def test_a_scratch_directory_that_names_no_directory_is_rejected_naming_the_directory(
     tmp_path: pathlib.Path,
+    exists_as_regular_file: bool,
 ) -> None:
-    missing_name, file_name = distinct_subject_paths(2)
-    missing = tmp_path / missing_name
+    named_name, file_name = distinct_subject_paths(2)
+    named = tmp_path / named_name
+    if exists_as_regular_file:
+        named.write_text(json.dumps({}), encoding="utf-8")
     readable = tmp_path / file_name
     readable.write_text(json.dumps({}), encoding="utf-8")
     with stale_local_base_repo() as stale:
@@ -203,13 +209,13 @@ def test_a_scratch_directory_that_does_not_exist_is_rejected_naming_the_director
             stale.repo,
             CHANGESET_SCOPE.HEAD_REF,
             audit_input_path=readable,
-            scratch_dir=missing,
+            scratch_dir=named,
         )
 
     assert completed.returncode == EXIT_COMMAND_FAILURE
     assert completed.stderr.startswith(ERROR_PREFIX)
     assert SCRATCH_DIR_OPTION in completed.stderr
-    assert str(missing) in completed.stderr
+    assert str(named) in completed.stderr
     assert AUDIT_INPUT_OPTION not in completed.stderr
     assert not completed.stdout
 
