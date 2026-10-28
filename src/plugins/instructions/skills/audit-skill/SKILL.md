@@ -5,7 +5,7 @@ description: >-
   shared fragments a changeset changes against the skill-standards and agent-prompt-standards rule catalogs,
   and records the judgment through an SPX changeset-scoped verification run.
 argument-hint: "<JSON object with path, runDriver, and optional base>"
-allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Bash(git rev-parse:*), Bash(git diff:*), Bash(git status:*), Bash(git -C * rev-parse:*), Bash(git -C * diff:*), Bash(git -C * status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
+allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Bash(git -C * rev-parse:*), Bash(git -C * diff:*), Bash(git -C * status:*), Bash(realpath:*), Bash(spx --version), Bash(spx verification run start:*), Bash(spx verification run status:*), Bash(spx verification run scope add:*), Bash(spx verification run finding add:*), Bash(spx verification run finish:*), Bash(spx verification run render:*), Write
 ---
 
 {!% require_skill 'instructions:skill-standards' %!}

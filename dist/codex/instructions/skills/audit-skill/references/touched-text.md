@@ -13,7 +13,7 @@ The classification that sorts each skill-audit finding into a finding on touched
 
 <touched_text>
 
-Touched text, inside one changed bundle file or included fragment, is each line that `git diff --unified=0 '<base-oid>...<head-oid>' -- '<path>'` adds or changes, extended to its enclosing unit, plus the text the change invalidates. The enclosing unit is:
+Touched text, inside one changed bundle file or included fragment, is each line that `git -C '<root>' diff --unified=0 '<base-oid>...<head-oid>' -- '<path>'` adds or changes, extended to its enclosing unit, plus the text the change invalidates. The enclosing unit is:
 
 | Content                   | Unit                                                                           |
 | ------------------------- | ------------------------------------------------------------------------------ |
