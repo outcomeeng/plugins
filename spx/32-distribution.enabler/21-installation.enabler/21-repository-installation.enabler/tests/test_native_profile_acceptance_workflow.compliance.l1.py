@@ -16,9 +16,14 @@ from outcomeeng_testing.harnesses.discovery_auth import (
     AuthenticationMode,
 )
 from outcomeeng_testing.harnesses.native_acceptance_workflow import (
+    PIN_SOURCE_WORKFLOW,
     observe_acceptance_workflow,
+    observe_pin_source_environment,
     recipe_artifact_directories,
+    run_pin_read_step,
+    shell_variable_references,
     uploaded_paths,
+    violating_pin_source_paths,
     violating_policy_workflow_paths,
     violating_trigger_workflow_paths,
 )
@@ -210,3 +215,48 @@ def test_a_self_hosted_runner_is_flagged_and_the_committed_workflow_is_not() -> 
     ]
 
     assert verdicts == [True, False]
+
+
+def consumed_pin_names() -> frozenset[str]:
+    """The pins the job's other run bodies reference that the job environment does not declare and the quality gate does."""
+    workflow = observe_acceptance_workflow()
+    return (
+        frozenset().union(
+            *(shell_variable_references(job) - job.env.keys() for job in workflow.jobs)
+        )
+        & observe_pin_source_environment().keys()
+    )
+
+
+def test_the_pin_reading_step_yields_the_values_the_quality_gate_declares() -> None:
+    names = consumed_pin_names()
+    declared = observe_pin_source_environment()
+    runs = [
+        run_pin_read_step(job, PIN_SOURCE_WORKFLOW)
+        for job in observe_acceptance_workflow().jobs
+    ]
+
+    assert names
+    for run in runs:
+        assert run.returncode == 0, run.stderr
+        assert run.environment == {name: declared[name] for name in names}
+
+
+def test_a_quality_gate_whose_pins_the_step_cannot_read_is_flagged_and_the_committed_one_is_not() -> (
+    None
+):
+    names = consumed_pin_names()
+    violating_paths = violating_pin_source_paths()
+    jobs = observe_acceptance_workflow().jobs
+
+    def flagged(source: Path) -> bool:
+        declared = observe_pin_source_environment(source)
+        expected = {name: declared[name] for name in names if name in declared}
+        return any(
+            run.returncode != 0 or run.environment != expected
+            for run in (run_pin_read_step(job, source) for job in jobs)
+        )
+
+    assert violating_paths
+    assert [flagged(path) for path in violating_paths] == [True] * len(violating_paths)
+    assert not flagged(PIN_SOURCE_WORKFLOW)
