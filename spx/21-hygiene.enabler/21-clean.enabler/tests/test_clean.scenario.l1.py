@@ -6,8 +6,9 @@ root nor the environment handed to it, `clean` records an argv that omits
 that environment and runs in the repository root it found, a Git dry run
 over the generated pathspecs would remove the
 other ignored cache and nothing else, the runner's exit code is propagated to
-the caller, and a repository whose every top-level path is protected invokes
-no runner. Root resolution from a directory with no repository metadata up to
+the caller, a symlinked agent copy is removed as the link while the directory
+it points at keeps its contents, and a repository whose every top-level path
+is protected invokes no runner. Root resolution from a directory with no repository metadata up to
 the search ceiling returns that directory, and a ceiling below a repository
 stops the search before it.
 """
@@ -32,6 +33,7 @@ from outcomeeng_testing.harnesses.clean import (
     create_clean_repo,
     create_directory_without_repository,
     observe_dry_run_removals,
+    run_cleanup,
     working_directory_below_root,
 )
 
@@ -69,6 +71,23 @@ def test_git_dry_run_preserves_session_store_and_active_environment(
     removals = observe_dry_run_removals(repo=repo, argv=argv)
 
     assert removals == {IGNORED_CACHE_DIR}
+
+
+def test_git_removes_a_symlinked_agent_copy_and_keeps_its_target(
+    tmp_path: Path,
+) -> None:
+    repo = create_clean_repo(tmp_path, include_local_work=True)
+    argv = build_clean_argv(
+        repo_root=repo.root,
+        active_python_prefix=repo.active_python_prefix,
+    )
+
+    run_cleanup(repo=repo, argv=argv)
+
+    assert repo.link_target_file is not None
+    assert repo.agent_copy_links
+    assert not any(os.path.lexists(repo.root / link) for link in repo.agent_copy_links)
+    assert repo.link_target_file.exists()
 
 
 def test_clean_propagates_runner_exit_code(tmp_path: Path) -> None:

@@ -3,7 +3,9 @@
 Covers the compliance assertions in `clean.md` whose verdict a command can
 produce: the argv the builder composes, the paths it omits, the empty argv
 it returns when nothing is left to clean, and a real Git dry run that lists
-no declared local-work path, even when a holder position is a file. The declared base command, protected set, and
+no declared local-work path outside an agent-copy path, lists an ignored
+entry under each agent-copy path, and passes a file at a holder position
+whole. The declared base command, protected set, and
 local-work paths are values the module complies with rather than behavior,
 so their evidence is audit and no case here pins them.
 """
@@ -133,7 +135,25 @@ def test_git_dry_run_lists_no_local_work_path(tmp_path: Path) -> None:
         IGNORED_CACHE_DIR,
         *repo.caches_beside_local_work,
         *repo.pattern_named_entries,
+        *repo.agent_copy_links,
     }
+
+
+def test_git_dry_run_lists_an_ignored_entry_under_each_agent_copy_path(
+    tmp_path: Path,
+) -> None:
+    repo = create_clean_repo(tmp_path, include_local_work=True)
+
+    argv = build_clean_argv(
+        repo_root=repo.root,
+        active_python_prefix=repo.active_python_prefix,
+    )
+
+    removals = observe_dry_run_removals(repo=repo, argv=argv)
+
+    assert repo.local_settings is not None
+    assert repo.agent_copy_links <= removals
+    assert repo.local_settings not in removals
 
 
 def test_git_dry_run_passes_a_file_at_a_holder_position_whole(
@@ -157,6 +177,7 @@ def test_git_dry_run_passes_a_file_at_a_holder_position_whole(
         IGNORED_CACHE_DIR,
         *repo.pattern_named_entries,
         *repo.files_at_holder_positions,
+        *repo.agent_copy_links,
     }
 
 
