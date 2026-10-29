@@ -10,7 +10,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- `/audit-skill` and `/audit-subagent` give a `filed` finding on an artifact no node governs no `issuesEntry` and name the artifact as a coverage gap; the product root carries no `ISSUES.md`.
+- `/audit-skill` and `/audit-subagent` treat every line of a changed artifact that no node below the product root governs as touched text, so a finding there rejects; the product root carries no `ISSUES.md`.
 
 ## 0.22.6
 

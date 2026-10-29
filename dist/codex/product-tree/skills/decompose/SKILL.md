@@ -46,14 +46,14 @@ If the target is `spx/`:
 1. Read the product document and product-level ADRs/PDRs.
 2. Read `AGENTS.md` if present.
 3. Enumerate existing top-level children.
-4. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `/understand` `references/artifact-placement.md` `<test_artifact_boundaries>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
+4. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `/understand` `references/artifact-placement.md` `<test_artifact_boundaries>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when the product document, a product-level decision, or the Change that carries this work identifies that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
 
 If the target is a node address:
 
 1. Accept only the target node address as structural input. The address must be the full path from `spx/`; never accept a bare node name or numeric prefix as sufficient.
-2. If the request includes proposed child names, indices, or dependency order, preserve those details as intent in the target node's `PLAN.md` or `ISSUES.md`; do not treat them as structure.
+2. If the request includes proposed child names, indices, or dependency order, preserve those details as intent in the Change that carries this work; do not treat them as structure.
 3. Check for a matching `<PRODUCT_TREE_CONTEXT>` marker. If absent, use skill `product-tree:contextualize`.
-4. Read the context manifest, target spec, existing children, and target `PLAN.md` or `ISSUES.md`.
+4. Read the context manifest, target spec, existing children, and the target's `ISSUES.md` when present.
 
 For both target modes, note root product scope, ancestor constraints, current assertions, existing siblings/children, and any known issues before proposing structure.
 
@@ -63,7 +63,7 @@ For both target modes, note root product scope, ancestor constraints, current as
 
 **Step 2: Assess whether composition is needed**
 
-For `spx/`, composition is needed when the product document or root coordination notes name product scope that has no top-level children yet.
+For `spx/`, composition is needed when the product document names product scope that has no top-level children yet.
 
 For a node target, decompose when at least one trigger applies:
 
@@ -73,7 +73,7 @@ For a node target, decompose when at least one trigger applies:
 | Context payload      | Exceeds a reliable working set                         |
 | Independent concerns | Contains assertions with no relationship to each other |
 | Separate validation  | Parts could be validated independently                 |
-| Explicit issue       | `PLAN.md` or `ISSUES.md` requests structure work       |
+| Explicit issue       | `ISSUES.md` or the Change requests structure work      |
 
 Classify the target with the product-domain-shapes reference before deciding whether to split it:
 
@@ -88,7 +88,7 @@ Classify the target with the product-domain-shapes reference before deciding whe
 
 **Step 3: Verify composition input completeness**
 
-Before proposing child nodes, verify that product/root context, target spec, existing children/siblings, `PLAN.md`, and `ISSUES.md` are complete enough to build the structure model.
+Before proposing child nodes, verify that product/root context, target spec, existing children/siblings, the target's `ISSUES.md` when present, and the Change that carries this work are complete enough to build the structure model.
 
 Use this coverage map:
 
@@ -132,7 +132,7 @@ Use these seam-finding heuristics:
 - Implementation layers alone are not concerns unless the user-visible or spec-visible contract can be validated independently.
 - Assertions that span multiple children stay in the parent as cross-cutting assertions.
 
-When later sibling slices are named, implied by the product vocabulary, or recorded as reserved horizon, keep the aggregate as the parent boundary and place the concrete behavior in a child. Record deferred siblings or reserved horizon in `PLAN.md`; keep cross-slice assertions on the parent and child-specific assertions on the child.
+When later sibling slices are named, implied by the product vocabulary, or recorded as reserved horizon, keep the aggregate as the parent boundary and place the concrete behavior in a child. Record deferred siblings or reserved horizon in the Change that carries this work; keep cross-slice assertions on the parent and child-specific assertions on the child.
 
 Present concern groupings to the user before writing files.
 
@@ -208,7 +208,7 @@ Use sparse indices to encode the ordering-evidence matrix. The horizon math belo
 
 1. Choose the horizon:
    - Full composition of all known child concerns → use the full [10, 99] range.
-   - First slice of a larger known area → use the first half or first quarter and record the reserved horizon in `PLAN.md`.
+   - First slice of a larger known area → use the first half or first quarter and record the reserved horizon in the Change that carries this work.
 2. Count child nodes in the chosen horizon.
 3. Distribute ordered groups with `i_k = 10 + floor(k * 89 / (N + 1))`, adjusted to the selected horizon.
 4. Assign a higher index only when the ordering-evidence matrix proves the predecessor constrains the successor — the higher index makes that predecessor constraining context for the successor in every later `/contextualize`.
@@ -271,8 +271,8 @@ Check each criterion:
 - [ ] Every different-index sibling relationship has ordering evidence
 - [ ] No new child placed at a higher index than an existing sibling without a matrix row proving the edge
 - [ ] Roadmap, chronology, theme grouping, and explanation order are not encoded as dependencies by themselves
-- [ ] Index horizon selected; partial compositions reserve remaining space in `PLAN.md`
-- [ ] Full compositions collectively cover the parent or product scope; partial compositions cover the selected first-slice horizon and record the remaining horizon in `PLAN.md`
+- [ ] Index horizon selected; partial compositions reserve remaining space in the Change that carries this work
+- [ ] Full compositions collectively cover the parent or product scope; partial compositions cover the selected first-slice horizon and record the remaining horizon in the Change that carries this work
 - [ ] Assertions are not lost during redistribution
 - [ ] Spec files use atemporal voice
 - [ ] Directory names follow `{NN}-{slug}.{enabler|outcome}`
@@ -319,7 +319,7 @@ How to avoid: Count assertions before and after. Assertions that span children r
 
 Claude wrote `32-parser.enabler` or `15-build.adr.md` in a decomposition plan. Another directory used the same numeric prefix, so the reference could not be resolved. Full paths from `spx/` are mandatory for every existing node, ADR, and PDR.
 
-How to avoid: When recording an ordering-evidence matrix, assertion move, issue, or PLAN.md note, write `spx/.../32-parser.enabler` and `spx/.../15-build.adr.md`. Before a new child has a final index, write the full parent path and candidate slug.
+How to avoid: When recording an ordering-evidence matrix, assertion move, issue, or Change entry, write `spx/.../32-parser.enabler` and `spx/.../15-build.adr.md`. Before a new child has a final index, write the full parent path and candidate slug.
 
 **Failure 7: Took the next sparse slot after an existing sibling**
 
@@ -331,7 +331,7 @@ How to avoid: Run the disposition checkpoint before assigning any index. Treat a
 
 Claude created only a parent domain node when the request named an aggregate domain plus its first concrete behavior. The parent then carried behavior-specific assertions, so adding the next behavior would require splitting the parent later and moving assertions that were specific from the start.
 
-How to avoid: When the aggregate owns shared scope or cross-child policy and the concrete behavior has its own validation contract, create both parent and child immediately. Put shared assertions on the parent, behavior-specific assertions on the child, and record deferred sibling horizon in `PLAN.md` when the later slices are known.
+How to avoid: When the aggregate owns shared scope or cross-child policy and the concrete behavior has its own validation contract, create both parent and child immediately. Put shared assertions on the parent, behavior-specific assertions on the child, and record deferred sibling horizon in the Change that carries this work when the later slices are known.
 
 **Failure 9: Left decision placement to authoring while ownership was unsettled**
 

@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Changed
 
-- The product root carries no `ISSUES.md`. `/contextualize` and `/decompose` read no note at the product root, and the audit skills give a finding on an artifact no node governs no `issuesEntry` and name the artifact as a coverage gap. Move each entry of an existing `spx/ISSUES.md` to the `ISSUES.md` of the node it describes, then delete the file.
+- The product root carries no `ISSUES.md`. `/contextualize` reads no note at the product root, and `/decompose` records intent and reserved index horizon in the Change that carries the work. The audit skills treat every line of a changed artifact that no node below the product root governs as touched text, so a finding there rejects: place the artifact's governing node, or fix a finding on a root decision record or the product document, in the same changeset. Move each entry of an existing `spx/ISSUES.md` to the `ISSUES.md` of the node it describes, then delete the file.
 
 ## 0.109.9
 

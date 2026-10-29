@@ -250,7 +250,7 @@ Children: {count} ({list if any})
 Test links: {list from target spec, full paths resolved from target} | none
 Co-located tests: {count} listed | none
 Implementation: unknown unless already established by a prior workflow
-Coordination notes: {list of {path}/PLAN.md and {path}/ISSUES.md found at any level} | none
+Coordination notes: {list of {path}/PLAN.md and {path}/ISSUES.md found on the path and at the target} | none
 Local skill overlays: {comma-separated list from spx/local/} | none
 Lifecycle overlays read: spx/local/merging.md | none
 Default-branch completion boundary: delivered value is value merged to the default branch on origin through /merge; local verification, review, audit, and commits are progress, not completion, while the branch carries changes ahead of its resolved base
