@@ -75,13 +75,13 @@ A known section may stand before the Maturity that first requires it — the sec
 
 <rule id="review-bar">
 
-A record is held only to what its review needs. A failed criterion of the declared Maturity's Definition of Ready is a blocking finding. A finding against any other record rule — among them the title and Intent word limits, section order, heading form, verdict wording, and malleability notation — is non-blocking and is returned `filed`. A blocking finding refuses only the Maturity it judges: the record publishes at the highest Maturity whose blocking criteria it meets, and at Proposed when it meets none.
+A record is held only to what its review needs, and every finding the change audit raises on it is blocking. A Change record is no Node's artifact, so no `ISSUES.md` holds a finding on it: the author fixes each finding in the record, and the audit judges every record whole and files no finding. A failed criterion of the declared Maturity's Definition of Ready that the record still fails refuses only the Maturity it judges: the record publishes at the highest Maturity whose criteria it meets, and at Proposed when it meets none.
 
 </rule>
 
 <rule id="one-audit">
 
-Each revision of a record receives at most one change audit, and its findings never withhold publication, claiming, or execution. The author repairs what takes a minute and publishes. Before the first audit of a revision, the author checks every same-class site and every section the repair changed.
+Each revision of a record receives at most one change audit, and its findings never withhold claiming or execution. The author fixes every finding and publishes with no further audit. Before the first audit of a revision, the author checks every same-class site and every section the repair changed.
 
 </rule>
 
@@ -102,7 +102,7 @@ When the Change derives from a raw submission, the Intent restates that submissi
 
 <rule id="record-limits">
 
-The title has at most 15 words and the Intent at most 60 words, labels included. A record over a limit is a non-blocking finding under `review-bar` that names the section, the limit, and the count.
+The title has at most 15 words and the Intent at most 60 words, labels included. A record over a limit is a blocking finding under `review-bar` that names the section, the limit, and the count.
 
 </rule>
 

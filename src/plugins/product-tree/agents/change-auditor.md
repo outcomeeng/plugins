@@ -90,8 +90,8 @@ request files, and persistence; relay its result.
 <output_format>
 
 Return exactly what `product-tree:audit-change` returns in its `verdict_format`,
-unchanged: the `OUTSIDE_CONTRACT` result, the completed verdict with its `filed:`
-lines, any `authority not judged` line, and the `finish` result, or the `BLOCKED`
+unchanged: the `OUTSIDE_CONTRACT` result, the completed verdict with any
+`authority not judged` line and the `finish` result, or the `BLOCKED`
 diagnostic. Rename, reorder, drop, or summarize no line or field, and add no
 prose verdict or summary.
 
