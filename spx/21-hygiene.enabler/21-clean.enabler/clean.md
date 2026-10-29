@@ -29,6 +29,8 @@ A value this node owns admits no test of its agreement with the module, because 
 
 The module invokes the command in the repository root whose top-level entries produced the pathspecs. A caller that names no root gets the nearest directory at or above its working directory that holds the repository's metadata. The search climbs no higher than its ceiling, the filesystem root unless a caller names one; when no directory up to the ceiling holds metadata, the working directory itself is the root, and Git reports the missing repository through the command's exit code. That root reaches the command boundary with the argv, so the declaration holds for every caller rather than only for one whose working directory already matches.
 
+A worktree probes its own build in a new session started with `claude --plugin-dir <worktree>/dist/claude/<plugin>`, never through checkout copies of agent definitions and skills. The flag loads the plugin directory for that session only and replaces an installed marketplace plugin of the same name, so the plugin's skills and agents keep their namespaced names and resolve to the built directory. No gate audit runs in such a session, because the changeset's own auditor would judge the changeset.
+
 ## Assertions
 
 ### Scenarios
@@ -56,3 +58,4 @@ The module invokes the command in the repository root whose top-level entries pr
 - ALWAYS: an entry at a holding position that is not a directory is itself a pathspec, so a Git dry run of the generated argv lists it when it is ignored ([test](tests/test_clean.compliance.l1.py))
 - ALWAYS: the root harness guides `CLAUDE.md` and `AGENTS.md` name `just clean` as the agent's own action when a gitignored artifact blocks a gate, with no operator question and no path-limited substitute ([audit])
 - ALWAYS: the root harness guides `CLAUDE.md` and `AGENTS.md` state that `just clean` also removes checkout copies of agent definitions and skills ([audit])
+- ALWAYS: the root harness guides `CLAUDE.md` and `AGENTS.md` name the probe of a worktree's own build, a new session started with `claude --plugin-dir <worktree>/dist/claude/<plugin>`, beside the `just clean` statement, and state that no gate audit runs in such a session ([audit])
