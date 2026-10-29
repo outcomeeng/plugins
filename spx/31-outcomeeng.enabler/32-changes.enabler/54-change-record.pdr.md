@@ -80,8 +80,8 @@ The merge composition is the one the `Merge` section of the 4.0 Projection chapt
 
 ## Review bar
 
-- review-bar: A Change record is held only to what its review needs. A failed Definition of Ready criterion is a blocking finding; a finding against any other record rule, among them the title and Intent word limits, section order, heading form, verdict wording, and malleability notation, is non-blocking and is returned `filed`.
-- one-audit: Each revision of a Change record receives at most one change audit, and its findings never withhold publication, claiming, or execution; the Author repairs what takes a minute and publishes. A blocking finding refuses only the Maturity it judges: the record publishes at the highest Maturity whose blocking criteria it meets, and at Proposed when it meets none.
+- review-bar: A Change record is held only to what its review needs, and every finding the change audit raises on it is blocking. A Change record is no Node's artifact, so no `ISSUES.md` holds a finding on it, and the Author fixes each finding in the record; the change audit judges every record whole and files no finding.
+- one-audit: Each revision of a Change record receives at most one change audit, and its findings never withhold claiming or execution; the Author fixes every finding and publishes with no further audit. A failed Definition of Ready criterion the record still fails refuses only the Maturity it judges: the record publishes at the highest Maturity whose criteria it meets, and at Proposed when it meets none.
 - unsettled-question: A question no assumption can defend goes, with the Refiner's best answer, to the superior that assigned the refinement — the agent that gave the task, or the operator when no agent did — and refinement continues on every part that does not depend on the answer.
 
 ## Authority
@@ -159,7 +159,8 @@ Excluding records without the closed front-matter key set keeps the contract clo
 - ALWAYS: Proposed, Framed, Sliced, and Executable each have one independently loadable, cumulative Definition of Ready, and no Definition of Ready requires a body authority line.
 - ALWAYS: Maturity advances past Proposed, Framed, and Sliced only when the target level's Definition of Ready holds and the store shows the Product's Maintainer's move of the Change out of `Submitted` at the Maturity it leaves, read from the store's field-change event with its actor and time.
 - NEVER: a Change body carries attestation, accountable-person, priority or overrule text.
-- ALWAYS: the change audit counts the title's words and the Intent's words and reports a record over a limit as a non-blocking finding naming the section, the limit, and the count.
+- ALWAYS: the change audit counts the title's words and the Intent's words and reports a record over a limit as a blocking finding naming the section, the limit, and the count.
+- NEVER: the change audit returns a finding `filed`; every finding on a Change record is blocking, and the Author fixes it in the record.
 - ALWAYS: persistence writes each field to its one home in the configured coordination store and the body to the store body, and reads each back unchanged before reporting success; a coordination-store limit never shapes the record.
 - NEVER: a place holds a Change field in two homes, a store body carries front matter or a lineage line, or a project field holds a Change field.
 - NEVER: `audit-change` judges or migrates a record whose front matter does not carry the contract's closed key set; the Auditor reports it as outside the contract.
