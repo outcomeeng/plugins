@@ -21,7 +21,7 @@ CAN adopt the Product Tree methodology while delegating top-level structure to `
 - ALWAYS: cover consumers, jobs, surfaces, actors and sidedness, constraints, success signals, and top-level intent in the interview, applying `/interview`'s methodology rather than a forked interview ([audit])
 - ALWAYS: in brownfield, derive top-level intent from the product dimensions — consumers, jobs, surfaces, actors — never from the code's package, module, directory, or file layout ([audit])
 - ALWAYS: create the product document and the root `CLAUDE.md` and `AGENTS.md` managed Product Tree instruction block before any top-level child nodes — the root must exist before composition ([audit])
-- ALWAYS: record top-level product intent, constraints, examples, and unresolved questions in `spx/PLAN.md` when the user provides candidate areas ([audit])
+- ALWAYS: record top-level product intent, constraints, examples, and unresolved questions in a Proposed Change created through `/author-change` when the user provides candidate areas, and write no note at the product root ([audit])
 - ALWAYS: delegate top-level child composition to `/decompose spx/` — bootstrapping records product intent, decomposition owns child boundaries, node types, ordering evidence, and indices ([audit])
 - NEVER: create a Product Tree without a product document — the product document is the root of all context ([audit])
 - NEVER: assign top-level child indices or create top-level child nodes inside bootstrapping ([audit])

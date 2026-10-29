@@ -71,15 +71,14 @@ Proposed root scaffold:
 {{! file('root_guide') !}}
 {!% if target == 'claude' %!}{{! file('root_guide', 'codex') !}}{!% else %!}{{! file('root_guide', 'claude') !}}{!% endif %!}
 spx/
-├── {product-name}.product.md
-└── PLAN.md        # optional top-level composition intent for /decompose spx/
+└── {product-name}.product.md
 ```
 
 Include:
 
 - Product name and hypothesis
 - Included and excluded product scope
-- Top-level composition intent that will be recorded for `/decompose spx/`
+- Top-level composition intent that a Proposed Change will carry for `/decompose spx/`
 
 Wait for user confirmation before creating files.
 
@@ -101,10 +100,12 @@ Wait for user confirmation before creating files.
 
 3. Use skill `product-tree:update-instruction-block` for the repository root so its generator writes both root instruction blocks — `{{! file('root_guide') !}}` for this runtime and `{!% if target == 'claude' %!}`{{! file('root_guide', 'codex') !}}`{!% else %!}`{{! file('root_guide', 'claude') !}}`{!% endif %!}` for the other runtime — from the installed template. `/update-instruction-block` owns instruction-block rendering, enabled-language detection, and any explicit language override.
 
-4. If top-level composition intent exists, write `spx/PLAN.md` with:
+4. If top-level composition intent exists, use skill `product-tree:author-change` to create a Proposed Change for composing the top level, carrying:
    - Candidate product areas from the interview
    - Known constraints, examples, and unresolved questions
    - Explicit note that `/decompose spx/` owns child boundaries, node types, ordering evidence, and indices
+
+   Write no note at the product root; the product root carries none.
 
 </step>
 
@@ -112,7 +113,7 @@ Wait for user confirmation before creating files.
 
 **Step 5: Delegate top-level composition**
 
-After the root scaffold exists, use skill `product-tree:decompose` with `spx/` to compose top-level children. Pass only `spx/`; the root product document and `spx/PLAN.md` carry the user-provided intent.
+After the root scaffold exists, use skill `product-tree:decompose` with `spx/` to compose top-level children. Pass only `spx/`; the root product document and the Proposed Change carry the user-provided intent.
 
 </step>
 
@@ -124,7 +125,7 @@ Summarize what was created:
 
 - Product document path
 - `{{! file('root_guide') !}}` path and `{!% if target == 'claude' %!}`{{! file('root_guide', 'codex') !}}`{!% else %!}`{{! file('root_guide', 'claude') !}}`{!% endif %!}` path
-- `spx/PLAN.md` path, if created
+- The Proposed Change's URL, if created
 - `/decompose spx/` as the next structural step
 
 Recommend next steps:
@@ -149,17 +150,17 @@ How to avoid: Step 1 checks for an existing product document. If one exists, red
 
 Claude accepted a list of candidate areas, assigned node types and indices during bootstrapping, and skipped the composition workflow. The first tree shape encoded unexamined dependencies.
 
-How to avoid: Bootstrapping records product intent in the product document and root `PLAN.md`; `/decompose spx/` owns top-level child structure.
+How to avoid: Bootstrapping records product intent in the product document and a Proposed Change; `/decompose spx/` owns top-level child structure.
 
 **Failure 3: Lost top-level intent**
 
 Claude created only the product document and guide, then discarded the user's candidate product areas, because it treated the interview answers as conversation context the next step would still hold. The next composition step ran in a fresh session and had no durable local context.
 
-How to avoid: Write candidate areas, constraints, examples, and unresolved questions to `spx/PLAN.md` before invoking `/decompose spx/`.
+How to avoid: Record candidate areas, constraints, examples, and unresolved questions in a Proposed Change through `/author-change` before invoking `/decompose spx/`.
 
 **Failure 4: Mirroring the implementation's module layout into top-level intent**
 
-Bootstrapping ran over an existing codebase. Claude read the packages and named the candidate top-level areas after them (`config`, `model`, `format`, `layout`, …), so the tree's shape mirrored how the code happened to be filed. Package boundaries are the lowest layer (Code); letting them shape the highest layer (the tree) inverts the truth hierarchy, and `/decompose spx/` inherits the contamination through `PLAN.md`.
+Bootstrapping ran over an existing codebase. Claude read the packages and named the candidate top-level areas after them (`config`, `model`, `format`, `layout`, …), so the tree's shape mirrored how the code happened to be filed. Package boundaries are the lowest layer (Code); letting them shape the highest layer (the tree) inverts the truth hierarchy, and `/decompose spx/` inherits the contamination through the Change that carries the intent.
 
 How to avoid: In brownfield, derive top-level intent from consumers, jobs, surfaces, and actors — the product dimensions from Step 2 — not from the module or file layout. Pre-analysis of the code informs vocabulary and constraints, never the partition. Express every candidate area as a user-facing capability; if an area is named after a code component, re-derive it.
 
@@ -173,7 +174,7 @@ The scaffold is sound when:
 - [ ] The product document states the hypothesis and scope the interview surfaced in atemporal voice and enumerates no child
 - [ ] Every candidate top-level area is a user-facing capability derived from consumers, jobs, surfaces, and actors; none is named after a code component
 - [ ] The managed sections of `{{! file('root_guide') !}}` and `{!% if target == 'claude' %!}`{{! file('root_guide', 'codex') !}}`{!% else %!}`{{! file('root_guide', 'claude') !}}`{!% endif %!}` match the installed template and name only the project's enabled languages
-- [ ] `spx/PLAN.md` carries every candidate area, constraint, example, and unresolved question the interview surfaced and assigns no node kind or index
+- [ ] The Proposed Change carries every candidate area, constraint, example, and unresolved question the interview surfaced and assigns no node kind or index
 - [ ] The user confirmed the root scaffold plan before any file was written
 
 </success_criteria>

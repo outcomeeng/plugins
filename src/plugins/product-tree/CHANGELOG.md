@@ -10,6 +10,13 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.109.10
+
+### Changed
+
+- The product root carries no `ISSUES.md`. `/contextualize` reads no note at the product root, `/decompose` records intent and reserved index horizon in the Change that carries the work, and `/bootstrap` records top-level intent in a Proposed Change in place of `spx/PLAN.md`. The audit skills treat every line of a changed artifact that no node below the product root governs as touched text, so a finding there rejects: place the artifact's governing node, or fix a finding on a root decision record or the product document, in the same changeset. Move each entry of an existing `spx/ISSUES.md` to the `ISSUES.md` of the node it describes, then delete the file.
+- `/audit-change` judges every Change record whole and raises every finding as `blocking`; it files none, because no node's `ISSUES.md` holds a finding on a Change. `/author-change` fixes every finding after the one audit of a revision and publishes with no further audit.
+
 ## 0.109.9
 
 ### Fixed

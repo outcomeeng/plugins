@@ -33,6 +33,8 @@ Invalidated text is:
 
 A touched sentence that only cites an already-defective passage leaves the finding standing, against the passage.
 
+Every line of a changed artifact that no node below the product root governs is touched text: the Product Tree foundation's governing-node search for product content resolves such an artifact to no node, or to the product root, which carries no `ISSUES.md`.
+
 </touched_text>
 
 <classification>
@@ -57,6 +59,6 @@ A finding keeps the severity and disposition recorded for its key in the `ISSUES
 
 <filed_finding>
 
-A `filed` finding uses the finding payload of `<persistence_contract>` with `severity` set to `filed`, a `baseRefEvidence` string holding the diff range `<base-oid>..<head-oid>` that shows every location lies outside the change, and an `issuesEntry` object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content, or the product root's `spx/ISSUES.md` when no node governs it, and whose `heading` is the heading of the entry that records the finding. Its `evidence.observed` states the changed basis `<severity_and_disposition>` names, when the run names one. Its unit is the changed file it lies in; text in a bundle file the changeset leaves unchanged is read as context and carries no finding.
+A `filed` finding uses the finding payload of `<persistence_contract>` with `severity` set to `filed`, a `baseRefEvidence` string holding the diff range `<base-oid>..<head-oid>` that shows every location lies outside the change, and an `issuesEntry` object whose `path` is the `ISSUES.md` of the nearest node that governs the audited artifact, found by the Product Tree foundation's governing-node search for product content, and whose `heading` is the heading of the entry that records the finding. Its `evidence.observed` states the changed basis `<severity_and_disposition>` names, when the run names one. Its unit is the changed file it lies in; text in a bundle file the changeset leaves unchanged is read as context and carries no finding.
 
 </filed_finding>
