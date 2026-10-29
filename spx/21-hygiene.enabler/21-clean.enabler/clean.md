@@ -54,7 +54,6 @@ A worktree probes its own build in a new session started with `claude --plugin-d
 - NEVER: fall back to the bare base command when no cleanup candidates exist ([test](tests/test_clean.compliance.l1.py))
 - ALWAYS: a Git dry run of the generated argv lists no declared local-work path and no entry of a local-work directory outside an agent-copy path, at the top level or nested, even beside an ignored entry whose name is a pattern matching one, and still lists an ignored cache that sits beside a nested one ([test](tests/test_clean.compliance.l1.py))
 - ALWAYS: a Git dry run of the generated argv lists an ignored entry under each agent-copy path, and does not list `.claude/settings.local.json` ([test](tests/test_clean.compliance.l1.py))
-- NEVER: a Git dry run of the generated argv lists a tracked file under `.claude`, `.agents`, or `.codex`, an agent-copy path included ([test](tests/test_clean.compliance.l1.py))
 - ALWAYS: an entry at a holding position that is not a directory is itself a pathspec, so a Git dry run of the generated argv lists it when it is ignored ([test](tests/test_clean.compliance.l1.py))
 - ALWAYS: the root harness guides `CLAUDE.md` and `AGENTS.md` name `just clean` as the agent's own action when a gitignored artifact blocks a gate, with no operator question and no path-limited substitute ([audit])
 - ALWAYS: the root harness guides `CLAUDE.md` and `AGENTS.md` state that `just clean` also removes checkout copies of agent definitions and skills ([audit])

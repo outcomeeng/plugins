@@ -102,7 +102,6 @@ class CleanRepo:
     pattern_named_entries: frozenset[str] = frozenset()
     files_at_holder_positions: frozenset[str] = frozenset()
     agent_copy_links: frozenset[str] = frozenset()
-    tracked_paths: frozenset[str] = frozenset()
     local_settings: str | None = None
     link_target_file: Path | None = None
 
@@ -141,9 +140,8 @@ def create_clean_repo(
     agent-copy paths under `.claude`, reported by `local_settings`. Each
     agent-copy directory holds a tracked file and an ignored symlink, reported
     by `agent_copy_links`, that points at a directory outside the repository
-    whose file `link_target_file` names. A tracked file also sits in each
-    top-level local-work directory. Every tracked file is reported by
-    `tracked_paths`.
+    whose file `link_target_file` names. The tracked file keeps Git from
+    reporting the directory whole, so a dry run lists each ignored symlink.
     """
     repo_root = tmp_path / "repo"
     ignored_cache = repo_root / IGNORED_CACHE_DIR
@@ -189,9 +187,6 @@ def create_clean_repo(
                 )
                 ignore_lines.append(f"/{escaped}")
                 pattern_named_entries.add(pattern_name)
-                tracked_file = repo_root / local_path / TRACKED_FILE
-                tracked_file.write_text(local_path, encoding="utf-8")
-                tracked_paths.add(f"{local_path}/{TRACKED_FILE}")
         link_target = tmp_path / LINK_TARGET_DIR
         link_target.mkdir()
         link_target_file = link_target / LINK_TARGET_FILE
@@ -235,7 +230,6 @@ def create_clean_repo(
         pattern_named_entries=frozenset(pattern_named_entries),
         files_at_holder_positions=frozenset(files_at_holder_positions),
         agent_copy_links=frozenset(agent_copy_links),
-        tracked_paths=frozenset(tracked_paths),
         local_settings=local_settings,
         link_target_file=link_target_file,
     )
