@@ -66,9 +66,6 @@ or runs the audit. A request without ``root``, or one whose ``root`` is no
 repository checkout root, blocks naming it, and the containment check of the
 path stays against that root.
 
-``read-published`` starts ``gh`` once and returns the issue's published body,
-the empty string when the store holds none.
-
 ``read-relations`` starts ``gh`` once per page of the store's issues and returns
 the named issue's Product and Parent, its Parent's Product, and the issues whose
 Parent is the named issue, and the issues whose Predecessors value names it,
@@ -108,7 +105,6 @@ class Operation(StrEnum):
     RECONCILE = "reconcile"
     FINISH = "finish"
     READ_AUTHORITY = "read-authority"
-    READ_PUBLISHED = "read-published"
     READ_RELATIONS = "read-relations"
     COUNT_LIMITS = "count-limits"
 
@@ -162,7 +158,6 @@ class ResultField(StrEnum):
     FIELD = "field"
     PREVIOUS_VALUE = "previousValue"
     NEW_VALUE = "newValue"
-    BODY = "body"
     PRODUCT = "product"
     PARENT = "parent"
     PARENT_PRODUCT = "parentProduct"
@@ -266,7 +261,6 @@ class StoreField(StrEnum):
     NEW_VALUE = "newValue"
     ISSUE_FIELD = "issueField"
     NAME = "name"
-    BODY = "body"
     ISSUES = "issues"
     NUMBER = "number"
     VALUE = "value"
@@ -322,10 +316,6 @@ _AUTHORITY_QUERIES: Final[Mapping[AuthorityRead, str]] = {
 _AUTHORITY_CONNECTIONS: Final[Mapping[AuthorityRead, StoreField]] = {
     AuthorityRead.EVENTS: StoreField.TIMELINE_ITEMS,
 }
-_PUBLISHED_QUERY: Final = (
-    "query($o:String!,$r:String!,$n:Int!)"
-    f"{{repository(owner:$o,name:$r){{issue(number:$n){{{StoreField.BODY}}}}}}}"
-)
 ISSUE_FIELD_VALUES_PAGE_SIZE: Final = 50
 _RELATIONS_QUERY: Final = (
     "query($o:String!,$r:String!,$after:String)"
@@ -382,7 +372,6 @@ REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
         }
     ),
     Operation.READ_AUTHORITY: frozenset({RequestField.ISSUE}),
-    Operation.READ_PUBLISHED: frozenset({RequestField.ISSUE}),
     Operation.READ_RELATIONS: frozenset({RequestField.ISSUE}),
     Operation.COUNT_LIMITS: frozenset({RequestField.PATH, RequestField.ROOT}),
 }
@@ -787,7 +776,6 @@ _REQUEST_CHECKS: Final[
     Operation.RECONCILE: (_candidate_path, _checkout_root, _run_token),
     Operation.FINISH: (_candidate_path, _checkout_root, _run_token, _terminal_status),
     Operation.READ_AUTHORITY: (_issue_identity,),
-    Operation.READ_PUBLISHED: (_issue_identity,),
     Operation.READ_RELATIONS: (_issue_identity,),
     Operation.COUNT_LIMITS: (_candidate_path, _checkout_root),
 }
@@ -1305,34 +1293,6 @@ def _read_authority(
     }
 
 
-def _read_published(
-    context: _Context, request: Mapping[str, object]
-) -> dict[str, object]:
-    """Return the store's published body of the named issue, or block."""
-    owner, repository, number = _issue_identity(request)
-    argv = [
-        *_GRAPHQL,
-        "-f",
-        f"query={_PUBLISHED_QUERY}",
-        "-f",
-        f"o={owner}",
-        "-f",
-        f"r={repository}",
-        "-F",
-        f"n={number}",
-    ]
-    node: object = _json_lines(_command(context, argv, cwd=context.cwd), argv=argv)[-1]
-    for key in (StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUE):
-        node = node.get(key) if isinstance(node, dict) else None
-    body = node.get(StoreField.BODY) if isinstance(node, dict) else None
-    if not isinstance(body, str):
-        raise Blocked(
-            BlockReason.UNREADABLE_OUTPUT,
-            f"store answer carries no issue {StoreField.BODY} string{_STORE_HINT}",
-        )
-    return {ResultField.ISSUE: request[RequestField.ISSUE], ResultField.BODY: body}
-
-
 def _field_values(node: Mapping[str, object]) -> dict[str, object]:
     """Return the Product, Parent, and Predecessors values one store issue node carries."""
     values: dict[str, object] = {}
@@ -1545,7 +1505,6 @@ _HANDLERS: Final[
     Operation.RECONCILE: _reconcile,
     Operation.FINISH: _finish,
     Operation.READ_AUTHORITY: _read_authority,
-    Operation.READ_PUBLISHED: _read_published,
     Operation.READ_RELATIONS: _read_relations,
     Operation.COUNT_LIMITS: _count_limits,
 }
