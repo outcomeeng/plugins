@@ -105,7 +105,7 @@ Before applying changes, determine what will be affected:
 - Which node's opening survives?
 - How do the combined assertions fit together?
 - Which node's directory survives based on durable scope identity and evidence links?
-- Does consolidation alter sibling ordering or child composition? If yes, compose the parent before applying. Use skill `product-tree:decompose`.
+- Does consolidation alter sibling ordering or child composition? If yes, compose the parent before applying. Use skill `product-tree:decompose` with the parent as its only argument.
 - What happens to the removed node's test files?
 
 </step>
@@ -140,7 +140,7 @@ A move that changes the node's parent or its index starts only when the matrix f
 
 **Step 4c: Apply — Extract provider**
 
-1. Compose the parent containing the affected siblings. Use skill `product-tree:decompose`.
+1. Compose the parent containing the affected siblings. Use skill `product-tree:decompose` with that parent as its only argument.
 2. Apply the resulting structure: create the provider directory and spec from the decomposition result.
 3. Move assertions for the shared concern into the provider, and move their test files with `git mv <old> <new>`.
 4. Remove the shared content from each dependent node's spec.
@@ -161,7 +161,7 @@ A move that changes the node's parent or its index starts only when the matrix f
 4. Update the surviving node's opening to cover the merged scope.
 5. Update any cross-cutting assertion links in ancestor specs that pointed to the removed node.
 6. Remove the old node's directory with `git rm -r <old-node-directory>` once its assertions and tests live in the surviving node, so Git records the removal in the changeset.
-7. If the surviving node now exceeds ~7 assertions or mixes independent concerns, decompose the surviving node. Use skill `product-tree:decompose`.
+7. If the surviving node now exceeds ~7 assertions or mixes independent concerns, decompose the surviving node. Use skill `product-tree:decompose` with the surviving node as its only argument.
 
 </step>
 
