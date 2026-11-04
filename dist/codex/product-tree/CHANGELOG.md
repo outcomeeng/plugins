@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.109.11
+
+### Fixed
+
+- **`/decompose` reports a declared but unsupported methodology version by its value.** For a tree with no node, a `spx.config.yaml` that is absent, carries no `methodology` block, or declares the sentinel `installed` stops the run with the report that the repository declares no methodology version, the observed value — `absent` when no value exists — and the accepted forms. A declared version outside the 3.x and 4.0 lines stops the run with the observed value and the accepted forms `4.0`, `4.0.N`, and a 3.x version. Before this change, the skill reported every such case as an undeclared version.
+
 ## 0.109.10
 
 ### Changed
