@@ -76,7 +76,7 @@ For a node target, decompose when at least one trigger applies:
 | Explicit issue       | `PLAN.md` or `ISSUES.md` requests structure work       |
 | Placement            | A node needs an index among the target's children      |
 
-Placement holds for either target form: a node `/refactor` moves under the target, or a new child, needs an index there. That run writes the Step 7 rows for the existing siblings and the candidate and reads the candidate's index from the matrix in Step 8; it splits nothing and redistributes no assertion.
+Placement holds for either target form: a node needs an index among the target's children, whether it is moved under the target or new. That run writes the Step 7 rows for the existing siblings and the candidate and reads the candidate's index from the matrix in Step 8; it splits nothing and redistributes no assertion.
 
 Classify the target with the product-domain-shapes reference before deciding whether to split it:
 
