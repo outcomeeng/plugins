@@ -34,7 +34,7 @@ jobs:
     # permissions before release review. renovate.json disables digest pinning
     # for this beta caller; pin it back to a SHA when this repo graduates to
     # production-caller usage.
-    uses: outcomeeng/gh-actions/.github/workflows/spec-tree-review.yml@main
+    uses: outcomeeng/gh-actions/.github/workflows/product-tree-review.yml@main
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 

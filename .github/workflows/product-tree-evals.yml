@@ -2,7 +2,7 @@
 # `outcomeeng_evals` harness in CI.
 #
 # Why this is a direct-run job (not a thin caller of an
-# outcomeeng/gh-actions reusable like spec-tree.yml / spec-tree-review.yml):
+# outcomeeng/gh-actions reusable like product-tree.yml / product-tree-review.yml):
 # the eval harness is THIS repo's own Python toolchain. It replays curated
 # cases through `claude --print --output-format json --plugin-dir <dir>` and
 # grades the structured verdict (see
@@ -111,7 +111,7 @@ jobs:
 
       - name: Install Bun
         # Provision the Claude Code CLI the same way anthropics/claude-code-action
-        # does (the action that spec-tree.yml / spec-tree-review.yml rely on):
+        # does (the action the product-tree.yml / product-tree-review.yml reusables rely on):
         # via Bun, pinned to the same setup-bun SHA and version the action pins.
         # Bun runs the package's postinstall (which fetches claude's platform-
         # native binary); pnpm blocks that postinstall by default, which left the
