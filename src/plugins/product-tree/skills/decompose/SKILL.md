@@ -76,7 +76,7 @@ For a node target, decompose when at least one trigger applies:
 | Explicit issue       | `PLAN.md` or `ISSUES.md` requests structure work       |
 | Placement            | A node needs an index among the target's children      |
 
-Placement holds for either target form: a node needs an index among the target's children, whether it is moved under the target or new. That run writes the Step 7 rows for the existing siblings and the candidate and reads the candidate's index from the matrix in Step 8; it splits nothing and redistributes no assertion.
+Placement holds for either target form: a node needs an index among the target's children, whether it is moved under the target or new. That run writes the Step 7 rows for the existing siblings and the candidate and reads the candidate's index from the matrix in Step 8; it splits nothing and redistributes no assertion. For a candidate that exists elsewhere in the tree, the run goes from Step 8 to Step 11 and Step 10 creates no directory for it, because the node keeps its own directory when it moves.
 
 Classify the target with the product-domain-shapes reference before deciding whether to split it:
 
@@ -212,7 +212,7 @@ Use full paths from `spx/` for existing nodes, ADRs, and PDRs in the matrix. For
 
 **Direction comes from the Requires cell.** The predecessor of an edge is a node in the successor's Requires cell, and the Consequence-if-absent cell names the consumer who stops receiving the Value when that predecessor is removed. A sentence about which node builds, ships, collects, reads, or breaks the other decides no direction: a component change that breaks the pipeline delivering it says nothing about order, while the component's Requires cell names the pipeline first. An edge whose Consequence-if-absent cell names no consumer losing a Value is no edge.
 
-**The matrix is a file.** Write the rows, the edges, and the disposition checkpoint to a file in the scratch directory the harness names for the session, under a file name unique to the agent and the target, and read it back. Step 8 reads every index from that file; an index assigned without it is a guessed slot.
+**The matrix is a file.** Write the rows, the edges, and the disposition checkpoint to a file in the scratch directory the harness names for the session, under a file name unique to the agent and the target, and read it back. Step 8 reads every index from that file; an index assigned without it is a guessed slot. The run's result names that file's full path.
 
 **Disposition checkpoint — mandatory before Step 8.** In the same file, state every proposed sibling pair explicitly as one of: ordered (name the matrix row proving the edge), same-index (independent peers, no edge), or unordered. Assign no index until every different-index pair names its proving matrix row; a pair with no row is same-index, never a guessed slot.
 
@@ -262,7 +262,7 @@ For `spx/`, write top-level children from product scope and root coordination-no
 
 **Step 10: Write child specs**
 
-For each child node:
+For each new child node, and never for a node that exists elsewhere in the tree:
 
 1. Create `{index}-{slug}.{enabler|outcome}/`.
 2. Create `{slug}.md`.
@@ -291,7 +291,8 @@ Check each criterion:
 - [ ] Any named aggregate boundary with an independently validated first concrete slice became parent plus child, with deferred siblings or reserved horizon recorded when known
 - [ ] No child exceeds ~7 assertions without a recursive-decomposition issue
 - [ ] Shared enablers have at least two dependent children
-- [ ] Ordering-evidence matrix and disposition checkpoint written to a scratch file and read back before index assignment
+- [ ] Ordering-evidence matrix and disposition checkpoint written to a scratch file and read back before index assignment, and the result names that file's full path
+- [ ] No directory created for a candidate that exists elsewhere in the tree
 - [ ] Every candidate child and existing sibling has a row naming its consumer, its value, and what it requires, and every edge's predecessor is in the successor's Requires cell
 - [ ] Disposition checkpoint stated every sibling pair as ordered, same-index, or unordered before any index was assigned
 - [ ] Every different-index sibling relationship has ordering evidence
@@ -408,12 +409,12 @@ Decomposition is complete when:
 - [ ] Concern boundaries and node types assigned
 - [ ] Shared enablers extracted only for multi-child dependencies
 - [ ] Aggregate parent plus independently validated first concrete child preserved when the input named both levels
-- [ ] Ordering-evidence matrix written to a scratch file and read back, every node with its consumer, value, and Requires cell, and every edge's predecessor in the successor's Requires cell
+- [ ] Ordering-evidence matrix written to a scratch file, read back, and its full path named in the result, every node with its consumer, value, and Requires cell, and every edge's predecessor in the successor's Requires cell
 - [ ] Disposition checkpoint stated before index assignment; no index guessed from an existing sibling's slot, and a child between an ordered predecessor and successor at the band's midpoint
 - [ ] Sparse indices assigned from the matrix file and the selected horizon
 - [ ] Assertions redistributed without loss
 - [ ] Parent or product document revised without temporal narration
-- [ ] Child specs written from templates
+- [ ] Child specs written from templates for new children only
 - [ ] Full `spx/` paths used for every node, ADR, and PDR reference
 - [ ] The product's verify command for the spec lane passed on the written tree, and the checklist passes
 
