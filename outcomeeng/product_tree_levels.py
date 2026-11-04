@@ -83,43 +83,65 @@ def _is_table_row(line: str) -> bool:
     return line.strip().startswith(TABLE_CELL_FENCE)
 
 
-def _level_two_body(sections: list[str]) -> list[str]:
-    emitted: list[str] = []
-    in_mapping = False
-    in_sentence_subsection = False
-    table_rows_seen = 0
-    rule_lines: list[str] = []
+class _LevelTwoView:
+    """Collect the level 2 lines of the sections that follow a document's opening."""
 
-    def flush_rule() -> None:
-        if rule_lines:
-            emitted.append(BULLET_PREFIX + " ".join(rule_lines))
-            rule_lines.clear()
+    def __init__(self) -> None:
+        self.emitted: list[str] = []
+        self._rule_lines: list[str] = []
+        self._in_mapping = False
+        self._in_sentence_subsection = False
+        self._table_rows_seen = 0
 
-    for line in sections:
+    def flush_rule(self) -> None:
+        if self._rule_lines:
+            self.emitted.append(BULLET_PREFIX + " ".join(self._rule_lines))
+            self._rule_lines.clear()
+
+    def consume(self, line: str) -> None:
         stripped = line.strip()
         if _is_heading(line):
-            flush_rule()
-            if emitted:
-                emitted.append("")
-            emitted.append(line)
-            in_mapping = line.startswith(MAPPING_HEADING_PREFIX)
-            in_sentence_subsection = in_mapping or line.startswith(EVAL_HEADING_PREFIX)
-            table_rows_seen = 0
+            self._open_subsection(line)
         elif not stripped:
-            flush_rule()
-        elif in_sentence_subsection and _is_table_row(line):
-            table_rows_seen += 1
-            if in_mapping and table_rows_seen > TABLE_HEADER_ROWS:
-                emitted.append(BULLET_PREFIX + _first_cell(line))
-        elif in_sentence_subsection:
-            emitted.append(stripped)
-        elif stripped.startswith(BULLET_PREFIX):
-            flush_rule()
-            rule_lines.append(stripped[len(BULLET_PREFIX) :])
-        elif rule_lines and not _is_table_row(line):
-            rule_lines.append(stripped)
-    flush_rule()
-    return emitted
+            self.flush_rule()
+        elif self._in_sentence_subsection:
+            self._consume_sentence_subsection(line, stripped)
+        else:
+            self._consume_rule(line, stripped)
+
+    def _open_subsection(self, heading: str) -> None:
+        self.flush_rule()
+        if self.emitted:
+            self.emitted.append("")
+        self.emitted.append(heading)
+        self._in_mapping = heading.startswith(MAPPING_HEADING_PREFIX)
+        self._in_sentence_subsection = self._in_mapping or heading.startswith(
+            EVAL_HEADING_PREFIX
+        )
+        self._table_rows_seen = 0
+
+    def _consume_sentence_subsection(self, line: str, stripped: str) -> None:
+        if not _is_table_row(line):
+            self.emitted.append(stripped)
+            return
+        self._table_rows_seen += 1
+        if self._in_mapping and self._table_rows_seen > TABLE_HEADER_ROWS:
+            self.emitted.append(BULLET_PREFIX + _first_cell(line))
+
+    def _consume_rule(self, line: str, stripped: str) -> None:
+        if stripped.startswith(BULLET_PREFIX):
+            self.flush_rule()
+            self._rule_lines.append(stripped[len(BULLET_PREFIX) :])
+        elif self._rule_lines and not _is_table_row(line):
+            self._rule_lines.append(stripped)
+
+
+def _level_two_body(sections: list[str]) -> list[str]:
+    view = _LevelTwoView()
+    for line in sections:
+        view.consume(line)
+    view.flush_rule()
+    return view.emitted
 
 
 def derive_view(text: str, path: str, level: Level) -> str:
