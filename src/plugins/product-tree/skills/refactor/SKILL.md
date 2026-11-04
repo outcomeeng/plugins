@@ -1,7 +1,7 @@
 ---
 name: refactor
 description: ALWAYS invoke this skill when moving nodes, re-scoping content, or extracting shared providers. NEVER restructure the Product Tree without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git status:*), Bash(git mv:*), Bash(git rm -r:*), {{! tool('use_skill') !}}
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git status:*), Bash(git mv:*), Bash(git rm -r:*), Bash(spx validation markdown), Bash(spx spec status:*), {{! tool('use_skill') !}}
 ---
 
 <objective>
@@ -60,12 +60,12 @@ If the request is ambiguous, ask.
 
 **Step 2: Load context**
 
-Load the context of each node involved in the operation, one invocation per node. Use skill `product-tree:contextualize`. Each invocation loads:
+A live `<PRODUCT_TREE_CONTEXT target="...">` marker for the exact path of every node the operation touches — the moved, re-scoped, extracted, or consolidated nodes and every parent that gains or loses a child, `spx/` when the root is that parent — is Step 3's input. Use skill `product-tree:contextualize` once per such node whose marker the live conversation lacks. Each invocation loads:
 
-- The affected nodes' specs and assertions
+- The node's spec and assertions
 - Parent and ancestor specs
 - ADRs/PDRs in scope
-- Sibling nodes (for index calculations)
+- Sibling nodes, with the index each carries
 
 </step>
 
@@ -79,7 +79,7 @@ Before applying changes, determine what will be affected:
 
 - Does the target parent exist?
 - Will the node's existing index conflict with children at the target?
-- Does the move require choosing a new sibling index? If yes, compose the target parent before applying. Use skill `product-tree:decompose`.
+- Does the move change the node's parent or its index? If yes, the index comes from `/decompose` on the target parent, and Step 4a does not start until the matrix file it writes exists. Use skill `product-tree:decompose` with the target parent as its only argument.
 - Do any ADRs/PDRs at the source location govern this node? Will it leave their scope?
 - Do any ancestor specs have cross-cutting assertions that reference this node?
 - Are there test links in other specs that point into this node's `tests/` directory?
@@ -114,11 +114,11 @@ Before applying changes, determine what will be affected:
 
 **Step 4a: Apply — Move**
 
-1. Move the node directory to the new location with an appropriate index, using `git mv <old-node-directory> <new-node-directory>`. The spec, the `tests/` directory, any ISSUES.md or prior-form PLAN.md, and every child node move with it, and no old directory remains.
+A move that changes the node's parent or its index starts only when the matrix file `/decompose` wrote for the target parent exists and names the moved node's disposition against every existing sibling there; read the new index from that file. A `git mv` with no such file does not run. A slug rename that keeps parent and index needs no matrix.
+
+1. Move the node directory to the new location with the index the matrix file names, using `git mv <old-node-directory> <new-node-directory>`. The spec, the `tests/` directory, any ISSUES.md or prior-form PLAN.md, and every child node move with it, and no old directory remains.
 2. When the slug changes, rename the spec file with `git mv` so it repeats the new slug.
 3. Update cross-cutting assertion links in ancestor specs that pointed to the old path.
-
-**Index assignment**: Preserve the node's existing index when possible. If insertion or reindexing is needed, compose the target parent before moving files. Use skill `product-tree:decompose`.
 
 </step>
 
@@ -169,18 +169,19 @@ Before applying changes, determine what will be affected:
 
 **Step 5: Validate**
 
-After applying any operation:
+After applying any operation, run the product's verify command for the spec lane — `spx validation markdown` and `spx spec status --format json` where the root guide names no other — against the restructured tree. A nonzero exit stops the run with the command, its exit code, and its failing output. Then check each criterion:
 
 - [ ] No broken evidence links — every `([test](...))` in affected specs resolves to an existing file
 - [ ] No orphaned test files — every test file in affected `tests/` directories is linked from an assertion
 - [ ] Coordination-note files (ISSUES.md, and a prior-form PLAN.md) moved with their node — they are node-local, not shared (do not need evidence links)
 - [ ] No empty nodes — every node has at least one assertion
-- [ ] Any new or changed index assignment came from `product-tree:decompose`
+- [ ] Any new or changed index came from the matrix file `product-tree:decompose` wrote for the target parent
 - [ ] ADR/PDR scope correct — nodes are governed by the decisions in their ancestry
 - [ ] Cross-cutting assertions in ancestors still reference valid paths
 - [ ] Every node, ADR, and PDR reference uses a full path from `spx/`
 - [ ] Atemporal voice maintained — no temporal language introduced
 - [ ] No content misplacement (per the live `/understand` `<artifact_placement>` and the placements it rules out)
+- [ ] The product's verify command for the spec lane passed on the restructured tree
 
 </step>
 
@@ -260,6 +261,12 @@ Claude generalized a node into a new parent node with multiple children and re-p
 
 How to avoid: Before re-pointing, classify each citing assertion. Universal — holds for every child of the generalized parent — cites the parent. Node-specific — holds only for the child with that surface or capability — cites the realizing child. Route each citation to parent or child by that classification; never blanket-re-point every citation to the new parent.
 
+**Failure 8: Moved the node before the matrix existed**
+
+Claude moved a top-level node to the next free index above the node it consumes, renamed the directory and re-pointed 99 files, then did it again one index higher when the first number was rejected. No ordering-evidence matrix existed for the root either time, and the operator reset both moves. Each `git mv` ran because nothing it needed was missing.
+
+How to avoid: Step 4a reads the index from the matrix file `/decompose` wrote for the target parent, and a `git mv` with no such file does not run.
+
 </failure_modes>
 
 <anti_patterns>
@@ -274,11 +281,13 @@ How to avoid: Before re-pointing, classify each citing assertion. Universal — 
 
 Refactoring is complete when the restructured tree shows:
 
+- [ ] Every node the operation touched, the parent that gained or lost a child included, had a live `<PRODUCT_TREE_CONTEXT>` marker before the first read
 - [ ] Every evidence link in an affected spec resolves to an existing file, and every test file in an affected `tests/` directory is linked from an assertion
 - [ ] Every affected node carries at least one assertion, and no empty node directory remains
 - [ ] Every moved or surviving node is governed by the decisions in its new ancestry
-- [ ] Every new or changed index came from `product-tree:decompose`
+- [ ] Every new or changed index came from the matrix file `product-tree:decompose` wrote, and no `git mv` ran before that file existed
 - [ ] Every moved tracked file kept its history through `git mv`
+- [ ] The product's verify command for the spec lane passed on the restructured tree
 - [ ] The report names every file created, modified, moved, and removed, and every follow-up issue
 
 </success_criteria>

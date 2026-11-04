@@ -2,7 +2,7 @@
 name: decompose
 description: ALWAYS invoke this skill when breaking down, splitting, scoping, composing, or structuring Product Tree nodes. NEVER decompose specs without this skill.
 argument-hint: <node-address|spx/>
-allowed-tools: Read, Glob, Grep, Write, Edit
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(spx validation markdown), Bash(spx spec status:*)
 ---
 
 <objective>
@@ -24,6 +24,8 @@ Accept exactly one target from `$ARGUMENTS`:
 
 If `$ARGUMENTS` is empty, stop before reading or writing product files. State that this skill requires exactly one target and give the two accepted forms above.
 
+If `$ARGUMENTS` carries anything beside the target, stop before reading or writing product files. The target is this skill's only input; every index is its output.
+
 Read the conditional operational sources below before composing. Use the live inline foundation for node and ordering rules:
 
 - Live `/understand` `<identity_and_kinds>` — the seven kinds, their order, and containment — and the `kind-decision.md` reference that section names for the ordered kind tests and the structural scorecards
@@ -41,22 +43,19 @@ Read the conditional operational sources below before composing. Use the live in
 
 **Step 1: Load tree context**
 
-If the target is `spx/`:
+A live `<PRODUCT_TREE_CONTEXT target="...">` marker whose target is exactly `$ARGUMENTS` — `spx/` or the full node path — is this step's input. When the live conversation carries none, use skill `product-tree:contextualize` with that target before any other read; a marker for another target, or one quoted from a compaction summary, is none.
 
-1. Read the product document and product-level ADRs/PDRs.
-2. Read `AGENTS.md` if present.
-3. Read `spx/PLAN.md` and `spx/ISSUES.md` if present.
-4. Enumerate existing top-level children.
-5. Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `/understand` `references/artifact-placement.md` `<test_artifact_boundaries>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
+Read from the manifest the marker carries:
 
-If the target is a node address:
+1. The product document and every product-level ADR and PDR.
+2. `AGENTS.md` when present.
+3. `spx/ISSUES.md` when present.
+4. For a node target, the target spec, its decision records, its coordination notes, and its existing children.
+5. The existing siblings at the target level — for `spx/`, the top-level nodes — with the index each carries.
 
-1. Accept only the target node address as structural input. The address must be the full path from `spx/`; never accept a bare node name or numeric prefix as sufficient.
-2. If the request includes proposed child names, indices, or dependency order, preserve those details as intent in the target node's `PLAN.md` or `ISSUES.md`; do not treat them as structure.
-3. Check for a matching `<PRODUCT_TREE_CONTEXT>` marker. If absent, use skill `product-tree:contextualize`.
-4. Read the context manifest, target spec, existing children, and target `PLAN.md` or `ISSUES.md`.
+Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `/understand` `references/artifact-placement.md` `<test_artifact_boundaries>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
 
-For both target modes, note root product scope, ancestor constraints, current assertions, existing siblings/children, and any known issues before proposing structure.
+Note root product scope, ancestor constraints, current assertions, existing siblings and children, and any known issues before proposing structure.
 
 </step>
 
@@ -175,7 +174,18 @@ Extract the shared concern as an enabler when removing it would break multiple c
 
 **Step 7: Build the ordering-evidence matrix**
 
-Before assigning indices, record every proposed ordering edge:
+Before assigning indices, record one row per candidate child and per existing sibling:
+
+| Field    | Required content                                                                                                                       |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Node     | Full path from `spx/`, or the parent path plus candidate slug                                                                          |
+| Consumer | The consumer its value reaches: one the product document names, or the audience outside the product that the parent's opening serves   |
+| Value    | What that consumer receives, in the product's own terms; an inward kind's value reaches the consumer through the nodes that consume it |
+| Requires | Every sibling whose contract the node needs to deliver that value                                                                      |
+
+Every sibling in a node's Requires cell is its predecessor. Read the cell from the product document and the kinds, never from the node's spec alone: a node's spec rarely names the pipeline that delivers it, and that pipeline is required all the same. A node whose row names no consumer, or a value no consumer receives, is not a child of this parent.
+
+Then record every proposed ordering edge:
 
 | Field                     | Required content                                                                                                 |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -197,7 +207,11 @@ Roadmap priority, chronology, theme grouping, and explanation order do not creat
 
 Use full paths from `spx/` for existing nodes, ADRs, and PDRs in the matrix. For new candidate children before the final index exists, include the full parent path plus candidate slug so the reference can be resolved after assignment.
 
-**Disposition checkpoint — mandatory before Step 8.** State every proposed sibling pair explicitly as one of: ordered (name the matrix row proving the edge), same-index (independent peers, no edge), or unordered. Assign no index until every different-index pair names its proving matrix row; a pair with no row is same-index, never a guessed slot.
+**Direction comes from the Requires cell.** The predecessor of an edge is a node in the successor's Requires cell, and the Consequence-if-absent cell names the consumer who stops receiving the Value when that predecessor is removed. A sentence about which node builds, ships, collects, reads, or breaks the other decides no direction: a component change that breaks the pipeline delivering it says nothing about order, while the component's Requires cell names the pipeline first. An edge whose Consequence-if-absent cell names no consumer losing a Value is no edge.
+
+**The matrix is a file.** Write the rows, the edges, and the disposition checkpoint to a file in the scratch directory the harness names for the session, under a file name unique to the agent and the target, and read it back. Step 8 reads every index from that file; an index assigned without it is a guessed slot.
+
+**Disposition checkpoint — mandatory before Step 8.** In the same file, state every proposed sibling pair explicitly as one of: ordered (name the matrix row proving the edge), same-index (independent peers, no edge), or unordered. Assign no index until every different-index pair names its proving matrix row; a pair with no row is same-index, never a guessed slot.
 
 </step>
 
@@ -205,7 +219,12 @@ Use full paths from `spx/` for existing nodes, ADRs, and PDRs in the matrix. For
 
 **Step 8: Assign sparse integer indices**
 
-Use sparse indices to encode the ordering-evidence matrix. The horizon math below composes a set of new children from scratch. When adding a child beside existing siblings, skip the distribution math and read the child's index from its disposition-checkpoint rows against each existing sibling: it shares the index of a sibling the checkpoint marked its independent peer, and takes a higher or lower index only from a pair the matrix proved ordered. Existing siblings at different indices are already ordered relative to each other, so a child cannot be the independent peer of two of them at once — a proven edge to an existing sibling places the child above that predecessor or below that successor, and that placement, never a guessed slot, sets its index.
+Read every index from the matrix file Step 7 wrote. The horizon math below composes a set of new children from scratch. When adding a child beside existing siblings, skip the distribution math and read the child's index from its disposition-checkpoint rows against each existing sibling:
+
+- It shares the index of a sibling the checkpoint marked its independent peer.
+- It takes an index above a predecessor or below a successor only from a pair the matrix proved ordered. Existing siblings at different indices are already ordered relative to each other, so a child cannot be the independent peer of two of them at once.
+- When the checkpoint names both an ordered predecessor and an ordered successor among the existing siblings, the child takes the midpoint of the band between their indices, rounded down, so a later sibling fits on either side without renumbering.
+- NEVER: the next integer after an existing sibling's index is the index.
 
 1. Choose the horizon:
    - Full composition of all known child concerns → use the full [10, 99] range.
@@ -255,7 +274,9 @@ Revise the parent spec so it summarizes the child structure without narrating th
 
 <step name="validate">
 
-**Step 11: Validate composition quality**
+**Step 11: Validate the composed tree**
+
+Run the product's verify command for the spec lane — `spx validation markdown` and `spx spec status --format json` where the root guide names no other — against the written tree. A nonzero exit stops the run with the command, its exit code, and its failing output.
 
 Check each criterion:
 
@@ -267,10 +288,12 @@ Check each criterion:
 - [ ] Any named aggregate boundary with an independently validated first concrete slice became parent plus child, with deferred siblings or reserved horizon recorded when known
 - [ ] No child exceeds ~7 assertions without a recursive-decomposition issue
 - [ ] Shared enablers have at least two dependent children
-- [ ] Ordering-evidence matrix recorded before index assignment
+- [ ] Ordering-evidence matrix and disposition checkpoint written to a scratch file and read back before index assignment
+- [ ] Every candidate child and existing sibling has a row naming its consumer, its value, and what it requires, and every edge's predecessor is in the successor's Requires cell
 - [ ] Disposition checkpoint stated every sibling pair as ordered, same-index, or unordered before any index was assigned
 - [ ] Every different-index sibling relationship has ordering evidence
 - [ ] No new child placed at a higher index than an existing sibling without a matrix row proving the edge
+- [ ] A child between an ordered predecessor and an ordered successor took the band's midpoint
 - [ ] Roadmap, chronology, theme grouping, and explanation order are not encoded as dependencies by themselves
 - [ ] Index horizon selected; partial compositions reserve remaining space in `PLAN.md`
 - [ ] Full compositions collectively cover the parent or product scope; partial compositions cover the selected first-slice horizon and record the remaining horizon in `PLAN.md`
@@ -279,6 +302,7 @@ Check each criterion:
 - [ ] Directory names follow `{NN}-{slug}.{enabler|outcome}`
 - [ ] Spec files are `{slug}.md`
 - [ ] Every node, ADR, and PDR reference uses a full path from `spx/`
+- [ ] The product's verify command for the spec lane passed on the written tree
 
 </step>
 
@@ -340,11 +364,23 @@ Claude asked `/author` to place exactly one PDR even though the concept crossed 
 
 How to avoid: treat ADR/PDR placement as decomposition work when the location depends on concept ownership, node renaming, node splitting, parent/child boundaries, or context-loading reach. Return the owning directory and scope boundary first; `/author` writes the decision record only after that structure is settled.
 
+**Failure 10: Took the direction of a dependency from a verb**
+
+Claude placed a shipped component's node against the node that delivers it to consumers three times from three sentences — the pipeline collects the component, a change in the component breaks the pipeline, the component has no value without the pipeline — reading each verb as a direction, then searched the component's spec for the pipeline's name, found none, and called the two independent. The node moved twice before the operator reset it.
+
+How to avoid: Fill the node's row first — consumer, value, and what it requires to deliver that value. The pipeline that delivers a component is in its Requires cell whether or not its spec names it; a verb decides no direction, and a spec's silence proves no independence.
+
+**Failure 11: Invoked the skill with the index already chosen**
+
+Claude invoked `/decompose spx/` with a candidate index in the argument, wrote no matrix, and moved the node to that index. The argument carried the answer, so every step confirmed it instead of deriving one.
+
+How to avoid: `<quick_start>` stops on an argument that carries more than the target.
+
 </failure_modes>
 
 <anti_patterns>
 
-**Pre-shaped child lists.** User-provided child names or indices are intent, not structure. Build the model from the target spec and coordination notes.
+**Pre-shaped child lists.** Structure comes from the matrix. The argument carries the target alone, per `<quick_start>`.
 
 **Implementation-layer decomposition.** Children named only "frontend," "backend," or "database" are usually layers, not independently validated concerns.
 
@@ -362,20 +398,20 @@ How to avoid: treat ADR/PDR placement as decomposition work when the location de
 
 Decomposition is complete when:
 
-- [ ] Target is either `spx/` or a valid node address
-- [ ] Context loaded from product/root, target spec if any, existing tree, and coordination notes
+- [ ] Target is either `spx/` or a valid node address, and the argument carried nothing else
+- [ ] Context loaded through a live `<PRODUCT_TREE_CONTEXT>` marker for the exact target
 - [ ] Composition need assessed
 - [ ] Clarity gate completed or `/interview` used
 - [ ] Concern boundaries and node types assigned
 - [ ] Shared enablers extracted only for multi-child dependencies
 - [ ] Aggregate parent plus independently validated first concrete child preserved when the input named both levels
-- [ ] Ordering-evidence matrix recorded
-- [ ] Disposition checkpoint stated before index assignment; no index guessed from an existing sibling's slot
-- [ ] Sparse indices assigned from ordering evidence and selected horizon
+- [ ] Ordering-evidence matrix written to a scratch file and read back, every node with its consumer, value, and Requires cell, and every edge's predecessor in the successor's Requires cell
+- [ ] Disposition checkpoint stated before index assignment; no index guessed from an existing sibling's slot, and a child between an ordered predecessor and successor at the band's midpoint
+- [ ] Sparse indices assigned from the matrix file and the selected horizon
 - [ ] Assertions redistributed without loss
 - [ ] Parent or product document revised without temporal narration
 - [ ] Child specs written from templates
 - [ ] Full `spx/` paths used for every node, ADR, and PDR reference
-- [ ] Validation checklist passes
+- [ ] The product's verify command for the spec lane passed on the written tree, and the checklist passes
 
 </success_criteria>
