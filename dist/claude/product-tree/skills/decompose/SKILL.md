@@ -223,7 +223,7 @@ Read every index from the matrix file Step 7 wrote. The horizon math below compo
 
 - It shares the index of a sibling the checkpoint marked its independent peer.
 - It takes an index above a predecessor or below a successor only from a pair the matrix proved ordered. Existing siblings at different indices are already ordered relative to each other, so a child cannot be the independent peer of two of them at once.
-- When the checkpoint names both an ordered predecessor and an ordered successor among the existing siblings, the child takes the midpoint of the band between their indices, rounded down.
+- When the checkpoint names both an ordered predecessor and an ordered successor among the existing siblings, the child takes the midpoint of the band between their indices: the integer midpoint rounded down where an integer lies between them, and a fractional insert at the midpoint, such as `20.5`, where none does.
 - NEVER: the next integer after an existing sibling's index is the index.
 
 1. Choose the horizon:
@@ -276,7 +276,7 @@ Revise the parent spec so it summarizes the child structure without narrating th
 
 **Step 11: Validate the composed tree**
 
-Run the product's verify command for the spec lane — `spx validation markdown` and `spx spec status --format json` where the root guide names no other — against the written tree. A nonzero exit stops the run with the command, its exit code, and its failing output.
+Run the product's verify command for the spec lane against the written tree: `spx validation markdown` and `spx spec status --format json`, and every further command the root guide names for a spec-only change, which runs through per-call approval where the grants above omit it. A nonzero exit stops the run with the command, its exit code, and its failing output.
 
 Check each criterion:
 

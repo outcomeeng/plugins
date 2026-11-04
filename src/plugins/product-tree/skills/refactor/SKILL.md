@@ -169,7 +169,7 @@ A move that changes the node's parent or its index starts only when the matrix f
 
 **Step 5: Validate**
 
-After applying any operation, run the product's verify command for the spec lane — `spx validation markdown` and `spx spec status --format json` where the root guide names no other — against the restructured tree. A nonzero exit stops the run with the command, its exit code, and its failing output. Then check each criterion:
+After applying any operation, run the product's verify command for the spec lane against the restructured tree: `spx validation markdown` and `spx spec status --format json`, and every further command the root guide names for a spec-only change, which runs through per-call approval where the grants above omit it. A nonzero exit stops the run with the command, its exit code, and its failing output. Then check each criterion:
 
 - [ ] No broken evidence links — every `([test](...))` in affected specs resolves to an existing file
 - [ ] No orphaned test files — every test file in affected `tests/` directories is linked from an assertion
