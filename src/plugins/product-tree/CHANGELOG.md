@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Fixed
 
-- **`/manage-pr` fires the mention reviewer with `@product-tree` by default.** When the CI review skips because a pull request changes the reviewer's own workflow and the merge overlay names no trigger phrase, the skill posts `@product-tree review`, the phrase the `outcomeeng/gh-actions` mention reusable listens for. Before this change, the default was `@spec-tree`, and a mention posted from it reached no reviewer. A repository whose caller still listens for `@spec-tree` declares that phrase in its merge overlay.
+- **`/manage-pr` fires the mention reviewer with `@product-tree` by default.** When the CI review skips because a pull request changes the reviewer's own workflow and the merge overlay names no trigger phrase, the skill posts `@product-tree review`, the phrase the product-tree mention reviewer workflow listens for. Before this change, the default was `@spec-tree`, and a mention posted from it reached no reviewer. A repository whose caller still listens for `@spec-tree` declares that phrase in its merge overlay.
 
 ## 0.109.11
 
