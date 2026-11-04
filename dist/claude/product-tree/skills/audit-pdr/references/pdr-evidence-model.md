@@ -1,6 +1,6 @@
 <overview>
 
-Detailed boundary guidance for PDR content classification, property quality, and tag validity. Read this before auditing any PDR.
+Detailed boundary guidance for PDR content classification, property quality, and declaration form and tag validity. Read this before auditing any PDR.
 
 The audit skill owns the complete five-property workflow, including atemporal voice and consistency. This reference defines the three properties whose classification boundaries require extended examples.
 
@@ -9,8 +9,8 @@ The audit skill owns the complete five-property workflow, including atemporal vo
 <contents>
 
 - `<content_classification>` — observable product behavior versus architecture, grounded in the product document's declared audience and interaction surfaces, with tooling-product examples
-- `<property_quality>` — observable, falsifiable, stable product properties
-- `<tag_validity>` — per-rule verification tag and assertion-type fit
+- `<property_quality>` — observable, falsifiable, stable behavior the CAN RELY ON line names
+- `<tag_validity>` — declaration form, tag absence, slug uniqueness, and assertion-type fit
 
 </contents>
 
@@ -75,7 +75,7 @@ PDRs govern observable product behavior. Every statement must pass the user test
 
 <property_quality>
 
-Product properties are guarantees users can rely on. They must be:
+The behavior the CAN RELY ON line names is a guarantee users can rely on. It must be:
 
 1. **Observable** — a user can perceive whether the property holds
 2. **Falsifiable** — a scenario exists where it's violated
@@ -109,28 +109,31 @@ Product properties are guarantees users can rely on. They must be:
 
 <tag_validity>
 
-Derive authoring and routed forms from the canonical PDR template. Specific untagged rules directly under `## Verification` await selection and receive the same clarity and falsifiability checks. The following tag checks apply to rules in routed subsections; authoring approval supplies no evidence result:
+Derive the form from the canonical PDR template. A rule directly under `## Verification`, outside any group, awaits selection and receives the same clarity and falsifiability checks. The checks below apply to the declaration; authoring approval supplies no evidence result:
 
-1. **Tag matching its subsection** — under `### Testing`, a `/test`-routed assertion type (`scenario`/`mapping`/`conformance`/`property`/`compliance`); under `### Eval`, `([eval])`; under `### Audit`, `([audit:{rule-slug}])` with a slug unique within the PDR, or the pathless `([audit])` that the foundation admits for a toolchain without slug support. An unsupported bare mechanism tag, a missing tag, more than one tag, a repeated `### Audit` slug, or a tag that disagrees with its subsection is `invalid-tag`.
-2. **Assertion-type fit** — a `### Testing` rule's assertion type fits the claim's quantifier per the `/test` router; a universal `ALWAYS`/`NEVER` claim tagged `scenario` is `assertion-type-mismatch`, since a single case cannot establish a universal.
+1. **Declaration form** — the PDR opens with a GOVERNS paragraph, writes each mapping rule as its own `### Mapping: <slug>` subsection holding one sentence and a table, keeps each group to at most seven rules, and holds no text outside its opening, a rule, or a table. A violation is `declaration-form`.
+2. **No tag, one slug** — a rule carries no tag, because its group heading names its verification type, and its leading slug is its one name and repeats nowhere in the PDR. A tag on a rule, or a repeated slug, is `invalid-tag`.
+3. **Assertion-type fit** — a rule's assertion type, named by its group heading, fits the claim's quantifier per the `/test` router; a universal `ALWAYS`/`NEVER` claim in a `### Scenario` group is `assertion-type-mismatch`, since a single case cannot establish a universal.
 
-A rule earns a sound tag only when it is verifiable (a test, eval, or audit skill can determine pass/fail) and specific (two independent reviewers would agree on the verdict); an unverifiable or vague rule cannot carry a meaningful evidence tag.
+A rule is sound only when it is verifiable (a test, eval, or audit skill can determine pass/fail) and specific (two independent reviewers would agree on the verdict); an unverifiable or vague rule cannot sit in any group.
 
 **Well-formed verification rules:**
 
 ```markdown
 ## Verification
 
-### Testing
+### Property: contrast
 
-- ALWAYS: all text/background color pairs maintain ΔL ≥ 0.80 contrast in all themes ([property])
-- ALWAYS: export files conform to RFC 4180 CSV format ([conformance])
-- NEVER: expose internal database IDs in user-facing URLs ([property])
-- NEVER: display raw error messages from backend services to users ([compliance])
+- contrast-floor: ALWAYS: all text/background color pairs maintain ΔL ≥ 0.80 contrast in all themes.
+- no-internal-ids: NEVER: expose internal database IDs in user-facing URLs.
+
+### Conformance: export
+
+- csv-format: ALWAYS: export files conform to RFC 4180 CSV format.
 
 ### Audit
 
-- ALWAYS: every theme variant is selectable from the settings surface ([audit:theme-variants-selectable])
+- theme-variants-selectable: ALWAYS: every theme variant is selectable from the settings surface.
 ```
 
 **Ill-formed verification rules:**
@@ -150,7 +153,7 @@ A rule earns a sound tag only when it is verifiable (a test, eval, or audit skil
 
 **Fixing bad rules:**
 
-- "Follow accessibility best practices" → "Meet WCAG 2.1 Level AA for all interactive components ([compliance])"
-- "Be fast" → "API responses return within 200ms at p95 under normal load ([property])"
+- "Follow accessibility best practices" → "wcag-aa: ALWAYS: all interactive components meet WCAG 2.1 Level AA", in a `### Compliance` group
+- "Be fast" → "response-latency: ALWAYS: API responses return within 200ms at p95 under normal load", in a `### Property` group
 
 </tag_validity>

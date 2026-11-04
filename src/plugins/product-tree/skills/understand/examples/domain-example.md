@@ -10,15 +10,23 @@ CAN speak one meaning of a task instead of each defining its own
 
 ## Assertions
 
-### Mappings
+### Mapping: completion-state
 
-- A task's completion state maps to exactly one of open or done; no third state exists ([test](tests/state.mapping.l1.test.{ext}))
+A task's completion state maps to exactly one of open or done; no third state exists.
 
-### Properties
+| Case | State |
+| ---- | ----- |
+| open | open  |
+| done | done  |
 
-- A due date is always a calendar date in the task owner's zone, never an instant ([test](tests/due-date.property.l1.test.{ext}))
+### Property: due-date
 
-### Compliance
+- due-date-is-a-date: A due date is always a calendar date in the task owner's zone, never an instant.
 
-- ALWAYS: a task keeps its identity across edits to title, date, and completion — consumers hold the id, never the title ([test](tests/identity.compliance.l1.test.{ext}))
-- NEVER: a capability or surface introduces a task field this domain does not define ([audit:field-ownership])
+### Compliance: identity
+
+- stable-identity: ALWAYS: a task keeps its identity across edits to title, date, and completion — consumers hold the id, never the title.
+
+### Audit
+
+- field-ownership: NEVER: a capability or surface introduces a task field this domain does not define.

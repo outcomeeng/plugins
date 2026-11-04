@@ -12,7 +12,7 @@
 
 ## Verification
 
-Authoring form: state new ALWAYS/NEVER rules directly here without tags or subsections until verification selection. Draft and routed rules may coexist. Judge draft clarity and falsifiability; declaration approval supplies no evidence result. The subsections below show the routed form, whose rules require their matching tags.
+Authoring form: state new ALWAYS/NEVER rules directly here, each opening with a slug, without tags or subsections until verification selection. Draft and routed rules may coexist. Judge draft clarity and falsifiability; declaration approval supplies no evidence result. The subsections below show the routed form, whose rules require their matching tags.
 
 Each routed rule is an ALWAYS guarantee or a NEVER boundary, under the one subsection naming how it is verified. Include only the subsections that apply. They are ordered by decreasing enforcement strength.
 
@@ -20,19 +20,19 @@ Each routed rule is an ALWAYS guarantee or a NEVER boundary, under the one subse
 
 Verified by a deterministic test. `/verify` selects test from the real subject's verdict; `/test` then selects each rule's assertion type — one of `scenario`, `mapping`, `conformance`, `property`, `compliance` — from the rule's quantifier before `/author-{language}-test` supplies language expression. The heading never determines the assertion type.
 
-- ALWAYS: {rule} ([{assertion type}])
-- NEVER: {prohibition} ([{assertion type}])
+- {slug}: ALWAYS: {rule} ([{assertion type}])
+- {slug}: NEVER: {prohibition} ([{assertion type}])
 
 ### Eval
 
 Verified by graded LLM behavior over curated cases — the subject is a skill, agent, or classifier whose output has a parseable contract.
 
-- ALWAYS: {rule} ([eval])
-- NEVER: {prohibition} ([eval])
+- {slug}: ALWAYS: {rule} ([eval])
+- {slug}: NEVER: {prohibition} ([eval])
 
 ### Audit
 
-Verified by an audit skill's judgment against this decision — the subject (a Product Tree decision, spec, skill, or agent) admits no deterministic test or graded eval. Each rule's slug is unique within this record.
+Verified by an audit skill's judgment against this decision — the subject (a Product Tree decision, spec, skill, or agent) admits no deterministic test or graded eval. The tag is `[audit]` and the rule's leading slug, unique within this record, is its name.
 
-- ALWAYS: {rule} ([audit:{rule-slug}])
-- NEVER: {prohibition} ([audit:{rule-slug}])
+- {slug}: ALWAYS: {rule} ([audit])
+- {slug}: NEVER: {prohibition} ([audit])

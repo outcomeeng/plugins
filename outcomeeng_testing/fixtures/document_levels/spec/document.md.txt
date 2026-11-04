@@ -11,11 +11,11 @@ CAN find a session until its retention window elapses
 
 ## Assertions
 
-- window-listing: ALWAYS: an ended session stays listed until its window elapses. [test: compliance, l1]
+- window-listing: ALWAYS: an ended session stays listed until its window elapses.
 
 ### Mapping: window-by-state
 
-Each session state maps to the window its listing follows. [mapping]
+Each session state maps to the window its listing follows.
 
 | Case   | Window         |
 | ------ | -------------- |
@@ -24,8 +24,8 @@ Each session state maps to the window its listing follows. [mapping]
 
 ### Scenario: expiry
 
-- sweep-removal: Given an ended session whose window elapsed, when the sweep runs, then the session leaves the listing. [test: scenario, l1]
+- sweep-removal: Given an ended session whose window elapsed, when the sweep runs, then the session leaves the listing.
 
 ### Audit
 
-- window-observable: ALWAYS: the listing states each window in days. [audit]
+- window-observable: ALWAYS: the listing states each window in days.

@@ -11,15 +11,24 @@ CAN {the parent's consumer capability}
 
 ## Assertions
 
-Authoring form: state new assertions directly here without tags or headings until verification selection. Draft and routed assertions may coexist. Declaration approval supplies no evidence result or Passing state. The grouped examples below show the routed form; its tag requirements follow declared malleability.
+- {slug}: {One sentence stating only what the parent's contract does not say. The parent's assertions are this variant's evidence too: the toolchain runs them once with the selection source set to this variant and records the results in this variant's status claim. A variant carries no outcome record. Include only the groups below that apply to this node.}
 
-State only what the parent's contract does not say. The parent's assertions are this variant's evidence too: the toolchain runs them once with the selection source set to this variant and records the results in this variant's status claim. A variant carries no outcome record.
+### Mapping: {slug}
 
-### Scenarios
+{One sentence mapping a finite set of inputs to their outputs.}
 
-- Given {context specific to this implementation}, when {action}, then {result} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
+| Case              | {Output column}   |
+| ----------------- | ----------------- |
+| {short case name} | {expected result} |
 
-### Compliance
+### Scenario: {subject specific to this implementation}
 
-- ALWAYS: {behavior this implementation guarantees beyond the contract} — {why} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
-- ALWAYS: {claim only observing this variant running settles} ([probe](probes/{probe-slug}/probe.md))
+- {slug}: Given {context specific to this implementation}, when {action}, then {result}.
+
+### Compliance: {subject}
+
+- {slug}: ALWAYS: {behavior this implementation guarantees beyond the contract} — {why}.
+
+### Probe
+
+- {slug}: ALWAYS: {claim only observing this variant running settles}.

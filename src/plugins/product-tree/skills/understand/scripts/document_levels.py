@@ -1,7 +1,7 @@
 """Derive the level views of a document written from the PDR or spec template form.
 
 A document in that form holds a title, an opening, subsection headings, rules
-opened by a slug and ended by at most one tag, and mapping tables. Level 1 is
+opened by a slug, and mapping tables. Level 1 is
 the path, the title, and the opening. Level 2 adds each heading, each rule's
 slug and sentence, and the first column of each mapping table. Level 3 is the
 whole file.
@@ -10,7 +10,6 @@ whole file.
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from enum import IntEnum
 from pathlib import Path
@@ -22,7 +21,6 @@ MAPPING_HEADING_PREFIX = "### Mapping:"
 BULLET_PREFIX = "- "
 TABLE_CELL_FENCE = "|"
 TABLE_HEADER_ROWS = 2
-TRAILING_TAG = re.compile(r"\s*\[[^\[\]]+\]\s*$")
 
 
 class Level(IntEnum):
@@ -72,10 +70,6 @@ def _split_opening(rest: list[str]) -> tuple[list[str], list[str]]:
     return _trim_blank_edges(rest), []
 
 
-def _without_tag(sentence: str) -> str:
-    return TRAILING_TAG.sub("", sentence).strip()
-
-
 def _first_cell(row: str) -> str:
     return row.strip().strip(TABLE_CELL_FENCE).split(TABLE_CELL_FENCE)[0].strip()
 
@@ -92,7 +86,7 @@ def _level_two_body(sections: list[str]) -> list[str]:
 
     def flush_rule() -> None:
         if rule_lines:
-            emitted.append(BULLET_PREFIX + _without_tag(" ".join(rule_lines)))
+            emitted.append(BULLET_PREFIX + " ".join(rule_lines))
             rule_lines.clear()
 
     for line in sections:
@@ -111,7 +105,7 @@ def _level_two_body(sections: list[str]) -> list[str]:
             if table_rows_seen > TABLE_HEADER_ROWS:
                 emitted.append(BULLET_PREFIX + _first_cell(line))
         elif in_mapping:
-            emitted.append(_without_tag(stripped))
+            emitted.append(stripped)
         elif stripped.startswith(BULLET_PREFIX):
             flush_rule()
             rule_lines.append(stripped[len(BULLET_PREFIX) :])

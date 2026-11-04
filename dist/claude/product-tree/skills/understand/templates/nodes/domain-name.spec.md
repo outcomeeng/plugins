@@ -11,24 +11,41 @@ CAN {what those consumers could not do without one owner of these semantics}
 
 ## Assertions
 
-Authoring form: state new assertions directly here without tags or headings until verification selection. Draft and routed assertions may coexist. Declaration approval supplies no evidence result or Passing state. The grouped examples below show the routed form; its tag requirements follow declared malleability.
+- {slug}: {One sentence stating an assertion awaiting verification selection. A domain states its class contract — the rule its children satisfy and how their contributions combine — and names no child. Include only the groups below that apply to this node.}
 
-Only include assertion type headings that apply to this node. A spec-malleable assertion may omit its tag. A domain states its class contract — the rule its children satisfy and how their contributions combine — and names no child.
+### Mapping: {slug}
 
-### Scenarios
+{One sentence mapping a finite set of inputs to their outputs.}
 
-- Given {context}, when {action}, then {result} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
+| Case              | {Output column}   |
+| ----------------- | ----------------- |
+| {short case name} | {expected result} |
 
-### Mappings
+### Scenario: {subject}
 
-- {input set} maps to {output set} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
+- {slug}: Given {context}, when {action}, then {result}.
 
-### Properties
+### Conformance: {subject}
 
-- {invariant of the domain's rules} holds for all {domain} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
+- {slug}: {Output} conforms to {standard or schema}.
 
-### Compliance
+### Property: {subject}
 
-- ALWAYS: {rule every node speaking this vocabulary obeys} — {why} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
-- NEVER: {prohibited behavior} — {why} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
-- ALWAYS: {semantic constraint requiring judgment} — {why} ([audit:{rule-slug}])
+- {slug}: {Invariant} holds for all {domain}.
+
+### Compliance: {subject}
+
+- {slug}: ALWAYS: {observable behavior that holds} — {why}.
+- {slug}: NEVER: {prohibited behavior} — {why}.
+
+### Eval
+
+- {slug}: ALWAYS: {LLM-driven behavior with a parseable verdict}.
+
+### Probe
+
+- {slug}: ALWAYS: {claim only observing the running node settles}.
+
+### Audit
+
+- {slug}: ALWAYS: {semantic constraint requiring judgment} — {why}.

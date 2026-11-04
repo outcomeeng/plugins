@@ -12,7 +12,7 @@ CAN RELY ON an ended session staying listed for its retention window.
 
 ### Mapping: window-by-state
 
-Each session state maps to the window its listing follows. [mapping]
+Each session state maps to the window its listing follows.
 
 | Case   | Window         |
 | ------ | -------------- |
@@ -22,9 +22,9 @@ Each session state maps to the window its listing follows. [mapping]
 
 ### Compliance: expiry
 
-- no-early-removal: NEVER: a session leaves the listing before its window elapses. [compliance]
-- expiry-removal: ALWAYS: a session whose window elapsed leaves the listing at the next sweep. [compliance]
+- no-early-removal: NEVER: a session leaves the listing before its window elapses.
+- expiry-removal: ALWAYS: a session whose window elapsed leaves the listing at the next sweep.
 
 ### Audit
 
-- window-observable: ALWAYS: the listing states each window in days an operator can read. [audit]
+- window-observable: ALWAYS: the listing states each window in days an operator can read.

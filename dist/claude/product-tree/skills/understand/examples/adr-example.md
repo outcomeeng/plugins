@@ -16,11 +16,11 @@ Machine-written claims retain inspectable verification results without making a 
 
 ### Testing
 
-- ALWAYS: derive the same state from identical declarations, artifacts, attributed results, and pins ([property])
-- ALWAYS: invalidate an attributed result when a path named by its pin changes ([property])
-- NEVER: let an invalidated result satisfy a required verification result ([compliance])
+- state-deterministic: ALWAYS: derive the same state from identical declarations, artifacts, attributed results, and pins ([property])
+- pin-invalidates: ALWAYS: invalidate an attributed result when a path named by its pin changes ([property])
+- no-invalid-satisfaction: NEVER: let an invalidated result satisfy a required verification result ([compliance])
 
 ### Audit
 
-- ALWAYS: the projector alone writes the committed `spx.status.json` claim ([audit:projector-sole-writer])
-- NEVER: a manually assigned label overrides evidence-derived state ([audit:no-manual-state])
+- projector-sole-writer: ALWAYS: the projector alone writes the committed `spx.status.json` claim ([audit])
+- no-manual-state: NEVER: a manually assigned label overrides evidence-derived state ([audit])
