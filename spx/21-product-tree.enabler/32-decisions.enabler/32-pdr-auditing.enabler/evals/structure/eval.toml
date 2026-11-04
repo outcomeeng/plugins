@@ -13,6 +13,7 @@ smoke_cases = [
   "well-formed-pdr-passes",
   "tooling-observable-passes",
   "tooling-internal-rejected",
+  "missing-governs-and-extra-sections-rejected",
 ]
 threshold = 0.85
 trials = 1

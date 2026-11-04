@@ -9,13 +9,13 @@ owned_paths = [
   "dist/claude/product-tree/skills/audit-pdr/**",
 ]
 smoke_cases = [
-  "testing-bare-mechanism-tag-rejected",
-  "eval-subsection-audit-tag-rejected",
-  "audit-subsection-eval-tag-rejected",
-  "testing-missing-tag-rejected",
-  "testing-multiple-tags-rejected",
-  "universal-scenario-tag-rejected",
-  "valid-tags-pass",
+  "audit-tag-on-compliance-rule-rejected",
+  "bare-mechanism-tag-rejected",
+  "eval-tag-on-audit-rule-rejected",
+  "multiple-tags-rejected",
+  "repeated-slug-rejected",
+  "universal-scenario-group-rejected",
+  "valid-form-passes",
 ]
 threshold = 0.85
 trials = 1
