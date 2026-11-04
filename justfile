@@ -125,6 +125,10 @@ fmt-check:
 eval-links:
     uv run python -m outcomeeng.validation.eval_links
 
+# Print one level view (1, 2, or 3) of a document written from the PDR or spec template form
+levels level file:
+    uv run python -m outcomeeng.product_tree_levels --level {{level}} {{file}}
+
 # Run selected local gate steps through the signal-safe recipe orchestrator
 check:
     python3 -m outcomeeng.validation check

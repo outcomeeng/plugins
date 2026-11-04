@@ -17,7 +17,7 @@ CAN operate from a shared structural definition rather than ad hoc conventions
 - mapping-subsection: ALWAYS: the PDR template and each output-kind and variant spec template write a mapping rule as its own `### Mapping: <slug>` subsection holding one sentence and a table with one row per case, whose first column holds a short name for the case. [audit]
 - rule-groups: ALWAYS: the PDR template and each output-kind and variant spec template write every other rule as one sentence opened by its slug, in a group headed `### <assertion type>: <subject>` when its rules share one subject or `### <assertion type>` when they share none, naming Eval, Probe, or Audit in place of the assertion type for a rule verified that way, and a group of more than seven rules splits by subject. [audit]
 - form-text: NEVER: a document written from the PDR template or from an output-kind or variant spec template holds text outside its opening, a rule, or a table. [audit]
-- levels: A stdlib script shipped in the product-tree plugin derives three views of a document written from the PDR template or from an output-kind or variant spec template from its structure alone, as follows. [test: mapping, l1]
+- levels: A script derives three views of a document written from the PDR template or from an output-kind or variant spec template from its structure alone, as follows. [test: mapping, l1]
 
   | Case    | View                                                                                                             |
   | ------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -25,6 +25,7 @@ CAN operate from a shared structural definition rather than ad hoc conventions
   | level-2 | level 1, then each subsection heading, each rule's slug and sentence, and the first column of each mapping table |
   | level-3 | the whole file                                                                                                   |
 
+- levels-probe: ALWAYS: the views the levels script derives from a document written from the PDR template and from a spec template stand for that document at their level, which only reading the views beside the document settles. [probe]
 - no-tags: NEVER: the PDR template or an output-kind or variant spec template writes a tag on a rule; the group heading names the rule's verification type, and the rule's leading slug is its one name. [audit]
 - adr-audit-tag: ALWAYS: the ADR decision template writes each `### Audit` rule with the tag `[audit]` led by the rule's slug, and never `[audit:{rule-slug}]`. [audit]
 

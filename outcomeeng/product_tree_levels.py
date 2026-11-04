@@ -1,14 +1,13 @@
 """Derive the level views of a document written from the PDR or spec template form.
 
-A document in that form holds a title, an opening, subsection headings, rules
-opened by a slug, and mapping tables. Level 1 is the path, the title, and the
-opening. Level 2 adds each heading, each rule's slug and sentence, and the first
-column of each mapping table. Level 3 is the whole file.
+A proof of concept for the form: the views follow from a document's structure
+alone, so a parser in the SPX CLI can derive the same views. A document in that
+form holds a title, an opening, subsection headings, rules opened by a slug, and
+mapping tables. Level 1 is the path, the title, and the opening. Level 2 adds
+each heading, each rule's slug and sentence, and the first column of each mapping
+table. Level 3 is the whole file.
 
-Usage: python3 "${CLAUDE_SKILL_DIR}/scripts/document_levels.py" --level 1|2|3 <file>
-
-Tested with a PDR and a spec document in template form at each of the three
-levels. The script reads one file, writes nothing, and leaves nothing to clean up.
+Usage: python3 -m outcomeeng.product_tree_levels --level 1|2|3 <file>
 """
 
 from __future__ import annotations

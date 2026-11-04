@@ -8,9 +8,7 @@ from pathlib import Path
 from types import ModuleType
 
 ROOT = Path(__file__).parents[2]
-DOCUMENT_LEVELS_PATH = (
-    ROOT / "src/plugins/product-tree/skills/understand/scripts/document_levels.py"
-)
+DOCUMENT_LEVELS_PATH = ROOT / "outcomeeng/product_tree_levels.py"
 FIXTURE_ROOT = ROOT / "outcomeeng_testing/fixtures/document_levels"
 DOCUMENT_FILE = "document.md.txt"
 PATH_FILE = "path.txt"

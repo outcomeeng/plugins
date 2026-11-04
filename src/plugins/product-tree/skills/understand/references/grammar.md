@@ -13,7 +13,6 @@ The structural grammar of the durable map — the shapes a loader accepts — in
 5. `<verification_artifacts>`: test, eval, and probe directories
 6. `<containment>`: the per-kind productions
 7. `<links>`: the two anchored link shapes
-8. `<level_views>`: the three views of a PDR or spec in template form
 
 </contents>
 
@@ -133,8 +132,3 @@ A product body carries no status file or verification directory because a scope 
 A leading-slash anchor or a `../` climb fails validation as ambiguous. Metric-source and selection-source links are external and verified by delivery; links inside a knowledge root follow the bundle's format. Implementation never links into the tree.
 
 </links>
-
-<level_views>
-
-A PDR or spec written from its template has three views, derived from its structure alone: level 1 is the path, the title, and the opening; level 2 adds each subsection heading, each rule's slug and sentence, and the first column of each mapping table; level 3 is the whole file. Print one with `python3 "${CLAUDE_SKILL_DIR}/scripts/document_levels.py" --level 1|2|3 <file>`.
-</level_views>

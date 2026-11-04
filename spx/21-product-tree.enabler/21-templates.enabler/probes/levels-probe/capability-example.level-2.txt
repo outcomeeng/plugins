@@ -1,0 +1,30 @@
+src/plugins/product-tree/skills/understand/examples/capability-example.md
+# Quick Add
+
+PROVIDES capture of a task from one line of natural text, including a due date when the text names one
+SO THAT every interface and surface that captures tasks
+CAN record a task without leaving what they were doing
+
+## Assertions
+
+### Mapping: relative-dates
+Relative date words map to dates: "today", "tomorrow", and weekday names resolve against the capture time.
+- today
+- tomorrow
+- weekday
+
+### Scenario: capture
+- dated-capture: Given the text "buy milk tomorrow", when it is captured, then a task titled "buy milk" exists with tomorrow's date.
+- undated-capture: Given text with no date, when it is captured, then the task has no due date and no error.
+
+### Property: capture
+- capture-idempotent: Capture is idempotent on its parsed form: capturing the parsed title and date again produces an equal task.
+
+### Compliance: capture
+- capture-event: ALWAYS: every capture emits the `task_captured` event the capture-rate source reads — the outcome record's condition is unreadable without it.
+
+### Probe
+- capture-basic: ALWAYS: a person captures a task from the quick-add field within two seconds of focusing it.
+
+### Audit
+- raw-text-retention: NEVER: the parser stores the raw text beyond the capture — the task is the record.
