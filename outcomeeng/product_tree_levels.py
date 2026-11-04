@@ -3,9 +3,10 @@
 A proof of concept for the form: the views follow from a document's structure
 alone, so a parser in the SPX CLI can derive the same views. A document in that
 form holds a title, an opening, subsection headings, rules opened by a slug, and
-mapping tables. Level 1 is the path, the title, and the opening. Level 2 adds
-each heading, each rule's slug and sentence, and the first column of each mapping
-table. Level 3 is the whole file.
+mapping tables. An eval is its own subsection of one sentence and a case table.
+Level 1 is the path, the title, and the opening. Level 2 adds each heading, each
+rule's slug and sentence, and the first column of each mapping table; an eval
+contributes its heading and sentence. Level 3 is the whole file.
 
 Usage: python3 -m outcomeeng.product_tree_levels --level 1|2|3 <file>
 """
@@ -21,6 +22,7 @@ FRONT_MATTER_FENCE = "---"
 TITLE_PREFIX = "# "
 HEADING_PREFIXES = ("## ", "### ")
 MAPPING_HEADING_PREFIX = "### Mapping:"
+EVAL_HEADING_PREFIX = "### Eval:"
 BULLET_PREFIX = "- "
 TABLE_CELL_FENCE = "|"
 TABLE_HEADER_ROWS = 2
@@ -84,6 +86,7 @@ def _is_table_row(line: str) -> bool:
 def _level_two_body(sections: list[str]) -> list[str]:
     emitted: list[str] = []
     in_mapping = False
+    in_sentence_subsection = False
     table_rows_seen = 0
     rule_lines: list[str] = []
 
@@ -100,14 +103,15 @@ def _level_two_body(sections: list[str]) -> list[str]:
                 emitted.append("")
             emitted.append(line)
             in_mapping = line.startswith(MAPPING_HEADING_PREFIX)
+            in_sentence_subsection = in_mapping or line.startswith(EVAL_HEADING_PREFIX)
             table_rows_seen = 0
         elif not stripped:
             flush_rule()
-        elif in_mapping and _is_table_row(line):
+        elif in_sentence_subsection and _is_table_row(line):
             table_rows_seen += 1
-            if table_rows_seen > TABLE_HEADER_ROWS:
+            if in_mapping and table_rows_seen > TABLE_HEADER_ROWS:
                 emitted.append(BULLET_PREFIX + _first_cell(line))
-        elif in_mapping:
+        elif in_sentence_subsection:
             emitted.append(stripped)
         elif stripped.startswith(BULLET_PREFIX):
             flush_rule()

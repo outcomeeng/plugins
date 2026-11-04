@@ -16,5 +16,8 @@ Each session state maps to the window its listing follows.
 ### Scenario: expiry
 - sweep-removal: Given an ended session whose window elapsed, when the sweep runs, then the session leaves the listing.
 
+### Eval: window-readout
+A listing summarizer states each window in days over curated sessions.
+
 ### Audit
 - window-observable: ALWAYS: the listing states each window in days.

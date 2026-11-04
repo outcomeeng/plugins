@@ -20,5 +20,8 @@ Each session state maps to the window its listing follows.
 - no-early-removal: NEVER: a session leaves the listing before its window elapses.
 - expiry-removal: ALWAYS: a session whose window elapsed leaves the listing at the next sweep.
 
+### Eval: window-readout
+A listing summarizer states each window in days over curated sessions.
+
 ### Audit
 - window-observable: ALWAYS: the listing states each window in days an operator can read.
