@@ -263,7 +263,7 @@ How to avoid: Before re-pointing, classify each citing assertion. Universal — 
 
 **Failure 8: Moved the node before the matrix existed**
 
-Claude moved a top-level node to the next free index above the node it consumes, renamed the directory and re-pointed 99 files, then did it again one index higher when the first number was rejected. No ordering-evidence matrix existed for the root either time, and the operator reset both moves. Each `git mv` ran because nothing it needed was missing.
+Claude moved a top-level node to the next free index above the node it consumes, then did it again one index higher when the first number was rejected. No ordering-evidence matrix existed for the root either time, and the operator reset both moves.
 
 How to avoid: Step 4a reads the index from the matrix file `/decompose` wrote for the target parent, and a `git mv` with no such file does not run.
 

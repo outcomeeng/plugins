@@ -179,7 +179,7 @@ Before assigning indices, record one row per candidate child and per existing si
 | Field    | Required content                                                                                                                       |
 | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | Node     | Full path from `spx/`, or the parent path plus candidate slug                                                                          |
-| Consumer | The consumer its value reaches: one the product document names, or the audience outside the product that the parent's opening serves   |
+| Consumer | The consumer its value reaches: one the product document names, or the audience the product's surfaces name in their TO slot           |
 | Value    | What that consumer receives, in the product's own terms; an inward kind's value reaches the consumer through the nodes that consume it |
 | Requires | Every sibling whose contract the node needs to deliver that value                                                                      |
 
@@ -223,7 +223,7 @@ Read every index from the matrix file Step 7 wrote. The horizon math below compo
 
 - It shares the index of a sibling the checkpoint marked its independent peer.
 - It takes an index above a predecessor or below a successor only from a pair the matrix proved ordered. Existing siblings at different indices are already ordered relative to each other, so a child cannot be the independent peer of two of them at once.
-- When the checkpoint names both an ordered predecessor and an ordered successor among the existing siblings, the child takes the midpoint of the band between their indices, rounded down, so a later sibling fits on either side without renumbering.
+- When the checkpoint names both an ordered predecessor and an ordered successor among the existing siblings, the child takes the midpoint of the band between their indices, rounded down.
 - NEVER: the next integer after an existing sibling's index is the index.
 
 1. Choose the horizon:
