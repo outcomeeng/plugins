@@ -1,7 +1,7 @@
 ---
 name: refactor
 description: ALWAYS invoke this skill when moving nodes, re-scoping content, or extracting shared providers. NEVER restructure the Product Tree without this skill.
-allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git status:*), Bash(git mv:*), Bash(git rm -r:*), Bash(spx validation markdown), Bash(spx spec status:*), Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git status:*), Bash(git mv:*), Bash(git rm -r:*), Bash(spx validation markdown:*), Bash(spx spec status:*), Skill
 ---
 
 <objective>

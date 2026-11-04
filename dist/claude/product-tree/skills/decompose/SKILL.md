@@ -2,7 +2,7 @@
 name: decompose
 description: ALWAYS invoke this skill when breaking down, splitting, scoping, composing, or structuring Product Tree nodes. NEVER decompose specs without this skill.
 argument-hint: <node-address|spx/>
-allowed-tools: Read, Glob, Grep, Write, Edit, Bash(spx validation markdown), Bash(spx spec status:*), Skill
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(spx validation markdown:*), Bash(spx spec status:*), Skill
 ---
 
 <objective>
@@ -74,6 +74,9 @@ For a node target, decompose when at least one trigger applies:
 | Independent concerns | Contains assertions with no relationship to each other |
 | Separate validation  | Parts could be validated independently                 |
 | Explicit issue       | `PLAN.md` or `ISSUES.md` requests structure work       |
+| Placement            | A node needs an index among the target's children      |
+
+Placement holds for either target form: a node `/refactor` moves under the target, or a new child, needs an index there. That run writes the Step 7 rows for the existing siblings and the candidate and reads the candidate's index from the matrix in Step 8; it splits nothing and redistributes no assertion.
 
 Classify the target with the product-domain-shapes reference before deciding whether to split it:
 
