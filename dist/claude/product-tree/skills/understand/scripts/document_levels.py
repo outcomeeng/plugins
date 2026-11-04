@@ -1,10 +1,17 @@
 """Derive the level views of a document written from the PDR or spec template form.
 
 A document in that form holds a title, an opening, subsection headings, rules
-opened by a slug, and mapping tables. Level 1 is
-the path, the title, and the opening. Level 2 adds each heading, each rule's
-slug and sentence, and the first column of each mapping table. Level 3 is the
-whole file.
+opened by a slug, and mapping tables. Level 1 is the path, the title, and the
+opening. Level 2 adds each heading, each rule's slug and sentence, and the first
+column of each mapping table. Level 3 is the whole file.
+
+Usage: python3 "${CLAUDE_SKILL_DIR}/scripts/document_levels.py" --level 1|2|3 <file>
+
+A file without a title line prints an error naming the expected form and exits 1;
+an unreadable file prints the operating-system error and exits 1.
+
+Tested with a PDR and a spec document in template form at each of the three
+levels. The script reads one file, writes nothing, and leaves nothing to clean up.
 """
 
 from __future__ import annotations
@@ -60,7 +67,10 @@ def _split_title_and_rest(lines: list[str]) -> tuple[str, list[str]]:
     for index, line in enumerate(lines):
         if line.startswith(TITLE_PREFIX):
             return line, lines[index + 1 :]
-    raise ValueError("document has no title line")
+    raise ValueError(
+        "document has no title line; start the document with a first-level "
+        "heading of the form '# <title>', before its opening"
+    )
 
 
 def _split_opening(rest: list[str]) -> tuple[list[str], list[str]]:
