@@ -8,7 +8,11 @@ owned_paths = [
   "src/plugins/product-tree/skills/audit-adr/**",
   "dist/claude/product-tree/skills/audit-adr/**",
 ]
-smoke_cases = ["missing-verification-section", "well-formed-adr-passes"]
+smoke_cases = [
+  "missing-verification-section",
+  "well-formed-adr-passes",
+  "so-that-names-an-audience-rejected",
+]
 threshold = 0.85
 trials = 1
 

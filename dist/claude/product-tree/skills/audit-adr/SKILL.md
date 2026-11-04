@@ -2,14 +2,14 @@
 name: audit-adr
 description: >-
   ADR audit methodology — judges one ADR against the ADR evidence model,
-  covering section structure, atemporal voice, and per-rule tag validity.
+  covering declaration form, atemporal voice, and per-rule tag validity.
 argument-hint: "<adr-file-path>"
 allowed-tools: Read, Grep, Glob, Skill, Bash(git branch --show-current:*), Bash(git merge-base:*), Bash(git diff:*)
 ---
 
 <objective>
 
-A verdict on one ADR against the ADR evidence model — APPROVED or REJECTED, with findings on touched text naming the section, rule, and evidence for section structure, atemporal voice, or per-rule declaration form and tag fitness, and every other finding returned as `filed`.
+A verdict on one ADR against the ADR evidence model — APPROVED or REJECTED, with findings on touched text naming the section, rule, and evidence for declaration form, atemporal voice, or per-rule tag validity and assertion-type fit, and every other finding returned as `filed`.
 
 </objective>
 
@@ -21,7 +21,7 @@ An ADR's content is architecture — technology choices, data structures, implem
 
 **ASSERTION TYPE MUST MATCH THE CLAIM.**
 
-Apply the canonical template's authoring and routed forms. Untagged rules directly under `## Verification` await selection and may coexist with routed subsections; judge their specificity, structure, voice, and consistency without inventing a missing-tag finding. Rules inside routed subsections carry the template's required tag. `/verify` selects the verification type, then `/test` selects a Testing rule's assertion type. A universal claim is never `scenario`; a missing required tag inside a routed subsection, unsupported tag, duplicate tag, or quantifier mismatch remains a finding. Approval judges declaration quality and establishes no evidence result or Passing state.
+Apply the canonical template's form. Rules directly under `## Verification`, outside any group, await selection and may coexist with groups; judge their specificity, structure, voice, and consistency. A rule carries no tag, because its group heading names its verification type and its leading slug is its one name. `/verify` selects the verification type, then `/test` selects a Testing rule's assertion type. A universal claim is never `scenario`; a tag on a rule, a repeated slug, or a quantifier mismatch is a finding. Approval judges declaration quality and establishes no evidence result or Passing state.
 
 **ATEMPORAL VOICE.**
 
@@ -33,7 +33,7 @@ ADRs state architecture truth. "The build emits one wheel per plugin" — not "W
 
 **LANGUAGE COMPOSITION BOUNDARY.**
 
-Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are composed from `/audit-<lang>-architecture` in Step 5b. The language skill judges only those concerns; this skill owns section structure, atemporal voice, and tag validity from the canonical template.
+Language-specific ADR concerns — testability-in-Verification (dependency injection, no-mocking), execution-level accuracy — are composed from `/audit-<lang>-architecture` in Step 5b. The language skill judges only those concerns; this skill owns declaration form, atemporal voice, and tag validity from the canonical template.
 
 - NEVER modify the ADR under audit or any other file — this audit produces a verdict, never a fix or a commit.
 - ALWAYS derive the valid section set from the canonical ADR template before judging structure — never from memory.
@@ -63,7 +63,7 @@ Do not proceed without the canonical ADR template content and live `<PRODUCT_TRE
 
 **Step 2: Read the ADR**
 
-Read the ADR under audit. Identify its sections: the opening decision statement, Rationale (optional), Invariants (optional), and Verification.
+Read the ADR under audit. Identify its parts: the optional DEFINES lines, the CONSTRAINS opening, and Verification.
 
 Resolve the touched text of the ADR as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states, so Steps 3 to 5b can classify each finding.
 
@@ -71,13 +71,15 @@ Resolve the touched text of the ADR as `${CLAUDE_SKILL_DIR}/references/touched-t
 
 <step name="audit_structure">
 
-**Step 3: Section structure**
+**Step 3: Declaration form**
 
-Use the canonical ADR template guidance loaded in Step 1 to derive the valid section set in full — never from memory or a transcribed copy. A structural finding that contradicts the canonical template is unbacked: drop it rather than rejecting the ADR. If the template guidance cannot be loaded, reject with `template-missing` and name the blocked read.
+Use the canonical ADR template guidance loaded in Step 1 to derive the form in full — never from memory or a transcribed copy. A finding that contradicts the canonical template is unbacked: drop it rather than rejecting the ADR. If the template guidance cannot be loaded, reject with `template-missing` and name the blocked read.
 
-Verify the decision is stated in the opening (no "Purpose" preamble) and a `## Verification` section is present. Rationale and Invariants are optional — Invariants appears only when the decision establishes algebraic properties.
+Verify the ADR opens with optional DEFINES lines and then the CONSTRAINS, TO, and SO THAT paragraph, writes each mapping rule as its own `### Mapping: <slug>` subsection holding one sentence and a table, keeps each group to at most seven rules, states its invariants as rules of a Property group, holds no text outside its opening, a rule, or a table, and has a `## Verification` section.
 
-**No decision statement, or no Verification section → `blocking` — "missing-section."**
+Verify the SO THAT line names a property of the build that the TO mechanism yields, never an audience and never a restatement of the mechanism.
+
+**No opening, or no Verification section → `blocking` — "missing-section." An opening, mapping subsection, group, or text that breaks the template form → `blocking` — "declaration-form." A SO THAT line that names an audience or restates the mechanism → `blocking` — "so-that-property."**
 
 </step>
 
@@ -85,7 +87,7 @@ Verify the decision is stated in the opening (no "Purpose" preamble) and a `## V
 
 **Step 4: Atemporal voice**
 
-Check EVERY section for temporal language:
+Check the opening and EVERY rule for temporal language:
 
 | Temporal (blocking)                   | Atemporal (correct)             |
 | ------------------------------------- | ------------------------------- |
@@ -93,7 +95,7 @@ Check EVERY section for temporal language:
 | "Currently the build does X"          | "The build does X"              |
 | "After profiling, we added caching"   | "Caching reduces latency for Z" |
 
-**Any temporal language in any section → `blocking` — "temporal-voice."**
+**Any temporal language in the opening or a rule → `blocking` — "temporal-voice."**
 
 </step>
 
@@ -101,21 +103,16 @@ Check EVERY section for temporal language:
 
 **Step 5: Per-rule tag validity and assertion-type fit**
 
-Read each rule's placement before judging tags. An untagged rule directly under `## Verification` has the canonical authoring form. For every such rule, identify its subject, the condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in the `tag-validity` row, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Check each draft rule against the decision statement and governing decisions; a contradiction also produces `invalid-draft-rule`, citing both conflicting declarations. Select no evidence type or tag during these checks.
+Read each rule's placement before judging it. A rule directly under `## Verification`, outside any group, has the canonical authoring form. For every such rule, identify its subject, the condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in the `tag-validity` row, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Check each draft rule against the decision statement and governing decisions; a contradiction also produces `invalid-draft-rule`, citing both conflicting declarations. Select no evidence type during these checks.
 
-A tagged rule must have the matching routed subsection. When `### Testing` contains rules: Use skill `product-tree:test-evidence-standards`. Load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, emit a blocking `test-standards-unavailable` finding and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the ADR during this audit.
+A rule carries no tag, because its group heading names its verification type and its leading slug is its one name. When a group heading names an assertion type: Use skill `product-tree:test-evidence-standards`. Load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to each rule's claim and its group's type. If the required reference cannot load, emit a blocking `test-standards-unavailable` finding and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement group, or change the ADR during this audit.
 
-For each routed rule:
+For each rule:
 
-1. The tag is valid for its subsection:
-   - under `### Testing` → one of `scenario`, `mapping`, `conformance`, `property`, `compliance`;
-   - under `### Eval` → `([eval])`;
-   - under `### Audit` → `([audit:{rule-slug}])` whose slug no other `### Audit` rule in the ADR repeats, or the pathless `([audit])` that the loaded foundation admits for a toolchain without slug support.
-2. Under `### Testing`, the declared assertion type is compatible with the claim's quantifier and evidence shape under the loaded foundation and shared assertion-type litmus. A universal claim cannot carry `scenario`. Reject a declared type whose required domain or oracle contradicts the claim, citing the claim and the loaded criterion; do not choose among compatible types or require executable evidence for a declaration.
+1. It carries no tag and its leading slug repeats nowhere in the ADR.
+2. Under a group named for an assertion type, the declared type is compatible with the claim's quantifier and evidence shape under the loaded foundation and shared assertion-type litmus. A universal claim cannot sit in a `### Scenario` group. Reject a declared type whose required domain or oracle contradicts the claim, citing the claim and the loaded criterion; do not choose among compatible types or require executable evidence for a declaration.
 
-An unsupported bare mechanism tag, a tag disagreeing with its subsection, a missing tag inside a routed subsection, more than one tag, an `### Audit` slug that repeats within the ADR, or an assertion type that contradicts the claim's shape is invalid.
-
-**A routed rule with a missing, unsupported, duplicate, repeated-slug, or subsection-mismatched tag → `blocking` — "invalid-tag." An assertion type that contradicts the claim's shape → `blocking` — "assertion-type-mismatch."**
+**A rule that carries a tag, or whose slug repeats within the ADR → `blocking` — "invalid-tag." An assertion type that contradicts the claim's shape → `blocking` — "assertion-type-mismatch."**
 
 </step>
 
@@ -182,13 +179,13 @@ How to avoid: The ADR audit checks form — structure, voice, tag validity. Cont
 
 **Failure 2: Passed a universal rule tagged `scenario`**
 
-Claude saw a `### Testing` rule — a universal ALWAYS/NEVER claim — tagged `([scenario])`, and passed it because a tag was present and named one of the five assertion types. A scenario proves one case; it cannot establish a claim about every case, so the assertion ships unverified — phantom green. The quantifier mismatch is a deterministic error, not a matter of taste.
+Claude saw a universal ALWAYS/NEVER rule in a `### Scenario` group and passed it because the group named one of the five assertion types. A scenario proves one case; it cannot establish a claim about every case, so the assertion ships unverified — phantom green. The quantifier mismatch is a deterministic error, not a matter of taste.
 
-How to avoid: Step 5 verifies the assertion type fits the claim's shape per the `/test` router. Reject a universal tagged `scenario` (and any type the router would not produce for the claim). The one line the audit does not cross is relitigating a choice the router leaves open between equally-valid types — that, and only that, is `/test`'s to decide.
+How to avoid: Step 5 verifies the assertion type fits the claim's shape per the `/test` router. Reject a universal in a `### Scenario` group (and any type the router would not produce for the claim). The one line the audit does not cross is relitigating a choice the router leaves open between equally-valid types — that, and only that, is `/test`'s to decide.
 
-**Failure 3: Applied routed tag requirements to authoring declarations**
+**Failure 3: Applied group requirements to authoring declarations**
 
-Claude rejected untagged authoring rules because the routed-form tag requirement was applied before verification selection. Derive the form from the artifact and canonical template. Judge every draft rule, preserve routed-rule checks, and never interpret declaration approval as evidence completeness.
+Claude rejected ungrouped authoring rules because the grouped-form requirement was applied before verification selection. Derive the form from the artifact and canonical template. Judge every draft rule, preserve the grouped-rule checks, and never interpret declaration approval as evidence completeness.
 
 </failure_modes>
 
@@ -196,10 +193,10 @@ Claude rejected untagged authoring rules because the routed-form tag requirement
 
 The verdict is sound when:
 
-- Every ADR rule was judged with none skipped — section structure, atemporal voice, and per-rule tag validity and assertion-type fit; when a language is in scope, the composed `/audit-<lang>-architecture` rows are judged too (coverage-complete).
+- Every ADR rule was judged with none skipped — declaration form, atemporal voice, and per-rule tag absence, slug uniqueness and assertion-type fit; when a language is in scope, the composed `/audit-<lang>-architecture` rows are judged too (coverage-complete).
 - The verdict states one `APPROVED` or `REJECTED` overall determination, every native and composed row carrying `PASS`, `FAIL`, or explained `NOT_APPLICABLE`, with no rule left unevaluated.
 - Each `blocking` finding lies on touched text, and every finding outside touched text appears as `filed` with its key, `baseRefEvidence`, and `issuesEntry`.
-- Each `blocking` finding is falsifiable: it names the section, the violated rule, and the evidence — the missing section, the temporal phrase, or the mismatched tag.
+- Each `blocking` finding is falsifiable: it names the section, the violated rule, and the evidence — the missing section, the broken form, the temporal phrase, the tag or repeated slug, or the mismatched assertion type.
 - The same ADR yields the same verdict.
 
 </success_criteria>
