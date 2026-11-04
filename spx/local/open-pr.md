@@ -70,6 +70,16 @@ version-only recovery path.
 base. The full CI gate does not run this comparison; the merge-time check is
 required even when all CI-related verification is green.
 
+## Plugin changelog entry
+
+A changeset that warrants a plugin bump under the version policy above carries
+an entry in that plugin's `src/plugins/<name>/CHANGELOG.md`, under a heading
+for the next version, in its content commits. The entry is written before
+`VERIFICATION_READINESS`, so the local review reads it with the change it
+records, and it follows the rules that file's header states. The merge-time
+step in `spx/local/merging.md` compares that heading with the version
+`just bump` writes; it writes no entry.
+
 ## Other pre-flight additions
 
 Verify these conditions before opening, alongside the parent protocol's checks:
@@ -78,6 +88,7 @@ Verify these conditions before opening, alongside the parent protocol's checks:
 | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
 | Touched-scope verification selected by `spx/local/merging.md` and `AGENTS.md` passes on the final head | Fix the failing lane before publication.                                         |
 | Both marketplace catalogs reflect added or removed plugins                                             | Update `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json`. |
+| Each plugin the version policy bumps carries its changelog entry under the next version heading        | Write the entry before the local review, per the changelog entry rule above.     |
 | The `README.md` skill and thin-agent catalog matches changed artifacts                                 | Regenerate the catalog through the command in `AGENTS.md`.                       |
 | The instruction-block template reflects changed skill structure                                        | Update its authored template and regenerate through the commands in `AGENTS.md`. |
 

@@ -10,6 +10,22 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.109.10
+
+### Changed
+
+- **`/decompose` reads every index from an ordering-evidence matrix it writes to a file.** The matrix opens with one row per candidate child and existing sibling naming the consumer its value reaches, the value that consumer receives, and every sibling it requires; each required sibling is a predecessor. The skill writes the rows, the edges, and the disposition checkpoint to a file in the session scratch directory, reads it back, assigns every index from it, and names the file's full path in its result. A child between an ordered predecessor and an ordered successor takes the midpoint of their band: the integer midpoint rounded down, a two-digit fractional insert such as `20.50` where no integer fits, and one more segment such as `20.00.50` where no two-digit fraction fits. Before this change, the skill recorded ordering edges with no consumer or value and assigned indices from no file.
+
+- **`/decompose` takes the target as its only argument and loads context through a live context marker.** An argument that carries anything beside `spx/` or a node path stops the run before any product file is read. Step 1 reads the manifest of a `<PRODUCT_TREE_CONTEXT>` marker for the exact target and invokes `/contextualize` when none is live.
+
+- **`/decompose` composes in the form the tree carries.** It classifies each new child by the ordered kind procedure and writes `{index}-{slug}.{kind}/` with `{slug}.spec.md`, or an `.enabler` or `.outcome` directory with `{slug}.md` in a tree authored under a 3.x version. A tree with no node takes the form its declared `methodology.version` selects, and where `spx.config.yaml` declares no version the skill can compose for, it writes no child and reports the observed value. Deferred siblings and the reserved horizon go to a Proposed Change through `/author-change`, never to `PLAN.md`.
+
+- **`/decompose` places a single node.** A node that needs an index among the target's children, moved there or new, triggers a placement run that writes the matrix rows and reads the node's index; a node that exists elsewhere in the tree receives no directory or spec.
+
+- **`/refactor` moves a node to a new parent or index only from the matrix file `/decompose` names.** Step 4a reads the index from the file at the path the `/decompose` result names and runs no `git mv` without it. Every `/decompose` call names its single argument, Step 2 loads a context marker for every node an operation touches, the parent included, and provider extraction creates no directory the decomposition already wrote.
+
+- **`/decompose` and `/refactor` run the spec-lane verify command after writing.** Both run `spx validation markdown` and `spx spec status --format json`, which their `allowed-tools` grant, and every further command the root guide names for a spec-only change through per-call approval, and stop on a nonzero exit.
+
 ## 0.109.9
 
 ### Fixed
