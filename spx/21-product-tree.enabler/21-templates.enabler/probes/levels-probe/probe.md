@@ -2,7 +2,7 @@
 
 ## Intent
 
-The operator expects a document written from the PDR or spec template to abbreviate itself deterministically: an agent reads a short view to decide whether the document matters before it loads the whole file. The `levels-probe` rule states that each view stands for its document at its level. Only reading a view beside its document settles whether the view keeps what a reader needs, and the run is a proof of concept a parser in the SPX CLI can reproduce.
+The operator expects a document written from the PDR or spec template to abbreviate itself deterministically: an agent reads a short view to decide whether the document matters before it loads the whole file. The `levels-probe` rule states that an attested run retains each example's level 2 view as its artifact. Only reading a view beside its document settles whether the view keeps what a reader needs, and the run is a proof of concept a parser in the SPX CLI can reproduce.
 
 ## Environment and preconditions
 
@@ -28,4 +28,4 @@ The operator expects a document written from the PDR or spec template to abbrevi
 
 ## Limitations
 
-The protocol exercised two documents. It ran level 1 on the capability example only and level 3 on the PDR example only. It did not exercise a rule that wraps over several lines, a group with more than seven rules, a PDR with a mapping table, a document with no title line, or an ADR, which the form does not cover.
+The protocol exercised two documents. It ran level 1 on the capability example only and level 3 on the PDR example only. It did not exercise a rule that wraps over several lines, a group with more than ten rules, a PDR with a mapping table, a document with no title line, or an ADR, which the form does not cover.

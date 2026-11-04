@@ -13,17 +13,18 @@ CAN operate from a shared structural definition rather than ad hoc conventions
 
 - authoring-and-routed-forms: ALWAYS: decision and output-node templates distinguish untagged authoring declarations directly under `## Verification` or `## Assertions` from the grouped examples produced after verification selection, and permit both forms in one artifact.
 - approval-is-not-evidence: NEVER: a declaration template treats authoring approval as evidence completeness or Passing state.
-- decision-openings: The PDR and ADR templates open with an optional paragraph of one `DEFINES <term> AS <definition>` line per term the decision owns, then the paragraph below, and carry no Rationale, Product properties, or Invariants section. [audit]
+- decision-openings: The PDR and ADR templates open with an optional paragraph of one `DEFINES <term> AS <definition>` line per term the decision owns, then the paragraph below, and carry no Rationale, Product properties, or Invariants section.
 
   | Case | Opening paragraph                                                                                       |
   | ---- | ------------------------------------------------------------------------------------------------------- |
   | pdr  | `GOVERNS <subject>`, `SO THAT <who relies on it>`, `CAN RELY ON <behavior>`                             |
   | adr  | `CONSTRAINS <part of the build>`, `TO <the chosen mechanism>`, `SO THAT <the property the build gains>` |
 
-- mapping-subsection: ALWAYS: the PDR and ADR templates and each output-kind and variant spec template write a mapping rule as its own `### Mapping: <slug>` subsection holding one sentence and a table with one row per case, whose first column holds a short name for the case. [audit]
-- rule-groups: ALWAYS: the PDR and ADR templates and each output-kind and variant spec template write every other rule as one sentence opened by its slug, in a group headed `### <assertion type>: <subject>` when its rules share one subject or `### <assertion type>` when they share none, naming Eval, Probe, or Audit in place of the assertion type for a rule verified that way, and a group of more than seven rules splits by subject. [audit]
-- form-text: NEVER: a document written from the PDR or ADR template or from an output-kind or variant spec template holds text outside its opening, a rule, or a table. [audit]
-- levels: A script derives three views of a document written from the PDR or ADR template or from an output-kind or variant spec template from its structure alone, as follows. [test: mapping, l1]
+- mapping-subsection: ALWAYS: the PDR and ADR templates and each output-kind and variant spec template write a mapping rule as its own `### Mapping: <slug>` subsection holding one sentence and a table with one row per case, whose first column holds a short name for the case.
+- rule-groups: ALWAYS: the PDR and ADR templates and each output-kind and variant spec template write every other rule as one sentence opened by its slug, in a group headed `### <assertion type>: <subject>` when its rules share one subject or `### <assertion type>` when they share none, naming Probe or Audit in place of the assertion type for a rule verified that way, and a group of more than ten rules splits by subject.
+- eval-subsection: ALWAYS: the PDR and ADR templates and each output-kind and variant spec template write an eval as its own `### Eval: <slug>` subsection holding one sentence and a case table whose rows give each case's Given and Then; the table is the one source of the eval's cases.
+- form-text: NEVER: a document written from the PDR or ADR template or from an output-kind or variant spec template holds text outside its opening, a rule, or a table.
+- levels: A stdlib script derives three views of a document written from the PDR or ADR template or from an output-kind or variant spec template from its structure alone, as follows. ([test](tests/test_document_levels.mapping.l1.py))
 
   | Case    | View                                                                                                             |
   | ------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -31,7 +32,8 @@ CAN operate from a shared structural definition rather than ad hoc conventions
   | level-2 | level 1, then each subsection heading, each rule's slug and sentence, and the first column of each mapping table |
   | level-3 | the whole file                                                                                                   |
 
-- levels-probe: ALWAYS: the views the levels script derives from a document written from the PDR or ADR template and from a spec template stand for that document at their level, which only reading the views beside the document settles. [probe]
+- levels-probe: An attested run of the levels script over the PDR and capability examples retains each example's level 2 view as its artifact. ([probe](probes/levels-probe/probe.md))
+- no-tags: NEVER: the PDR or ADR template or an output-kind or variant spec template writes a tag on a rule; the group heading names the rule's verification type, the rule's leading slug is its one name, and a spec rule gains its evidence link only when its evidence exists.
 
 ### Compliance
 
