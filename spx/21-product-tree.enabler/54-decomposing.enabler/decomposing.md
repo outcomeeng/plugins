@@ -11,14 +11,14 @@ CAN compose top-level product children or split nodes into focused children with
 
 ## Assertions
 
-- ALWAYS: the ordering-evidence matrix opens with one row per candidate child and existing sibling naming the consumer the product document names, the value that consumer receives from the node, and every sibling the value passes through to reach that consumer; each sibling on that path is a predecessor of the node, an edge's consequence-if-absent names the consumer who stops receiving the value, and a sentence about which node acts on which decides no direction
+- ALWAYS: the ordering-evidence matrix opens with one row per candidate child and existing sibling naming the consumer its value reaches — one the product document names, or where it names none, the audience outside the product that the parent's opening serves — the value that consumer receives, and every sibling whose contract the node requires to deliver it; each sibling it requires is a predecessor, an edge's consequence-if-absent names the consumer who stops receiving the value, and a sentence about which node acts on which decides no direction
 - ALWAYS: a child whose disposition checkpoint names an ordered predecessor and an ordered successor among existing siblings takes the midpoint of the band between their indices, rounded down, so a later sibling that depends on the predecessor alone, or that the successor alone depends on, fits on either side without renumbering
 - ALWAYS: run the product's verify command for the spec lane after writing or moving product-tree files, and stop on a nonzero exit before reporting a composed tree
 
 ### Compliance
 
 - ALWAYS: treat more than roughly 7 assertions as a signal requiring decomposition analysis, not as an automatic split ([audit])
-- ALWAYS: separate independent concerns into separate child nodes when each concern has a meaningful validation boundary, and admit a child only when its row names a consumer from the product document and a value that consumer receives ([audit])
+- ALWAYS: separate independent concerns into separate child nodes when each concern has a meaningful validation boundary, and admit a child only when its row names a consumer and a value that reaches that consumer ([audit])
 - ALWAYS: accept `spx/` as the product-root target for top-level composition and a full node address for child decomposition, and stop before any product file is read when the invocation argument carries anything beside the target — every index is this skill's output ([audit])
 - ALWAYS: take a live context marker for the exact target — `spx/` or the node address — as the input of composition, loading root product context, ancestor constraints, target spec when present, existing children and siblings, and local `ISSUES.md` through `/contextualize` before proposing child structure ([audit])
 - ALWAYS: own decision-placement scoping when a requested ADR/PDR location depends on concept ownership, node renaming, node splitting, parent/child boundaries, or context-loading reach, returning the owning directory and scope boundary before `/author` writes the decision record ([audit])
