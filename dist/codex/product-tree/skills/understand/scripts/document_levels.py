@@ -7,9 +7,6 @@ column of each mapping table. Level 3 is the whole file.
 
 Usage: python3 "${SKILL_DIR}/scripts/document_levels.py" --level 1|2|3 <file>
 
-A file without a title line prints an error naming the expected form and exits 1;
-an unreadable file prints the operating-system error and exits 1.
-
 Tested with a PDR and a spec document in template form at each of the three
 levels. The script reads one file, writes nothing, and leaves nothing to clean up.
 """
@@ -64,13 +61,10 @@ def _trim_blank_edges(lines: list[str]) -> list[str]:
 
 
 def _split_title_and_rest(lines: list[str]) -> tuple[str, list[str]]:
-    for index, line in enumerate(lines):
-        if line.startswith(TITLE_PREFIX):
-            return line, lines[index + 1 :]
-    raise ValueError(
-        "document has no title line; start the document with a first-level "
-        "heading of the form '# <title>', before its opening"
+    index = next(
+        position for position, line in enumerate(lines) if line.startswith(TITLE_PREFIX)
     )
+    return lines[index], lines[index + 1 :]
 
 
 def _split_opening(rest: list[str]) -> tuple[list[str], list[str]]:
@@ -147,14 +141,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("file", type=Path)
     arguments = parser.parse_args(argv)
-    try:
-        text = arguments.file.read_text(encoding="utf-8")
-        sys.stdout.write(
-            derive_view(text, arguments.file.as_posix(), Level(arguments.level))
-        )
-    except (OSError, ValueError) as error:
-        sys.stderr.write(f"{arguments.file}: {error}\n")
-        return 1
+    text = arguments.file.read_text(encoding="utf-8")
+    sys.stdout.write(
+        derive_view(text, arguments.file.as_posix(), Level(arguments.level))
+    )
     return 0
 
 

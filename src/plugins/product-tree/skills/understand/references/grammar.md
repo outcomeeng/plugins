@@ -136,6 +136,5 @@ A leading-slash anchor or a `../` climb fails validation as ambiguous. Metric-so
 
 <level_views>
 
-A PDR or spec written from its template has three views, derived from its structure alone: level 1 is the path, the title, and the opening; level 2 adds each subsection heading, each rule's slug and sentence, and the first column of each mapping table; level 3 is the whole file. Print one with `python3 "${CLAUDE_SKILL_DIR}/scripts/document_levels.py" --level 1|2|3 <file>`. A file without a title line exits 1 with an error naming the expected form.
-
+A PDR or spec written from its template has three views, derived from its structure alone: level 1 is the path, the title, and the opening; level 2 adds each subsection heading, each rule's slug and sentence, and the first column of each mapping table; level 3 is the whole file. Print one with `python3 "${CLAUDE_SKILL_DIR}/scripts/document_levels.py" --level 1|2|3 <file>`.
 </level_views>
