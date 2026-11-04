@@ -13,7 +13,7 @@ The rule catalog of the PDR audit: every rule identifier a finding may carry, it
 
 <key_form>
 
-The unit of a finding is the audited PDR file path, or `input` when the request carries no path. The key is `<unit>:<rule-id>`, for example `spx/55-example.enabler/15-y.pdr.md:temporal-voice`. One key covers every location in the PDR where that rule is violated, and the finding lists each such location by the section, property, or rule text, never a line number.
+The unit of a finding is the audited PDR file path, or `input` when the request carries no path. The key is `<unit>:<rule-id>`, for example `spx/55-example.enabler/15-y.pdr.md:temporal-language`. One key covers every location in the PDR where that rule is violated, and the finding lists each such location by the section, property, or rule text, never a line number.
 
 Severity in the tables below labels the defect on touched text. A finding whose locations all lie outside touched text takes severity `filed`.
 
@@ -32,7 +32,7 @@ Severity in the tables below labels the defect on touched text. A finding whose 
 | `invalid-draft-rule`         | blocking | A rule directly under `## Verification`, outside any group, names a subject, a constrained condition, and an observation that would violate it.                                                                   | `audit_workflow` Step 5                                         |
 | `invalid-tag`                | blocking | A rule is verifiable and specific, carries no tag, and its leading slug repeats nowhere in the PDR.                                                                                                               | `audit_workflow` Step 5                                         |
 | `assertion-type-mismatch`    | blocking | A rule's assertion type, named by its group heading, is compatible with the claim's quantifier and evidence shape.                                                                                                | `audit_workflow` Step 5; `product-tree:test-evidence-standards` |
-| `temporal-voice`             | blocking | The opening and every rule state product truth atemporally.                                                                                                                                                       | `audit_workflow` Step 6                                         |
+| `temporal-language`          | blocking | The opening and every rule state product truth atemporally.                                                                                                                                                       | `audit_workflow` Step 6                                         |
 | `consistency-violation`      | blocking | The PDR contradicts neither the product document nor an ancestor PDR.                                                                                                                                             | `audit_workflow` Step 7                                         |
 
 </form_rules>

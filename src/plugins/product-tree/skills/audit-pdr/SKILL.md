@@ -119,14 +119,14 @@ Apply content classification, property quality, voice, and consistency to ungrou
 
 Check the opening and EVERY rule for temporal language:
 
-| Temporal (`temporal-voice`)           | Atemporal (correct)                                |
+| Temporal (`temporal-language`)        | Atemporal (correct)                                |
 | ------------------------------------- | -------------------------------------------------- |
 | "We discovered that users ask for X"  | "Users value X"                                    |
 | "Currently the product does X"        | "The product does X"                               |
 | "After customer feedback, we decided" | "The product does X to meet customer expectations" |
 | "The existing implementation lacks"   | (omit — PDR doesn't reference code)                |
 
-Any temporal language in the opening or a rule is a `temporal-voice` finding.
+Any temporal language in the opening or a rule is a `temporal-language` finding.
 
 </step>
 
