@@ -18,7 +18,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/decompose` takes the target as its only argument and loads context through a live context marker.** An argument that carries anything beside `spx/` or a node path stops the run before any product file is read. Step 1 reads the manifest of a `<PRODUCT_TREE_CONTEXT>` marker for the exact target and invokes `/contextualize` when none is live.
 
-- **`/decompose` composes in the form the tree carries.** It classifies each new child by the ordered kind procedure and writes `{index}-{slug}.{kind}/` with `{slug}.spec.md`, or an `.enabler` or `.outcome` directory with `{slug}.md` in a tree authored under a 3.x version. Deferred siblings and the reserved horizon go to a Proposed Change through `/author-change`, never to `PLAN.md`.
+- **`/decompose` composes in the form the tree carries.** It classifies each new child by the ordered kind procedure and writes `{index}-{slug}.{kind}/` with `{slug}.spec.md`, or an `.enabler` or `.outcome` directory with `{slug}.md` in a tree authored under a 3.x version. A tree with no node takes the form its declared `methodology.version` selects, and where `spx.config.yaml` declares no version the skill can compose for, it writes no child and reports the observed value. Deferred siblings and the reserved horizon go to a Proposed Change through `/author-change`, never to `PLAN.md`.
 
 - **`/decompose` places a single node.** A node that needs an index among the target's children, moved there or new, triggers a placement run that writes the matrix rows and reads the node's index; a node that exists elsewhere in the tree receives no directory or spec.
 

@@ -145,7 +145,7 @@ Present concern groupings to the user before writing files.
 
 **Step 5: Assign node kinds**
 
-The tree's form is the one its existing nodes carry; a tree with no node yet takes the form the `methodology.version` in `spx.config.yaml` declares.
+The tree's form is the one its existing nodes carry. A tree with no node yet takes the form its declared `methodology.version` in `spx.config.yaml` selects: the kind suffixes for `4.0` or `4.0.N`, and the `.enabler` and `.outcome` suffixes for a 3.x version. When `spx.config.yaml` is absent, carries no `methodology` block, declares the sentinel `installed`, or declares any other version, stop before writing any child and report that the repository declares no methodology version this skill can compose for, naming `spx.config.yaml` and the observed value; never infer the form from a plugin version, a changelog, or prose.
 
 In a tree that carries the kind suffixes, classify each concern by the ordered kind procedure of the live `/understand` `<identity_and_kinds>` and the `kind-decision.md` tests it names — product, variant, substrate, surface, interface, domain, capability — where the first test that holds fixes the kind. The target admits the kind under the containment that section states, or the concern belongs under another parent.
 
