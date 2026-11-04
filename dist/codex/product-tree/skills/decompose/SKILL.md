@@ -49,7 +49,7 @@ Read from the manifest the marker carries:
 
 1. The product document and every product-level ADR and PDR.
 2. `AGENTS.md` when present.
-3. `spx/ISSUES.md` when present.
+3. `spx/ISSUES.md` when present, and a prior-form `spx/PLAN.md` a 3.x-authored tree still carries.
 4. For a node target, the target spec, its decision records, its coordination notes, and its existing children.
 5. The existing siblings at the target level — for `spx/`, the top-level nodes — with the index each carries.
 
