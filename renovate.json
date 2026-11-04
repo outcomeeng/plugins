@@ -17,8 +17,8 @@
       "matchManagers": ["github-actions"],
       "matchDepNames": ["outcomeeng/gh-actions"],
       "matchFileNames": [
-        ".github/workflows/spec-tree.yml",
-        ".github/workflows/spec-tree-review.yml"
+        ".github/workflows/product-tree.yml",
+        ".github/workflows/product-tree-review.yml"
       ],
       "enabled": false
     },

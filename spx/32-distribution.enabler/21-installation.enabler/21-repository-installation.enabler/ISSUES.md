@@ -269,7 +269,7 @@ appear to report never occurred. They are one defect class, and both are silent:
 the officer sees a success and stops looking.
 
 **The mention dispatches nothing.** `spx/local/merging.md` documents a trigger
-phrase for re-running the changeset review, and `.github/workflows/spec-tree-review.yml`
+phrase for re-running the changeset review, and `.github/workflows/product-tree-review.yml`
 passes that phrase to the reusable workflow it calls. The caller's own triggers
 are `pull_request` on `opened`, `synchronize`, and `reopened` alone, so no
 comment event reaches it and the phrase can dispatch no run on this repository.
@@ -278,7 +278,7 @@ for other pull requests, so an officer who comments, then reads the run list,
 sees a run start and concludes it is theirs. Establishing otherwise takes reading
 each run's head.
 
-**A green check row is not an approval.** The `spec-tree-review` check row
+**A green check row is not an approval.** The `product-tree-review` check row
 reports the workflow's exit status, and the workflow exits zero whether the
 review approves or rejects; the verdict is written as a pull-request
 conversation comment. The row and the verdict are therefore two readings that

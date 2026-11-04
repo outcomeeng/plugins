@@ -11,7 +11,7 @@ from outcomeeng.validation.implementation_audit_contract import (
     RUN_TERMINAL_STATUS_FIELD,
 )
 
-DEFAULT_REVIEW_TRIGGER_PHRASE = "@spec-tree"
+DEFAULT_REVIEW_TRIGGER_PHRASE = "@product-tree"
 MENTION_REVIEW_NEEDED_TOKEN_SEPARATOR = ":"
 
 

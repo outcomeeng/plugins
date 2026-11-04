@@ -179,7 +179,7 @@ Objective: merge the review prompt single-source cleanup without carrying the lo
 #### Discard
 
 - `.github/workflows/review-changes-preview.yml`: discard the hand-rolled local workflow. The wanted preview is a thin caller of the reusable verification host from `outcomeeng/gh-actions`.
-- `.github/workflows/spec-tree-review.yml`: discard comments or behavior that make the local `review-changes-preview.yml` workflow canonical.
+- `.github/workflows/product-tree-review.yml`: discard comments or behavior that make the local `review-changes-preview.yml` workflow canonical.
 - Commits `b5f5682742b22f8121d7d6b13d795b0aa10e5e7b`, `73fd856a16c32890769028746b794a0fd82e6986`, `82e96b29e1acfb27c452ed51118f2a14580125e1`, `bad2a8d58fe038f656281b86f792df62ca15c2dc`, `59ae3dbfc79865e2eadf0a0144863dbbb8f93526`, `c610caa2d1f27eaa20ae7c3469ad71f44911d927`, and `a3d65439c501a0f53bf7a8971fa0539e0cd5013b`: discard the local preview implementation and permission-envelope churn.
 - Any generated root guide or unrelated marketplace-wide distribution churn visible only because `work/review-prompt-single-source` is stale against current `origin/main`.
 
