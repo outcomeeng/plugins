@@ -148,7 +148,7 @@ A prior local review is reusable across a clean rebase only when the branch patc
 
 ## Mention-reviewer trigger phrase
 
-`@spec-tree` (configured in `.github/workflows/spec-tree-review.yml` `trigger_phrase`; repository-variable override `SPEC_TREE_REVIEW_TRIGGER_PHRASE`).
+`@product-tree` (configured in `.github/workflows/product-tree-review.yml` `trigger_phrase`; repository-variable override `PRODUCT_TREE_REVIEW_TRIGGER_PHRASE`).
 
 ## Deploy: advance the designated main checkout
 

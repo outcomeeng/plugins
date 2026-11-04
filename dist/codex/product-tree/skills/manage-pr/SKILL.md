@@ -120,7 +120,7 @@ If the conclusion is `skipped` **because the PR modifies the reviewer's own work
 
 Reviewer-skipped-by-design exception steps:
 
-1. Resolve the trigger phrase per /merging-standards `<repo_local_overlay>` (the Mention-reviewer trigger phrase topic; default `@spec-tree` when the overlay is silent).
+1. Resolve the trigger phrase per /merging-standards `<repo_local_overlay>` (the Mention-reviewer trigger phrase topic; default `@product-tree` when the overlay is silent).
 2. Post one PR-level comment with body exactly `<trigger-phrase> review`, writing the body to a scratch file per /merging-standards `<shared_contract>` and posting it with `gh pr comment <pr-number> --body-file <body-file>`. Where the harness names no scratch directory, use the one the environment designates, such as `$RUNNER_TEMP` on a hosted runner.
 3. Emit `MENTION_REVIEW_NEEDED:<trigger-phrase>` and run Step 7. The mention-triggered reviewer's posted findings become the current-head review the next management pass reads.
 
