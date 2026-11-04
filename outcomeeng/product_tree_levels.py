@@ -26,13 +26,6 @@ TABLE_CELL_FENCE = "|"
 TABLE_HEADER_ROWS = 2
 
 
-EXIT_FAILURE = 1
-
-
-class LevelsError(Exception):
-    """A problem with the input; the command prints it and exits with EXIT_FAILURE."""
-
-
 class Level(IntEnum):
     ONE = 1
     TWO = 2
@@ -67,30 +60,10 @@ def _trim_blank_edges(lines: list[str]) -> list[str]:
 
 
 def _split_title_and_rest(lines: list[str]) -> tuple[str, list[str]]:
-    for index, line in enumerate(lines):
-        if line.startswith(TITLE_PREFIX):
-            return line, lines[index + 1 :]
-    raise LevelsError(
-        "the document has no title line; start it with a first-level heading "
-        f"of the form '{TITLE_PREFIX}<title>'"
+    index = next(
+        position for position, line in enumerate(lines) if line.startswith(TITLE_PREFIX)
     )
-
-
-def _parse_level(raw: str) -> Level:
-    try:
-        return Level(int(raw))
-    except ValueError:
-        allowed = ", ".join(str(level.value) for level in Level)
-        raise LevelsError(
-            f"invalid level {raw!r}; the allowed levels are {allowed}"
-        ) from None
-
-
-def _read_document(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8")
-    except OSError as error:
-        raise LevelsError(f"cannot read {path.as_posix()}: {error.strerror}") from error
+    return lines[index], lines[index + 1 :]
 
 
 def _split_opening(rest: list[str]) -> tuple[list[str], list[str]]:
@@ -159,16 +132,18 @@ def derive_view(text: str, path: str, level: Level) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--level", required=True)
+    parser.add_argument(
+        "--level",
+        type=int,
+        required=True,
+        choices=[level.value for level in Level],
+    )
     parser.add_argument("file", type=Path)
     arguments = parser.parse_args(argv)
-    try:
-        level = _parse_level(arguments.level)
-        text = _read_document(arguments.file)
-        sys.stdout.write(derive_view(text, arguments.file.as_posix(), level))
-    except LevelsError as error:
-        sys.stderr.write(f"{error}\n")
-        return EXIT_FAILURE
+    text = arguments.file.read_text(encoding="utf-8")
+    sys.stdout.write(
+        derive_view(text, arguments.file.as_posix(), Level(arguments.level))
+    )
     return 0
 
 

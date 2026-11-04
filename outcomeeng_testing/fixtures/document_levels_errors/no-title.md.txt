@@ -1,5 +1,0 @@
-A document that opens without a title line.
-
-## Verification
-
-- window-listing: ALWAYS: an ended session stays listed until its retention window elapses.

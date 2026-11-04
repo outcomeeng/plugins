@@ -31,15 +31,7 @@ CAN operate from a shared structural definition rather than ad hoc conventions
   | level-2 | level 1, then each subsection heading, each rule's slug and sentence, and the first column of each mapping table |
   | level-3 | the whole file                                                                                                   |
 
-- levels-errors: The levels script exits 1 with an error that names the problem, as follows. [test: mapping, l1]
-
-  | Case          | Input                           | Error names             |
-  | ------------- | ------------------------------- | ----------------------- |
-  | missing-title | a document without a title line | the expected title form |
-  | missing-file  | a path to no file               | the path                |
-  | invalid-level | a level other than 1, 2, or 3   | the allowed levels      |
-
-- levels-probe: ALWAYS: the views the levels script derives from a document written from the PDR template and from a spec template stand for that document at their level, which only reading the views beside the document settles. [probe]
+- levels-probe: ALWAYS: the views the levels script derives from a document written from the PDR or ADR template and from a spec template stand for that document at their level, which only reading the views beside the document settles. [probe]
 
 ### Compliance
 
