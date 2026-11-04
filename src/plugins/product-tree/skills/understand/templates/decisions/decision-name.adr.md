@@ -20,15 +20,19 @@ SO THAT {the property the build gains, never an audience and never a restatement
 
 ### {Scenario | Conformance | Compliance}: {subject}
 
-- {slug}: {One sentence stating the rule. A group of more than seven rules splits by subject; a group whose rules share no subject takes the heading `### {Scenario | Conformance | Compliance}`.}
+- {slug}: {One sentence stating the rule. A group of more than ten rules splits by subject; a group whose rules share no subject takes the heading `### {Scenario | Conformance | Compliance}`.}
 
 ### Property: {subject}
 
 - {slug}: {One sentence stating an invariant that holds for all code the decision governs.}
 
-### Eval
+### Eval: {slug}
 
-- {slug}: {One sentence stating behavior of a skill, agent, or classifier whose output has a parseable contract, graded over curated cases.}
+{One sentence stating behavior of a skill, agent, or classifier whose output has a parseable contract, graded over curated cases.}
+
+| Given                 | Then                             |
+| --------------------- | -------------------------------- |
+| {the input of a case} | {the verdict the producer emits} |
 
 ### Probe
 

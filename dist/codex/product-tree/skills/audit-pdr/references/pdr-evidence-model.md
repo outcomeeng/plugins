@@ -111,7 +111,7 @@ The behavior the CAN RELY ON line names is a guarantee users can rely on. It mus
 
 Derive the form from the canonical PDR template. A rule directly under `## Verification`, outside any group, awaits selection and receives the same clarity and falsifiability checks. The checks below apply to the declaration; authoring approval supplies no evidence result:
 
-1. **Declaration form** — the PDR opens with a GOVERNS paragraph, writes each mapping rule as its own `### Mapping: <slug>` subsection holding one sentence and a table, keeps each group to at most seven rules, and holds no text outside its opening, a rule, or a table. A violation is `declaration-form`.
+1. **Declaration form** — the PDR opens with a GOVERNS paragraph, writes each mapping rule as its own `### Mapping: <slug>` subsection holding one sentence and a table, keeps each group to at most ten rules, and holds no text outside its opening, a rule, or a table. A violation is `declaration-form`.
 2. **No tag, one slug** — a rule carries no tag, because its group heading names its verification type, and its leading slug is its one name and repeats nowhere in the PDR. A tag on a rule, or a repeated slug, is `invalid-tag`.
 3. **Assertion-type fit** — a rule's assertion type, named by its group heading, fits the claim's quantifier per the `/test` router; a universal `ALWAYS`/`NEVER` claim in a `### Scenario` group is `assertion-type-mismatch`, since a single case cannot establish a universal.
 

@@ -39,9 +39,13 @@ CAN {what they can do through its resources, verbs, selectors, payload shapes, l
 - {slug}: ALWAYS: {observable behavior that holds} — {why}.
 - {slug}: NEVER: {prohibited behavior} — {why}.
 
-### Eval
+### Eval: {slug}
 
-- {slug}: ALWAYS: {LLM-driven behavior with a parseable verdict}.
+{One sentence stating LLM-driven behavior with a parseable verdict, graded over curated cases.}
+
+| Given                 | Then                             |
+| --------------------- | -------------------------------- |
+| {the input of a case} | {the verdict the producer emits} |
 
 ### Probe
 

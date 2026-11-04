@@ -75,7 +75,7 @@ Resolve the touched text of the ADR as `${CLAUDE_SKILL_DIR}/references/touched-t
 
 Use the canonical ADR template guidance loaded in Step 1 to derive the form in full — never from memory or a transcribed copy. A finding that contradicts the canonical template is unbacked: drop it rather than rejecting the ADR. If the template guidance cannot be loaded, reject with `template-missing` and name the blocked read.
 
-Verify the ADR opens with optional DEFINES lines and then the CONSTRAINS, TO, and SO THAT paragraph, writes each mapping rule as its own `### Mapping: <slug>` subsection holding one sentence and a table, keeps each group to at most seven rules, states its invariants as rules of a Property group, holds no text outside its opening, a rule, or a table, and has a `## Verification` section.
+Verify the ADR opens with optional DEFINES lines and then the CONSTRAINS, TO, and SO THAT paragraph, writes each mapping rule as its own `### Mapping: <slug>` subsection holding one sentence and a table, keeps each group to at most ten rules, states its invariants as rules of a Property group, holds no text outside its opening, a rule, or a table, and has a `## Verification` section.
 
 Verify the SO THAT line names a property of the build that the TO mechanism yields, never an audience and never a restatement of the mechanism.
 

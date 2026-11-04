@@ -20,11 +20,15 @@ CAN RELY ON {the user-observable behavior, not implementation}
 
 ### {Scenario | Conformance | Property | Compliance}: {subject}
 
-- {slug}: {One sentence stating the rule. A group of more than seven rules splits by subject; a group whose rules share no subject takes the heading `### {Scenario | Conformance | Property | Compliance}`.}
+- {slug}: {One sentence stating the rule. A group of more than ten rules splits by subject; a group whose rules share no subject takes the heading `### {Scenario | Conformance | Property | Compliance}`.}
 
-### Eval
+### Eval: {slug}
 
-- {slug}: {One sentence stating behavior of a skill, agent, or classifier whose output has a parseable contract, graded over curated cases.}
+{One sentence stating behavior of a skill, agent, or classifier whose output has a parseable contract, graded over curated cases.}
+
+| Given                 | Then                             |
+| --------------------- | -------------------------------- |
+| {the input of a case} | {the verdict the producer emits} |
 
 ### Probe
 

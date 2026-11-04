@@ -101,7 +101,7 @@ A non-observable or unfalsifiable behavior is a `non-observable-property` findin
 
 Rules live under `## Verification`. Preserve Step 2's failed `tag-validity` row when the section is absent; an empty rule loop never clears that finding. If the section contains no rules, mark `tag-validity` as `FAIL` with `missing-verification-rules`.
 
-Check the declaration form the canonical template states. A PDR whose opening lacks a GOVERNS paragraph, whose mapping rule is not its own `### Mapping: <slug>` subsection holding one sentence and a table, whose group holds more than seven rules, or that holds text outside its opening, a rule, or a table is a `declaration-form` finding in `tag-validity`; mark the row `FAIL`, quote the offending text, and name the form it breaks.
+Check the declaration form the canonical template states. A PDR whose opening lacks a GOVERNS paragraph, whose mapping rule is not its own `### Mapping: <slug>` subsection holding one sentence and a table, whose group holds more than ten rules, or that holds text outside its opening, a rule, or a table is a `declaration-form` finding in `tag-validity`; mark the row `FAIL`, quote the offending text, and name the form it breaks.
 
 A rule directly under the section, outside any group, has the canonical authoring form and may coexist with groups. For every such rule, identify its subject, the observable condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in `property-quality`, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Select no evidence type during these checks.
 

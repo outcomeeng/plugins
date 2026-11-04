@@ -111,7 +111,7 @@ A non-observable or unfalsifiable behavior is a `non-observable-property` findin
 
 Rules live under `## Verification`. Preserve Step 2's failed `tag-validity` row when the section is absent; an empty rule loop never clears that finding. If the section contains no rules, mark `tag-validity` as `FAIL` with `missing-verification-rules`.
 
-Check the declaration form the canonical template states. A PDR whose opening lacks a GOVERNS paragraph, whose mapping rule is not its own `### Mapping: <slug>` subsection holding one sentence and a table, whose group holds more than seven rules, or that holds text outside its opening, a rule, or a table is a `declaration-form` finding in `tag-validity`; mark the row `FAIL`, quote the offending text, and name the form it breaks.
+Check the declaration form the canonical template states. A PDR whose opening lacks a GOVERNS paragraph, whose mapping rule is not its own `### Mapping: <slug>` subsection holding one sentence and a table, whose group holds more than ten rules, or that holds text outside its opening, a rule, or a table is a `declaration-form` finding in `tag-validity`; mark the row `FAIL`, quote the offending text, and name the form it breaks.
 
 A rule directly under the section, outside any group, has the canonical authoring form and may coexist with groups. For every such rule, identify its subject, the observable condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in `property-quality`, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Select no evidence type during these checks.
 
@@ -364,7 +364,7 @@ The behavior the CAN RELY ON line names is a guarantee users can rely on. It mus
 
 Derive the form from the canonical PDR template. A rule directly under `## Verification`, outside any group, awaits selection and receives the same clarity and falsifiability checks. The checks below apply to the declaration; authoring approval supplies no evidence result:
 
-1. **Declaration form** — the PDR opens with a GOVERNS paragraph, writes each mapping rule as its own `### Mapping: <slug>` subsection holding one sentence and a table, keeps each group to at most seven rules, and holds no text outside its opening, a rule, or a table. A violation is `declaration-form`.
+1. **Declaration form** — the PDR opens with a GOVERNS paragraph, writes each mapping rule as its own `### Mapping: <slug>` subsection holding one sentence and a table, keeps each group to at most ten rules, and holds no text outside its opening, a rule, or a table. A violation is `declaration-form`.
 2. **No tag, one slug** — a rule carries no tag, because its group heading names its verification type, and its leading slug is its one name and repeats nowhere in the PDR. A tag on a rule, or a repeated slug, is `invalid-tag`.
 3. **Assertion-type fit** — a rule's assertion type, named by its group heading, fits the claim's quantifier per the `/test` router; a universal `ALWAYS`/`NEVER` claim in a `### Scenario` group is `assertion-type-mismatch`, since a single case cannot establish a universal.
 
