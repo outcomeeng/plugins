@@ -40,7 +40,6 @@ CAN operate from a shared structural definition rather than ad hoc conventions
   | invalid-level | a level other than 1, 2, or 3   | the allowed levels      |
 
 - levels-probe: ALWAYS: the views the levels script derives from a document written from the PDR template and from a spec template stand for that document at their level, which only reading the views beside the document settles. [probe]
-- no-tags: NEVER: the PDR or ADR template or an output-kind or variant spec template writes a tag on a rule; the group heading names the rule's verification type, and the rule's leading slug is its one name. [audit]
 
 ### Compliance
 

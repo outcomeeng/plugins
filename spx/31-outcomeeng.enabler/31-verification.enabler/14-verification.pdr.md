@@ -1,6 +1,6 @@
 # Verification
 
-GOVERNS the verification of every Assertion and decision SO THAT product engineers and agent sessions CAN RELY ON six types — validate, test, evaluate, probe, audit, review — across verdict mode and purpose, four of which verify a rule by the group it sits under, an assertion type for test, and Eval, Probe, or Audit; a rule carries no tag, and its leading slug is its one name
+GOVERNS the verification of every Assertion and decision SO THAT product engineers and agent sessions CAN RELY ON six types — validate, test, evaluate, probe, audit, review — across verdict mode and purpose, four of which verify a rule by the group it sits under, an assertion type for test, and Eval, Probe, or Audit; a rule's leading slug is its one name
 
 ## Rationale
 
@@ -29,7 +29,7 @@ An output node declares its **malleability** — `spec`, `verification`, or `imp
 
 ## Product properties
 
-1. Verification is the six marketplace types — validate, test, evaluate, probe, audit, review — across two axes, verdict mode and purpose. Four verify a rule by the group it sits under: an assertion type for test, and Eval, Probe, or Audit. A rule carries no tag, and its leading slug is its one name.
+1. Verification is the six marketplace types — validate, test, evaluate, probe, audit, review — across two axes, verdict mode and purpose. Four verify a rule by the group it sits under: an assertion type for test, and Eval, Probe, or Audit. A rule's leading slug is its one name.
 2. Evidence names the slug of the rule it proves: a test file names the slug, an eval or probe directory is keyed by it, and an audit result is keyed by it; a rule names no evidence file.
 3. Every audit and review starts in a Verifier's agent session without the Author's conversation, reasoning, summaries, or suggested verdict. A separate session alone does not establish isolation when it inherits authoring history. The calling skill selects the exact configured role and supplies only the target; the Verifier independently discovers evidence from that target and its configured instructions. Accepted requirements are persisted in decisions and specs before verification, so the Verifier reads them independently. The Author never grades its own work in place. A Verifier isolated from Author context may compose further verification within its configured workflow.
 4. The agent owns all six verification types and runs each applicable one locally, over the changeset, before any external or CI review.
