@@ -223,7 +223,7 @@ Read every index from the matrix file Step 7 wrote. The horizon math below compo
 
 - It shares the index of a sibling the checkpoint marked its independent peer.
 - It takes an index above a predecessor or below a successor only from a pair the matrix proved ordered. Existing siblings at different indices are already ordered relative to each other, so a child cannot be the independent peer of two of them at once.
-- When the checkpoint names both an ordered predecessor and an ordered successor among the existing siblings, the child takes the midpoint of the band between their indices: the integer midpoint rounded down where an integer lies between them, and a fractional insert at the midpoint, such as `20.5`, where none does.
+- When the checkpoint names both an ordered predecessor and an ordered successor among the existing siblings, the child takes the midpoint of the band between their indices: the integer midpoint rounded down where an integer lies between them, and a fractional insert at the midpoint, such as `20.50`, where none does.
 - NEVER: the next integer after an existing sibling's index is the index.
 
 1. Choose the horizon:
