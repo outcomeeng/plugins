@@ -1,0 +1,6 @@
+spx/20-example.domain/15-listing.capability/listing.spec.md
+# Retention listing
+
+PROVIDES the listing of ended sessions
+SO THAT operators reviewing sessions
+CAN find a session until its retention window elapses

@@ -1,0 +1,30 @@
+# Session retention
+
+DEFINES retention window AS the span after which an ended session leaves the listing.
+
+GOVERNS the retention of ended sessions
+SO THAT operators reviewing sessions
+CAN RELY ON an ended session staying listed for its retention window.
+
+## Verification
+
+- window-listing: ALWAYS: an ended session stays listed until its retention window elapses.
+
+### Mapping: window-by-state
+
+Each session state maps to the window its listing follows. [mapping]
+
+| Case   | Window         |
+| ------ | -------------- |
+| active | not applicable |
+| ended  | seven days     |
+| failed | thirty days    |
+
+### Compliance: expiry
+
+- no-early-removal: NEVER: a session leaves the listing before its window elapses. [compliance]
+- expiry-removal: ALWAYS: a session whose window elapsed leaves the listing at the next sweep. [compliance]
+
+### Audit
+
+- window-observable: ALWAYS: the listing states each window in days an operator can read. [audit]
