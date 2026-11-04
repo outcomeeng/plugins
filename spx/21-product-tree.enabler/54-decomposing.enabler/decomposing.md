@@ -12,7 +12,7 @@ CAN compose top-level product children or split nodes into focused children with
 ## Assertions
 
 - ALWAYS: the ordering-evidence matrix opens with one row per candidate child and existing sibling naming the consumer its value reaches — one the product document names, or where it names none, the audience the product's surfaces name in their TO slot — the value that consumer receives, and every sibling whose contract the node requires to deliver it; each sibling it requires is a predecessor, an edge's consequence-if-absent names the consumer who stops receiving the value, and a sentence about which node acts on which decides no direction
-- ALWAYS: a child whose disposition checkpoint names an ordered predecessor and an ordered successor among existing siblings takes the midpoint of the band between their indices, rounded down
+- ALWAYS: a child whose disposition checkpoint names an ordered predecessor and an ordered successor among existing siblings takes the midpoint of the band between their indices — the integer midpoint rounded down where an integer lies between them, and a fractional insert at the midpoint where none does
 - ALWAYS: run the product's verify command for the spec lane after writing or moving product-tree files, and stop on a nonzero exit before reporting a composed tree
 
 ### Compliance
