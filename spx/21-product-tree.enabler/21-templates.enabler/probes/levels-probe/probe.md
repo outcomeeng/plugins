@@ -28,4 +28,4 @@ The operator expects a document written from the PDR or spec template to abbrevi
 
 ## Limitations
 
-The protocol exercised two documents. It ran level 1 on the capability example only and level 3 on the PDR example only. It did not exercise a rule that wraps over several lines, a group with more than ten rules, a PDR with a mapping table, a document with no title line, or an ADR, which the form does not cover.
+The protocol exercised two documents. It ran level 1 on the capability example only and level 3 on the PDR example only. It did not exercise a rule that wraps over several lines, a group with more than ten rules, a PDR with a mapping table, or a document with no title line. It ran on no ADR; the ADR form reaches the script through the mapping test's `adr` fixture alone.

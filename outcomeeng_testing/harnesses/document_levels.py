@@ -1,4 +1,4 @@
-"""Test infrastructure for the shipped document-levels script."""
+"""Test infrastructure for the document-levels script."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ PATH_FILE = "path.txt"
 
 
 def load_document_levels() -> ModuleType:
-    """Load the shipped script so linked tests can exercise its public contract."""
+    """Load the script so linked tests can exercise its public contract."""
     spec = importlib.util.spec_from_file_location(
         "product_tree_document_levels", DOCUMENT_LEVELS_PATH
     )

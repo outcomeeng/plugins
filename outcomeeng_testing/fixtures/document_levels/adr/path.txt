@@ -1,0 +1,1 @@
+spx/20-example.domain/15-status.adr.md

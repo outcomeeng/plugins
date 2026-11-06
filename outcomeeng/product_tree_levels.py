@@ -1,5 +1,6 @@
-"""Derive the level views of a document written from the PDR or spec template form.
+"""Derive the level views of a document written in the template form.
 
+The form is the PDR or ADR template or an output-kind or variant spec template.
 A proof of concept for the form: the views follow from a document's structure
 alone, so a parser in the SPX CLI can derive the same views. A document in that
 form holds a title, an opening, subsection headings, rules opened by a slug, and
