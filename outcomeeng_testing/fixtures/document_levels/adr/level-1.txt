@@ -1,0 +1,8 @@
+spx/20-example.domain/15-status.adr.md
+# Status derivation
+
+DEFINES attributed result AS a verification result pinned to the declaration, the verification artifact, and the subject it covers.
+
+CONSTRAINS the state of an output node
+TO derive from its declarations, required verification artifacts, and attributed results against its declared malleability
+SO THAT the same declarations and results always yield the same state.

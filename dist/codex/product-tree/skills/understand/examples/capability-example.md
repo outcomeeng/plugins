@@ -11,21 +11,33 @@ CAN record a task without leaving what they were doing
 
 ## Assertions
 
-### Scenarios
+### Mapping: relative-dates
 
-- Given the text "buy milk tomorrow", when it is captured, then a task titled "buy milk" exists with tomorrow's date ([test](tests/capture.scenario.l1.test.{ext}))
-- Given text with no date, when it is captured, then the task has no due date and no error ([test](tests/capture.scenario.l1.test.{ext}))
+Relative date words map to dates: "today", "tomorrow", and weekday names resolve against the capture time.
 
-### Mappings
+| Case     | Date                      |
+| -------- | ------------------------- |
+| today    | the capture date          |
+| tomorrow | the day after the capture |
+| weekday  | the next such weekday     |
 
-- Relative date words map to dates: "today", "tomorrow", and weekday names resolve against the capture time ([test](tests/dates.mapping.l1.test.{ext}))
+### Scenario: capture
 
-### Properties
+- dated-capture: Given the text "buy milk tomorrow", when it is captured, then a task titled "buy milk" exists with tomorrow's date.
+- undated-capture: Given text with no date, when it is captured, then the task has no due date and no error.
 
-- Capture is idempotent on its parsed form: capturing the parsed title and date again produces an equal task ([test](tests/capture.property.l1.test.{ext}))
+### Property: capture
 
-### Compliance
+- capture-idempotent: Capture is idempotent on its parsed form: capturing the parsed title and date again produces an equal task.
 
-- ALWAYS: every capture emits the `task_captured` event the capture-rate source reads — the outcome record's condition is unreadable without it ([test](tests/events.compliance.l1.test.{ext}))
-- ALWAYS: a person captures a task from the quick-add field within two seconds of focusing it ([probe](probes/capture-basic/probe.md))
-- NEVER: the parser stores the raw text beyond the capture — the task is the record ([audit:raw-text-retention])
+### Compliance: capture
+
+- capture-event: ALWAYS: every capture emits the `task_captured` event the capture-rate source reads — the outcome record's condition is unreadable without it.
+
+### Probe
+
+- capture-basic: ALWAYS: a person captures a task from the quick-add field within two seconds of focusing it.
+
+### Audit
+
+- raw-text-retention: NEVER: the parser stores the raw text beyond the capture — the task is the record.

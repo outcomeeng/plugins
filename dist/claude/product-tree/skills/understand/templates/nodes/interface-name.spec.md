@@ -12,24 +12,45 @@ CAN {what they can do through its resources, verbs, selectors, payload shapes, l
 
 ## Assertions
 
-Authoring form: state new assertions directly here without tags or headings until verification selection. Draft and routed assertions may coexist. Declaration approval supplies no evidence result or Passing state. The grouped examples below show the routed form; its tag requirements follow declared malleability.
+- {slug}: {One sentence stating an assertion awaiting verification selection. An interface owns no rendering. Include only the groups below that apply to this node.}
 
-Only include assertion type headings that apply to this node. A spec-malleable assertion may omit its tag. An interface owns no rendering.
+### Mapping: {slug}
 
-### Conformance
+{One sentence mapping a finite set of inputs to their outputs.}
 
-- {payload, resource, or error shape} conforms to {declared contract or schema} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
+| Case              | {Output column}   |
+| ----------------- | ----------------- |
+| {short case name} | {expected result} |
 
-### Mappings
+### Conformance: {subject}
 
-- {verb and selector} maps to {resource and result} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
+- {slug}: {Output} conforms to {standard or schema}.
 
-### Scenarios
+### Scenario: {subject}
 
-- Given {context}, when {lifecycle step}, then {result or error semantics} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
+- {slug}: Given {context}, when {action}, then {result}.
 
-### Compliance
+### Property: {subject}
 
-- ALWAYS: {contract guarantee} — {why} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
-- NEVER: {rendering or medium-specific behavior} — {why} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
-- ALWAYS: {semantic constraint requiring judgment} — {why} ([audit:{rule-slug}])
+- {slug}: {Invariant} holds for all {domain}.
+
+### Compliance: {subject}
+
+- {slug}: ALWAYS: {observable behavior that holds} — {why}.
+- {slug}: NEVER: {prohibited behavior} — {why}.
+
+### Eval: {slug}
+
+{One sentence stating LLM-driven behavior with a parseable verdict, graded over curated cases.}
+
+| Given                 | Then                             |
+| --------------------- | -------------------------------- |
+| {the input of a case} | {the verdict the producer emits} |
+
+### Probe
+
+- {slug}: ALWAYS: {claim only observing the running node settles}.
+
+### Audit
+
+- {slug}: ALWAYS: {semantic constraint requiring judgment} — {why}.

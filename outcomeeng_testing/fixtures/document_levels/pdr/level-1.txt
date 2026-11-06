@@ -1,0 +1,8 @@
+spx/20-example.domain/15-retention.pdr.md
+# Session retention
+
+DEFINES retention window AS the span after which an ended session leaves the listing.
+
+GOVERNS the retention of ended sessions
+SO THAT operators reviewing sessions
+CAN RELY ON an ended session staying listed for its retention window.

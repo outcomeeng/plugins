@@ -12,25 +12,45 @@ CAN {what they can do at this boundary}
 
 ## Assertions
 
-Authoring form: state new assertions directly here without tags or headings until verification selection. Draft and routed assertions may coexist. Declaration approval supplies no evidence result or Passing state. The grouped examples below show the routed form; its tag requirements follow declared malleability.
+- {slug}: {One sentence stating an assertion awaiting verification selection. A surface owns no product-domain semantics; a family surface states the shared audience, affordance class, packaging promise, and the contract that selects among its concrete children. Include only the groups below that apply to this node.}
 
-Only include assertion type headings that apply to this node. A spec-malleable assertion may omit its tag. A surface owns no product-domain semantics; a family surface states the shared audience, affordance class, packaging promise, and the contract that selects among its concrete children.
+### Mapping: {slug}
 
-### Scenarios
+{One sentence mapping a finite set of inputs to their outputs.}
 
-- Given {context}, when {invocation}, then {rendered result} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
+| Case              | {Output column}   |
+| ----------------- | ----------------- |
+| {short case name} | {expected result} |
 
-### Conformance
+### Scenario: {subject}
 
-- {rendered output or protocol message} conforms to {standard or schema} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
+- {slug}: Given {context}, when {action}, then {result}.
 
-### Mappings
+### Conformance: {subject}
 
-- {invocation form} maps to {rendering or protocol behavior} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
+- {slug}: {Output} conforms to {standard or schema}.
 
-### Compliance
+### Property: {subject}
 
-- ALWAYS: {boundary guarantee} — {why} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
-- NEVER: {product semantics owned here} — {why} ([test](tests/{subject}.{evidence}.l1.test.{ext}))
-- ALWAYS: {claim only observing the running surface settles} ([probe](probes/{probe-slug}/probe.md))
-- ALWAYS: {semantic constraint requiring judgment} — {why} ([audit:{rule-slug}])
+- {slug}: {Invariant} holds for all {domain}.
+
+### Compliance: {subject}
+
+- {slug}: ALWAYS: {observable behavior that holds} — {why}.
+- {slug}: NEVER: {prohibited behavior} — {why}.
+
+### Eval: {slug}
+
+{One sentence stating LLM-driven behavior with a parseable verdict, graded over curated cases.}
+
+| Given                 | Then                             |
+| --------------------- | -------------------------------- |
+| {the input of a case} | {the verdict the producer emits} |
+
+### Probe
+
+- {slug}: ALWAYS: {claim only observing the running node settles}.
+
+### Audit
+
+- {slug}: ALWAYS: {semantic constraint requiring judgment} — {why}.

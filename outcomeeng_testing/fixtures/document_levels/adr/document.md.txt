@@ -1,0 +1,22 @@
+# Status derivation
+
+DEFINES attributed result AS a verification result pinned to the declaration, the verification artifact, and the subject it covers.
+
+CONSTRAINS the state of an output node
+TO derive from its declarations, required verification artifacts, and attributed results against its declared malleability
+SO THAT the same declarations and results always yield the same state.
+
+## Verification
+
+### Property: derivation
+
+- state-deterministic: Identical declarations, artifacts, attributed results, and pins produce identical state.
+- current-results-only: Only current results satisfy a node's verification requirements.
+
+### Compliance: validity
+
+- no-invalid-satisfaction: NEVER: an invalidated result satisfies a required verification result.
+
+### Audit
+
+- no-manual-state: NEVER: a manually assigned label overrides evidence-derived state.

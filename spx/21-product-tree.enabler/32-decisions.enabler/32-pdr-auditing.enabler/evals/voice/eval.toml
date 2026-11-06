@@ -8,7 +8,7 @@ owned_paths = [
   "src/plugins/product-tree/skills/audit-pdr/**",
   "dist/claude/product-tree/skills/audit-pdr/**",
 ]
-smoke_cases = ["temporal-decision-statement", "atemporal-pdr-passes"]
+smoke_cases = ["temporal-opening-rejected", "atemporal-pdr-passes"]
 threshold = 0.85
 trials = 1
 

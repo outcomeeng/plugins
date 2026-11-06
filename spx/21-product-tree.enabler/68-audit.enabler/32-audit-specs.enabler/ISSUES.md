@@ -76,3 +76,15 @@ The assertions state the sealed-run verdict model: the audit run's terminal stat
 **Settlement condition.** outcomeeng/changes#513 rewrites the skill and wrapper onto one `spx verification run` over the spec file scope and migrates the producer-coupled eval expectations, under an unchanged semantic verdict model.
 
 **Evidence**: current-head CI review of pull request 671.
+
+## The spec audit judges the previous spec template form `src/plugins/product-tree/skills/audit-specs/SKILL.md` `group headings and tag routing` `consistency`
+
+`src/plugins/product-tree/skills/audit-specs/SKILL.md` names the plural group headings `### Scenarios`, `### Mappings`, `### Conformance`, `### Properties`, and `### Compliance`, reports a verification-type heading such as `### Test`, `### Eval`, or `### Audit` as `heading-mismatch`, and treats a routed assertion as one that carries its tag. The spec templates write `### Mapping: <slug>`, `### <assertion type>: <subject>`, `### Eval: <slug>`, `### Probe`, and `### Audit`, and a spec rule carries no tag until its evidence exists. A spec written from the templates therefore draws `heading-mismatch` for its `### Eval:` and `### Audit` subsections.
+
+The same previous form stands in the `align`, `audit-assertions`, `verify`, and `author` skills of the product-tree plugin.
+
+**Why this is a separate larger concern.** The fix edits five skill surfaces. Each takes the `skill-auditor` gate and a plugin bump. The `audit-specs` producer is embedded verbatim in this node's `evals/structure` prompt, so an edit re-materializes the prompt and invalidates the committed run history, and the group-heading and tag side of `/verify` and the foundation grammar belongs to the Change that carries the grammar, outcomeeng/changes#904.
+
+**Settlement condition.** The five skills describe the template form and the rule-tag rule, `/audit-specs` reports no `heading-mismatch` for a spec written from the shipped templates, and this node's `evals/structure` suite passes on a head that carries the amended producer.
+
+**Evidence**: current-head CI review of pull request 734, head `2bdb0e1b90542c7434ccee972dedde2135bc4302`.

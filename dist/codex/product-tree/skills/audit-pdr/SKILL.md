@@ -2,15 +2,15 @@
 name: audit-pdr
 description: >-
   PDR audit methodology — judges one PDR against the PDR evidence model,
-  covering content classification, property quality, per-rule tag validity,
-  atemporal voice, and consistency with ancestor decisions.
+  covering content classification, property quality, declaration form and tag
+  validity, atemporal voice, and consistency with ancestor decisions.
 argument-hint: "<pdr-file-path>"
 allowed-tools: Read, Grep, Glob, Bash(git branch --show-current:*), Bash(git merge-base:*), Bash(git diff:*)
 ---
 
 <objective>
 
-A verdict on one PDR against the PDR evidence model — APPROVED or REJECTED, with findings on touched text naming the section, rule, and evidence for content classification, property quality, declaration form and tag fitness, atemporal voice, or consistency with the product document and ancestor PDRs, and every other finding returned as `filed`.
+A verdict on one PDR against the PDR evidence model — APPROVED or REJECTED, with findings on touched text naming the section, rule, and evidence for content classification, property quality, declaration form and tag validity, atemporal voice, or consistency with the product document and ancestor PDRs, and every other finding returned as `filed`.
 
 </objective>
 
@@ -46,7 +46,7 @@ PDRs state atemporal product truth without historical context. No references to 
 
 Bind the required PDR path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. If the request carries no path, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all five property rows marked `FAIL`. Each row carries a `missing-target` finding with severity `blocking`, unit `input`, locations `["input"]`, evidence naming the empty input, and a message naming the required PDR path. Stop before context loading or artifact inspection.
 
-Use skill `product-tree:understand` when the live `<PRODUCT_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.pdr.md` beneath that marker's resolved absolute template directory, then use skill `product-tree:contextualize` on the directory containing the PDR. Derive declaration form and required tags from that canonical template. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
+Use skill `product-tree:understand` when the live `<PRODUCT_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.pdr.md` beneath that marker's resolved absolute template directory, then use skill `product-tree:contextualize` on the directory containing the PDR. Derive the declaration form from that canonical template. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
 
 The product document used below is the one `/contextualize` loads in its product-level context step. Use that document's declared audience and interaction surfaces for content classification.
 
@@ -58,7 +58,7 @@ Do not proceed without live `<PRODUCT_TREE_FOUNDATION>` and `<PRODUCT_TREE_CONTE
 
 **Step 2: Read the PDR**
 
-Read the PDR under audit. Identify its sections: the opening decision statement, Rationale, Product properties, and Verification.
+Read the PDR under audit. Identify its parts: the opening with its optional DEFINES paragraph and its GOVERNS paragraph, and Verification.
 
 Resolve the touched text of the PDR as `${SKILL_DIR}/references/touched-text.md` states, so Steps 3 to 7 can classify each finding.
 
@@ -89,25 +89,27 @@ Record each `architecture-content` finding in the `content-classification` row.
 
 **Step 4: Property quality**
 
-Judge each product property against the evidence model's observable, falsifiable, and stable criteria. Stability covers failure and boundary conditions; never silently limit a guarantee to the successful case.
+Judge the behavior the CAN RELY ON line names against the evidence model's observable, falsifiable, and stable criteria. Stability covers failure and boundary conditions; never silently limit a guarantee to the successful case.
 
-A non-observable or unfalsifiable property is a `non-observable-property` finding, and an unstable property is an `unstable-property` finding. Record either violation in `property-quality` and mark that row `FAIL`. Name the property and the context that breaks the guarantee; a stability finding requires evidence, and an unevaluable criterion follows `<verdict_format>`'s missing-evidence rule.
+A non-observable or unfalsifiable behavior is a `non-observable-property` finding, and an unstable behavior is an `unstable-property` finding. Record either violation in `property-quality` and mark that row `FAIL`. Name the behavior and the context that breaks the guarantee; a stability finding requires evidence, and an unevaluable criterion follows `<verdict_format>`'s missing-evidence rule.
 
 </step>
 
 <step name="audit_verification">
 
-**Step 5: Per-rule verification tag validity**
+**Step 5: Declaration form and tag validity**
 
-Rules live under `## Verification`. Preserve Step 2's failed `tag-validity` row when the section is absent; an empty rule loop never clears that finding. If the section contains no rules, mark `tag-validity` as `FAIL` with `missing-verification-rules`. An untagged rule directly under the section has the canonical authoring form and may coexist with routed subsections. For every such rule, identify its subject, the observable condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in `property-quality`, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Select no evidence type or tag during these checks; an absent draft tag alone causes no finding.
+Rules live under `## Verification`. Preserve Step 2's failed `tag-validity` row when the section is absent; an empty rule loop never clears that finding. If the section contains no rules, mark `tag-validity` as `FAIL` with `missing-verification-rules`.
 
-A tagged rule requires its matching routed subsection. When `### Testing` contains rules, use skill `product-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to the declared claim and tag. If the required reference cannot load, emit a `test-standards-unavailable` finding and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement tag, or change the PDR during this audit.
+Check the declaration form the canonical template states. A PDR whose opening lacks a GOVERNS paragraph, whose mapping rule is not its own `### Mapping: <slug>` subsection holding one sentence and a table, whose group holds more than ten rules, or that holds text outside its opening, a rule, or a table is a `declaration-form` finding in `tag-validity`; mark the row `FAIL`, quote the offending text, and name the form it breaks.
 
-For each routed rule, judge tag validity and assertion-type fit as the evidence model's tag validity states. Under `### Testing`, apply the loaded foundation's assertion-type definitions and the shared litmus to the declared claim and tag: reject a declared type whose required domain or oracle contradicts the claim, citing the claim and the loaded criterion, and do not choose among compatible types or require executable evidence for a declaration.
+A rule directly under the section, outside any group, has the canonical authoring form and may coexist with groups. For every such rule, identify its subject, the observable condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in `property-quality`, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Select no evidence type during these checks.
 
-A routed rule with a missing, unsupported, duplicate, repeated-slug, or subsection-mismatched tag, or one that is unverifiable or vague, is an `invalid-tag` finding in `tag-validity`; mark the row `FAIL`, quote the rule, and identify the missing observable condition or ambiguous criterion. An assertion type that contradicts the claim's shape is an `assertion-type-mismatch` finding.
+A rule carries no tag, because its group heading names its verification type and its leading slug is its one name. A rule that carries a tag, or whose slug repeats within the PDR, is an `invalid-tag` finding in `tag-validity`; mark the row `FAIL` and quote the rule.
 
-Apply content classification, property quality, voice, and consistency to draft and routed declarations alike. Approval establishes declaration quality only; it supplies no evidence result, implementation claim, or Passing state for an untagged rule.
+When a group heading names an assertion type, use skill `product-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to each rule's claim and its group's type. If the required reference cannot load, emit a `test-standards-unavailable` finding and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Reject a type whose required domain or oracle contradicts the claim as `assertion-type-mismatch`, citing the claim and the loaded criterion; do not choose among compatible types or require executable evidence for a declaration. Never invoke the mutating `/test` authoring workflow, select a replacement group, or change the PDR during this audit.
+
+Apply content classification, property quality, voice, and consistency to ungrouped and grouped declarations alike. Approval establishes declaration quality only; it supplies no evidence result, implementation claim, or Passing state for an ungrouped rule.
 
 </step>
 
@@ -115,16 +117,16 @@ Apply content classification, property quality, voice, and consistency to draft 
 
 **Step 6: Atemporal voice**
 
-Check EVERY section for temporal language:
+Check the opening and EVERY rule for temporal language:
 
-| Temporal (`temporal-voice`)           | Atemporal (correct)                                |
+| Temporal (`temporal-language`)        | Atemporal (correct)                                |
 | ------------------------------------- | -------------------------------------------------- |
 | "We discovered that users ask for X"  | "Users value X"                                    |
 | "Currently the product does X"        | "The product does X"                               |
 | "After customer feedback, we decided" | "The product does X to meet customer expectations" |
 | "The existing implementation lacks"   | (omit — PDR doesn't reference code)                |
 
-Any temporal language in any section is a `temporal-voice` finding.
+Any temporal language in the opening or a rule is a `temporal-language` finding.
 
 </step>
 
@@ -203,17 +205,17 @@ How to avoid: Step 3 classifies every statement. "Would a user be able to determ
 
 **Failure 2: Accepted non-observable properties**
 
-Claude saw "Product properties: Database connections are pooled with a maximum of 50 connections." This is an implementation detail observable only by a DBA, not by users. The PDR version would be "The product handles at least 500 concurrent users without degradation."
+Claude saw "CAN RELY ON database connections pooled with a maximum of 50 connections." This is an implementation detail observable only by a DBA, not by users. The PDR version would be "CAN RELY ON the product handling at least 500 concurrent users without degradation."
 
 Why it failed: Claude treated an implementation detail measurable by a specialist as a guarantee observable by the product's users.
 
-How to avoid: Step 4 asks "Is this falsifiable from the user's perspective?"
+How to avoid: Step 4 asks "Is the behavior the CAN RELY ON line names falsifiable from the user's perspective?"
 
 **Failure 3: Approved a universal claim tagged as a scenario**
 
-Claude saw a `### Testing` rule "ALWAYS: every export conforms to RFC 4180 ([scenario])" and approved it because the prose read like a concrete interaction. `ALWAYS` is a universal claim, and a single scenario cannot establish a claim about every case — the tag should be `mapping`, `conformance`, `property`, or `compliance`. The mismatch is `assertion-type-mismatch`, not `invalid-tag`.
+Claude saw the rule "csv-format: ALWAYS: every export conforms to RFC 4180." in a `### Scenario: export` group and approved it because the prose read like a concrete interaction. `ALWAYS` is a universal claim, and a single scenario cannot establish a claim about every case — the group should be `Mapping`, `Conformance`, `Property`, or `Compliance`. The mismatch is `assertion-type-mismatch`, not `invalid-tag`.
 
-How to avoid: Step 5 reads the quantifier first and separates a quantifier mismatch from a structural tag problem.
+How to avoid: Step 5 reads the quantifier first and separates a quantifier mismatch from a structural form problem.
 
 **Failure 4: Flagged a tooling product's observable state as architecture**
 
@@ -227,10 +229,10 @@ How to avoid: Step 3 reads the product document's declared audience first and ju
 
 The verdict is sound when:
 
-- Every PDR rule was judged with none skipped — content classification, property quality (observability, falsifiability, and stability), per-rule tag validity and assertion-type fit, atemporal voice, and consistency (coverage-complete).
+- Every PDR rule was judged with none skipped — content classification, property quality (observability, falsifiability, and stability), declaration form, tag absence, slug uniqueness and assertion-type fit, atemporal voice, and consistency (coverage-complete).
 - The verdict states an overall APPROVED/REJECTED, every property row carrying its determination, with no rule left unevaluated.
 - Each `blocking` finding lies on touched text, and every finding outside touched text appears as `filed` with its key, `baseRefEvidence`, and `issuesEntry`.
-- Each `blocking` finding is falsifiable: it names the location, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable, unfalsifiable, or unstable property, absent verification section or rules, the unverifiable rule or mismatched tag, the temporal phrase, or the contradicted product document or ancestor PDR.
+- Each `blocking` finding is falsifiable: it names the location, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable, unfalsifiable, or unstable behavior, absent verification section or rules, the unverifiable rule, the broken declaration form, the tag or repeated slug, the mismatched assertion type, the temporal phrase, or the contradicted product document or ancestor PDR.
 - An absent or empty Verification section fails `tag-validity`; an unmet property-quality criterion fails `property-quality`. Neither condition can disappear through an empty iteration or receive an overall `APPROVED` verdict.
 - The same PDR yields the same verdict.
 

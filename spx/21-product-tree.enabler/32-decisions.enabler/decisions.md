@@ -13,4 +13,5 @@ CAN govern architecture and product behavior through enforceable, auditable deci
 
 ### Compliance
 
-- ALWAYS: a decision record keeps rules awaiting verification selection untagged directly under `## Verification`; selected rules are grouped by verification type — `### Testing`, `### Eval`, `### Audit`; `/verify` selects the verification type, a `### Testing` rule carries an assertion type that `/test` selects from the rule's quantifier (scenario, mapping, conformance, property, compliance), an `### Eval` rule carries `[eval]`, and an `### Audit` rule carries `[audit:{rule-slug}]` with a slug unique within its record, or the pathless `[audit]` that the foundation admits for a toolchain without slug support ([audit])
+- pdr-form: ALWAYS: a PDR states its decision in the opening of the PDR template and every rule as the PDR template writes it, and its rules awaiting verification selection stay ungrouped directly under `## Verification`.
+- adr-form: ALWAYS: an ADR states its decision in the opening of the ADR template and every rule as the ADR template writes it, its invariants are rules of a Property group, and its rules awaiting verification selection stay ungrouped directly under `## Verification`.

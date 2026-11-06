@@ -1,0 +1,39 @@
+---
+id: 01a0ebba-0000-7000-8000-000000000001
+malleability: spec
+---
+
+# Retention listing
+
+PROVIDES the listing of ended sessions
+SO THAT operators reviewing sessions
+CAN find a session until its retention window elapses
+
+## Assertions
+
+- window-listing: ALWAYS: an ended session stays listed until its window elapses.
+
+### Mapping: window-by-state
+
+Each session state maps to the window its listing follows.
+
+| Case   | Window         |
+| ------ | -------------- |
+| active | not applicable |
+| ended  | seven days     |
+
+### Scenario: expiry
+
+- sweep-removal: Given an ended session whose window elapsed, when the sweep runs, then the session leaves the listing.
+
+### Eval: window-readout
+
+A listing summarizer states each window in days over curated sessions.
+
+| Given            | Then                        |
+| ---------------- | --------------------------- |
+| an ended session | the window reads seven days |
+
+### Audit
+
+- window-observable: ALWAYS: the listing states each window in days.

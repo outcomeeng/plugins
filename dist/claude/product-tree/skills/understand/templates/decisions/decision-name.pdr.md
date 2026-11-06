@@ -1,42 +1,39 @@
 # {Decision Name}
 
-{The decision, stated directly as permanent truth in 1-3 sentences — what product behavior it governs and what it decides. State user-observable behavior, not implementation. No "This PDR governs..." preamble.}
+DEFINES {term} AS {definition — one line for each term the decision owns; omit the paragraph when it owns none}
 
-## Rationale
-
-{Answer in one or two sentences: Why is this the right decision? Name a rejected alternative only when it sharpens the decision and is not self-evident.}
-
-## Product properties
-
-{Ordered list — no more than 3 items; omit section if it would be redundant with the decision.}
-
-1. {First observable property a product implementing this decision must exhibit}
-2. {Second observable property a product implementing this decision must exhibit}
-3. {Third observable property a product implementing this decision must exhibit}
+GOVERNS {the product behavior this decision governs, stated as permanent truth}
+SO THAT {who relies on it}
+CAN RELY ON {the user-observable behavior, not implementation}
 
 ## Verification
 
-Authoring form: state new ALWAYS/NEVER rules directly here without tags or subsections until verification selection. Draft and routed rules may coexist. Judge draft clarity and falsifiability; declaration approval supplies no evidence result. The subsections below show the routed form, whose rules require their matching tags.
+- {slug}: {ALWAYS or NEVER, then one sentence stating a rule awaiting verification selection.}
 
-{Each routed rule is an ALWAYS guarantee or a NEVER boundary, under the one subsection naming how it is verified. Include only the subsections that apply. They are ordered by decreasing enforcement strength.}
+### Mapping: {slug}
 
-### Testing
+{One sentence mapping a finite set of inputs to their outputs.}
 
-{Verified by a deterministic test. `/verify` selects test from the real subject's verdict; `/test` then selects each rule's assertion type — one of `scenario`, `mapping`, `conformance`, `property`, `compliance` — from the rule's quantifier before `/author-{language}-test` supplies language expression. The heading never determines the assertion type. Do not include test files; these belong to the specs implementing this PDR.}
+| Case              | {Output column}   |
+| ----------------- | ----------------- |
+| {short case name} | {expected result} |
 
-- ALWAYS: {rule} ([{assertion type}])
-- NEVER: {prohibition} ([{assertion type}])
+### {Scenario | Conformance | Property | Compliance}: {subject}
 
-### Eval
+- {slug}: {One sentence stating the rule. A group of more than ten rules splits by subject; a group whose rules share no subject takes the heading `### {Scenario | Conformance | Property | Compliance}`.}
 
-{Verified by graded LLM behavior over curated cases — the subject is a skill, agent, or classifier whose output has a parseable contract.}
+### Eval: {slug}
 
-- ALWAYS: {rule} ([eval])
-- NEVER: {prohibition} ([eval])
+{One sentence stating behavior of a skill, agent, or classifier whose output has a parseable contract, graded over curated cases.}
+
+| Given                 | Then                             |
+| --------------------- | -------------------------------- |
+| {the input of a case} | {the verdict the producer emits} |
+
+### Probe
+
+- {slug}: {One sentence stating a claim about the running node that only an executed observation settles.}
 
 ### Audit
 
-{Verified by an audit skill's judgment against this decision — the subject (a Product Tree decision, spec, skill, or agent) admits no deterministic test or graded eval. Each rule's slug is unique within this record.}
-
-- ALWAYS: {rule} ([audit:{rule-slug}])
-- NEVER: {prohibition} ([audit:{rule-slug}])
+- {slug}: {One sentence stating a semantic constraint an audit skill judges, with no deterministic test or graded eval.}
