@@ -5,149 +5,163 @@ breaks it and, where the rule admits one, a case that keeps it. The script
 reaches the Change Store only through its command runner, so each case runs
 it against the simulated GitHub store of
 `outcomeeng_testing.harnesses.operate_change`, which records every command,
-fails a chosen one, or lands another writer's edit between two of them.
+fails a chosen one, or lands another writer's edit between two of them. The
+records, the case domains, and the orders and closed sets the spec states come
+from `outcomeeng_testing.generators.operate_change`; the vocabulary comes from
+the script that owns it.
 """
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Sequence
 from typing import Any
 
-import inspect
-
 import pytest
 
+from outcomeeng_testing.generators.operate_change import (
+    ANOTHER_ACCOUNT,
+    BASE,
+    DELEGATE_KEY,
+    OTHER_BASE,
+    POSITION_KEY,
+    RACES,
+    REASON,
+    SPEC_HANDOFF_KEYS,
+    SPEC_LOG_EXTRAS,
+    SPEC_LOG_KEYS,
+    SPEC_WRITE_ORDER,
+    TARGET,
+    UNRESOLVED_BASE,
+    add_child,
+    applicable_held,
+    breaking_cases,
+    carrying_cases,
+    change_store,
+    declaration,
+    edited,
+    every_transition,
+    intent,
+    leaf_record,
+    part_cases,
+)
+from outcomeeng_testing.generators.operate_change import (
+    CarryCase,
+    PartCase,
+)
 from outcomeeng_testing.harnesses.operate_change import (
+    APPROVED,
     LOGIN,
     MERGE_COMMIT,
     OTHER_SESSION,
-    PRODUCT_REPOSITORY,
+    REJECTED,
     STORE,
     UNMERGED_COMMIT,
+    ChangesetKey,
+    Field,
+    IssueState,
+    Lifecycle,
+    LogKey,
+    LowerCause,
+    Maturity,
+    Mover,
+    PairKey,
+    Reason,
+    RequestKey,
     SimulatedGitHub,
+    Status,
+    Transition,
+    WriteKind,
+    bound_pair,
+    changeset,
     claim_block,
+    close_check,
+    handoff,
     held,
     is_write,
-    load_script,
+    pair_of,
+    passing_form_check,
     product_repository,
     request,
     run,
     run_main,
+    script,
     sha256,
     write_kind,
 )
 
-script = load_script()
-
-BASE = "c" * 40
-SOI = (
-    "## Statement of Intent\n\n"
-    "- Output: An example Output.\n"
-    "- Why: An example reason.\n"
-    "- Verification: An example verification.\n"
-)
-TARGET = "spx/20-example.enabler/example.md"
-LEAF = (
-    SOI
-    + f"\n## Declarations\n\n### {TARGET}\n\n```diff\n+ - one: ALWAYS: an example\n```\n\nInfrastructure: one none\n"
-)
-HANDOFF = {"branch": "work/example", "head": "d" * 40, "next": TARGET}
-CLOSE = {
-    "merge_gates_passed": True,
-    "results_complete": True,
-    "declarations_on_default": True,
-    "audit_at_close": "approved",
-}
-CHANGESET = {
-    "url": f"https://github.com/{PRODUCT_REPOSITORY}/pull/7",
-    "merge_commit": MERGE_COMMIT,
-}
-
-
-def store(
-    maturity: str, lifecycle: str, body: str = LEAF, base: str = BASE, number: int = 10
-) -> SimulatedGitHub:
-    github = SimulatedGitHub()
-    github.add(number, body, Maturity=maturity, Lifecycle=lifecycle, Base=base)
-    return github
-
-
-def pair(github: SimulatedGitHub, number: int = 10) -> dict[str, str]:
-    issue = github.issues[number]
-    return {"body_sha256": sha256(issue.body), "base": issue.fields["Base"]}
-
-
-def check(github: SimulatedGitHub, number: int = 10) -> dict[str, str]:
-    return {"status": "pass", "body_sha256": sha256(github.issues[number].body)}
+CLOSE_KEYS = tuple(close_check())
 
 
 def blocks(github: SimulatedGitHub, number: int = 10) -> list[dict[str, str]]:
     return [script.parse_block(body) for body in github.blocks(number)]
 
 
-def applicable_held() -> SimulatedGitHub:
-    github = store("Applicable", "Available")
-    held(github, 10)
-    return github
-
-
 def to_applicable(github: SimulatedGitHub, **values: object) -> dict[str, Any]:
     payload = request(
-        "advance",
+        Transition.ADVANCE,
         10,
-        "holder",
-        form_check=check(github),
-        audit=pair(github),
-        audit_status="approved",
+        Mover.HOLDER,
+        form_check=passing_form_check(github),
+        audit=bound_pair(github),
+        audit_status=APPROVED,
     )
     payload.update(values)
     return payload
 
 
+def maturity_write(command: Sequence[str]) -> bool:
+    return is_write(command) and write_kind(command) == WriteKind.MATURITY
+
+
 # ----------------------------------------------------------------- closing
 
 
-@pytest.mark.parametrize("broken", ["ancestor", *CLOSE])
+@pytest.mark.parametrize("broken", ["ancestor", *CLOSE_KEYS])
 def test_leaf_applied_only_on_its_close_condition(broken: str) -> None:
     github = applicable_held()
     if broken == "ancestor":
         payload = request(
-            "applied",
+            Transition.APPLIED,
             10,
-            "holder",
-            changeset={**CHANGESET, "merge_commit": UNMERGED_COMMIT},
-            close_check=CLOSE,
+            Mover.HOLDER,
+            changeset=changeset(UNMERGED_COMMIT),
+            close_check=close_check(),
         )
     else:
+        met = close_check()[broken]
         payload = request(
-            "applied",
+            Transition.APPLIED,
             10,
-            "holder",
-            changeset=CHANGESET,
-            close_check={
-                **CLOSE,
-                broken: False if broken != "audit_at_close" else "rejected",
-            },
+            Mover.HOLDER,
+            changeset=changeset(),
+            close_check=close_check(**{broken: REJECTED if met == APPROVED else False}),
         )
 
     result = run(github, payload)
 
-    assert result["status"] == "refused"
-    assert github.issues[10].fields["Lifecycle"] == "Available"
+    assert result["status"] == Status.REFUSED
+    assert github.issues[10].fields[Field.LIFECYCLE] == Lifecycle.AVAILABLE
     assert (
         run(
             github,
-            request("applied", 10, "holder", changeset=CHANGESET, close_check=CLOSE),
+            request(
+                Transition.APPLIED,
+                10,
+                Mover.HOLDER,
+                changeset=changeset(),
+                close_check=close_check(),
+            ),
         )["status"]
-        == "done"
+        == Status.DONE
     )
 
 
-@pytest.mark.parametrize("terminal", ["Applied", "Abandoned"])
-@pytest.mark.parametrize("move", [member.value for member in script.Transition])
-def test_terminal_change_never_moves(terminal: str, move: str) -> None:
-    github = store("Applicable", terminal)
-    github.issues[10].state = "CLOSED"
+@pytest.mark.parametrize("terminal", [Lifecycle.APPLIED, Lifecycle.ABANDONED])
+@pytest.mark.parametrize("move", list(Transition))
+def test_terminal_change_never_moves(terminal: Lifecycle, move: Transition) -> None:
+    github = change_store(Maturity.APPLICABLE, terminal)
+    github.issues[10].state = IssueState.CLOSED.value
     held(github, 10)
 
     result = run(
@@ -155,37 +169,41 @@ def test_terminal_change_never_moves(terminal: str, move: str) -> None:
         request(
             move,
             10,
-            "operator",
-            target="Sliced",
-            reason="r",
-            lower_cause="reopened",
-            handoff=HANDOFF,
-            changeset=CHANGESET,
-            close_check=CLOSE,
+            Mover.OPERATOR,
+            target=Maturity.SLICED,
+            reason=REASON,
+            lower_cause=LowerCause.REOPENED,
+            handoff=handoff(),
+            changeset=changeset(),
+            close_check=close_check(),
         ),
     )
 
-    assert result["status"] == "refused"
+    assert result["status"] == Status.REFUSED
     assert github.writes() == []
 
 
 def test_terminal_kept_no_delete_command() -> None:
     github = applicable_held()
-    github.add(11, LEAF, Maturity="Applicable", Lifecycle="Available", Base=BASE)
+    github.add(
+        11,
+        leaf_record(),
+        {Field.MATURITY: Maturity.APPLICABLE, Field.LIFECYCLE: Lifecycle.AVAILABLE},
+    )
     github.issues[11].blocked_by.append(10)
 
     run(
         github,
         request(
-            "lower",
+            Transition.LOWER,
             10,
-            "holder",
-            target="Sliced",
-            reason="a decision line",
-            lower_cause="decision-line",
+            Mover.HOLDER,
+            target=Maturity.SLICED,
+            reason=REASON,
+            lower_cause=LowerCause.DECISION_LINE,
         ),
     )
-    run(github, request("abandoned", 10, "operator"))
+    run(github, request(Transition.ABANDONED, 10, Mover.OPERATOR))
 
     assert github.writes()
     for command in github.commands:
@@ -199,49 +217,52 @@ def test_lower_claim_keeps_or_releases() -> None:
     result = run(
         kept,
         request(
-            "lower",
+            Transition.LOWER,
             10,
-            "holder",
-            target="Sliced",
-            reason="a decision line",
-            lower_cause="decision-line",
+            Mover.HOLDER,
+            target=Maturity.SLICED,
+            reason=REASON,
+            lower_cause=LowerCause.DECISION_LINE,
         ),
     )
-    assert result["status"] == "done"
-    assert "release" not in result
+    assert result["status"] == Status.DONE
+    assert Transition.RELEASE not in result
     assert kept.issues[10].assignees == [LOGIN]
 
     released = applicable_held()
     result = run(
         released,
         request(
-            "lower",
+            Transition.LOWER,
             10,
-            "holder",
-            target="Sliced",
-            reason="the Application check failed",
-            lower_cause="application-check",
-            handoff=HANDOFF,
+            Mover.HOLDER,
+            target=Maturity.SLICED,
+            reason=REASON,
+            lower_cause=LowerCause.APPLICATION_CHECK,
+            handoff=handoff(),
         ),
     )
-    assert result["status"] == "done"
-    assert result["release"]["status"] == "done"
+    assert result["status"] == Status.DONE
+    assert result["release"]["status"] == Status.DONE
     assert released.issues[10].assignees == []
-    assert [b["transition"] for b in blocks(released)][-2:] == ["lower", "release"]
+    assert [b[LogKey.TRANSITION] for b in blocks(released)][-2:] == [
+        Transition.LOWER,
+        Transition.RELEASE,
+    ]
 
     missing = applicable_held()
     result = run(
         missing,
         request(
-            "lower",
+            Transition.LOWER,
             10,
-            "holder",
-            target="Sliced",
-            reason="the Application check failed",
-            lower_cause="application-check",
+            Mover.HOLDER,
+            target=Maturity.SLICED,
+            reason=REASON,
+            lower_cause=LowerCause.APPLICATION_CHECK,
         ),
     )
-    assert result["status"] == "refused"
+    assert result["status"] == Status.REFUSED
     assert missing.writes() == []
 
 
@@ -249,210 +270,237 @@ def test_lower_claim_keeps_or_releases() -> None:
 
 
 def test_review_binding_on_advance_to_sliced() -> None:
-    github = store("Framed", "Submitted")
-    stale = {"body_sha256": sha256("another body"), "base": BASE}
+    github = change_store(Maturity.FRAMED, Lifecycle.SUBMITTED)
+    stale = pair_of(edited(github.issues[10].body), BASE)
 
     refused = run(
         github,
-        request("advance", 10, "operator", form_check=check(github), review=stale),
+        request(
+            Transition.ADVANCE,
+            10,
+            Mover.OPERATOR,
+            form_check=passing_form_check(github),
+            review=stale,
+        ),
     )
-    assert refused["status"] == "refused"
-    assert refused["reason"] == "review-binding"
+    assert refused["status"] == Status.REFUSED
+    assert refused["reason"] == Reason.REVIEW_BINDING
 
     done = run(
         github,
         request(
-            "advance", 10, "operator", form_check=check(github), review=pair(github)
+            Transition.ADVANCE,
+            10,
+            Mover.OPERATOR,
+            form_check=passing_form_check(github),
+            review=bound_pair(github),
         ),
     )
-    assert done["status"] == "done"
+    assert done["status"] == Status.DONE
 
 
 def test_review_binding_on_claim_for_application() -> None:
-    github = store("Applicable", "Available")
-    stale = {"body_sha256": sha256("another body"), "base": BASE}
+    github = change_store(Maturity.APPLICABLE, Lifecycle.AVAILABLE)
+    stale = pair_of(edited(github.issues[10].body), BASE)
 
     assert (
-        run(github, request("claim", 10, "agent", review=stale))["status"] == "refused"
+        run(github, request(Transition.CLAIM, 10, Mover.AGENT, review=stale))["status"]
+        == Status.REFUSED
     )
     assert github.writes() == []
     assert (
-        run(github, request("claim", 10, "agent", review=pair(github)))["status"]
-        == "done"
+        run(
+            github,
+            request(Transition.CLAIM, 10, Mover.AGENT, review=bound_pair(github)),
+        )["status"]
+        == Status.DONE
     )
 
 
-def test_review_binding_comment_only_while_the_pair_stands() -> None:
-    github = store("Framed", "Submitted")
-    reviewed = pair(github)
+def land_race(github: SimulatedGitHub, race: str) -> None:
+    """Make another writer's edit land after the Maturity write of a Transition."""
 
     def edit_after_maturity(sim: SimulatedGitHub, command: Sequence[str]) -> None:
-        if is_write(command) and write_kind(command) == "maturity":
-            sim.edit_body(10, LEAF + "\nan edit from another writer\n")
+        if not maturity_write(command):
+            return
+        if race == "body":
+            sim.edit_body(10, edited(sim.issues[10].body))
+        else:
+            sim.set_field(10, Field.BASE, OTHER_BASE)
 
     github.after = edit_after_maturity
+
+
+@pytest.mark.parametrize("race", RACES)
+def test_review_binding_comment_only_while_the_pair_stands(race: str) -> None:
+    github = change_store(Maturity.FRAMED, Lifecycle.SUBMITTED)
+    reviewed = bound_pair(github)
+    land_race(github, race)
+
     result = run(
         github,
-        request("advance", 10, "operator", form_check=check(github), review=reviewed),
+        request(
+            Transition.ADVANCE,
+            10,
+            Mover.OPERATOR,
+            form_check=passing_form_check(github),
+            review=reviewed,
+        ),
     )
 
-    assert result["status"] == "failed"
-    assert result["reason"] == "binding-raced"
-    assert result["failed_write"] == "comment"
-    assert all(write_kind(command) != "comment" for command in github.writes())
+    assert result["status"] == Status.FAILED
+    assert result["reason"] == Reason.BINDING_RACED
+    assert result["failed_write"] == WriteKind.COMMENT
+    assert all(write_kind(command) != WriteKind.COMMENT for command in github.writes())
+
+
+@pytest.mark.parametrize("race", RACES)
+def test_audit_binding_comment_only_while_the_pair_stands(race: str) -> None:
+    github = change_store(Maturity.SLICED, Lifecycle.AVAILABLE)
+    held(github, 10)
+    payload = to_applicable(github)
+    land_race(github, race)
+
+    result = run(github, payload)
+
+    assert result["status"] == Status.FAILED
+    assert result["reason"] == Reason.BINDING_RACED
+    assert result["failed_write"] == WriteKind.COMMENT
+    assert all(write_kind(command) != WriteKind.COMMENT for command in github.writes())
 
 
 @pytest.mark.parametrize("broken", ["body", "base", "status"])
 def test_audit_binding(broken: str) -> None:
-    github = store("Sliced", "Available")
+    github = change_store(Maturity.SLICED, Lifecycle.AVAILABLE)
     held(github, 10)
-    audit = pair(github)
-    status = "approved"
+    audit = bound_pair(github)
+    status = APPROVED
     if broken == "body":
-        audit = {**audit, "body_sha256": sha256(LEAF + "\nanother revision\n")}
+        audit = {**audit, PairKey.BODY_SHA256: sha256(edited(github.issues[10].body))}
     elif broken == "base":
-        audit = {**audit, "base": "e" * 40}
+        audit = {**audit, PairKey.BASE: OTHER_BASE}
     else:
-        status = "rejected"
+        status = REJECTED
 
-    assert (
-        run(github, to_applicable(github, audit=audit, audit_status=status))["status"]
-        == "refused"
-    )
-    assert github.issues[10].fields["Maturity"] == "Sliced"
-    assert run(github, to_applicable(github))["status"] == "done"
+    refused = run(github, to_applicable(github, audit=audit, audit_status=status))
 
-
-def reviewed_repository(
-    target_texts: tuple[str, str],
-    record_texts: tuple[str, str] = ("decision", "decision"),
-):
-    return product_repository(
-        [
-            {
-                TARGET: target_texts[0],
-                "spx/20-example.enabler/15-rule.pdr.md": record_texts[0],
-            },
-            {
-                TARGET: target_texts[1],
-                "spx/20-example.enabler/15-rule.pdr.md": record_texts[1],
-                "other.txt": "x",
-            },
-        ]
-    )
+    assert refused["status"] == Status.REFUSED
+    assert refused["reason"] == Reason.AUDIT_BINDING
+    assert github.issues[10].fields[Field.MATURITY] == Maturity.SLICED
+    assert run(github, to_applicable(github))["status"] == Status.DONE
 
 
 def carried_advance(
     github: SimulatedGitHub, root: str, reviewed_body: str, reviewed_base: str
 ) -> dict[str, Any]:
     payload = request(
-        "advance",
+        Transition.ADVANCE,
         10,
-        "operator",
-        form_check=check(github),
-        review={"body_sha256": sha256(reviewed_body), "base": reviewed_base},
+        Mover.OPERATOR,
+        form_check=passing_form_check(github),
+        review=pair_of(reviewed_body, reviewed_base),
         review_body=reviewed_body,
     )
     return run(github, payload, root=root)
 
 
-def test_review_carry_forward() -> None:
-    with reviewed_repository(("same", "same")) as (root, (old, new)):
-        github = store(
-            "Framed",
-            "Submitted",
-            body=LEAF.replace("An example reason.", "An edited reason."),
-            base=new,
+def carry(case: CarryCase) -> dict[str, Any]:
+    with product_repository(case.commits) as (root, (old, new)):
+        github = change_store(
+            Maturity.FRAMED, Lifecycle.SUBMITTED, body=case.current_body, base=new
         )
-        assert carried_advance(github, root, LEAF, old)["status"] == "done"
-
-    with reviewed_repository(("same", "same")) as (root, (old, new)):
-        github = store(
-            "Framed",
-            "Submitted",
-            body=LEAF.replace("an example", "an edited example"),
-            base=new,
-        )
-        assert carried_advance(github, root, LEAF, old)["status"] == "refused"
-
-    with reviewed_repository(("before", "after")) as (root, (old, new)):
-        github = store("Framed", "Submitted", body=LEAF, base=new)
-        assert carried_advance(github, root, LEAF, old)["status"] == "refused"
-
-    with reviewed_repository(("same", "same"), ("decision", "amended decision")) as (
-        root,
-        (old, new),
-    ):
-        github = store("Framed", "Submitted", body=LEAF, base=new)
-        assert carried_advance(github, root, LEAF, old)["status"] == "refused"
-
-    with reviewed_repository(("same", "same")) as (root, (old, new)):
-        github = store("Framed", "Submitted", body=LEAF, base=new)
-        assert carried_advance(github, root, LEAF, "f" * 40)["status"] == "refused"
+        base = old if case.reviewed_base_resolves else UNRESOLVED_BASE
+        return carried_advance(github, root, case.reviewed_body, base)
 
 
-def test_review_part_context() -> None:
-    table = "### spx/20-example.enabler/example.md\n\n```diff\n  | Case | Value |\n+ | one | x |\n```\n"
-    reviewed = SOI + "\n## Declarations\n\n" + table
-    context_changed = reviewed.replace("| Case | Value |", "| Case | Other |")
-    with reviewed_repository(("same", "same")) as (root, (old, new)):
-        github = store("Framed", "Submitted", body=context_changed, base=new)
-        assert carried_advance(github, root, reviewed, old)["status"] == "refused"
+@pytest.mark.parametrize("case", carrying_cases(), ids=lambda case: case.name)
+def test_review_carry_forward_while_parts_read_the_same(case: CarryCase) -> None:
+    assert carry(case)["status"] == Status.DONE
 
-    node = "### spx/20-example.enabler\n\n```diff\ndeleted file\n```\n"
-    reviewed = SOI + "\n## Declarations\n\n" + node
-    with product_repository(
-        [
-            {TARGET: "a", "spx/20-example.enabler/child/child.md": "one"},
-            {TARGET: "a", "spx/20-example.enabler/child/child.md": "two"},
-        ]
-    ) as (root, (old, new)):
-        github = store("Framed", "Submitted", body=reviewed, base=new)
-        assert carried_advance(github, root, reviewed, old)["status"] == "refused"
+
+@pytest.mark.parametrize("case", breaking_cases(), ids=lambda case: case.name)
+def test_review_carry_forward_stops_when_a_part_moves(case: CarryCase) -> None:
+    result = carry(case)
+
+    assert result["status"] == Status.REFUSED
+    assert result["reason"] == Reason.REVIEW_BINDING
+
+
+@pytest.mark.parametrize("case", part_cases(), ids=lambda case: case.name)
+def test_review_part_context(case: PartCase) -> None:
+    reviewed = declaration(list(case.reviewed_lines))
+    current = declaration(list(case.current_lines))
+    carry_case = CarryCase(
+        case.name,
+        ({TARGET: "same"}, {TARGET: "same"}),
+        reviewed,
+        current,
+    )
+
+    result = carry(carry_case)
+
+    assert result["status"] == Status.REFUSED
+    assert result["reason"] == Reason.REVIEW_BINDING
+    for line in case.lost:
+        assert f"{TARGET}: {line}" in result["detail"]
+    for line in case.kept:
+        assert line not in result["detail"]
 
 
 # ------------------------------------------------------ structure and blockers
 
 
-def with_child(github: SimulatedGitHub, state: str = "OPEN") -> None:
-    github.add(11, LEAF, Maturity="Proposed", Lifecycle="Available", Parent=10)
-    github.issues[11].state = state
-
-
 def test_change_type_derives_from_relations() -> None:
-    parent = store("Sliced", "Available", body=SOI)
-    with_child(parent)
+    parent = change_store(Maturity.SLICED, Lifecycle.AVAILABLE, body=intent())
+    add_child(parent)
     held(parent, 10)
     result = run(parent, to_applicable(parent))
-    assert result["status"] == "refused"
-    assert result["reason"] == "parent"
+    assert result["status"] == Status.REFUSED
+    assert result["reason"] == Reason.PARENT
 
-    leaf = store("Sliced", "Available")
+    leaf = change_store(Maturity.SLICED, Lifecycle.AVAILABLE)
     held(leaf, 10)
-    assert run(leaf, to_applicable(leaf))["status"] == "done"
+    assert run(leaf, to_applicable(leaf))["status"] == Status.DONE
 
 
 def test_parent_maturity() -> None:
-    github = store("Proposed", "Submitted", body=SOI)
-    with_child(github)
+    github = change_store(Maturity.PROPOSED, Lifecycle.SUBMITTED, body=intent())
+    add_child(github)
     assert (
-        run(github, request("advance", 10, "operator", form_check=check(github)))[
-            "status"
-        ]
-        == "done"
+        run(
+            github,
+            request(
+                Transition.ADVANCE,
+                10,
+                Mover.OPERATOR,
+                form_check=passing_form_check(github),
+            ),
+        )["status"]
+        == Status.DONE
     )
 
-    child_moves = SimulatedGitHub()
-    child_moves.add(10, SOI, Maturity="Framed", Lifecycle="Available", Base=BASE)
+    child_moves = change_store(Maturity.FRAMED, Lifecycle.AVAILABLE, body=intent())
     child_moves.add(
-        11, LEAF, Maturity="Proposed", Lifecycle="Submitted", Parent=10, Base=BASE
+        11,
+        leaf_record(),
+        {
+            Field.MATURITY: Maturity.PROPOSED,
+            Field.LIFECYCLE: Lifecycle.SUBMITTED,
+            Field.PARENT: 10,
+            Field.BASE: BASE,
+        },
     )
     assert (
         run(
             child_moves,
-            request("advance", 11, "operator", form_check=check(child_moves, 11)),
+            request(
+                Transition.ADVANCE,
+                11,
+                Mover.OPERATOR,
+                form_check=passing_form_check(child_moves, 11),
+            ),
         )["status"]
-        == "done"
+        == Status.DONE
     )
     assert all(
         command[3] != "10" for command in child_moves.writes() if command[1] == "issue"
@@ -461,56 +509,84 @@ def test_parent_maturity() -> None:
 
 
 def test_blocker_abandoned_passes_or_returns() -> None:
-    merged = SimulatedGitHub()
-    merged.add(10, LEAF, Maturity="Sliced", Lifecycle="Available", Base=BASE)
-    merged.add(11, LEAF, Maturity="Applicable", Lifecycle="Available", Base=BASE)
-    merged.add(12, LEAF, Maturity="Sliced", Lifecycle="Available", Base=BASE)
+    merged = change_store(Maturity.SLICED, Lifecycle.AVAILABLE)
+    merged.add(
+        11,
+        leaf_record(),
+        {
+            Field.MATURITY: Maturity.APPLICABLE,
+            Field.LIFECYCLE: Lifecycle.AVAILABLE,
+            Field.BASE: BASE,
+        },
+    )
+    merged.add(
+        12,
+        leaf_record(),
+        {
+            Field.MATURITY: Maturity.SLICED,
+            Field.LIFECYCLE: Lifecycle.AVAILABLE,
+            Field.BASE: BASE,
+        },
+    )
     merged.issues[11].blocked_by.append(10)
-    result = run(merged, request("abandoned", 10, "agent", merged_into=12))
-    assert result["status"] == "done"
+    result = run(merged, request(Transition.ABANDONED, 10, Mover.AGENT, merged_into=12))
+    assert result["status"] == Status.DONE
     assert 12 in merged.issues[11].blocked_by
 
-    unmerged = SimulatedGitHub()
-    unmerged.add(10, LEAF, Maturity="Sliced", Lifecycle="Available", Base=BASE)
-    unmerged.add(11, LEAF, Maturity="Applicable", Lifecycle="Available", Base=BASE)
+    unmerged = change_store(Maturity.SLICED, Lifecycle.AVAILABLE)
+    unmerged.add(
+        11,
+        leaf_record(),
+        {
+            Field.MATURITY: Maturity.APPLICABLE,
+            Field.LIFECYCLE: Lifecycle.AVAILABLE,
+            Field.BASE: BASE,
+        },
+    )
     unmerged.issues[11].blocked_by.append(10)
-    result = run(unmerged, request("abandoned", 10, "operator"))
-    assert result["status"] == "done"
-    assert unmerged.issues[11].fields["Maturity"] == "Sliced"
+    result = run(unmerged, request(Transition.ABANDONED, 10, Mover.OPERATOR))
+    assert result["status"] == Status.DONE
+    assert unmerged.issues[11].fields[Field.MATURITY] == Maturity.SLICED
 
 
 def test_blocker_cycle_never_advances_or_claims() -> None:
-    github = SimulatedGitHub()
-    github.add(10, LEAF, Maturity="Framed", Lifecycle="Submitted", Base=BASE)
-    github.add(11, LEAF, Maturity="Applicable", Lifecycle="Available", Base=BASE)
+    github = change_store(Maturity.FRAMED, Lifecycle.SUBMITTED)
+    github.add(
+        11,
+        leaf_record(),
+        {
+            Field.MATURITY: Maturity.APPLICABLE,
+            Field.LIFECYCLE: Lifecycle.AVAILABLE,
+            Field.BASE: BASE,
+        },
+    )
     github.issues[10].blocked_by.append(11)
     github.issues[11].blocked_by.append(10)
 
+    def advance() -> dict[str, Any]:
+        return run(
+            github,
+            request(
+                Transition.ADVANCE,
+                10,
+                Mover.OPERATOR,
+                form_check=passing_form_check(github),
+                review=bound_pair(github),
+            ),
+        )
+
+    assert advance()["status"] == Status.REFUSED
     assert (
         run(
             github,
-            request(
-                "advance", 10, "operator", form_check=check(github), review=pair(github)
-            ),
+            request(Transition.CLAIM, 11, Mover.AGENT, review=bound_pair(github, 11)),
         )["status"]
-        == "refused"
-    )
-    assert (
-        run(github, request("claim", 11, "agent", review=pair(github, 11)))["status"]
-        == "refused"
+        == Status.REFUSED
     )
     assert github.writes() == []
 
     github.issues[11].blocked_by.clear()
-    assert (
-        run(
-            github,
-            request(
-                "advance", 10, "operator", form_check=check(github), review=pair(github)
-            ),
-        )["status"]
-        == "done"
-    )
+    assert advance()["status"] == Status.DONE
 
 
 # ------------------------------------------------------- transition function
@@ -518,9 +594,9 @@ def test_blocker_cycle_never_advances_or_claims() -> None:
 
 def test_transition_function_is_what_main_writes() -> None:
     assert inspect.isfunction(script.transition)
-    first = store("Sliced", "Available")
-    second = store("Sliced", "Available")
-    payload = request("claim", 10, "agent")
+    first = change_store(Maturity.SLICED, Lifecycle.AVAILABLE)
+    second = change_store(Maturity.SLICED, Lifecycle.AVAILABLE)
+    payload = request(Transition.CLAIM, 10, Mover.AGENT)
 
     returned = script.transition(payload, run=first)
     code, written = run_main(second, payload)
@@ -534,63 +610,10 @@ def test_transition_function_is_what_main_writes() -> None:
 # ---------------------------------------------------------- transition log
 
 
-def every_transition() -> list[tuple[SimulatedGitHub, dict[str, Any]]]:
-    claim = store("Sliced", "Available")
-    release = store("Sliced", "Submitted")
-    held(release, 10)
-    submit = store("Proposed", "Available")
-    held(submit, 10)
-    advance = store("Proposed", "Submitted")
-    lower = store("Sliced", "Available")
-    applied = applicable_held()
-    abandoned = store("Framed", "Available")
-    return [
-        (claim, request("claim", 10, "agent")),
-        (
-            release,
-            request(
-                "release",
-                10,
-                "holder",
-                handoff={
-                    **HANDOFF,
-                    "pull_request": f"https://github.com/{PRODUCT_REPOSITORY}/pull/7",
-                },
-            ),
-        ),
-        (
-            submit,
-            request(
-                "submit",
-                10,
-                "holder",
-                reopened="the Base moved under a settled replacement",
-            ),
-        ),
-        (advance, request("advance", 10, "operator", form_check=check(advance))),
-        (
-            lower,
-            request(
-                "lower",
-                10,
-                "operator",
-                target="Framed",
-                reason="a settled judgment reopened",
-                lower_cause="reopened",
-            ),
-        ),
-        (
-            applied,
-            request("applied", 10, "holder", changeset=CHANGESET, close_check=CLOSE),
-        ),
-        (abandoned, request("abandoned", 10, "operator")),
-    ]
-
-
 def test_log_block_one_fenced_block_per_transition() -> None:
     for github, payload in every_transition():
         before = len(github.blocks(10))
-        assert run(github, payload)["status"] == "done"
+        assert run(github, payload)["status"] == Status.DONE
         posted = github.blocks(10)[before:]
         assert len(posted) == 1
         text = posted[0].strip()
@@ -605,46 +628,41 @@ def test_log_keys() -> None:
     for github, payload in every_transition():
         run(github, payload)
         block = blocks(github)[-1]
-        identity = payload["identity"]
-        assert block["transition"] == payload["transition"]
-        assert block["maturity"] == github.issues[10].fields["Maturity"]
-        assert (
-            block["harness"],
-            block["session"],
-            block["machine"],
-            block["worktree"],
-        ) == (
-            identity["harness"],
-            identity["session"],
-            identity["machine"],
-            identity["worktree"],
-        )
+        who = payload[RequestKey.IDENTITY]
+        assert set(SPEC_LOG_KEYS) <= set(block)
+        assert block[LogKey.TRANSITION] == payload[RequestKey.TRANSITION]
+        assert block[LogKey.MATURITY] == github.issues[10].fields[Field.MATURITY]
+        for key in (LogKey.HARNESS, LogKey.SESSION, LogKey.MACHINE, LogKey.WORKTREE):
+            assert block[key] == who[key.value]
 
 
 def test_log_extras_and_handoff_keys() -> None:
     texts = {}
     for github, payload in every_transition():
         run(github, payload)
-        texts[payload["transition"]] = github.blocks(10)[-1]
-    assert "reason:" in texts["lower"]
-    assert "reason:" in texts["submit"]
-    assert "handoff:" in texts["release"]
-    for key in ("branch:", "head:", "next:", "pull_request:"):
-        assert f"  {key}" in texts["release"]
-    assert (
-        "changeset:" in texts["applied"]
-        and "  merge_commit: " + MERGE_COMMIT in texts["applied"]
-    )
-    assert all(
-        "reason:" not in texts[t] for t in ("claim", "advance", "applied", "abandoned")
-    )
+        texts[payload[RequestKey.TRANSITION]] = github.blocks(10)[-1]
+    reason = f"{LogKey.REASON}:"
+    assert reason in texts[Transition.LOWER]
+    assert reason in texts[Transition.SUBMIT]
+    assert f"{LogKey.HANDOFF}:" in texts[Transition.RELEASE]
+    for key in SPEC_HANDOFF_KEYS:
+        assert f"  {key}:" in texts[Transition.RELEASE]
+    assert f"{LogKey.CHANGESET}:" in texts[Transition.APPLIED]
+    assert f"  {ChangesetKey.MERGE_COMMIT}: {MERGE_COMMIT}" in texts[Transition.APPLIED]
+    for transition in (
+        Transition.CLAIM,
+        Transition.ADVANCE,
+        Transition.APPLIED,
+        Transition.ABANDONED,
+    ):
+        assert reason not in texts[transition]
 
 
 def test_log_closed_set() -> None:
-    allowed = {member.value for member in script.LogKey}
+    allowed = {str(key) for key in (*SPEC_LOG_KEYS, *SPEC_LOG_EXTRAS)}
     for github, payload in every_transition():
-        payload["position"] = "Plugins Maintainer"
-        payload["delegate"] = "a delegate"
+        payload[POSITION_KEY] = "Plugins Maintainer"
+        payload[DELEGATE_KEY] = "a delegate"
         run(github, payload)
         keys = {
             line.split(":")[0]
@@ -652,29 +670,43 @@ def test_log_closed_set() -> None:
             if not line.startswith(" ")
         }
         assert keys <= allowed
+        assert POSITION_KEY not in keys
 
 
 def test_log_closed_check_refuses_another_key() -> None:
-    entries = {key.value: "x" for key in script.LOG_KEYS}
+    entries = {str(key): "x" for key in SPEC_LOG_KEYS}
     with pytest.raises(ValueError):
-        script.render_block({**entries, "position": "a position"})
+        script.render_block({**entries, POSITION_KEY: "a position"})
     with pytest.raises(ValueError):
         script.render_block(
-            {key: value for key, value in entries.items() if key != "session"}
+            {key: value for key, value in entries.items() if key != str(LogKey.SESSION)}
         )
     assert script.render_block(entries).startswith("```yaml\n")
 
 
 def test_log_no_authority() -> None:
-    github = store("Proposed", "Submitted")
+    github = change_store(Maturity.PROPOSED, Lifecycle.SUBMITTED)
     github.post(
-        10, "The Operator approves the advance to Framed.", author="another-account"
+        10, "The Operator approves the advance to Framed.", author=ANOTHER_ACCOUNT
     )
-    github.post(10, claim_block(OTHER_SESSION).replace("claim", "advance"))
+    github.post(
+        10,
+        claim_block(OTHER_SESSION).replace(
+            str(Transition.CLAIM), str(Transition.ADVANCE)
+        ),
+    )
 
-    result = run(github, request("advance", 10, "agent", form_check=check(github)))
+    result = run(
+        github,
+        request(
+            Transition.ADVANCE,
+            10,
+            Mover.AGENT,
+            form_check=passing_form_check(github),
+        ),
+    )
 
-    assert result["status"] == "refused"
+    assert result["status"] == Status.REFUSED
     assert github.writes() == []
 
 
@@ -682,37 +714,56 @@ def test_log_no_authority() -> None:
 
 
 def test_github_binding_reads_the_pair_at_the_comment() -> None:
-    github = store("Sliced", "Available")
+    github = change_store(Maturity.SLICED, Lifecycle.AVAILABLE)
     held(github, 10)
+    body = github.issues[10].body
     change = script.GitHubStore(STORE, github).read(10)
     comment = github.blocks(10)[-1]
     assert script.binding_at_comment(change, comment) == script.BoundPair(
-        sha256(LEAF), BASE
+        sha256(body), BASE
     )
 
-    github.edit_body(10, LEAF + "\nlater\n")
+    github.edit_body(10, edited(body))
     change = script.GitHubStore(STORE, github).read(10)
     assert script.binding_at_comment(change, comment) == script.BoundPair(
-        sha256(LEAF), BASE
+        sha256(body), BASE
+    )
+
+    github.set_field(10, Field.BASE, OTHER_BASE)
+    change = script.GitHubStore(STORE, github).read(10)
+    assert script.binding_at_comment(change, comment) == script.BoundPair(
+        sha256(body), BASE
     )
 
 
 def test_github_one_holder() -> None:
-    github = store("Sliced", "Available")
-    github.issues[10].assignees = ["someone-else"]
-    assert run(github, request("claim", 10, "agent"))["status"] == "refused"
+    github = change_store(Maturity.SLICED, Lifecycle.AVAILABLE)
+    github.issues[10].assignees = [ANOTHER_ACCOUNT]
+    assert (
+        run(github, request(Transition.CLAIM, 10, Mover.AGENT))["status"]
+        == Status.REFUSED
+    )
 
-    github = store("Sliced", "Available")
-    run(github, request("claim", 10, "agent"))
-    run(github, request("claim", 10, "agent", session=OTHER_SESSION))
+    github = change_store(Maturity.SLICED, Lifecycle.AVAILABLE)
+    run(github, request(Transition.CLAIM, 10, Mover.AGENT))
+    run(
+        github,
+        request(Transition.CLAIM, 10, Mover.AGENT, session=OTHER_SESSION),
+    )
     assert github.issues[10].assignees == [LOGIN]
 
 
 def test_github_parent_in_the_childs_store() -> None:
-    github = SimulatedGitHub()
-    github.add(10, SOI, Maturity="Proposed", Lifecycle="Submitted", Base=BASE)
+    github = change_store(Maturity.PROPOSED, Lifecycle.SUBMITTED, body=intent())
     github.add(
-        11, LEAF, Maturity="Proposed", Lifecycle="Available", Parent=10, Base=BASE
+        11,
+        leaf_record(),
+        {
+            Field.MATURITY: Maturity.PROPOSED,
+            Field.LIFECYCLE: Lifecycle.AVAILABLE,
+            Field.PARENT: 10,
+            Field.BASE: BASE,
+        },
     )
     change = script.GitHubStore(STORE, github).read(11)
     assert change.parent == 10
@@ -725,52 +776,49 @@ def test_github_parent_in_the_childs_store() -> None:
     )
 
 
-@pytest.mark.parametrize("index", range(7))
+@pytest.mark.parametrize("index", range(len(Transition)))
 def test_write_order(index: int) -> None:
     github, payload = every_transition()[index]
-    if payload["transition"] == "abandoned":
-        held(github, 10)
     run(github, payload)
     kinds = [write_kind(command) for command in github.writes()]
-    order = [kind.value for kind in script.WRITE_ORDER]
-    assert kinds == sorted(kinds, key=order.index)
-    if "comment" in kinds:
-        assert all(
-            order.index(kind) < order.index("comment")
-            for kind in kinds[: kinds.index("comment")]
-        )
+    assert kinds
+    assert kinds == sorted(kinds, key=SPEC_WRITE_ORDER.index)
+    assert len(set(kinds)) == len(kinds)
+    if WriteKind.COMMENT in kinds:
+        after = kinds[kinds.index(WriteKind.COMMENT) + 1 :]
+        assert all(kind == WriteKind.STATE for kind in after)
 
 
 def test_ordered_write_stops_and_reports() -> None:
     github = applicable_held()
     github.fail_when = lambda command: (
-        write_kind(command) == "lifecycle"
-        if command[1:3] == ("api", "graphql") and "query=mutation" in " ".join(command)
-        else False
+        is_write(command) and write_kind(command) == WriteKind.LIFECYCLE
+    )
+    payload = request(
+        Transition.APPLIED,
+        10,
+        Mover.HOLDER,
+        changeset=changeset(),
+        close_check=close_check(),
     )
 
-    result = run(
-        github, request("applied", 10, "holder", changeset=CHANGESET, close_check=CLOSE)
-    )
+    result = run(github, payload)
 
-    assert result["status"] == "failed"
-    assert result["failed_write"] == "lifecycle"
+    assert result["status"] == Status.FAILED
+    assert result["failed_write"] == WriteKind.LIFECYCLE
     assert result["writes"] == []
     assert [
         write_kind(c)
         for c in github.commands
-        if c[1:3] == ("issue", "comment") or c[1:3] == ("issue", "close")
+        if write_kind(c) in (WriteKind.COMMENT, WriteKind.STATE)
     ] == []
-    assert result["observed"]["lifecycle"] == "Available"
+    assert result["observed"]["lifecycle"] == Lifecycle.AVAILABLE
 
     diverging = applicable_held()
-    diverging.ignore_when = lambda command: command[1:3] == ("issue", "comment")
-    result = run(
-        diverging,
-        request("applied", 10, "holder", changeset=CHANGESET, close_check=CLOSE),
-    )
-    assert result["status"] == "failed"
-    assert result["reason"] == "readback"
-    assert result["writes"] == ["lifecycle"]
-    assert diverging.issues[10].state == "OPEN"
-    assert diverging.issues[10].fields["Lifecycle"] == "Applied"
+    diverging.ignore_when = lambda command: write_kind(command) == WriteKind.COMMENT
+    result = run(diverging, payload)
+    assert result["status"] == Status.FAILED
+    assert result["reason"] == Reason.READBACK
+    assert result["writes"] == [WriteKind.LIFECYCLE]
+    assert diverging.issues[10].state == IssueState.OPEN
+    assert diverging.issues[10].fields[Field.LIFECYCLE] == Lifecycle.APPLIED

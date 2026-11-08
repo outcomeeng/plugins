@@ -22,9 +22,10 @@ import io
 import json
 import subprocess
 import sys
-from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+from enum import StrEnum
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -55,6 +56,16 @@ PRODUCT_REPOSITORY: Final = "example-org/example-product"
 MERGE_COMMIT: Final = "a" * 40
 UNMERGED_COMMIT: Final = "b" * 40
 
+#: The words the form check, the audit, and the infrastructure lookup hand the script.
+APPROVED: Final = "approved"
+REJECTED: Final = "rejected"
+PASSING: Final = "Passing"
+SPECIFIED: Final = "Specified"
+FORM_STATUS: Final = "status"
+FORM_BODY: Final = "body_sha256"
+FORM_PASS: Final = "pass"
+FORM_FAIL: Final = "fail"
+
 _EPOCH: Final = datetime(2026, 1, 1, tzinfo=UTC)
 
 _script_module: ModuleType | None = None
@@ -74,6 +85,45 @@ def load_script() -> ModuleType:
     return _script_module
 
 
+script = load_script()
+
+#: The vocabulary the script owns; the harness and the tests read it from there.
+Transition = script.Transition
+Maturity = script.Maturity
+Lifecycle = script.Lifecycle
+Mover = script.Mover
+LowerCause = script.LowerCause
+Status = script.Status
+Reason = script.Reason
+WriteKind = script.WriteKind
+IssueState = script.IssueState
+Field = script.Field
+LogKey = script.LogKey
+HandoffKey = script.HandoffKey
+ChangesetKey = script.ChangesetKey
+
+
+def _keys(name: str, record: Any) -> Any:
+    """A key enumeration naming the fields of one of the script's request records."""
+    members = {
+        field_name.upper(): field_name for field_name in record.__dataclass_fields__
+    }
+    return StrEnum(name, members)  # type: ignore[misc]
+
+
+#: The keys of a request, of the session identity, of a bound pair, and of a close check.
+RequestKey = _keys("RequestKey", script.Request)
+IdentityKey = _keys("IdentityKey", script.Identity)
+PairKey = _keys("PairKey", script.BoundPair)
+CloseKey = _keys("CloseKey", script.CloseCheck)
+
+#: The organization issue field each issue-field write reaches.
+FIELD_WRITES: Final = {
+    Field.MATURITY.value: WriteKind.MATURITY,
+    Field.LIFECYCLE.value: WriteKind.LIFECYCLE,
+}
+
+
 @dataclass
 class Issue:
     """One Change issue as the simulated store holds it."""
@@ -81,7 +131,7 @@ class Issue:
     number: int
     body: str
     fields: dict[str, Any]
-    state: str = "OPEN"
+    state: str = IssueState.OPEN.value
     title: str = "An example Change"
     assignees: list[str] = field(default_factory=list)
     comments: list[dict[str, Any]] = field(default_factory=list)
@@ -109,7 +159,7 @@ class SimulatedGitHub:
         self.clock += 1
         return (_EPOCH + timedelta(seconds=self.clock)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    def add(self, number: int, body: str, **fields: Any) -> Issue:
+    def add(self, number: int, body: str, fields: Mapping[str, Any]) -> Issue:
         issue = Issue(number, body, dict(fields))
         issue.edits.append(
             {"id": f"UCE_{number}_0", "editedAt": self.now(), "diff": body}
@@ -159,7 +209,6 @@ class SimulatedGitHub:
     # ----------------------------------------------------------- the runner
 
     def __call__(self, args: Sequence[str], stdin: str | None = None) -> Any:
-        script = load_script()
         command = tuple(args)
         if command[0] == "git":
             completed = subprocess.run(
@@ -200,7 +249,7 @@ class SimulatedGitHub:
         if command[1:3] == ("issue", "close"):
             issue = self.issues[int(command[3])]
             if not ignored:
-                issue.state = "CLOSED"
+                issue.state = IssueState.CLOSED.value
                 issue.close_reason = command[-1]
             return ""
         if command[1:3] == ("repo", "view"):
@@ -263,8 +312,8 @@ class SimulatedGitHub:
             return {"setIssueFieldValue": {"clientMutationId": None}}
         if "organization(" in query:
             fields = {
-                "Maturity": ("Proposed", "Framed", "Sliced", "Applicable"),
-                "Lifecycle": ("Submitted", "Available", "Applied", "Abandoned"),
+                Field.MATURITY.value: tuple(member.value for member in Maturity),
+                Field.LIFECYCLE.value: tuple(member.value for member in Lifecycle),
             }
             return {
                 "organization": {
@@ -307,11 +356,11 @@ class SimulatedGitHub:
         return {"repository": {"issue": self._state_node(issue)}}
 
     def _child_node(self, issue: Issue) -> dict[str, Any]:
-        parent = issue.fields.get("Parent")
+        parent = issue.fields.get(Field.PARENT)
         values = (
             []
             if parent is None
-            else [{"value": float(parent), "field": {"name": "Parent"}}]
+            else [{"value": float(parent), "field": {"name": Field.PARENT.value}}]
         )
         return {
             "number": issue.number,
@@ -322,9 +371,9 @@ class SimulatedGitHub:
     def _state_node(self, issue: Issue) -> dict[str, Any]:
         values: list[dict[str, Any]] = []
         for name, value in issue.fields.items():
-            if name in ("Maturity", "Lifecycle"):
+            if name in (Field.MATURITY, Field.LIFECYCLE):
                 values.append({"name": value, "field": {"name": name}})
-            elif name == "Parent":
+            elif name == Field.PARENT:
                 values.append({"value": float(value), "field": {"name": name}})
             else:
                 values.append({"value": value, "field": {"name": name}})
@@ -372,42 +421,64 @@ def is_write(command: Sequence[str]) -> bool:
     return "POST" in command or "DELETE" in command or "PATCH" in command
 
 
-def write_kind(command: Sequence[str]) -> str:
-    """Name a write command by the part of the store it reaches."""
+def write_kind(command: Sequence[str]) -> Any:
+    """Name a write command by the script's write kind it reaches; `None` for a read or a dependency write."""
+    if not is_write(command):
+        return None
     if tuple(command[1:3]) == ("api", "graphql"):
         field_id = next(
             part for part in command if part.startswith("field=")
         ).removeprefix("field=F_")
-        return field_id.lower()
+        return FIELD_WRITES[field_id]
     if tuple(command[1:3]) == ("issue", "edit"):
-        return "assignee"
+        return WriteKind.ASSIGNEE
     if tuple(command[1:3]) == ("issue", "comment"):
-        return "comment"
+        return WriteKind.COMMENT
     if tuple(command[1:3]) == ("issue", "close"):
-        return "state"
-    return "dependency"
+        return WriteKind.STATE
+    return None
 
 
 def identity(session: str = SESSION) -> dict[str, str]:
-    return {
-        "login": LOGIN,
-        "harness": HARNESS,
-        "session": session,
-        "machine": MACHINE,
-        "worktree": WORKTREE,
+    return asdict(
+        script.Identity(
+            login=LOGIN,
+            harness=HARNESS,
+            session=session,
+            machine=MACHINE,
+            worktree=WORKTREE,
+        )
+    )
+
+
+def change_fields(
+    maturity: str,
+    lifecycle: str,
+    base: str | None = None,
+    parent: int | None = None,
+) -> dict[str, Any]:
+    """The organization issue fields a Change issue holds."""
+    found: dict[str, Any] = {
+        Field.MATURITY.value: str(maturity),
+        Field.LIFECYCLE.value: str(lifecycle),
     }
+    if base is not None:
+        found[Field.BASE.value] = base
+    if parent is not None:
+        found[Field.PARENT.value] = parent
+    return found
 
 
-def claim_block(session: str = SESSION, maturity: str = "Applicable") -> str:
+def claim_block(session: str = SESSION, maturity: str = Maturity.APPLICABLE) -> str:
     """A claim comment as a claim of `session` posts it."""
-    script = load_script()
+    ids = identity(session)
     entries = {
-        "transition": "claim",
-        "maturity": maturity,
-        "harness": HARNESS,
-        "session": session,
-        "machine": MACHINE,
-        "worktree": WORKTREE,
+        LogKey.TRANSITION.value: Transition.CLAIM.value,
+        LogKey.MATURITY.value: str(maturity),
+        LogKey.HARNESS.value: ids[IdentityKey.HARNESS],
+        LogKey.SESSION.value: ids[IdentityKey.SESSION],
+        LogKey.MACHINE.value: ids[IdentityKey.MACHINE],
+        LogKey.WORKTREE.value: ids[IdentityKey.WORKTREE],
     }
     return str(script.render_block(entries))
 
@@ -416,24 +487,91 @@ def held(github: SimulatedGitHub, number: int, session: str = SESSION) -> None:
     """Make `session` the holder of `number`: one assignee and its claim comment."""
     issue = github.issues[number]
     issue.assignees = [LOGIN]
-    github.post(number, claim_block(session, issue.fields.get("Maturity", "Proposed")))
+    github.post(
+        number,
+        claim_block(session, issue.fields.get(Field.MATURITY, Maturity.PROPOSED)),
+    )
 
 
-def request(transition: str, number: int, mover: str, **values: Any) -> dict[str, Any]:
+def request(
+    transition: str,
+    number: int,
+    mover: str,
+    session: str = SESSION,
+    **values: Any,
+) -> dict[str, Any]:
+    unknown = set(values) - {key.value for key in RequestKey}
+    if unknown:
+        raise ValueError(f"not request keys: {sorted(unknown)}")
     return {
-        "transition": transition,
-        "store": STORE,
-        "number": number,
-        "mover": mover,
-        "identity": identity(values.pop("session", SESSION)),
+        RequestKey.TRANSITION.value: str(transition),
+        RequestKey.STORE.value: STORE,
+        RequestKey.NUMBER.value: number,
+        RequestKey.MOVER.value: str(mover),
+        RequestKey.IDENTITY.value: identity(session),
         **values,
     }
+
+
+def bound_pair(github: SimulatedGitHub, number: int = 10) -> dict[str, str]:
+    """The pair a review or an audit reads: the current body revision and Base."""
+    issue = github.issues[number]
+    return asdict(
+        script.BoundPair(
+            body_sha256=sha256(issue.body), base=str(issue.fields[Field.BASE])
+        )
+    )
+
+
+def pair_of(body: str, base: str) -> dict[str, str]:
+    """The pair a review or an audit read for a body text and a Base."""
+    return asdict(script.BoundPair(body_sha256=sha256(body), base=base))
+
+
+def close_check(**overrides: Any) -> dict[str, Any]:
+    """A close check that meets the close condition, with `overrides` applied."""
+    found = asdict(
+        script.CloseCheck(
+            merge_gates_passed=True,
+            results_complete=True,
+            declarations_on_default=True,
+            audit_at_close=APPROVED,
+        )
+    )
+    return {**found, **overrides}
+
+
+def changeset(merge_commit: str = MERGE_COMMIT) -> dict[str, str]:
+    """A Changeset naming the merge commit."""
+    return {
+        ChangesetKey.URL.value: f"https://github.com/{PRODUCT_REPOSITORY}/pull/7",
+        ChangesetKey.MERGE_COMMIT.value: merge_commit,
+    }
+
+
+def handoff(**overrides: str) -> dict[str, str]:
+    """A Handoff holding the branch, the head commit, and the next subsection."""
+    return {
+        HandoffKey.BRANCH.value: "work/example",
+        HandoffKey.HEAD.value: "d" * 40,
+        HandoffKey.NEXT.value: "spx/20-example.enabler/example.md",
+        **overrides,
+    }
+
+
+def passing_form_check(github: SimulatedGitHub, number: int = 10) -> dict[str, str]:
+    """The form check's pass result for the current body revision."""
+    return {FORM_STATUS: FORM_PASS, FORM_BODY: sha256(github.issues[number].body)}
+
+
+def failing_form_check(github: SimulatedGitHub, number: int = 10) -> dict[str, str]:
+    """The form check's fail result for the current body revision."""
+    return {FORM_STATUS: FORM_FAIL, FORM_BODY: sha256(github.issues[number].body)}
 
 
 def run(
     github: SimulatedGitHub, payload: dict[str, Any], root: str | None = None
 ) -> dict[str, Any]:
-    script = load_script()
     result: dict[str, Any] = script.transition(payload, run=github, root=root)
     return result
 
@@ -442,19 +580,18 @@ def run_main(
     github: SimulatedGitHub, payload: dict[str, Any]
 ) -> tuple[int, dict[str, Any]]:
     """Run the entry point on one request; return its exit code and its result."""
-    script = load_script()
     sink = io.StringIO()
     code = script.main(io.StringIO(json.dumps(payload)), sink, github)
     return code, json.loads(sink.getvalue())
 
 
 def sha256(text: str) -> str:
-    return str(load_script().sha256(text))
+    return str(script.sha256(text))
 
 
 @contextmanager
 def product_repository(
-    files_by_commit: Sequence[dict[str, str]],
+    files_by_commit: Sequence[Mapping[str, str]],
 ) -> Iterator[tuple[str, list[str]]]:
     """A real git repository holding one commit per mapping of path to text."""
     with TemporaryDirectory() as directory:
