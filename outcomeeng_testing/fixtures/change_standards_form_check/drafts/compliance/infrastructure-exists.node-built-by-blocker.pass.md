@@ -6,7 +6,7 @@ lifecycle: Submitted
 parent: null
 predecessors: []
 blockers: [101]
-base: { { BASE } }
+base: {{BASE}}
 priority: null
 primary_value: null
 investment: null

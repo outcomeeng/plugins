@@ -18,6 +18,8 @@
     "**/semgrep_*.yaml",
     "outcomeeng/vendor/**",
     "outcomeeng_testing/fixtures/link_conversion/**",
+    // The Draft fixtures are inert payloads whose placeholder and malformed Markdown the formatter would rewrite.
+    "outcomeeng_testing/fixtures/change_standards_form_check/**",
     "pyproject.toml",
     // The authored registry data file carries one build token and renders into JSON under dist/.
     "src/plugins/*/skills/*/scripts/artifact-registry.json",
