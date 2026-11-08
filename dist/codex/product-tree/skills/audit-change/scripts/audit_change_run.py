@@ -620,6 +620,8 @@ def _probe(
             f"{argv[0]} could not be executed; confirm {argv[0]} is installed and on PATH, then repeat the request",
             evidence={
                 ResultField.COMMAND: shlex.join(argv),
+                ResultField.PAYLOAD_SOURCE: NOT_APPLICABLE,
+                ResultField.PAYLOAD_KEY: NOT_APPLICABLE,
                 ResultField.EXIT_CODE: NOT_APPLICABLE,
                 ResultField.STDERR: str(exc),
             },
@@ -963,6 +965,11 @@ def _product_root(context: _Context, named: pathlib.Path) -> pathlib.Path:
     try:
         top = _repository_root(_Context(runner=context.runner, cwd=named))
     except Blocked as exc:
+        if (
+            exc.reason is BlockReason.COMMAND_FAILED
+            and exc.evidence.get(ResultField.EXIT_CODE) == NOT_APPLICABLE
+        ):
+            raise
         raise Blocked(
             BlockReason.PATH_REJECTED,
             f"root is no repository checkout: {named}; pass the absolute path of the directory that holds the Product's checkout",

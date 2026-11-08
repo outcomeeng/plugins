@@ -12,7 +12,7 @@ allowed-tools: Read, Grep, Glob, Write, Bash(python3 "${SKILL_DIR}/scripts/audit
 
 <objective>
 
-A sealed `spx verification run` on one stored Change record, whose terminal status is `approved` or `rejected` and whose every finding blocks; the `OUTSIDE_CONTRACT` result for a record the audit does not judge; or the complete `BLOCKED` diagnostic when the run cannot finish.
+A sealed `spx verification run` on one stored Change record, judged against `product-tree:change-standards` and the audit rules of `<execution_sequence>`, whose terminal status is `approved` or `rejected` and whose every finding blocks and names a form, Declarations, cited-fact, set-apart, person, or format defect; the `OUTSIDE_CONTRACT` result for a record the audit does not judge; or the complete `BLOCKED` diagnostic when the run cannot finish.
 
 </objective>
 
