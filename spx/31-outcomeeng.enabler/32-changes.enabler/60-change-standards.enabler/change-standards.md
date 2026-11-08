@@ -21,8 +21,8 @@ CAN judge a record's form through one check before each publish
 
 ### Scenario: reachability
 
-- reachability: Given a Draft that records a Leaf adding one new Node, a checkout root whose one commit holds the parent spec its heading names, and no stored record, when the check function and the script each judge it, then each returns pass under the request and result names the module exports.
-- reachability-fail: Given the same Draft with one metadata key the record-keys rule does not name, when the check function and the script each judge it, then each returns fail with one finding naming record-keys.
+- reachability: Given a Draft that records a Leaf adding one new Node, a checkout root whose one commit holds the parent spec its heading names, and no stored record, when the check function and the script each judge it, then each returns pass under the request and result names the module exports ([test](tests/test_form_check.scenario.l1.py)).
+- reachability-fail: Given the same Draft with one metadata key the record-keys rule does not name, when the check function and the script each judge it, then each returns fail with one finding naming record-keys ([test](tests/test_form_check.scenario.l1.py)).
 
 ### Audit: change-standards
 
