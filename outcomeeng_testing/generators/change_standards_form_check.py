@@ -50,6 +50,17 @@ FILLER_CHARACTER: Final = "x"
 OUTSIDE_PREFIX: Final = "not-"
 UNKNOWN_FIELD: Final = "unknown_field"
 STORED_CHANGE_SUFFIX: Final = " before"
+SPEC_DRAFT_ABSENT: Final = "absent from a Change Draft"
+SPEC_CLAUSE_SPLIT: Final = re.compile(r", or |, | or ")
+SPEC_EXPLANATION_OPENING: Final = "which "
+SPEC_ENUMERATION: Final = re.compile(
+    r"^[A-Z][a-z]+(?:, [A-Z][a-z]+)*,? or [A-Z][a-z]+(?:, null\b.*)?$"
+)
+SPEC_TITLE_LIMIT: Final = re.compile(r"\bat most (?P<limit>\d+) words\b")
+# Compliance rules of the spec that no finding names: limits and interface promises.
+NON_FINDING_RULES: Final = frozenset(
+    {"github-limit", "check-request", "check-import", "check-reads-only"}
+)
 
 
 class Verdict(StrEnum):
@@ -81,8 +92,12 @@ def fixture_cases(group: str) -> tuple[FixtureCase, ...]:
 
 
 def draft_keys() -> tuple[str, ...]:
-    """Return the metadata keys a Draft holds, in the script's order."""
-    return tuple(str(key.value) for key in load_form_check().DRAFT_KEYS)
+    """Return the metadata keys the spec's record-keys table lists for a Draft."""
+    return tuple(
+        row[0]
+        for row in _spec_rows(SPEC_MAPPING_KIND, SPEC_RECORD_KEYS)
+        if SPEC_DRAFT_ABSENT not in row[1]
+    )
 
 
 def operations() -> tuple[str, ...]:
@@ -90,38 +105,113 @@ def operations() -> tuple[str, ...]:
     return tuple(str(operation.value) for operation in load_form_check().Operation)
 
 
+def _operation_vocabulary() -> Mapping[str, frozenset[str]]:
+    """Map each phrase of the spec's "Changes through" column to operation names.
+
+    The phrases are the spec's words; the names are the script's wire values.
+    The mapping is owned here, not by the script.
+    """
+    op = load_form_check().Operation
+    transition = frozenset(
+        {
+            op.CLAIM,
+            op.RELEASE,
+            op.SUBMIT,
+            op.ADVANCE,
+            op.LOWER,
+            op.APPLIED,
+            op.ABANDONED,
+        }
+    )
+    phrases: dict[str, frozenset[Any]] = {
+        "recording": frozenset({op.RECORD}),
+        "recording a Leaf": frozenset({op.RECORD}),
+        "recording a Child": frozenset({op.RECORD_CHILD}),
+        "its removal when a Child makes the record a Parent": frozenset(
+            {op.RECORD_CHILD}
+        ),
+        "a publish": frozenset({op.PUBLISH}),
+        "a publish that writes its body": frozenset({op.PUBLISH}),
+        "a split": frozenset({op.SPLIT}),
+        "an advance": frozenset({op.ADVANCE}),
+        "a lower": frozenset({op.LOWER}),
+        "a claim": frozenset({op.CLAIM}),
+        "a release": frozenset({op.RELEASE}),
+        "a merge": frozenset({op.MERGE}),
+        "the Priority decision": frozenset({op.PRIORITY_DECISION}),
+        "a Transition": transition,
+    }
+    return {
+        phrase: frozenset(str(member.value) for member in members)
+        for phrase, members in phrases.items()
+    }
+
+
 def operations_of(key: str) -> frozenset[str]:
-    """Return the operations the script lets change ``key``."""
-    form = load_form_check()
-    return frozenset(str(op.value) for op in form.KEY_OPERATIONS[form.Key(key)])
+    """Return the operations the spec's "Changes through" cell of ``key`` names.
+
+    A phrase of the cell that maps to no operation fails the lookup.
+    """
+    vocabulary = _operation_vocabulary()
+    for row in _spec_rows(SPEC_MAPPING_KIND, SPEC_RECORD_KEYS):
+        if row[0] != key:
+            continue
+        named: set[str] = set()
+        for clause in SPEC_CLAUSE_SPLIT.split(row[2]):
+            phrase = clause.strip()
+            if phrase.startswith(SPEC_EXPLANATION_OPENING):
+                continue
+            if phrase not in vocabulary:
+                raise AssertionError(
+                    f"the spec phrase {phrase!r} of {key} maps to no operation"
+                )
+            named |= vocabulary[phrase]
+        return frozenset(named)
+    raise AssertionError(f"the spec lists no record-keys row for {key}")
+
+
+def _spec_enumerated_rows() -> dict[str, str]:
+    """Return the value cell of each record-keys row that lists a fixed set of members."""
+    return {
+        row[0]: row[1]
+        for row in _spec_rows(SPEC_MAPPING_KIND, SPEC_RECORD_KEYS)
+        if SPEC_ENUMERATION.match(row[1])
+    }
 
 
 def enumerated_values() -> tuple[tuple[str, str], ...]:
-    """Return each (key, yaml value) the script's enumerated domains accept.
+    """Return each (key, yaml value) the spec's record-keys table lists as accepted.
 
-    A key the script lets hold null contributes the yaml null beside its members.
+    A key whose row allows null contributes the yaml null beside its members.
     """
-    form = load_form_check()
     pairs: list[tuple[str, str]] = []
-    for key, members in form.ENUMERATED_VALUES.items():
-        pairs.extend((str(key.value), str(member)) for member in members)
-        if key in form.NULLABLE_KEYS:
-            pairs.append((str(key.value), YAML_NULL))
+    for key, cell in _spec_enumerated_rows().items():
+        pairs.extend((key, member) for member in sorted(spec_key_values(key)))
+        if SPEC_NULL_CLAUSE in cell:
+            pairs.append((key, YAML_NULL))
     return tuple(pairs)
 
 
 def foreign_values() -> tuple[tuple[str, str], ...]:
-    """Return each (key, value) where the value belongs to another enumerated key's domain only."""
-    form = load_form_check()
+    """Return each (key, value) where the value belongs to another enumerated key's row only."""
+    rows = _spec_enumerated_rows()
     pairs: list[tuple[str, str]] = []
-    for key, members in form.ENUMERATED_VALUES.items():
-        for other, others in form.ENUMERATED_VALUES.items():
-            pairs.extend(
-                (str(key.value), str(value))
-                for value in others
-                if other is not key and value not in members
-            )
+    for key in rows:
+        members = spec_key_values(key)
+        for other in rows:
+            if other != key:
+                pairs.extend(
+                    (key, value)
+                    for value in sorted(spec_key_values(other))
+                    if value not in members
+                )
     return tuple(pairs)
+
+
+def declared_values(key: str) -> frozenset[str]:
+    """Return the members the script declares for an enumerated ``key``."""
+    form = load_form_check()
+    return frozenset(str(value) for value in form.ENUMERATED_VALUES[form.Key(key)])
 
 
 def title_of_words(count: int) -> str:
@@ -130,8 +220,13 @@ def title_of_words(count: int) -> str:
 
 
 def title_word_limit() -> int:
-    """Return the number of words the script lets a title hold."""
-    return int(load_form_check().TITLE_WORD_LIMIT)
+    """Return the number of words the spec's title row lets a title hold."""
+    for row in _spec_rows(SPEC_MAPPING_KIND, SPEC_RECORD_KEYS):
+        if row[0] == "title":
+            match = SPEC_TITLE_LIMIT.search(row[1])
+            assert match is not None, "the spec's title row states no word limit"
+            return int(match.group("limit"))
+    raise AssertionError("the spec lists no record-keys row for title")
 
 
 def spec_key_values(key: str) -> frozenset[str]:
@@ -159,13 +254,12 @@ def spec_mapping_rules() -> tuple[str, ...]:
 
 
 def spec_compliance_rules() -> tuple[str, ...]:
-    """Return the slug of each compliance rule the spec lists that the script names."""
-    names = {str(rule.value) for rule in load_form_check().Rule}
+    """Return the slug of each compliance rule the spec lists that a finding names."""
     listed: list[str] = []
     for body in _spec_subsections(SPEC_COMPLIANCE_KIND).values():
         for line in body:
             match = SPEC_RULE_PATTERN.match(line)
-            if match and match.group("slug") in names:
+            if match and match.group("slug") not in NON_FINDING_RULES:
                 listed.append(match.group("slug"))
     return tuple(listed)
 
@@ -234,13 +328,13 @@ def with_value(text: str, key: str, value: str) -> str:
 
 
 def non_value(key: str) -> str:
-    """Return a yaml value that the key's domain does not hold."""
+    """Return a yaml value that the key's domain, as the spec states it, does not hold."""
     form = load_form_check()
     member = form.Key(key)
-    if member in form.ENUMERATED_VALUES:
-        return OUTSIDE_PREFIX + str(form.ENUMERATED_VALUES[member][0])
+    if key in _spec_enumerated_rows():
+        return OUTSIDE_PREFIX + sorted(spec_key_values(key))[0]
     if member is form.Key.TITLE:
-        return " ".join([OUTSIDE_PREFIX.strip("-")] * (form.TITLE_WORD_LIMIT + 1))
+        return " ".join([OUTSIDE_PREFIX.strip("-")] * (title_word_limit() + 1))
     if member in {form.Key.PREDECESSORS, form.Key.BLOCKERS}:
         return OUTSIDE_PREFIX + "a-list"
     if member is form.Key.BASE:

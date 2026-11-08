@@ -14,9 +14,10 @@ Assertion design, for every test below:
 - Case provenance: the spec's table rows (one fixture or one key each) and the
   script's declared key and operation domains.
 - Oracle: the fixture name for the verdict, and the key or fixture name for the
-  place a finding names; the one exception is the operation each key's row
-  names, which the script declares as the typed ``KEY_OPERATIONS`` contract the
-  spec table renders.
+  place a finding names; the keys, their listed values, the title word limit and
+  the operations each key's row names come from the spec table, read through the
+  generator and its vocabulary from the spec's phrases to operation names. The
+  script's own tables supply no expected result.
 - Rejected mutation: dropping a key's value check, a key's operation row, or
   the rule a fixture exercises makes the matching case pass a Draft it must
   fail.
@@ -29,10 +30,10 @@ import pytest
 from outcomeeng_testing.generators.change_standards_form_check import (
     GROUP_MAPPING,
     GROUP_MAPPING_NO_TREE,
-    YAML_NULL,
     FixtureCase,
     Verdict,
     covering_fixtures,
+    declared_values,
     draft_keys,
     enumerated_values,
     fixture_cases,
@@ -136,8 +137,7 @@ def test_a_draft_holding_a_value_of_another_keys_domain_fails_that_key(
 def test_the_values_the_script_declares_for_an_enumerated_key_are_those_the_spec_row_lists(
     key: str,
 ) -> None:
-    declared = {value for name, value in enumerated_values() if name == key}
-    assert declared - {YAML_NULL} == spec_key_values(key)
+    assert declared_values(key) == spec_key_values(key)
 
 
 def test_a_title_of_exactly_the_word_limit_passes_the_title_key() -> None:
