@@ -114,6 +114,90 @@ class Status(StrEnum):
     INVALID_REQUEST = "invalid-request"
 
 
+class RequestKey(StrEnum):
+    """The keys of a request."""
+
+    TRANSITION = "transition"
+    STORE = "store"
+    NUMBER = "number"
+    MOVER = "mover"
+    IDENTITY = "identity"
+    TARGET = "target"
+    REASON = "reason"
+    REOPENED = "reopened"
+    LOWER_CAUSE = "lower_cause"
+    HANDOFF = "handoff"
+    CHANGESET = "changeset"
+    REVIEW = "review"
+    REVIEW_BODY = "review_body"
+    AUDIT = "audit"
+    AUDIT_STATUS = "audit_status"
+    FORM_CHECK = "form_check"
+    INFRASTRUCTURE = "infrastructure"
+    CLOSE_CHECK = "close_check"
+    MERGED_INTO = "merged_into"
+    APPLICATION = "application"
+    CHECKOUT_ROOT = "checkout_root"
+
+
+class ResultKey(StrEnum):
+    """The keys of a result."""
+
+    STATUS = "status"
+    TRANSITION = "transition"
+    REASON = "reason"
+    DETAIL = "detail"
+    WRITES = "writes"
+    FAILED_WRITE = "failed_write"
+    OBSERVED = "observed"
+    RELEASE = "release"
+    COMMENT_URL = "comment_url"
+    DEPENDENTS = "dependents"
+
+
+class ObservedKey(StrEnum):
+    """The keys of the Change state a result observes."""
+
+    STATE = "state"
+    MATURITY = "maturity"
+    LIFECYCLE = "lifecycle"
+    ASSIGNEES = "assignees"
+    BODY_SHA256 = "body_sha256"
+    BASE = "base"
+
+
+class FormCheckKey(StrEnum):
+    STATUS = "status"
+    BODY_SHA256 = "body_sha256"
+
+
+class FormStatus(StrEnum):
+    """The status a form check reports for the current record."""
+
+    PASS = "pass"
+    FAIL = "fail"
+
+
+class AuditStatus(StrEnum):
+    """The status a sealed audit result, or the audit at close, reports."""
+
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class CloseCheckKey(StrEnum):
+    MERGE_GATES_PASSED = "merge_gates_passed"
+    RESULTS_COMPLETE = "results_complete"
+    DECLARATIONS_ON_DEFAULT = "declarations_on_default"
+    AUDIT_AT_CLOSE = "audit_at_close"
+
+
+class InfrastructureState(StrEnum):
+    """The state an infrastructure path holds when it needs no blocker."""
+
+    PASSING = "Passing"
+
+
 class WriteKind(StrEnum):
     """The writes a Transition makes, in the write order."""
 
@@ -387,8 +471,8 @@ def _pair(raw: Any, name: str) -> BoundPair | None:
             f"{name} must be an object of body_sha256 and base, both non-empty strings"
         )
     return BoundPair(
-        str(_text(raw, "body_sha256")),
-        str(_text(raw, "base")),
+        str(_text(raw, ObservedKey.BODY_SHA256)),
+        str(_text(raw, ObservedKey.BASE)),
     )
 
 
@@ -398,19 +482,19 @@ def read_request(raw: object) -> Request:
             "the request must be a JSON object holding transition, store, number, "
             "mover, and identity"
         )
-    kind = _choice(Transition, "transition", raw.get("transition"))
-    mover = _choice(Mover, "mover", raw.get("mover"))
-    store = str(_text(raw, "store"))
+    kind = _choice(Transition, RequestKey.TRANSITION, raw.get(RequestKey.TRANSITION))
+    mover = _choice(Mover, RequestKey.MOVER, raw.get(RequestKey.MOVER))
+    store = str(_text(raw, RequestKey.STORE))
     if not re.fullmatch(r"[\w.-]+/[\w.-]+", store):
         raise InvalidRequest(
             f"store must read owner/repo, as in outcomeeng/changes; got {store!r}"
         )
-    number = raw.get("number")
+    number = raw.get(RequestKey.NUMBER)
     if not isinstance(number, int) or isinstance(number, bool) or number < 1:
         raise InvalidRequest(
             "number must be a positive integer, the issue number of the Change"
         )
-    who = raw.get("identity")
+    who = raw.get(RequestKey.IDENTITY)
     keys = ", ".join(Identity.__dataclass_fields__)
     if not isinstance(who, Mapping):
         raise InvalidRequest(
@@ -419,18 +503,20 @@ def read_request(raw: object) -> Request:
     identity = Identity(
         *(str(_text(who, key)) for key in Identity.__dataclass_fields__)
     )
-    target = raw.get("target")
-    cause = raw.get("lower_cause")
+    target = raw.get(RequestKey.TARGET)
+    cause = raw.get(RequestKey.LOWER_CAUSE)
     close = _object(
         raw,
-        "close_check",
-        "of merge_gates_passed, results_complete, declarations_on_default, and audit_at_close",
+        RequestKey.CLOSE_CHECK,
+        "of " + ", ".join(CloseCheckKey),
     )
-    handoff = _object(raw, "handoff", "of " + ", ".join(HandoffKey))
-    changeset = _object(raw, "changeset", "of " + ", ".join(ChangesetKey))
-    form_check = _object(raw, "form_check", "of status and body_sha256")
+    handoff = _object(raw, RequestKey.HANDOFF, "of " + ", ".join(HandoffKey))
+    changeset = _object(raw, RequestKey.CHANGESET, "of " + ", ".join(ChangesetKey))
+    form_check = _object(raw, RequestKey.FORM_CHECK, "of " + ", ".join(FormCheckKey))
     infrastructure = _object(
-        raw, "infrastructure", "mapping each path to Passing or {blocker: number}"
+        raw,
+        RequestKey.INFRASTRUCTURE,
+        "mapping each path to Passing or {blocker: number}",
     )
     request = Request(
         transition=kind,
@@ -438,30 +524,30 @@ def read_request(raw: object) -> Request:
         number=number,
         mover=mover,
         identity=identity,
-        target=None if target is None else _choice(Maturity, "target", target),
-        reason=_text(raw, "reason", optional=True),
-        reopened=_text(raw, "reopened", optional=True),
+        target=None if target is None else _choice(Maturity, RequestKey.TARGET, target),
+        reason=_text(raw, RequestKey.REASON, optional=True),
+        reopened=_text(raw, RequestKey.REOPENED, optional=True),
         lower_cause=None
         if cause is None
-        else _choice(LowerCause, "lower_cause", cause),
+        else _choice(LowerCause, RequestKey.LOWER_CAUSE, cause),
         handoff=handoff,
         changeset=changeset,
-        review=_pair(raw.get("review"), "review"),
-        review_body=raw.get("review_body"),
-        audit=_pair(raw.get("audit"), "audit"),
-        audit_status=_text(raw, "audit_status", optional=True),
+        review=_pair(raw.get(RequestKey.REVIEW), RequestKey.REVIEW),
+        review_body=raw.get(RequestKey.REVIEW_BODY),
+        audit=_pair(raw.get(RequestKey.AUDIT), RequestKey.AUDIT),
+        audit_status=_text(raw, RequestKey.AUDIT_STATUS, optional=True),
         form_check=form_check,
         infrastructure=infrastructure or {},
         close_check=None
         if close is None
         else CloseCheck(
-            bool(close.get("merge_gates_passed")),
-            bool(close.get("results_complete")),
-            bool(close.get("declarations_on_default")),
-            str(close.get("audit_at_close", "")),
+            bool(close.get(CloseCheckKey.MERGE_GATES_PASSED)),
+            bool(close.get(CloseCheckKey.RESULTS_COMPLETE)),
+            bool(close.get(CloseCheckKey.DECLARATIONS_ON_DEFAULT)),
+            str(close.get(CloseCheckKey.AUDIT_AT_CLOSE, "")),
         ),
-        merged_into=raw.get("merged_into"),
-        application=bool(raw.get("application", False)),
+        merged_into=raw.get(RequestKey.MERGED_INTO),
+        application=bool(raw.get(RequestKey.APPLICATION, False)),
     )
     return request
 
@@ -943,13 +1029,14 @@ def plan_advance(request: Request, change: Change, context: PlanContext) -> Plan
 def confirm_form_check(request: Request, change: Change) -> None:
     result = request.form_check
     require(
-        isinstance(result, Mapping) and result.get("status") == "pass",
+        isinstance(result, Mapping)
+        and result.get(FormCheckKey.STATUS) == FormStatus.PASS,
         Reason.FORM_CHECK,
         "the form check's result for the current record is pass",
     )
     assert isinstance(result, Mapping)
     require(
-        result.get("body_sha256") == change.body_sha256,
+        result.get(FormCheckKey.BODY_SHA256) == change.body_sha256,
         Reason.FORM_CHECK,
         "the form check judged another body revision",
     )
@@ -993,7 +1080,7 @@ def confirm_audit(request: Request, change: Change) -> BoundPair:
     audit = request.audit
     current = BoundPair(change.body_sha256, change.base or "")
     require(
-        audit is not None and request.audit_status == "approved",
+        audit is not None and request.audit_status == AuditStatus.APPROVED,
         Reason.AUDIT_BINDING,
         "a sealed audit result that approved is required",
     )
@@ -1008,7 +1095,7 @@ def confirm_audit(request: Request, change: Change) -> BoundPair:
 def confirm_infrastructure(request: Request, change: Change) -> None:
     for path in infrastructure_paths(change.body):
         state = request.infrastructure.get(path)
-        passing = state == "Passing"
+        passing = state == InfrastructureState.PASSING
         blocked = isinstance(state, Mapping) and state.get("blocker") in change.blockers
         require(
             passing or blocked,
@@ -1122,7 +1209,7 @@ def plan_applied(request: Request, change: Change, context: PlanContext) -> Plan
             and check.merge_gates_passed
             and check.results_complete
             and check.declarations_on_default
-            and check.audit_at_close == "approved",
+            and check.audit_at_close == AuditStatus.APPROVED,
             Reason.CLOSE_CONDITION,
             "every merge gate passed, every result stands, every line stands, and the audit at close found nothing",
         )
@@ -1601,12 +1688,12 @@ def github_ancestor(run: CommandRunner) -> Callable[[str, str], bool]:
 
 def observe(change: Change) -> dict[str, Any]:
     return {
-        "state": change.state.value,
-        "maturity": change.maturity,
-        "lifecycle": change.lifecycle,
-        "assignees": list(change.assignees),
-        "body_sha256": change.body_sha256,
-        "base": change.base,
+        ObservedKey.STATE: change.state.value,
+        ObservedKey.MATURITY: change.maturity,
+        ObservedKey.LIFECYCLE: change.lifecycle,
+        ObservedKey.ASSIGNEES: list(change.assignees),
+        ObservedKey.BODY_SHA256: change.body_sha256,
+        ObservedKey.BASE: change.base,
     }
 
 
@@ -1717,11 +1804,11 @@ def execute(
             current,
         )
     return {
-        "status": Status.DONE.value,
-        "transition": plan_.transition.value,
-        "writes": done,
-        "comment_url": comment_url,
-        "observed": observe(current),
+        ResultKey.STATUS: Status.DONE.value,
+        ResultKey.TRANSITION: plan_.transition.value,
+        ResultKey.WRITES: done,
+        ResultKey.COMMENT_URL: comment_url,
+        ResultKey.OBSERVED: observe(current),
     }
 
 
@@ -1740,22 +1827,22 @@ def failed(
     change: Change | None,
 ) -> dict[str, Any]:
     return {
-        "status": Status.FAILED.value,
-        "reason": reason.value,
-        "detail": detail,
-        "writes": done,
-        "failed_write": None if write is None else write.kind.value,
-        "observed": None if change is None else observe(change),
+        ResultKey.STATUS: Status.FAILED.value,
+        ResultKey.REASON: reason.value,
+        ResultKey.DETAIL: detail,
+        ResultKey.WRITES: done,
+        ResultKey.FAILED_WRITE: None if write is None else write.kind.value,
+        ResultKey.OBSERVED: None if change is None else observe(change),
     }
 
 
 def refused(reason: Reason, detail: str, change: Change | None) -> dict[str, Any]:
     return {
-        "status": Status.REFUSED.value,
-        "reason": reason.value,
-        "detail": detail,
-        "writes": [],
-        "observed": None if change is None else observe(change),
+        ResultKey.STATUS: Status.REFUSED.value,
+        ResultKey.REASON: reason.value,
+        ResultKey.DETAIL: detail,
+        ResultKey.WRITES: [],
+        ResultKey.OBSERVED: None if change is None else observe(change),
     }
 
 
@@ -1795,9 +1882,9 @@ def transition(
         parsed = request if isinstance(request, Request) else read_request(request)
     except InvalidRequest as error:
         return {
-            "status": Status.INVALID_REQUEST.value,
-            "detail": str(error),
-            "writes": [],
+            ResultKey.STATUS: Status.INVALID_REQUEST.value,
+            ResultKey.DETAIL: str(error),
+            ResultKey.WRITES: [],
         }
     store = store or GitHubStore(parsed.store, run)
     try:
@@ -1828,12 +1915,12 @@ def transition(
             change,
         )
     result = execute(store, change, plan_, parsed.identity)
-    if result["status"] != Status.DONE.value:
+    if result[ResultKey.STATUS] != Status.DONE.value:
         return result
     if plan_.follow is not None:
-        result["release"] = transition(plan_.follow, store, run=run, root=root)
+        result[ResultKey.RELEASE] = transition(plan_.follow, store, run=run, root=root)
     if parsed.transition == Transition.ABANDONED:
-        result["dependents"] = pass_blocks(store, parsed, change)
+        result[ResultKey.DEPENDENTS] = pass_blocks(store, parsed, change)
     return result
 
 
@@ -1842,7 +1929,7 @@ def exit_code(result: Mapping[str, Any]) -> int:
         Status.DONE.value: EXIT_DONE,
         Status.REFUSED.value: EXIT_REFUSED,
         Status.INVALID_REQUEST.value: EXIT_INVALID_REQUEST,
-    }.get(str(result.get("status")), EXIT_FAILED)
+    }.get(str(result.get(ResultKey.STATUS)), EXIT_FAILED)
 
 
 def main(
@@ -1856,12 +1943,12 @@ def main(
         raw = json.loads(source.read())
     except json.JSONDecodeError as error:
         result: dict[str, Any] = {
-            "status": Status.INVALID_REQUEST.value,
-            "detail": str(error),
-            "writes": [],
+            ResultKey.STATUS: Status.INVALID_REQUEST.value,
+            ResultKey.DETAIL: str(error),
+            ResultKey.WRITES: [],
         }
     else:
-        root = raw.get("checkout_root") if isinstance(raw, Mapping) else None
+        root = raw.get(RequestKey.CHECKOUT_ROOT) if isinstance(raw, Mapping) else None
         result = transition(raw, run=run, root=root if isinstance(root, str) else None)
     sink.write(json.dumps(result, indent=2) + "\n")
     return exit_code(result)
