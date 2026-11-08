@@ -44,12 +44,14 @@ FIXTURE_ROOT: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "change_standards_form_check"
 )
 REPOSITORY_DIR: Final = FIXTURE_ROOT / "repository"
+NO_TREE_REPOSITORY_DIR: Final = FIXTURE_ROOT / "repository-no-tree"
+TESTS_ALIAS: Final = "tests-directory"
+TESTS_DIRECTORY: Final = "tests"
 DRAFT_DIR: Final = FIXTURE_ROOT / "drafts"
 BASE_PLACEHOLDER: Final = "{{BASE}}"
 SIDECAR_SUFFIX: Final = ".request.json"
 DRAFT_SUFFIX: Final = ".md"
 VALID_DRAFT: Final = "valid"
-DEFAULT_OPERATION: Final = "publish"
 GIT_IDENTITY: Final = (
     "-c",
     "user.name=harness",
@@ -130,11 +132,18 @@ def _git(root: Path, *args: str) -> str:
 
 
 @contextmanager
-def base_workspace() -> Iterator[Workspace]:
-    """Yield a workspace whose commit holds the fixture Base tree."""
+def base_workspace(repository: Path = REPOSITORY_DIR) -> Iterator[Workspace]:
+    """Yield a workspace whose commit holds the fixture Base tree of ``repository``.
+
+    A fixture directory stored under the alias name stands as a tests directory
+    in the workspace, because test-infrastructure files live outside any tests
+    directory of this repository.
+    """
     with TemporaryDirectory() as directory:
         root = Path(directory) / "checkout"
-        shutil.copytree(REPOSITORY_DIR, root, symlinks=True)
+        shutil.copytree(repository, root, symlinks=True)
+        for aliased in sorted(root.rglob(TESTS_ALIAS)):
+            aliased.rename(aliased.with_name(TESTS_DIRECTORY))
         _git(root, "init", "--quiet")
         _git(root, "add", "--all")
         _git(root, "commit", "--quiet", "--message", "base")
@@ -166,7 +175,7 @@ def request_for(
     request: dict[str, Any] = {
         module.RequestField.DRAFT_TEXT: text,
         module.RequestField.CHECKOUT_ROOT: str(workspace.root),
-        module.RequestField.OPERATION: DEFAULT_OPERATION,
+        module.RequestField.OPERATION: module.Operation.PUBLISH,
         module.RequestField.STORED_RECORD: None,
         module.RequestField.SIZE_LIMIT: module.GITHUB_STORE,
     }

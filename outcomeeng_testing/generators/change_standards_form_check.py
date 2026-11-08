@@ -23,6 +23,8 @@ from outcomeeng_testing.harnesses.change_standards_form_check import (
 
 GROUP_MAPPING: Final = "mapping"
 GROUP_COMPLIANCE: Final = "compliance"
+GROUP_MAPPING_NO_TREE: Final = "mapping-no-tree"
+GROUP_COMPLIANCE_NO_TREE: Final = "compliance-no-tree"
 FRONT_MATTER_FENCE: Final = "---"
 TABLE_HEADING_MARK: Final = "### "
 FILLER_OPEN: Final = "<!-- "

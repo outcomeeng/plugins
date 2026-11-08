@@ -149,7 +149,7 @@ Infrastructure lines:
 
 <form_check>
 
-The form check is one standard-library script, `${SKILL_DIR}/scripts/form_check.py`, that judges a Change Draft against the record this skill states. Its module exposes one function, `check`, that returns for a request the result the script writes for it, so a sibling Change skill's script reaches the check through a `__file__`-relative import of that module.
+The form check is one standard-library script, `${SKILL_DIR}/scripts/form_check.py`, that judges a Change Draft against the record this skill states. Its module exposes one function, `check`, that returns for a request the result the script writes for it, and a `__file__`-relative import of that module reaches the function.
 
 - form-check: ALWAYS: below Applicable, and on a publish that writes the body of an Applicable record, a program checks the form of a record before the publish, and nothing publishes while the check fails.
 - size-limit: ALWAYS: the form check fails a record that exceeds the Change Store's size limit, and names the limit.
@@ -175,10 +175,23 @@ The form check judges each key's presence, the type of its value, and the values
 
 </form_check>
 
+<testing>
+
+The form check is covered by the Node's tests, which run the script against whole Draft fixtures and a Base committed in a temporary Git repository for each test:
+
+- A conforming Draft: status `pass`, exit 0, and no finding.
+- A Draft that breaks one rule, one fixture per rule: status `fail`, exit 1, and a finding that names the rule's slug and the subsection, key, or line it breaks.
+- A request that names both or neither of `draft_text` and `draft_path`, carries an unknown field, or is no JSON object: status `invalid-request`, exit 2, and no finding.
+- A record of exactly the size limit passes and one character more fails, for a numeric limit and for `github`.
+- A Product with a Product Tree and a Product with none, each read at its Base.
+- Every run leaves each file of the checkout and the Change Store as it found them, and runs only reading git commands.
+
+</testing>
+
 <success_criteria>
 
-- The skill states the Change record, the Change Draft, and the form check's request and result as the Change record decision states them, and names no rule the decision does not state.
+- The skill names no rule the Change record decision does not state.
 - Each rule appears once, under the slug the decision gives it.
-- A consumer reaches the form check through the `check` function of the script, or through the script's stdin and stdout, and publishes only after a result with status `pass`.
+- The form check answers a request through the `check` function of the script or through the script's stdin and stdout, and a record publishes only after a result with status `pass`.
 
 </success_criteria>

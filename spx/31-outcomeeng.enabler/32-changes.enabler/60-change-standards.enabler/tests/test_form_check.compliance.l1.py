@@ -28,6 +28,7 @@ import pytest
 
 from outcomeeng_testing.generators.change_standards_form_check import (
     GROUP_COMPLIANCE,
+    GROUP_COMPLIANCE_NO_TREE,
     UNKNOWN_FIELD,
     FixtureCase,
     Verdict,
@@ -37,6 +38,7 @@ from outcomeeng_testing.generators.change_standards_form_check import (
     unreadable_requests,
 )
 from outcomeeng_testing.harnesses.change_standards_form_check import (
+    NO_TREE_REPOSITORY_DIR,
     VALID_DRAFT,
     base_workspace,
     check_draft,
@@ -58,6 +60,8 @@ Request = form.RequestField
 
 COMPLIANCE_CASES = fixture_cases(GROUP_COMPLIANCE)
 CASE_IDS = [case.identity for case in COMPLIANCE_CASES]
+NO_TREE_CASES = fixture_cases(GROUP_COMPLIANCE_NO_TREE)
+NO_TREE_CASE_IDS = [case.identity for case in NO_TREE_CASES]
 
 
 @pytest.mark.parametrize("case", COMPLIANCE_CASES, ids=CASE_IDS)
@@ -65,6 +69,21 @@ def test_each_compliance_case_gets_the_verdict_its_fixture_declares(
     case: FixtureCase,
 ) -> None:
     with base_workspace() as workspace:
+        observation = check_draft(workspace, case.name)
+
+    if case.verdict is Verdict.PASS:
+        assert observation.status == Status.PASS
+        assert observation.rules == ()
+    else:
+        assert observation.status == Status.FAIL
+        assert case.rule in observation.rules
+
+
+@pytest.mark.parametrize("case", NO_TREE_CASES, ids=NO_TREE_CASE_IDS)
+def test_each_compliance_case_of_a_product_with_no_tree_gets_its_declared_verdict(
+    case: FixtureCase,
+) -> None:
+    with base_workspace(NO_TREE_REPOSITORY_DIR) as workspace:
         observation = check_draft(workspace, case.name)
 
     if case.verdict is Verdict.PASS:

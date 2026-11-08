@@ -14,7 +14,9 @@ Assertion design, for every test below:
 - Case provenance: the spec's table rows (one fixture or one key each) and the
   script's declared key and operation domains.
 - Oracle: the fixture name for the verdict, and the key or fixture name for the
-  place a finding names; the oracle reuses no table or branch of the script.
+  place a finding names; the one exception is the operation each key's row
+  names, which the script declares as the typed ``KEY_OPERATIONS`` contract the
+  spec table renders.
 - Rejected mutation: dropping a key's value check, a key's operation row, or
   the rule a fixture exercises makes the matching case pass a Draft it must
   fail.
@@ -26,6 +28,7 @@ import pytest
 
 from outcomeeng_testing.generators.change_standards_form_check import (
     GROUP_MAPPING,
+    GROUP_MAPPING_NO_TREE,
     FixtureCase,
     Verdict,
     draft_keys,
@@ -39,6 +42,7 @@ from outcomeeng_testing.generators.change_standards_form_check import (
     without_key,
 )
 from outcomeeng_testing.harnesses.change_standards_form_check import (
+    NO_TREE_REPOSITORY_DIR,
     VALID_DRAFT,
     base_workspace,
     check_draft,
@@ -52,6 +56,7 @@ Rule = form.Rule
 Status = form.Status
 
 MAPPING_CASES = fixture_cases(GROUP_MAPPING)
+NO_TREE_CASES = fixture_cases(GROUP_MAPPING_NO_TREE)
 
 
 def test_the_conforming_draft_passes_with_no_finding() -> None:
@@ -110,6 +115,23 @@ def test_each_mapping_case_gets_the_verdict_its_fixture_declares(
     case: FixtureCase,
 ) -> None:
     with base_workspace() as workspace:
+        observation = check_draft(workspace, case.name)
+
+    if case.verdict is Verdict.PASS:
+        assert observation.status == Status.PASS
+        assert observation.rules == ()
+    else:
+        assert observation.status == Status.FAIL
+        assert case.rule in observation.rules
+
+
+@pytest.mark.parametrize(
+    "case", NO_TREE_CASES, ids=[case.identity for case in NO_TREE_CASES]
+)
+def test_each_mapping_case_of_a_product_with_no_tree_gets_its_declared_verdict(
+    case: FixtureCase,
+) -> None:
+    with base_workspace(NO_TREE_REPOSITORY_DIR) as workspace:
         observation = check_draft(workspace, case.name)
 
     if case.verdict is Verdict.PASS:
