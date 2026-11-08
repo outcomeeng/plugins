@@ -458,7 +458,10 @@ def parse_front_matter_value(raw: str) -> Any:
 def parse_draft(text: str) -> Draft:
     lines = text.split("\n")
     if not lines or lines[0].strip() != FRONT_MATTER_FENCE:
-        raise InvalidRequest("the Draft opens with no front matter")
+        raise InvalidRequest(
+            f"the Draft opens with no front matter; line 1 must hold {FRONT_MATTER_FENCE}, "
+            f"then the metadata keys, then a closing {FRONT_MATTER_FENCE} line"
+        )
     try:
         end = next(
             index
@@ -466,7 +469,10 @@ def parse_draft(text: str) -> Draft:
             if lines[index].strip() == FRONT_MATTER_FENCE
         )
     except StopIteration as error:
-        raise InvalidRequest("the Draft's front matter has no closing fence") from error
+        raise InvalidRequest(
+            f"the Draft's front matter has no closing {FRONT_MATTER_FENCE} line; "
+            "add it after the last metadata key"
+        ) from error
     metadata: dict[str, Any] = {}
     index = 1
     while index < end:
@@ -492,7 +498,10 @@ def read_draft(path: str) -> Draft:
         text = Path(path).read_text(encoding="utf-8")
     except OSError as error:
         raise InvalidRequest(f"the Draft at {path} cannot be read: {error}") from error
-    return parse_draft(text)
+    try:
+        return parse_draft(text)
+    except InvalidRequest as error:
+        raise InvalidRequest(f"the Draft at {path} is malformed: {error}") from error
 
 
 def render_draft(metadata: Mapping[str, Any], body: str) -> str:
@@ -522,10 +531,14 @@ def parse_reference(reference: str, store: str) -> int:
         if match:
             if match.group(1) != store:
                 raise InvalidRequest(
-                    f"{reference} names a Change outside the store {store}"
+                    f"{reference} names a Change outside the store {store}; "
+                    f"a record names only Changes of {store}"
                 )
             return int(match.group(2))
-    raise InvalidRequest(f"{reference} is no Change reference")
+    raise InvalidRequest(
+        f"{reference} is no Change reference; write https://github.com/{store}/issues/<N> "
+        f"or {store}#<N>"
+    )
 
 
 def read_field_ids(session: Session) -> dict[str, tuple[str, dict[str, str]]]:
@@ -1176,26 +1189,38 @@ def merge(
     return {ResultField.NUMBER: survivor}
 
 
-def required(request: Mapping[str, Any], key: RequestField) -> Any:
+def required(
+    request: Mapping[str, Any],
+    key: RequestField,
+    operation: Operation | None = None,
+) -> Any:
     value = request.get(key.value)
     if value is None:
-        raise InvalidRequest(f"the request carries no {key.value}")
+        needer = f"the {operation.value} operation" if operation else "every operation"
+        raise InvalidRequest(
+            f"the request carries no {key.value}, which {needer} needs; "
+            f'add "{key.value}" to the request object'
+        )
     return value
 
 
 def execute(request: Mapping[str, Any], run: CommandRunner) -> dict[str, Any]:
     store = str(required(request, RequestField.STORE))
     if not STORE_PATTERN.match(store):
-        raise InvalidRequest(f"{store} is no Change store")
+        raise InvalidRequest(f"{store} is no Change store; write <owner>/<repo>")
+    named = required(request, RequestField.OPERATION)
     try:
-        operation = Operation(required(request, RequestField.OPERATION))
+        operation = Operation(named)
     except ValueError as error:
-        raise InvalidRequest(str(error)) from error
+        valid = ", ".join(item.value for item in Operation)
+        raise InvalidRequest(
+            f"{named!r} is no operation; the valid operations are {valid}"
+        ) from error
     session = Session(
         store=store,
         run=run,
         identity=request.get(RequestField.IDENTITY.value) or {},
-        checkout_root=str(required(request, RequestField.CHECKOUT_ROOT)),
+        checkout_root=str(required(request, RequestField.CHECKOUT_ROOT, operation)),
         size_limit=int(
             request.get(RequestField.SIZE_LIMIT.value) or DEFAULT_SIZE_LIMIT
         ),
@@ -1222,40 +1247,43 @@ def dispatch(
 ) -> dict[str, Any]:
     reason = str(request.get(RequestField.REASON.value) or "")
     if operation == Operation.PUBLISH:
-        draft = read_draft(str(required(request, RequestField.DRAFT_PATH)))
-        return publish(
-            session, int(required(request, RequestField.NUMBER)), draft, directory
-        )
-    if operation == Operation.REFRAME:
-        draft = read_draft(str(required(request, RequestField.DRAFT_PATH)))
+        draft = read_draft(str(required(request, RequestField.DRAFT_PATH, operation)))
         return publish(
             session,
-            int(required(request, RequestField.NUMBER)),
+            int(required(request, RequestField.NUMBER, operation)),
+            draft,
+            directory,
+        )
+    if operation == Operation.REFRAME:
+        draft = read_draft(str(required(request, RequestField.DRAFT_PATH, operation)))
+        return publish(
+            session,
+            int(required(request, RequestField.NUMBER, operation)),
             draft,
             directory,
             reframe=True,
             reason=reason or "reframe",
         )
     if operation == Operation.RECORD:
-        draft = read_draft(str(required(request, RequestField.DRAFT_PATH)))
+        draft = read_draft(str(required(request, RequestField.DRAFT_PATH, operation)))
         return {ResultField.NUMBER: record(session, draft, directory)}
     if operation == Operation.SPLIT:
         return split(
             session,
-            int(required(request, RequestField.NUMBER)),
-            list(required(request, RequestField.CHILDREN)),
+            int(required(request, RequestField.NUMBER, operation)),
+            list(required(request, RequestField.CHILDREN, operation)),
             directory,
         )
     if operation == Operation.DRAFT:
         return draft_from_store(
             session,
-            int(required(request, RequestField.NUMBER)),
-            str(required(request, RequestField.DRAFT_PATH)),
+            int(required(request, RequestField.NUMBER, operation)),
+            str(required(request, RequestField.DRAFT_PATH, operation)),
         )
     return merge(
         session,
-        int(required(request, RequestField.NUMBER)),
-        int(required(request, RequestField.ABSORBED)),
+        int(required(request, RequestField.NUMBER, operation)),
+        int(required(request, RequestField.ABSORBED, operation)),
         reason or "merged into the survivor",
     )
 

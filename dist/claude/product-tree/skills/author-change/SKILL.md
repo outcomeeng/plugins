@@ -70,6 +70,16 @@ The common fields are `operation`, `store`, `checkout_root`, and, for `publish`,
 
 </rules>
 
+<testing>
+
+The script is tested with controlled `gh` and `git` runners, and with controlled stand-ins for the form check and the transition function of the sibling skills.
+
+- Sample inputs: one Draft for each of `record`, `publish`, `reframe`, `split`, `draft`, and `merge`; a publish of an Applicable record that writes the body and one that writes metadata only; a reframe of a held Change with a handoff. Each returns `ok` with its writes in order.
+- Error cases: a Draft the form check fails, a record edited after the publish read it, a foreign revision that landed between the read and the write and one that landed after the write, a readback that differs, a refused lower, a refused abandonment, and a split of an Applicable record, of a Parent, and of Children that span two Products. Each returns `failed` or `blocked` and writes nothing past the stop.
+- Cleanup: the script writes every intermediate file in a temporary directory it removes on every exit path. The only file it leaves is the Draft that `draft` writes at `draft_path`.
+
+</testing>
+
 <success_criteria>
 
 - The script published the Draft only after the form check returned `pass`, and a `failed` result with findings left the store unchanged.
