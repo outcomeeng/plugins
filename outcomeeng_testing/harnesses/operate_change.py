@@ -409,7 +409,7 @@ def claim_block(session: str = SESSION, maturity: str = "Applicable") -> str:
         "machine": MACHINE,
         "worktree": WORKTREE,
     }
-    return script.render_block(entries)
+    return str(script.render_block(entries))
 
 
 def held(github: SimulatedGitHub, number: int, session: str = SESSION) -> None:
@@ -434,7 +434,8 @@ def run(
     github: SimulatedGitHub, payload: dict[str, Any], root: str | None = None
 ) -> dict[str, Any]:
     script = load_script()
-    return script.transition(payload, run=github, root=root)
+    result: dict[str, Any] = script.transition(payload, run=github, root=root)
+    return result
 
 
 def run_main(
@@ -448,7 +449,7 @@ def run_main(
 
 
 def sha256(text: str) -> str:
-    return load_script().sha256(text)
+    return str(load_script().sha256(text))
 
 
 @contextmanager

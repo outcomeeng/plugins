@@ -10,6 +10,9 @@ fails a chosen one, or lands another writer's edit between two of them.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Any
+
 import inspect
 
 import pytest
@@ -88,7 +91,7 @@ def applicable_held() -> SimulatedGitHub:
     return github
 
 
-def to_applicable(github: SimulatedGitHub, **values: object) -> dict[str, object]:
+def to_applicable(github: SimulatedGitHub, **values: object) -> dict[str, Any]:
     payload = request(
         "advance",
         10,
@@ -283,7 +286,7 @@ def test_review_binding_comment_only_while_the_pair_stands() -> None:
     github = store("Framed", "Submitted")
     reviewed = pair(github)
 
-    def edit_after_maturity(sim: SimulatedGitHub, command: tuple[str, ...]) -> None:
+    def edit_after_maturity(sim: SimulatedGitHub, command: Sequence[str]) -> None:
         if is_write(command) and write_kind(command) == "maturity":
             sim.edit_body(10, LEAF + "\nan edit from another writer\n")
 
@@ -341,7 +344,7 @@ def reviewed_repository(
 
 def carried_advance(
     github: SimulatedGitHub, root: str, reviewed_body: str, reviewed_base: str
-) -> dict[str, object]:
+) -> dict[str, Any]:
     payload = request(
         "advance",
         10,
@@ -531,7 +534,7 @@ def test_transition_function_is_what_main_writes() -> None:
 # ---------------------------------------------------------- transition log
 
 
-def every_transition() -> list[tuple[SimulatedGitHub, dict[str, object]]]:
+def every_transition() -> list[tuple[SimulatedGitHub, dict[str, Any]]]:
     claim = store("Sliced", "Available")
     release = store("Sliced", "Submitted")
     held(release, 10)

@@ -373,8 +373,8 @@ def read_request(raw: object) -> Request:
     if not isinstance(raw, Mapping):
         raise InvalidRequest("the request must be a JSON object")
     try:
-        kind = Transition(raw.get("transition"))
-        mover = Mover(raw.get("mover"))
+        kind = Transition(str(raw.get("transition")))
+        mover = Mover(str(raw.get("mover")))
     except ValueError as error:
         raise InvalidRequest(str(error)) from error
     store = str(_text(raw, "store"))
@@ -605,7 +605,7 @@ def _scalar(value: Any) -> str:
 
 
 def block_entries(
-    request: Request, maturity: str, extras: Mapping[str, Any]
+    request: Request, maturity: str, extras: Mapping[LogKey, Any]
 ) -> dict[str, Any]:
     who = request.identity
     entries: dict[str, Any] = {
@@ -616,7 +616,8 @@ def block_entries(
         LogKey.MACHINE: who.machine,
         LogKey.WORKTREE: who.worktree,
     }
-    entries.update(extras)
+    for key, value in extras.items():
+        entries[key.value] = value
     return entries
 
 
@@ -948,6 +949,7 @@ def plan_lower(request: Request, change: Change, context: PlanContext) -> Plan:
     require(bool(request.reason), Reason.REASON_REQUIRED, "a lower names its reason")
     cause = request.lower_cause
     require(cause is not None, Reason.STATE, "a lower names its cause")
+    assert cause is not None
     allowed = {
         LowerCause.REOPENED: request.mover == Mover.OPERATOR,
         LowerCause.DECISION_LINE: request.mover == Mover.HOLDER
@@ -992,7 +994,7 @@ def plan_lower(request: Request, change: Change, context: PlanContext) -> Plan:
 
 
 def plan_applied(request: Request, change: Change, context: PlanContext) -> Plan:
-    extras: dict[str, Any] = {}
+    extras: dict[LogKey, Any] = {}
     if change.is_parent:
         require(
             request.mover == Mover.OPERATOR,

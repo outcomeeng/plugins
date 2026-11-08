@@ -9,6 +9,8 @@ changes is read from the spec row the case names.
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from outcomeeng_testing.harnesses.operate_change import (
@@ -62,7 +64,7 @@ def bound(github: SimulatedGitHub, number: int = 10) -> dict[str, str]:
     return {"body_sha256": sha256(github.issues[number].body), "base": BASE}
 
 
-def observed(github: SimulatedGitHub, number: int = 10) -> dict[str, object]:
+def observed(github: SimulatedGitHub, number: int = 10) -> dict[str, Any]:
     issue = github.issues[number]
     return {
         "maturity": issue.fields.get("Maturity"),
@@ -75,7 +77,7 @@ def observed(github: SimulatedGitHub, number: int = 10) -> dict[str, object]:
 # ------------------------------------------------------------ transitions
 
 
-def admitted(case: str) -> tuple[SimulatedGitHub, dict[str, object]]:
+def admitted(case: str) -> tuple[SimulatedGitHub, dict[str, Any]]:
     """A Change in the state the case's row requires, with its request."""
     if case == "claim":
         github = store("Sliced", "Available")
@@ -185,7 +187,7 @@ def test_transition_reports_any_other_state_without_a_write(case: str) -> None:
 # ---------------------------------------------------------- maturity-ready
 
 
-def ready(case: str, *, met: bool = True) -> tuple[SimulatedGitHub, dict[str, object]]:
+def ready(case: str, *, met: bool = True) -> tuple[SimulatedGitHub, dict[str, Any]]:
     """An advance into the case's Maturity, its record meeting that row and every row above it.
 
     With `met` false the record misses the case's row alone.
