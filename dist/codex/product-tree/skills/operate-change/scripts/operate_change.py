@@ -487,7 +487,7 @@ def read_request(raw: object) -> Request:
     store = str(_text(raw, RequestKey.STORE))
     if not re.fullmatch(r"[\w.-]+/[\w.-]+", store):
         raise InvalidRequest(
-            f"store must read owner/repo, as in outcomeeng/changes; got {store!r}"
+            f"store must read owner/repo, the repository of the Change Store; got {store!r}"
         )
     number = raw.get(RequestKey.NUMBER)
     if not isinstance(number, int) or isinstance(number, bool) or number < 1:
