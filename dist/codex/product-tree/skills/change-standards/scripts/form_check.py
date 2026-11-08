@@ -9,8 +9,7 @@ breaks, the subsection or line it names, and its detail. A request the script
 cannot read yields `invalid-request` and no finding.
 
 The module exposes `check`, which returns for a request the result `main`
-writes for it, so a sibling Change skill's script reaches the check through a
-`__file__`-relative import.
+writes for it. A `__file__`-relative import of the module reaches `check`.
 
 The check reads the Draft and runs only reading git commands at the Draft's
 base commit in the checkout root. It writes no file and no Change Store.
@@ -883,7 +882,7 @@ def resolve_size_limit(raw: Any) -> int:
     if isinstance(raw, int) and not isinstance(raw, bool) and raw > 0:
         return raw
     raise InvalidRequest(
-        f"{RequestField.SIZE_LIMIT} is a positive integer or {GITHUB_STORE}"
+        f"{RequestField.SIZE_LIMIT} is a positive integer or {GITHUB_STORE}; received {describe(raw)}"
     )
 
 
@@ -2012,13 +2011,21 @@ def created_nodes(body: str) -> set[tuple[str, str]]:
 # ---------------------------------------------------------------- request
 
 
+def describe(value: object) -> str:
+    return f"{type(value).__name__} {json.dumps(value, default=repr)[:80]}"
+
+
 def read_request(request: object) -> dict[str, Any]:
     if not isinstance(request, dict):
-        raise InvalidRequest("the request is one JSON object")
-    known = {field.value for field in RequestField}
+        raise InvalidRequest(
+            f"the request is one JSON object; received {type(request).__name__}"
+        )
+    known = [field.value for field in RequestField]
     for name in request:
         if name not in known:
-            raise InvalidRequest(f"{name} is no field of the request")
+            raise InvalidRequest(
+                f"{name} is no field of the request; the fields are {', '.join(known)}"
+            )
     return request
 
 
@@ -2037,16 +2044,21 @@ def read_draft_text(request: Mapping[str, Any]) -> str:
         )
     if text is not None:
         if not isinstance(text, str):
-            raise InvalidRequest(f"{RequestField.DRAFT_TEXT} is a string")
+            raise InvalidRequest(
+                f"{RequestField.DRAFT_TEXT} is a string; received {type(text).__name__}"
+            )
         return text
     if not isinstance(path, str):
-        raise InvalidRequest(f"{RequestField.DRAFT_PATH} is a string")
+        raise InvalidRequest(
+            f"{RequestField.DRAFT_PATH} is a string; received {type(path).__name__}"
+        )
     try:
         return Path(path).read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
+    except (OSError, UnicodeDecodeError) as error:
         raise InvalidRequest(
-            f"{RequestField.DRAFT_PATH} names no readable text file"
-        ) from None
+            f"{RequestField.DRAFT_PATH} {path} names no readable UTF-8 text file: "
+            f"{type(error).__name__}: {error}"
+        ) from error
 
 
 def read_record(raw: Any, name: str) -> dict[str, Any] | None:
@@ -2055,7 +2067,9 @@ def read_record(raw: Any, name: str) -> dict[str, Any] | None:
     if not isinstance(raw, dict) or not isinstance(
         raw.get(RecordField.METADATA, {}), dict
     ):
-        raise InvalidRequest(f"{name} is null or an object with metadata and body")
+        raise InvalidRequest(
+            f"{name} is null or an object with metadata and body; received {describe(raw)}"
+        )
     return raw
 
 
@@ -2066,7 +2080,7 @@ def read_root(raw: Any) -> str:
         or not Path(raw).is_dir()
     ):
         raise InvalidRequest(
-            f"{RequestField.CHECKOUT_ROOT} is the absolute path of a directory"
+            f"{RequestField.CHECKOUT_ROOT} is the absolute path of a directory; received {describe(raw)}"
         )
     return raw
 
@@ -2076,7 +2090,7 @@ def read_operation(raw: Any) -> Operation:
         return Operation(raw)
     except ValueError:
         raise InvalidRequest(
-            f"{RequestField.OPERATION} is one of {', '.join(Operation)}"
+            f"{RequestField.OPERATION} is one of {', '.join(Operation)}; received {describe(raw)}"
         ) from None
 
 
@@ -2086,7 +2100,7 @@ def read_blockers(request: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
         isinstance(value, dict) for value in raw.values()
     ):
         raise InvalidRequest(
-            f"{RequestField.BLOCKER_RECORDS} maps each blocker reference to its record"
+            f"{RequestField.BLOCKER_RECORDS} maps each blocker reference to its record; received {describe(raw)}"
         )
     return {str(key): value for key, value in raw.items()}
 
@@ -2164,11 +2178,14 @@ def main(
     sink = stdout if stdout is not None else sys.stdout
     try:
         request: object = json.loads(source.read())
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as error:
         result: dict[str, Any] = {
             ResultField.STATUS: Status.INVALID_REQUEST,
             ResultField.FINDINGS: [],
-            ResultField.DETAIL: "the request is one JSON document",
+            ResultField.DETAIL: (
+                "the request is one JSON document; "
+                f"{error.msg} at line {error.lineno}, column {error.colno}"
+            ),
         }
     else:
         result = check(request, run)
