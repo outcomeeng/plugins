@@ -354,8 +354,8 @@ def test_a_record_read_naming_no_root_blocks_naming_the_root_without_a_file() ->
 def test_a_record_read_whose_root_is_inside_a_checkout_blocks_naming_the_root() -> None:
     with audit_workspace() as workspace:
         identity = workspace.place_issue()
-        workspace.commit({"docs/example.md": "text\n"}, message="add a file")
-        inside = workspace.root / "docs"
+        tree = workspace.commit_sample_tree()
+        inside = workspace.root / tree.directory
         before = workspace.snapshot()
 
         blocked = workspace.invoke(
@@ -557,31 +557,28 @@ def test_a_path_read_at_the_base_returns_the_file_the_commit_holds_and_not_the_w
     None
 ):
     with audit_workspace() as workspace:
-        base = workspace.commit(
-            {"docs/example.md": "at the base\n", "docs/other.md": "other\n"},
-            message="add files",
-        )
-        workspace.commit({"docs/example.md": "after the base\n"}, message="edit a file")
+        tree = workspace.commit_sample_tree()
         request = {
             Field.OPERATION: Operation.READ_AT_BASE,
             Field.ROOT: str(workspace.root),
-            Field.BASE: base,
+            Field.BASE: tree.base,
         }
 
-        file = workspace.invoke({**request, Field.PATH: "docs/example.md"})
-        directory = workspace.invoke({**request, Field.PATH: "docs"})
-        missing = workspace.invoke({**request, Field.PATH: "docs/absent.md"})
+        file = workspace.invoke({**request, Field.PATH: tree.edited_file})
+        directory = workspace.invoke({**request, Field.PATH: tree.directory})
+        missing = workspace.invoke({**request, Field.PATH: tree.absent_file})
 
         assert file.result[Result.STATUS] == Status.OK
         assert file.result[Result.KIND] == runner.BaseKind.FILE
-        assert file.result[Result.CONTENT] == "at the base\n"
+        assert file.result[Result.CONTENT] == tree.content_at_base
+        assert tree.content_at_base != tree.content_after_base
         assert directory.result[Result.KIND] == runner.BaseKind.DIRECTORY
-        assert directory.result[Result.ENTRIES] == ["example.md", "other.md"]
+        assert directory.result[Result.ENTRIES] == tree.entries
         assert missing.result[Result.STATUS] == Status.OK
         assert missing.result[Result.KIND] == runner.BaseKind.MISSING
         assert (
-            Path(workspace.root / "docs" / "example.md").read_text(encoding="utf-8")
-            == "after the base\n"
+            Path(workspace.root / tree.edited_file).read_text(encoding="utf-8")
+            == tree.content_after_base
         )
         for call in (file, directory, missing):
             assert call.runner_writes == ()
@@ -590,15 +587,15 @@ def test_a_path_read_at_the_base_returns_the_file_the_commit_holds_and_not_the_w
 
 def test_a_base_that_names_no_commit_blocks_naming_the_base() -> None:
     with audit_workspace() as workspace:
-        workspace.commit({"docs/example.md": "text\n"}, message="add a file")
-        unknown = "0" * 40
+        tree = workspace.commit_sample_tree()
+        unknown = workspace.unresolvable_commit()
 
         blocked = workspace.invoke(
             {
                 Field.OPERATION: Operation.READ_AT_BASE,
                 Field.ROOT: str(workspace.root),
                 Field.BASE: unknown,
-                Field.PATH: "docs/example.md",
+                Field.PATH: tree.edited_file,
             }
         )
 

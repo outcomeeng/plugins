@@ -16,6 +16,7 @@ from outcomeeng_testing.harnesses.audit_change_run import (
     RunnerCall,
     StartedRun,
     audit_workspace,
+    different_commit,
     load_runner,
 )
 
@@ -28,8 +29,6 @@ Reason = runner.BlockReason
 Terminal = runner.TerminalStatus
 ExitCode = runner.ExitCode
 BASE_FIELD = runner.FIELD_NAMES[runner.MetadataKey.BASE]
-#: A Base other than the one the captured record names.
-OTHER_BASE = "a" * 40
 
 
 def _finish(workspace: AuditWorkspace, identity: str, opened: StartedRun) -> RunnerCall:
@@ -109,14 +108,15 @@ def test_a_base_published_after_the_run_started_blocks_finish_naming_both_bases(
     with audit_workspace() as workspace:
         identity = workspace.place_issue()
         opened = workspace.start_run(identity)
-        workspace.set_field(identity, BASE_FIELD, OTHER_BASE)
+        other_base = different_commit(str(opened.read.result[Result.BASE]))
+        workspace.set_field(identity, BASE_FIELD, other_base)
 
         finished = _finish(workspace, identity, opened)
 
         assert finished.exit_code == ExitCode.BLOCKED
         assert finished.result[Result.REASON] == Reason.RECORD_CHANGED
         assert finished.result[Result.RETAINED_BASE] == opened.read.result[Result.BASE]
-        assert finished.result[Result.LIVE_BASE] == OTHER_BASE
+        assert finished.result[Result.LIVE_BASE] == other_base
         assert finished.runner_writes == ()
 
 
@@ -124,11 +124,14 @@ def test_a_publication_that_writes_only_metadata_keeps_the_audit() -> None:
     with audit_workspace() as workspace:
         identity = workspace.place_issue()
         opened = workspace.start_run(identity)
-        workspace.set_title(identity, "A title the publication wrote")
+        stored_title = workspace.title(identity)
+        retitled = workspace.retitle(identity)
 
         reconciled = _reconcile(workspace, identity, opened)
         finished = _finish(workspace, identity, opened)
 
+        assert workspace.title(identity) == retitled
+        assert retitled != stored_title
         assert reconciled.result[Result.STATUS] == Status.OK
         assert finished.result[Result.STATUS] == Status.OK
         assert (
@@ -149,18 +152,20 @@ def test_a_start_over_a_base_other_than_the_stored_one_blocks_without_a_run() ->
             }
         )
 
+        other_base = different_commit(str(read.result[Result.BASE]))
+
         started = workspace.invoke(
             {
                 Field.OPERATION: Operation.START,
                 Field.ISSUE: identity,
                 Field.ROOT: str(workspace.root),
                 Field.BODY_SHA256: read.result[Result.BODY_SHA256],
-                Field.BASE: OTHER_BASE,
+                Field.BASE: other_base,
             }
         )
 
         assert started.exit_code == ExitCode.BLOCKED
         assert started.result[Result.REASON] == Reason.RECORD_CHANGED
         assert started.result[Result.RUN_TOKEN] == runner.NOT_STARTED
-        assert started.result[Result.RETAINED_BASE] == OTHER_BASE
+        assert started.result[Result.RETAINED_BASE] == other_base
         assert started.result[Result.LIVE_BASE] == read.result[Result.BASE]

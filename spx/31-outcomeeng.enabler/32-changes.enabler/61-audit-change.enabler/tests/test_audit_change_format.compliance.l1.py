@@ -16,7 +16,9 @@ from __future__ import annotations
 
 from outcomeeng_testing.harnesses.audit_change_run import (
     FORMAT_CLEAN,
+    FORMAT_DECLARED_PATH,
     FORMAT_DIRTY,
+    FORMAT_OTHER_PATH,
     FORMAT_TAGGED,
     AuditWorkspace,
     RunnerCall,
@@ -32,7 +34,7 @@ Result = runner.ResultField
 Status = runner.ResultStatus
 Rule = runner.FormatRule
 ExitCode = runner.ExitCode
-DECLARED_PATH = "docs/example.md"
+DECLARED_PATH = FORMAT_DECLARED_PATH
 
 
 def _text(source: object) -> str:
@@ -120,7 +122,7 @@ def test_a_merge_commit_that_holds_no_file_at_the_declared_path_is_a_merge_findi
     with audit_workspace() as workspace:
         identity = workspace.place_issue()
         workspace.set_body(identity, body_declaring(DECLARED_PATH, clean))
-        merge_commit = workspace.commit({"docs/other.md": clean}, message="merge")
+        merge_commit = workspace.commit({FORMAT_OTHER_PATH: clean}, message="merge")
         head = workspace.commit({DECLARED_PATH: tagged}, message="later")
         workspace.publish_default_branch(head)
         formatter = workspace.install_formatter()

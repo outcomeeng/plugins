@@ -167,6 +167,9 @@ def issue_identity(issue: Mapping[str, object]) -> str:
 FORMAT_CLEAN: Final = _FIXTURES_DIR / "format-clean.md.txt"
 FORMAT_DIRTY: Final = _FIXTURES_DIR / "format-dirty.md.txt"
 FORMAT_TAGGED: Final = _FIXTURES_DIR / "format-tagged.md.txt"
+#: The path a format scenario's record declares, and a different path the merge commit may hold instead.
+FORMAT_DECLARED_PATH: Final = "docs/example.md"
+FORMAT_OTHER_PATH: Final = "docs/other.md"
 
 
 def body_declaring(path: str, text: str) -> str:
@@ -175,6 +178,44 @@ def body_declaring(path: str, text: str) -> str:
         "## Statement of Intent\n\n- Output: a file replaced\n\n"
         f"## Declarations\n\n### `{path}`\n\n````markdown\n{text}````\n"
     )
+
+
+#: Inert trees the harness commits: one at the Base, and the edit of one file after it.
+_TREE_AT_BASE: Final = _FIXTURES_DIR / "tree_at_base"
+_TREE_AFTER_BASE: Final = _FIXTURES_DIR / "tree_after_base"
+_ABSENT_PREFIX: Final = "absent-"
+_RETITLE_SUFFIX: Final = " (retitled)"
+
+
+def _tree_files(tree: Path) -> dict[str, str]:
+    """Return the content of every file under ``tree`` by its path relative to ``tree``."""
+    return {
+        path.relative_to(tree).as_posix(): path.read_text(encoding="utf-8")
+        for path in sorted(tree.rglob("*"))
+        if path.is_file()
+    }
+
+
+def different_commit(commit: str) -> str:
+    """Return a full commit id other than ``commit``."""
+    return hashlib.sha1(  # noqa: S324
+        commit.encode(load_runner().TEXT_ENCODING)
+    ).hexdigest()
+
+
+@dataclass(frozen=True)
+class CommittedTree:
+    """The commits and paths of the sample tree committed in a workspace."""
+
+    base: str
+    later: str
+    directory: str
+    edited_file: str
+    absent_file: str
+    content_at_base: str
+    content_after_base: str
+    #: The names in ``directory`` at the base commit.
+    entries: list[str]
 
 
 #: The identity of the captured store issue.
@@ -342,6 +383,14 @@ class AuditWorkspace:
             raise TypeError(f"the store holds no issue {identity}")
         return str(issue["body"])
 
+    def title(self, identity: str) -> str:
+        """Return the stored title of ``identity``."""
+        number = identity.partition("#")[2]
+        issue = self._store()[number]
+        if not isinstance(issue, dict):
+            raise TypeError(f"the store holds no issue {identity}")
+        return str(issue["title"])
+
     def edit(self, identity: str) -> None:
         """Change a stored body, as another session publishing the record would."""
         number = identity.partition("#")[2]
@@ -413,6 +462,59 @@ class AuditWorkspace:
             check=True,
         )
         return completed.stdout.strip()
+
+    def commit_sample_tree(self) -> CommittedTree:
+        """Commit the inert sample tree, then its edit, in two commits; describe both."""
+        at_base = _tree_files(_TREE_AT_BASE)
+        after_base = _tree_files(_TREE_AFTER_BASE)
+        base = self.commit(at_base, message=_TREE_AT_BASE.name)
+        later = self.commit(after_base, message=_TREE_AFTER_BASE.name)
+        edited = next(iter(after_base))
+        directory = Path(edited).parent
+        return CommittedTree(
+            base=base,
+            later=later,
+            directory=directory.as_posix(),
+            edited_file=edited,
+            absent_file=(directory / f"{_ABSENT_PREFIX}{Path(edited).name}").as_posix(),
+            content_at_base=at_base[edited],
+            content_after_base=after_base[edited],
+            entries=sorted(
+                Path(path).name for path in at_base if Path(path).parent == directory
+            ),
+        )
+
+    def unresolvable_commit(self) -> str:
+        """Return a full commit id that names no object in the repository."""
+        candidate = hashlib.sha1(  # noqa: S324
+            str(self.root).encode(load_runner().TEXT_ENCODING)
+        ).hexdigest()
+        while (
+            subprocess.run(  # noqa: S603
+                ["git", "cat-file", "-e", candidate],  # noqa: S607
+                cwd=self.root,
+                capture_output=True,
+                check=False,
+            ).returncode
+            == 0
+        ):
+            candidate = hashlib.sha1(  # noqa: S324
+                candidate.encode(load_runner().TEXT_ENCODING)
+            ).hexdigest()
+        return candidate
+
+    def retitle(self, identity: str) -> str:
+        """Publish a changed title for ``identity``, as a publish that writes only metadata would.
+
+        Return the title the store now holds.
+        """
+        number = identity.partition("#")[2]
+        issue = self._store()[number]
+        if not isinstance(issue, dict):
+            raise TypeError(f"the store holds no issue {identity}")
+        title = f"{issue['title']}{_RETITLE_SUFFIX}"
+        self.set_title(identity, title)
+        return title
 
     def publish_default_branch(self, commit: str) -> str:
         """Point the remote-tracking default branch at ``commit``; return its short name."""
