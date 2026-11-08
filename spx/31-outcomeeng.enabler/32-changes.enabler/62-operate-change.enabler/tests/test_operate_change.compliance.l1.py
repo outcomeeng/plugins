@@ -11,7 +11,6 @@ fails a chosen one, or lands another writer's edit between two of them.
 from __future__ import annotations
 
 import inspect
-import json
 
 import pytest
 
