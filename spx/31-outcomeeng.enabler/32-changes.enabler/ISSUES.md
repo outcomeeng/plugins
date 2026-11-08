@@ -44,38 +44,11 @@ Revisit and settlement condition: once the runner proves its value in use, its l
 
 Defect class: `evidence`.
 
-Finding: `reconcile` and the finding readers of `audit_change_run.py` block with `unreadable-output` when the rendered projection carries no `auditScopeUnits` array of objects or a finding without an integer `seq` and a payload object. `tests/test_audit_change_run.compliance.l1.py` drives the runner against the real SPX store, which never renders such a projection, so removing either block leaves every linked test passing. The same holds for the other blocked-result branches the real store never reaches: the runner's command wrapper on an `OSError`, a `ValueError`, or undecodable output, the line reader on unparseable or empty command output, the findings reader on a findings group that is not an array, the `retained-input-mismatch` block of `start`, the `OSError` branch of the stdin read in `main`, and the serializer's `RecursionError` fallback. The test-evidence audit of the changes node on head `c9124f951d82668d846e303686b236a52f72a309` raised this as a `WARNING` coverage finding against `src/plugins/product-tree/skills/audit-change/scripts/audit_change_run.py`. The CI review of [PR 643](https://github.com/outcomeeng/plugins/pull/643#issuecomment-6103177670) raised the same class against the `read-relations` and `count-limits` operations: no linked case drives either, among them an integer-valued Parent field and a field-value connection that fills its bound. The node declares `malleability: spec`, which requires no test evidence, so the finding is recorded here and no case is added.
+Finding: `reconcile` and the finding readers of `audit_change_run.py` block with `unreadable-output` when the rendered projection carries no `auditScopeUnits` array of objects or a finding without an integer `seq` and a payload object. `tests/test_audit_change_run.compliance.l1.py` drives the runner against the real SPX store, which never renders such a projection, so removing either block leaves every linked test passing. The same holds for the other blocked-result branches the real store never reaches: the runner's command wrapper on an `OSError`, a `ValueError`, or undecodable output, the line reader on unparseable or empty command output, the findings reader on a findings group that is not an array, the `retained-input-mismatch` block of `start`, the `OSError` branch of the stdin read in `main`, and the serializer's `RecursionError` fallback. The test-evidence audit of the changes node on head `c9124f951d82668d846e303686b236a52f72a309` raised this as a `WARNING` coverage finding against `src/plugins/product-tree/skills/audit-change/scripts/audit_change_run.py`. The node declares `malleability: verification`, which requires a tagged result for every assertion and no case for each blocked branch, so the finding is recorded here and no case is added.
 
-Impact: the runner's refusal of a malformed projection is unobserved, so a regression there reads a run with no coverage as an empty one. The same holds for the Parent decoding and the field-value bound of `read-relations` and for the counts of `count-limits`.
+Impact: the runner's refusal of a malformed projection is unobserved, so a regression there reads a run with no coverage as an empty one.
 
-Revisit and settlement condition: the runner's SPX boundary admits a controlled implementation of its command runner that renders a malformed projection, and a linked case asserts the `unreadable-output` block for each malformed shape; linked cases then also cover `read-relations` with an integer-valued and a float-valued Parent value and with a field-value connection that fills its bound, and `count-limits` for each limit.
-
-## DEBT [skill-contract]: audit-change's grants deviate from the audit baseline, its reason table stays inline and its verdict returns the reduced finish result
-
-Defect class: `skill-contract`.
-
-Judgment: Change outcomeeng/changes#333 settled two findings on `audit-change`: the BLOCKED result states its three shapes as labeled shapes, and the piping prohibition reads "never piped into another command" in the skill and in `changes.md`. One deviation is a separate larger concern whose fix belongs in the audit-grant rule of `/skill-standards` in the instructions plugin, which Change outcomeeng/changes#344 edits: `/skill-standards` requires an audit skill to add `allowed-tools: Read, Grep, Glob`, while `audit-change` grants the runner invocation and the skill-composition tool and no Read, Grep, or Glob, because the runner's journal appends make its grant a write grant; its constraints state the deviation. Two findings are not valid against their governing text and stay recorded as judged:
-
-- Rules `progressive-disclosure-conditional-detail` and `conciseness`, against the reason table of `<runner_contract>`: moving the table to a bundled reference needs a Read grant, which the skill declines in its constraints ("grants no Read, Grep, or Glob: the runner is the audit's only read path"), and the table is the complete inventory a blocked result is matched against.
-- Rules `auditor-verdict-format` and `auditor-skeleton-verdict-format`, against `<verdict_format>`: the completed verdict returns the unchanged `finish` result, which omits the projection's `events` and `auditScopeUnits`. `changes.md` states that result as the contract: "whose result carries the run token, the rendered projection's run-level fields, every finding payload verbatim, and the one command that reproduces the complete rendered projection from the sealed run".
-
-Evidence: `instructions:skill-auditor` runs `2026-10-07_09-05-51-393-d08dac7359db` and `2026-10-07_09-31-07-355-24f22aa9dd57`, and the earlier runs on heads `007c3871de7b82f7592325be191d26fbfa8aee8d` and `95da1302cb72c523328f0d7d02b3a05b23df603b`.
-
-Impact: each later audit of the skill can raise the grant deviation and the two judged findings again.
-
-Revisit and settlement condition: the audit standards state that an audit skill whose only read path is a bundled runner that appends to the SPX verification-run journal grants that runner and the skill-composition tool and no Read, Grep, or Glob, may hold its reason inventory inline, and may return a reduced result the owning spec declares; one typed skill audit of `audit-change` then raises none of the three findings.
-
-## DEBT [subagent-contract]: change-auditor restates the skill's result contract and carries a description-match description
-
-Defect class: `subagent-contract`.
-
-Finding: two warnings stand against the `change-auditor` definition. Its `<output_format>` restates the skill's result contract field by field, and its list of fields for a failed command omits `liveSha256`, `sha256`, and `retainedSha256`, which the skill's `<verdict_format>` carries for `candidate-changed` and `retained-input-mismatch`. Its description is directive description-match wording, although the owning skills dispatch the role by exact configured name.
-
-Evidence: `instructions:subagent-auditor` findings f-003 (rule `description-style/exact-name-invocation`) and f-004 (rule `configuration/thin-wrapper-contract-copy`), each severity `WARNING`, against `src/plugins/product-tree/agents/change-auditor.md` lines 3 and 91, in the typed subagent audit on head `95da1302cb72c523328f0d7d02b3a05b23df603b`, which rejected on the standing findings f-001 and f-002 recorded in the native-artifact node and in the `adr-pdr-compliance` entry above. The directive description is the wording every product-tree agent definition carries.
-
-Impact: the wrapper's copied field list drifts each time the runner contract changes, and a relaying session can take the narrower list as the expected shape; the description invites a launch the calling skills have not instructed.
-
-Revisit and settlement condition: the wrapper points at the skill's `<verdict_format>` for the completed, `OUTSIDE_CONTRACT`, and runner-blocked shapes and keeps only its own pre-run diagnostic shape, and the description states its subject and the conditions under which the owning skills invoke the role in passive wording; one typed subagent audit of `change-auditor` then raises neither warning.
+Revisit and settlement condition: the runner's SPX boundary admits a controlled implementation of its command runner that renders a malformed projection, and a linked case asserts the `unreadable-output` block for each malformed shape.
 
 ## DEBT [skill-audit]: close-change names no current-state source for the merge commit
 
@@ -112,80 +85,6 @@ Evidence: the Observation of outcomeeng/changes#168 records a query whose cursor
 Impact: a session cannot learn from the REST endpoint whether its next GraphQL call will succeed, so a refusal arrives with no earlier signal, and the refusal reaches every session on the account at once. The page bound written in each skill's text keeps any one call from spending the budget; it does not give a session a way to read what remains.
 
 Revisit and settlement condition: GitHub reports the GraphQL budget consistently across its REST and GraphQL interfaces, or a read that establishes GraphQL availability without spending the budget is documented and the Change skills cite it in their blocked results.
-
-## DEBT [objective-criteria-duplication]: audit-change restates one outcome in its objective and in a success criterion
-
-Defect class: `objective-criteria-duplication`.
-
-Finding: `instructions:skill-auditor` run `2026-10-10_17-01-57-466-c9901d6d0a37` on head `cada9b899fb059bcf251aa34f2a47dcfb2218de4` finished `rejected` with one `debt` finding under rule `objective_criteria_duplication`, key `instructions:skill:file:src/plugins/product-tree/skills/audit-change/SKILL.md:objective_criteria_duplication`, at lines 15 and 350 of `src/plugins/product-tree/skills/audit-change/SKILL.md`. The `<objective>` and a `<success_criteria>` bullet each state that a finding on touched text rejects the run and every other finding is returned `filed`. The finding's expected text: the objective names the output and its shape, and `<success_criteria>` states soundness properties without restating the objective.
-
-Evidence: the sealed run above. The approved skill-auditor runs on `audit-skill` and `audit-subagent` in the same changeset carry the same objective and success-criterion pairing and raised no finding, so the audit flags the pairing inconsistently across sibling skills.
-
-Impact: a later audit of `audit-change` can raise the finding again, and a run whose only finding is `debt` still finishes `rejected`.
-
-Revisit and settlement condition: the objective keeps the output and its shape, the success criterion states the soundness property of the `filed` listing without restating the rejection rule, and one typed skill audit of `audit-change` raises no `objective_criteria_duplication` finding.
-
-## DEBT [finding-identity]: the audit-change runner derives a finding key from its position in the finding list
-
-Defect class: `finding-identity`.
-
-Finding: `finding_key` in `src/plugins/product-tree/skills/audit-change/scripts/audit_change_run.py` returns `<unit_id>` followed by `finding-<ordinal>-<rule>`, and line 257 of `src/plugins/product-tree/skills/audit-change/SKILL.md` passes each finding's one-based position in the sorted finding inventory of one run as the `ordinal`. Property 12 of [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) identifies a finding by its unit's key and its rule identifier, the same in every run and on every head. The same finding takes a different key when an earlier finding in the list appears or disappears between runs.
-
-Evidence: `finding_key` and its caller `_add_finding` in `audit_change_run.py`, and the `ordinal` sentence of the skill above.
-
-Impact: a `filed` finding recorded once can reappear under a new key after an unrelated finding changes position, so a later run cannot match it to the recorded entry and the Author records it again.
-
-Revisit and settlement condition: the runner builds the key from the unit and the rule alone, and a linked case asserts that one finding keeps its key when the list around it changes.
-
-## DEBT [consistency]: the path-rejected row of the audit-change runner contract omits count-limits
-
-Defect class: `consistency`.
-
-Finding: the `path-rejected` row of the blocked-reason table in `src/plugins/product-tree/skills/audit-change/SKILL.md` (line 87) states that `read-candidate`, `start`, and `reconcile` reject a candidate the filesystem cannot resolve, that resolves outside the repository, that is not a regular file, or is not UTF-8 text. The `count-limits` operation reads the candidate through the same path checks, and the `candidate-missing` and `candidate-unreadable` rows below it name `count-limits`, so the row names three of the four operations that read a candidate.
-
-Evidence: the hosted review of [PR 643](https://github.com/outcomeeng/plugins/pull/643#issuecomment-6104113065) raised the omission as a `debt` finding against the row; the row at line 87 and the `candidate-missing` row at line 88 of the skill show the two lists differ.
-
-Impact: a reader of the table concludes that `count-limits` returns no `path-rejected` result for a candidate outside the repository or not UTF-8, though it does.
-
-Revisit and settlement condition: the row names `count-limits` beside `read-candidate`, `start`, and `reconcile`, and one typed skill audit of `audit-change` raises no finding on the blocked-reason table.
-
-## DEBT [consistency]: the read-relations operation returns parentProduct with no remaining reader
-
-Defect class: `consistency`.
-
-Finding: the `change-type` judgment of `src/plugins/product-tree/skills/audit-change/SKILL.md` no longer compares a Parent's Product with its children's, and that comparison was the only reader of the `parentProduct` field. The `read-relations` row of the runner operation table and the result prose of the same skill still list `parentProduct`, and `_read_relations` in `src/plugins/product-tree/skills/audit-change/scripts/audit_change_run.py` still computes it under `ResultField.PARENT_PRODUCT`.
-
-Evidence: the CI review of [PR 658](https://github.com/outcomeeng/plugins/pull/658) on head `82bf3bef3f779940748ff9013ece56e3fdd6b14d` raised this as a `DEBT` finding against line 69 of the skill. The operator ruled that a PR with only cosmetic findings merges and the rest is handled after the merge, and the field changes no verdict, so the merge of Change outcomeeng/changes#470 carries it.
-
-Impact: the runner computes and the skill advertises a value no step reads, and a reader of the operation table can expect a Product comparison the skill no longer makes.
-
-Revisit and settlement condition: the `read-relations` row and result prose name no `parentProduct`, the runner computes none, the linked runner tests pass, and one typed skill audit of `audit-change` raises no finding on the operation table.
-
-## DEBT [consistency]: the audit-change runner counts title words and Intent words by two definitions
-
-Defect class: `consistency`.
-
-Finding: `_count_limits` in `src/plugins/product-tree/skills/audit-change/scripts/audit_change_run.py` counts the title's words with a whitespace split and the Intent's words with `count_words`, which strips link brackets, list markers, and emphasis markup and drops a token with no alphanumeric character. The `record-limits` rule of `src/plugins/product-tree/skills/change-standards/SKILL.md` states both limits as the same kind of count, so a title token that is pure markup counts toward the title limit and would not count toward the Intent limit.
-
-Evidence: the CI review of [PR 658](https://github.com/outcomeeng/plugins/pull/658) on head `d863e67349d1247b128dc919a67a87e732212215` raised this as a `DEBT` finding. The disposition comment on the same PR records the merge under the operator's ruling that cosmetic findings do not block it.
-
-Impact: a title carrying a markup-only token reaches the 15-word limit one token sooner than the same words would under the Intent's count.
-
-Revisit and settlement condition: `_count_limits` counts the title with `count_words`, a linked runner case covers a title with a markup-only token, and one typed skill audit of `audit-change` raises no finding on the count.
-
-## DEBT [consistency]: audit-change builds its runner request as a shell heredoc and forbids the file-write payload form
-
-Defect class: `consistency`.
-
-Finding: `src/plugins/product-tree/skills/audit-change/SKILL.md` line 51 instructs that every runner request be built in the shell as a quoted heredoc, with the `<<'AUDIT_REQUEST'` example, and states "NEVER write a file", which also forbids the file-write payload form. The skill is a journal consumer through its bundled runner `audit_change_run.py`, and the audit skills for assertions, implementation, skills, subagents, and prose record their payloads through files written with the file-write tool.
-
-Evidence: line 51 of the skill above; the dangerous-command guard blocks heredoc forms; the five audit skills named above pass their payloads through files written with the file-write tool. The local review run `2026-10-14_23-21-02-887-63b369b239c3` raised the finding with severity `debt`, category `consistency`.
-
-Impact: a run of the change auditor can have its runner request blocked by the guard, and the journal projection assertion that a consumer whose bundled runner issues the journal commands instructs no payload built in the shell does not hold for this skill.
-
-Revisit and settlement condition: `outcomeeng/changes#515` is the home of the fix, which moves the change auditor to file-written requests. `audit-change` passes its runner request by a file written with the file-write tool, with its agent grant and constraints adjusted, or the assertion states why a stdin-fed runner request is outside it.
-
-Reason the fix is a separate larger concern: the fix adds a Write grant to the change-auditor agent, which reverses that agent's no-file-write rule. A separate Change set that rule, and no block of `outcomeeng/changes#425` amends it, so the fix lies outside this changeset.
 
 ## DEBT [voice]: change-standards lifecycle inert-stdin names the agent as a subject
 
