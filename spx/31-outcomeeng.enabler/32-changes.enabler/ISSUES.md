@@ -198,3 +198,15 @@ Evidence: `instructions:skill-auditor` run `2026-10-17_18-16-04-154-bd168bad0aee
 Impact: a later audit of `change-standards` can raise the finding again.
 
 Revisit and settlement condition: `inert-stdin` in `lifecycle.md` states the instruction in imperative voice or names Claude as its subject, and one typed skill audit of `change-standards` raises no `banned_subject` finding on it.
+
+## DEBT [decision-conflict]: a Parent's Product list has no home in a GitHub Change store
+
+Defect class: `decision-conflict`.
+
+Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) gives a Parent's product as the list of the Products its Children span, and homes product in the organization issue field Product, which holds one option. The decision allows no second home for a field, so a Parent whose Children span more than one Product has no place to hold its list in a GitHub Change store.
+
+Evidence: the `record-keys` row `product` ("a Leaf's one Product; a Parent's list of the Products its Children span"), the `github-store` row `product` ("the organization issue field Product"), and the `one-home` rule of the same decision ("a metadata field stands in the body, or the Change Store holds a field in two places"). The Director ruled on this conflict: a split whose Children span more than one Product fails, names the absent home, and writes nothing, and a split within one Product works as declared.
+
+Impact: the `split` operation of `author-change` refuses a split across Products, so a Change that spans Products is split only by first dividing it by Product.
+
+Revisit and settlement condition: the Operator chooses the field that holds a Parent's Product list, the decision states that home, and `split` writes the list there.

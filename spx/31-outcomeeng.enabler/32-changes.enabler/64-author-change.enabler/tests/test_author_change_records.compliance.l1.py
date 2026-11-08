@@ -14,7 +14,7 @@ fields come from the record decision's rows, never from the script.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 import pytest
 
@@ -45,6 +45,10 @@ Metadata = script.Metadata
 NEW_LEAF_DRAFT = FIXTURES / "draft-leaf-new.md"
 INTENT_ONLY_DRAFT = FIXTURES / "draft-leaf-intent-only.md"
 CHILD_DRAFTS = [FIXTURES / "draft-child-one.md", FIXTURES / "draft-child-two.md"]
+CROSS_PRODUCT_CHILD_DRAFTS = [
+    FIXTURES / "draft-child-one.md",
+    FIXTURES / "draft-child-other-product.md",
+]
 STORED_BODY = (FIXTURES / "stored-leaf-body.md").read_text()
 BELOW_APPLICABLE = [
     member.value for member in Maturity if member != Maturity.APPLICABLE
@@ -64,13 +68,13 @@ def record(
     )
 
 
-def split(store: Store) -> Observation:
+def split(store: Store, children: Sequence[object] = CHILD_DRAFTS) -> Observation:
     return run_script(
         request_for(
             Operation.SPLIT,
             {
                 Request.NUMBER: SUBJECT_NUMBER,
-                Request.CHILDREN: [str(path) for path in CHILD_DRAFTS],
+                Request.CHILDREN: [str(path) for path in children],
             },
         ),
         store,
@@ -137,6 +141,18 @@ def test_split_records_each_child_under_the_split_record_and_leaves_it_only_its_
     assert STORED_BODY.startswith(parent.body.rstrip("\n"))
     assert parent.fields.get("Base") is None
     assert parent.fields["Product"] == "example"
+
+
+def test_split_refuses_children_that_span_two_products_and_writes_nothing() -> None:
+    store = Store()
+    seed_leaf(store, Maturity.PROPOSED.value)
+
+    observed = split(store, CROSS_PRODUCT_CHILD_DRAFTS)
+
+    assert observed.result[Result.STATUS] == Status.BLOCKED
+    assert "Product" in str(observed.result)
+    assert writes(observed) == []
+    assert set(store.issues) == {SUBJECT_NUMBER}
 
 
 def test_split_refuses_an_applicable_record_and_writes_nothing() -> None:

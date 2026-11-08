@@ -1098,13 +1098,19 @@ def split(
     if stored.metadata.get(Metadata.BASE.value) is None:
         raise InvalidRequest("a split accepts only a Leaf, and a Parent holds no base")
     reference = issue_reference(session.store, number)
-    created: list[int] = []
+    drafts = [read_draft(child_path) for child_path in children]
     products: list[str] = []
-    for child_path in children:
-        child = read_draft(child_path)
+    for child in drafts:
         product = child.metadata.get(Metadata.PRODUCT.value)
         if product and product not in products:
             products.append(str(product))
+    if len(products) > 1:
+        raise Blocked(
+            "organization issue field Product",
+            "a Parent's list of Products has no home: the field holds one option",
+        )
+    created: list[int] = []
+    for child in drafts:
         created.append(
             record(
                 session,
@@ -1135,9 +1141,7 @@ def split(
     )
     session.writes.append("base removed")
     if products:
-        set_field(
-            session, stored.node_id, FieldName.PRODUCT, LIST_SEPARATOR.join(products)
-        )
+        set_field(session, stored.node_id, FieldName.PRODUCT, products[0])
     return {ResultField.NUMBERS: created}
 
 
