@@ -10,6 +10,26 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.111.0
+
+### Breaking
+
+- **`/audit-change` and the `change-auditor` agent audit the Change record the Change Store holds, named by its issue reference.** The agent takes a task message of one JSON object with `issue` (`owner/repo#N`) and `checkoutRoot`, and for the audit at close also `mergeCommit` and `formatCommand`, the Product's format command as an argument vector; any other task message returns a blocked result. The skill takes the same fields, with `runDriver` and `agentOwningPluginVersion`. The runner assembles a Change Draft from the stored record, binds each run to the SHA-256 of the record body and to the Base, and blocks `reconcile` and `finish` with `record-changed` when the stored body or Base differs at that point; a publish that writes only metadata keeps the audit. Before this change, the agent took three space-separated tokens, a repository-relative candidate path, the checkout root, and an optional store reference, and audited a local file.
+
+### Changed
+
+- **The audit reads every Node and Decision Record at the Base commit.** The runner's `read-at-base` operation reads a path from the repository under `checkoutRoot` at the Base, so the verdict names the record revision it judged and no working tree decides it. The audit at close reads the same paths at the merge commit. Before this change, the runner read the working tree.
+
+- **The audit at close checks the format of each replacement the record declares.** The runner's `format-at-close` operation runs the Product's format command over each declared replacement and reports a finding for each failed comparison: `format-base`, `format-merge`, and `default-branch-differs`. The runner knows no formatter and writes no file.
+
+- **The audit reports the newest `Maturity` event of the issue in its verdict.** The runner's `read-authority` operation reads the store's field-change events and the verdict judges nothing from them. Before this change, the audit judged the authority clauses of each Maturity level from the events and recorded a `filed` finding for each level it found unattested.
+
+- **Every finding of the audit blocks.** The audit records each finding with the severity `blocking`, and a sealed run with any finding is `rejected`. Before this change, a finding against a rule other than a failed criterion of the Definition of Ready, or on text the candidate left unchanged, took the severity `filed` and failed no run.
+
+### Removed
+
+- **The runner operations `read-candidate`, `resolve-reference`, `read-published`, and `count-limits`, and the `parentProduct` and absorber results of `read-relations`.** The form check of `change-standards` replaces the limit counts, and the stored record replaces the candidate file and the published reference.
+
 ## 0.110.0
 
 ### Changed
