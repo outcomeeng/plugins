@@ -19,13 +19,3 @@ Category consistency, severity debt, finding F-001 of local review run 2026-10-1
 **Impact**: a blocking finding's deferral is not checkable against the finding it defers, so an unrelated entry can release the merge-readiness predicate.
 
 **Settlement condition**: a blocking deferral entry is matched to its finding by the same entry key a debt ruling uses.
-
-## The merging decision and the change-execution spec name the replaced record sections [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) `text the governing Change states in exact text` `consistency`
-
-Category consistency, severity debt, accepted by the Methodology Director's ruling on the CI review of https://github.com/outcomeeng/plugins/pull/735 at head `76ea59eab683a36c3f17e1f8bf26d998721c77c7`.
-
-**Evidence**: the Audit Assertion of [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md) that opens "text the governing Change states in exact text" names "a decision of its Governance mutations or an assertion of its Spec mutations", and `spx/31-outcomeeng.enabler/32-changes.enabler/65-change-execution.enabler/change-execution.md` names the Governance mutations and Spec mutations blocks and the Executor. The Change record decision [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) defines a body of a Statement of Intent and Declarations, and [`spx/15-agent-terminology.pdr.md`](spx/15-agent-terminology.pdr.md) names the Applier.
-
-**Impact**: a reader of the merging decision or the change-execution spec meets record sections the Change record decision does not define, and a Role the terminology decision does not name.
-
-**Settlement condition**: both files name the Declarations subsections and the Applier, as https://github.com/outcomeeng/changes/issues/916 declares them.
