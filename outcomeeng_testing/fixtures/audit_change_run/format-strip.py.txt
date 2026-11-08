@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+"""Format text read on stdin and write the formatted text on stdout.
+
+A format command in the form the audit-change runner takes: it strips trailing
+whitespace from every line and ends the text with one newline.
+"""
+
+import sys
+
+
+def main() -> int:
+    text = sys.stdin.read()
+    lines = [line.rstrip() for line in text.split("\n")]
+    sys.stdout.write("\n".join(lines).rstrip("\n") + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

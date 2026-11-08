@@ -1,8 +1,8 @@
 """Replay harness for the audit-change runner's ``read-relations`` operation.
 
 Backs the ``[test]`` evidence that the operation decodes a Change's Parent,
-returns its absorbers, reads the store's issue pages until the store reports no
-further page, and blocks when a read fills a bound. The runner reaches the store
+reads the store's issue pages until the store reports no further page, and
+blocks when a read fills a bound. The runner reaches the store
 only through its injected command seam, so the harness passes the runner a
 recording collaborator that answers each ``gh api graphql`` call with a page in
 the shape of the store's answer, under the interaction-protocol exception of the
@@ -31,7 +31,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from outcomeeng_testing.harnesses.audit_change_authority import CHANGES_SPEC
+from outcomeeng_testing.harnesses.audit_change_authority import AUDIT_CHANGE_SPEC
 from outcomeeng_testing.harnesses.audit_change_run import REPO_ROOT, load_runner
 
 _FIXTURES_DIR: Final = (
@@ -42,7 +42,6 @@ RELATIONS_ISSUE: Final = "example-org/example-changes#12"
 #: The replayed Parent-form scenarios, one fixture per form.
 PARENT_FIXTURES: Final = _FIXTURES_DIR / "parent"
 CHILDREN_ON_LATER_PAGE: Final = _FIXTURES_DIR / "children-on-later-page.json"
-ABSORBERS: Final = _FIXTURES_DIR / "absorbers.json"
 UNENDING_ISSUES: Final = _FIXTURES_DIR / "unending-issues.json"
 FIELD_VALUES_UNFINISHED: Final = _FIXTURES_DIR / "field-values-unfinished.json"
 
@@ -81,20 +80,20 @@ def declared(fixture: Path) -> object:
 
 def spec_issue_page_bound() -> str:
     """The issue-page bound the spec assertion says a blocked read names."""
-    found = _PAGE_BOUND_PHRASE.search(CHANGES_SPEC.read_text(encoding="utf-8"))
+    found = _PAGE_BOUND_PHRASE.search(AUDIT_CHANGE_SPEC.read_text(encoding="utf-8"))
     if found is None:
         raise RuntimeError(
-            f"no read-relations issue page bound stated in {CHANGES_SPEC}"
+            f"no read-relations issue page bound stated in {AUDIT_CHANGE_SPEC}"
         )
     return found.group(1)
 
 
 def spec_field_value_bound() -> str:
     """The field-value bound the spec assertion says a blocked read names."""
-    found = _FIELD_BOUND_PHRASE.search(CHANGES_SPEC.read_text(encoding="utf-8"))
+    found = _FIELD_BOUND_PHRASE.search(AUDIT_CHANGE_SPEC.read_text(encoding="utf-8"))
     if found is None:
         raise RuntimeError(
-            f"no read-relations field value bound stated in {CHANGES_SPEC}"
+            f"no read-relations field value bound stated in {AUDIT_CHANGE_SPEC}"
         )
     return found.group(1)
 

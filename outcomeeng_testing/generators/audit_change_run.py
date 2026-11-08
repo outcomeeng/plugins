@@ -3,12 +3,14 @@
 The runner contract in the audit-change ``SKILL.md`` declares a request as one
 JSON object that names one listed operation, carries exactly the fields that
 operation takes, and gives each field its declared form: ``path``,
-``candidateSha256``, ``runToken``, and ``terminalStatus`` are non-empty strings;
+``bodySha256``, ``runToken``, and ``terminalStatus`` are non-empty strings;
 a path, a ``runToken``, and a payload ``unitId`` carry no NUL character and no
-text without a UTF-8 encoding; every operation except ``resolve-reference``
-names a normalized repository-relative candidate path; a payload is an object
-with a non-empty ``unitId``; a finding ``rule`` is a lowercase hyphenated ID;
-``terminalStatus`` is a listed terminal status.
+text without a UTF-8 encoding; ``read-at-base`` names a normalized
+repository-relative path; ``base`` and ``mergeCommit`` are full commit ids;
+``bodySha256`` is a SHA-256; ``formatCommand`` is a non-empty array of
+non-empty strings; a payload is an object with a non-empty ``unitId``; a
+finding ``rule`` is a lowercase hyphenated ID; ``terminalStatus`` is a listed
+terminal status.
 
 A request text is also outside the contract when the runner cannot parse it
 as one JSON object: a truncated object, a JSON value of another type, or an
@@ -161,6 +163,18 @@ def _non_rule_ids(runner: ModuleType) -> st.SearchStrategy[object]:
     return st.one_of(_not_non_empty_strings(), with_foreign, misplaced_separator)
 
 
+def _malformed_commands() -> st.SearchStrategy[object]:
+    """Values that are not a non-empty array of non-empty strings."""
+    elements = st.one_of(_non_strings(), st.just(""))
+    return st.one_of(
+        json_values().filter(lambda value: not isinstance(value, list)),
+        st.just([]),
+        st.lists(st.text(min_size=1), max_size=_MAX_MEMBERS).flatmap(
+            lambda good: elements.map(lambda bad: [*good, bad])
+        ),
+    )
+
+
 def _malformed_payloads(
     runner: ModuleType, operation: object
 ) -> st.SearchStrategy[object]:
@@ -199,10 +213,11 @@ def _malformed_values(
     """Values outside the declared form of ``field`` in a request for ``operation``."""
     fields = runner.RequestField
     if field == fields.PATH:
-        paths = st.one_of(_not_non_empty_strings(), _text_without_system_form(runner))
-        if operation != runner.Operation.RESOLVE_REFERENCE:
-            paths = st.one_of(paths, _unfit_candidate_paths())
-        return paths
+        return st.one_of(
+            _not_non_empty_strings(),
+            _text_without_system_form(runner),
+            _unfit_candidate_paths(),
+        )
     if field == fields.RUN_TOKEN:
         return st.one_of(_not_non_empty_strings(), _text_without_system_form(runner))
     if field == fields.ROOT:
@@ -211,8 +226,18 @@ def _malformed_values(
             _text_without_system_form(runner),
             _relative_paths(),
         )
-    if field == fields.CANDIDATE_SHA256:
-        return _not_non_empty_strings()
+    if field == fields.BODY_SHA256:
+        return st.one_of(
+            _non_strings(),
+            st.text().filter(lambda text: not runner.SHA256_PATTERN.fullmatch(text)),
+        )
+    if field in (fields.BASE, fields.MERGE_COMMIT):
+        return st.one_of(
+            _non_strings(),
+            st.text().filter(lambda text: not runner.COMMIT_PATTERN.fullmatch(text)),
+        )
+    if field == fields.FORMAT_COMMAND:
+        return _malformed_commands()
     if field == fields.TERMINAL_STATUS:
         listed = {status.value for status in runner.TerminalStatus}
         return st.one_of(

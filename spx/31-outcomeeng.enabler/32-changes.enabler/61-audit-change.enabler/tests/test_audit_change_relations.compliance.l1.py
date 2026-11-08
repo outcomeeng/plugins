@@ -1,13 +1,11 @@
-"""Compliance evidence: read-relations returns absorbers, reads every page, and blocks at its bounds.
+"""Compliance evidence: read-relations reads every page and blocks at its bounds.
 
 The rules are the spec assertions for the ``audit-change`` runner's
 ``read-relations`` operation. Each violating case is a replayed store scenario
-that a faulty reader gets wrong: issues whose ``Predecessors`` value only
-contains the named issue's number as a prefix of another number, or that the
-named issue's own value names, for the absorbers rule; a child that sits on a
-page after the first, for the page-order rule; a store that never ends its
-issue connection, for the issue-page bound; and an issue whose field-value
-connection reports a further page, for the field-value bound. Each scenario
+that a faulty reader gets wrong: a child that sits on a page after the first,
+for the page-order rule; a store that never ends its issue connection, for the
+issue-page bound; and an issue whose field-value connection reports a further
+page, for the field-value bound. Each scenario
 states what its issues declare, the bounds come from the assertion text, and
 the store answers come from replayed fixture files, so no expected value is
 chosen here and no call reaches the network.
@@ -16,7 +14,6 @@ chosen here and no call reaches the network.
 from __future__ import annotations
 
 from outcomeeng_testing.harnesses.audit_change_relations import (
-    ABSORBERS,
     CHILDREN_ON_LATER_PAGE,
     FIELD_VALUES_UNFINISHED,
     UNENDING_ISSUES,
@@ -32,16 +29,6 @@ Result = runner.ResultField
 Status = runner.ResultStatus
 Reason = runner.BlockReason
 ExitCode = runner.ExitCode
-
-
-def test_absorbers_are_the_issues_whose_predecessors_name_the_issue_and_no_other() -> (
-    None
-):
-    observed = read_relations(ABSORBERS)
-
-    assert observed.exit_code == ExitCode.OK
-    assert observed.result[Result.STATUS] == Status.OK
-    assert observed.result[Result.ABSORBERS] == declared(ABSORBERS)
 
 
 def test_a_child_on_a_later_page_is_returned_after_reading_pages_in_order() -> None:

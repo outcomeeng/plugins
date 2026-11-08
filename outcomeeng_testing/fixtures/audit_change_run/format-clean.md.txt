@@ -1,0 +1,6 @@
+# Example
+
+A short document the format command leaves unchanged.
+
+- first-rule: ALWAYS: the document states one rule
+- second-rule: NEVER: the document states two rules in one line

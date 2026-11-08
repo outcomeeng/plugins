@@ -1,34 +1,31 @@
-"""Compliance evidence: an audit-change run writes no file.
+"""Compliance evidence: an audit-change run writes no file and reads the record, the Base, and the checkout root as its request names them.
 
 Every request passes to the shipped runner on stdin and every result returns on
 stdout; the SPX run journal is the only store the audit leaves behind. The
 violating inputs are the conditions that made auditors write working files: a
 rendered projection far larger than a result, two audits started at once from
-one worktree, and a failure part-way through a run — a candidate that changes,
-a payload SPX rejects, a request the runner refuses, and a candidate it cannot
-take.
+one worktree, and a failure part-way through a run — a record that changes, a
+payload SPX rejects, a request the runner refuses, and a record the store does
+not hold.
 
 Each subprocess invocation is observed for every file the runner process
 writes wherever the path lies — a fixed temporary path, the home directory, or
 the SPX store included — and for every process it starts, alongside snapshots
 of the repository, the SPX store, and the runner's temporary and home
 directories. Generated requests enter the runner's entry point in the test
-process under the same audit-hook observation.
+process under the same audit-hook observation. The Change Store answers from a
+replayed ``gh``, so no call reaches the network.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Mapping
 from pathlib import Path
 
-import pytest
-
 from outcomeeng_testing.harnesses.audit_change_run import (
-    CAPTURED_CHANGE_RECORD,
-    CHANGE_TEMPLATE,
     AuditWorkspace,
-    CandidateCondition,
     EntryPointCall,
     RunnerCall,
     audit_payloads,
@@ -49,28 +46,24 @@ Reason = runner.BlockReason
 Terminal = runner.TerminalStatus
 ExitCode = runner.ExitCode
 SpxField = runner.SpxField
-PERMITTED_EXECUTABLES = frozenset({runner.SPX_EXECUTABLE, runner.GIT_EXECUTABLE})
+Metadata = runner.MetadataKey
+PERMITTED_EXECUTABLES = frozenset(
+    {runner.SPX_EXECUTABLE, runner.GIT_EXECUTABLE, runner.GH_EXECUTABLE}
+)
 
 
-def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall]:
-    """Drive every runner operation of one rejected audit over ``relative``.
+def _complete_audit(workspace: AuditWorkspace, identity: str) -> list[RunnerCall]:
+    """Drive every runner operation of one rejected audit over ``identity``.
 
-    The first two calls read the candidate and start the run.
+    The first two calls read the record and start the run.
     """
-    opened = workspace.start_run(relative)
+    opened = workspace.start_run(identity)
     run_token = opened.run_token
-    resolved = workspace.invoke(
-        {
-            Field.OPERATION: Operation.RESOLVE_REFERENCE,
-            Field.PATH: relative,
-            Field.ROOT: str(workspace.root),
-        }
-    )
     versioned = workspace.invoke({Field.OPERATION: Operation.TOOL_VERSION})
-    calls = [opened.read, opened.started, resolved, versioned]
+    calls = [opened.read, opened.started, versioned]
     payloads = audit_payloads(
-        subject=relative,
-        content=str(opened.read.result[Result.CONTENT]),
+        subject=identity,
+        content=str(opened.read.result[Result.DRAFT]),
         tool_version=str(versioned.result[Result.TOOL_VERSION]),
     )
     for scope in payloads.scopes:
@@ -78,7 +71,7 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
             workspace.invoke(
                 {
                     Field.OPERATION: Operation.ADD_SCOPE,
-                    Field.PATH: relative,
+                    Field.ISSUE: identity,
                     Field.ROOT: str(workspace.root),
                     Field.RUN_TOKEN: run_token,
                     Field.PAYLOAD: scope,
@@ -90,7 +83,7 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
             workspace.invoke(
                 {
                     Field.OPERATION: Operation.ADD_FINDING,
-                    Field.PATH: relative,
+                    Field.ISSUE: identity,
                     Field.ROOT: str(workspace.root),
                     Field.RUN_TOKEN: run_token,
                     Field.PAYLOAD: finding,
@@ -101,7 +94,7 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
         workspace.invoke(
             {
                 Field.OPERATION: Operation.RECONCILE,
-                Field.PATH: relative,
+                Field.ISSUE: identity,
                 Field.ROOT: str(workspace.root),
                 Field.RUN_TOKEN: run_token,
             }
@@ -111,7 +104,7 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
         workspace.invoke(
             {
                 Field.OPERATION: Operation.FINISH,
-                Field.PATH: relative,
+                Field.ISSUE: identity,
                 Field.ROOT: str(workspace.root),
                 Field.RUN_TOKEN: run_token,
                 Field.TERMINAL_STATUS: Terminal.REJECTED,
@@ -129,10 +122,10 @@ def test_a_complete_audit_writes_no_file_and_its_journal_reproduces_the_projecti
     None
 ):
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        identity = workspace.place_issue()
         before = workspace.snapshot()
 
-        calls = _complete_audit(workspace, relative)
+        calls = _complete_audit(workspace, identity)
         changes = workspace.changes_since(before)
 
         assert [call.result[Result.STATUS] for call in calls] == [Status.OK] * len(
@@ -170,6 +163,7 @@ def test_a_complete_audit_writes_no_file_and_its_journal_reproduces_the_projecti
             f"{finding[SpxField.UNIT_ID]}{runner.IDEMPOTENCY_KEY_SEPARATOR}{finding[SpxField.RULE]}"
             for finding in submitted
         ]
+        draft = str(calls[0].result[Result.DRAFT])
         finished = calls[-1].result
         run_fields = finished[Result.RUN]
         projection = workspace.render(str(finished[Result.RENDER_COMMAND]))
@@ -177,32 +171,29 @@ def test_a_complete_audit_writes_no_file_and_its_journal_reproduces_the_projecti
         assert isinstance(run_fields, dict)
         assert run_fields
         assert {field: projection[field] for field in run_fields} == run_fields
-        assert workspace.content(relative) in json_strings(projection)
-        assert workspace.content(relative) not in json_strings(run_fields)
+        assert draft in json_strings(projection)
+        assert draft not in json_strings(run_fields)
 
 
-def test_two_audits_started_at_once_from_one_worktree_each_read_only_their_own_candidate() -> (
+def test_two_audits_started_at_once_from_one_worktree_each_read_only_their_own_record() -> (
     None
 ):
     with audit_workspace() as workspace:
-        candidates = [
-            workspace.place(CAPTURED_CHANGE_RECORD),
-            workspace.place(CHANGE_TEMPLATE),
-        ]
+        identities = [workspace.place_issue(), workspace.place_issue(number=896)]
         before = workspace.snapshot()
 
         audits = run_in_parallel(
-            lambda relative: _complete_audit(workspace, relative), candidates
+            lambda identity: _complete_audit(workspace, identity), identities
         )
         changes = workspace.changes_since(before)
 
-        for relative, calls in zip(candidates, audits, strict=True):
+        for identity, calls in zip(identities, audits, strict=True):
             assert [call.result[Result.STATUS] for call in calls] == [Status.OK] * len(
                 calls
             )
             assert [call.runner_writes for call in calls] == [()] * len(calls)
             assert _started_executables(calls) <= PERMITTED_EXECUTABLES
-            assert calls[0].result[Result.CONTENT] == workspace.content(relative)
+            assert calls[0].result[Result.ISSUE] == identity
             run_fields = calls[-1].result[Result.RUN]
             assert isinstance(run_fields, dict)
             assert run_fields[SpxField.RUN_TOKEN] == calls[1].result[Result.RUN_TOKEN]
@@ -215,33 +206,34 @@ def test_two_audits_started_at_once_from_one_worktree_each_read_only_their_own_c
         assert changes.in_runner_home_directory == ()
 
 
-def test_a_candidate_edited_before_the_run_starts_blocks_without_a_run_or_a_file() -> (
+def test_a_record_published_before_the_run_starts_blocks_without_a_run_or_a_file() -> (
     None
 ):
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        identity = workspace.place_issue()
         read = workspace.invoke(
             {
-                Field.OPERATION: Operation.READ_CANDIDATE,
-                Field.PATH: relative,
+                Field.OPERATION: Operation.READ_RECORD,
+                Field.ISSUE: identity,
                 Field.ROOT: str(workspace.root),
             }
         )
-        workspace.edit(relative)
+        workspace.edit(identity)
         before = workspace.snapshot()
 
         started = workspace.invoke(
             {
                 Field.OPERATION: Operation.START,
-                Field.PATH: relative,
+                Field.ISSUE: identity,
                 Field.ROOT: str(workspace.root),
-                Field.CANDIDATE_SHA256: read.result[Result.SHA256],
+                Field.BODY_SHA256: read.result[Result.BODY_SHA256],
+                Field.BASE: read.result[Result.BASE],
             }
         )
         changes = workspace.changes_since(before)
 
         assert started.exit_code == ExitCode.BLOCKED
-        assert started.result[Result.REASON] == Reason.CANDIDATE_CHANGED
+        assert started.result[Result.REASON] == Reason.RECORD_CHANGED
         assert started.result[Result.RUN_TOKEN] == runner.NOT_STARTED
         assert started.runner_writes == ()
         assert _started_executables([started]) <= PERMITTED_EXECUTABLES
@@ -251,46 +243,17 @@ def test_a_candidate_edited_before_the_run_starts_blocks_without_a_run_or_a_file
         assert changes.in_runner_home_directory == ()
 
 
-def test_a_candidate_edited_during_the_run_blocks_reconciliation_without_a_file() -> (
-    None
-):
-    with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
-        opened = workspace.start_run(relative)
-        workspace.edit(relative)
-        before = workspace.snapshot()
-
-        reconciled = workspace.invoke(
-            {
-                Field.OPERATION: Operation.RECONCILE,
-                Field.PATH: relative,
-                Field.ROOT: str(workspace.root),
-                Field.RUN_TOKEN: opened.run_token,
-            }
-        )
-        changes = workspace.changes_since(before)
-
-        assert reconciled.exit_code == ExitCode.BLOCKED
-        assert reconciled.result[Result.REASON] == Reason.CANDIDATE_CHANGED
-        assert reconciled.result[Result.RUN_TOKEN] == opened.run_token
-        assert reconciled.runner_writes == ()
-        assert _started_executables([reconciled]) <= PERMITTED_EXECUTABLES
-        assert changes.in_repository_outside_store == ()
-        assert changes.in_runner_temporary_directory == ()
-        assert changes.in_runner_home_directory == ()
-
-
 def test_a_payload_spx_rejects_blocks_with_its_command_diagnostic_and_no_file() -> None:
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
-        opened = workspace.start_run(relative)
+        identity = workspace.place_issue()
+        opened = workspace.start_run(identity)
         before = workspace.snapshot()
-        payload = {SpxField.UNIT_ID: relative}
+        payload = {SpxField.UNIT_ID: identity}
 
         rejected = workspace.invoke(
             {
                 Field.OPERATION: Operation.ADD_SCOPE,
-                Field.PATH: relative,
+                Field.ISSUE: identity,
                 Field.ROOT: str(workspace.root),
                 Field.RUN_TOKEN: opened.run_token,
                 Field.PAYLOAD: payload,
@@ -301,7 +264,7 @@ def test_a_payload_spx_rejects_blocks_with_its_command_diagnostic_and_no_file() 
         assert rejected.exit_code == ExitCode.BLOCKED
         assert rejected.result[Result.REASON] == Reason.COMMAND_FAILED
         assert rejected.result[Result.RUN_TOKEN] == opened.run_token
-        assert rejected.result[Result.PAYLOAD_KEY] == relative
+        assert rejected.result[Result.PAYLOAD_KEY] == identity
         assert rejected.result[Result.EXIT_CODE] != 0
         assert rejected.result[Result.STDERR]
         assert runner.SPX_EXECUTABLE in _started_executables([rejected])
@@ -346,13 +309,13 @@ def test_a_generated_request_text_the_runner_cannot_parse_as_one_json_object_blo
 
 def test_a_request_that_is_not_utf8_text_blocks_on_stdout_without_a_file() -> None:
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        identity = workspace.place_issue()
         before = workspace.snapshot()
 
         blocked = workspace.invoke_utf16(
             {
-                Field.OPERATION: Operation.READ_CANDIDATE,
-                Field.PATH: relative,
+                Field.OPERATION: Operation.READ_RECORD,
+                Field.ISSUE: identity,
                 Field.ROOT: str(workspace.root),
             }
         )
@@ -367,15 +330,13 @@ def test_a_request_that_is_not_utf8_text_blocks_on_stdout_without_a_file() -> No
         assert changes.in_runner_home_directory == ()
 
 
-def test_a_reference_resolution_naming_no_root_blocks_naming_the_root_without_a_file() -> (
-    None
-):
+def test_a_record_read_naming_no_root_blocks_naming_the_root_without_a_file() -> None:
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        identity = workspace.place_issue()
         before = workspace.snapshot()
 
         blocked = workspace.invoke(
-            {Field.OPERATION: Operation.RESOLVE_REFERENCE, Field.PATH: relative}
+            {Field.OPERATION: Operation.READ_RECORD, Field.ISSUE: identity}
         )
         changes = workspace.changes_since(before)
 
@@ -390,18 +351,17 @@ def test_a_reference_resolution_naming_no_root_blocks_naming_the_root_without_a_
         assert changes.in_runner_home_directory == ()
 
 
-def test_a_reference_resolution_whose_root_is_inside_a_checkout_blocks_naming_the_root() -> (
-    None
-):
+def test_a_record_read_whose_root_is_inside_a_checkout_blocks_naming_the_root() -> None:
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
-        inside = workspace.root / Path(relative).parent
+        identity = workspace.place_issue()
+        workspace.commit({"docs/example.md": "text\n"}, message="add a file")
+        inside = workspace.root / "docs"
         before = workspace.snapshot()
 
         blocked = workspace.invoke(
             {
-                Field.OPERATION: Operation.RESOLVE_REFERENCE,
-                Field.PATH: relative,
+                Field.OPERATION: Operation.READ_RECORD,
+                Field.ISSUE: identity,
                 Field.ROOT: str(inside),
             }
         )
@@ -418,18 +378,16 @@ def test_a_reference_resolution_whose_root_is_inside_a_checkout_blocks_naming_th
         assert changes.in_runner_home_directory == ()
 
 
-def test_a_reference_resolution_whose_root_is_no_repository_blocks_naming_the_root() -> (
-    None
-):
+def test_a_record_read_whose_root_is_no_repository_blocks_naming_the_root() -> None:
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        identity = workspace.place_issue()
         outside = workspace.outside_directory
         before = workspace.snapshot()
 
         blocked = workspace.invoke(
             {
-                Field.OPERATION: Operation.RESOLVE_REFERENCE,
-                Field.PATH: relative,
+                Field.OPERATION: Operation.READ_RECORD,
+                Field.ISSUE: identity,
                 Field.ROOT: str(outside),
             }
         )
@@ -450,14 +408,14 @@ def test_an_audit_launched_from_another_directory_seals_its_run_in_the_named_roo
     None
 ):
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        identity = workspace.place_issue()
         launched_from = workspace.outside_directory
         before = workspace.snapshot()
 
         read = workspace.invoke(
             {
-                Field.OPERATION: Operation.READ_CANDIDATE,
-                Field.PATH: relative,
+                Field.OPERATION: Operation.READ_RECORD,
+                Field.ISSUE: identity,
                 Field.ROOT: str(workspace.root),
             },
             launched_from=launched_from,
@@ -465,9 +423,10 @@ def test_an_audit_launched_from_another_directory_seals_its_run_in_the_named_roo
         started = workspace.invoke(
             {
                 Field.OPERATION: Operation.START,
-                Field.PATH: relative,
+                Field.ISSUE: identity,
                 Field.ROOT: str(workspace.root),
-                Field.CANDIDATE_SHA256: read.result[Result.SHA256],
+                Field.BODY_SHA256: read.result[Result.BODY_SHA256],
+                Field.BASE: read.result[Result.BASE],
             },
             launched_from=launched_from,
         )
@@ -475,7 +434,7 @@ def test_an_audit_launched_from_another_directory_seals_its_run_in_the_named_roo
         finished = workspace.invoke(
             {
                 Field.OPERATION: Operation.FINISH,
-                Field.PATH: relative,
+                Field.ISSUE: identity,
                 Field.ROOT: str(workspace.root),
                 Field.RUN_TOKEN: run_token,
                 Field.TERMINAL_STATUS: Terminal.REJECTED,
@@ -485,7 +444,6 @@ def test_an_audit_launched_from_another_directory_seals_its_run_in_the_named_roo
         changes = workspace.changes_since(before)
 
         assert read.result[Result.STATUS] == Status.OK
-        assert read.result[Result.CONTENT] == workspace.content(relative)
         assert started.result[Result.STATUS] == Status.OK
         assert finished.result[Result.STATUS] == Status.OK
         run_fields = finished.result[Result.RUN]
@@ -499,18 +457,16 @@ def test_an_audit_launched_from_another_directory_seals_its_run_in_the_named_roo
         assert changes.in_runner_home_directory == ()
 
 
-@pytest.mark.parametrize("condition", tuple(CandidateCondition))
-def test_a_candidate_the_runner_cannot_take_blocks_on_stdout_without_a_file(
-    condition: CandidateCondition,
-) -> None:
+def test_a_record_the_store_does_not_hold_blocks_on_stdout_without_a_file() -> None:
     with audit_workspace() as workspace:
-        relative = workspace.place_in_condition(condition, CAPTURED_CHANGE_RECORD)
+        workspace.place_issue()
+        absent = workspace.absent_identity()
         before = workspace.snapshot()
 
         blocked = workspace.invoke(
             {
-                Field.OPERATION: Operation.READ_CANDIDATE,
-                Field.PATH: relative,
+                Field.OPERATION: Operation.READ_RECORD,
+                Field.ISSUE: absent,
                 Field.ROOT: str(workspace.root),
             }
         )
@@ -518,6 +474,7 @@ def test_a_candidate_the_runner_cannot_take_blocks_on_stdout_without_a_file(
 
         assert len(blocked.stdout_lines) == 1
         assert blocked.result[Result.STATUS] == Status.BLOCKED
+        assert blocked.result[Result.REASON] == Reason.RECORD_MISSING
         assert blocked.runner_writes == ()
         assert _started_executables([blocked]) <= PERMITTED_EXECUTABLES
         assert changes.in_repository_outside_store == ()
@@ -525,41 +482,127 @@ def test_a_candidate_the_runner_cannot_take_blocks_on_stdout_without_a_file(
         assert changes.in_runner_home_directory == ()
 
 
-@pytest.mark.parametrize(
-    "operation",
-    tuple(
+def test_every_refused_request_naming_a_started_run_blocks_with_its_run_token_and_no_file() -> (
+    None
+):
+    operations = tuple(
         operation
         for operation in Operation
         if Field.RUN_TOKEN in runner.REQUIRED_FIELDS[operation]
-    ),
-)
-def test_a_refused_request_naming_a_started_run_blocks_with_its_run_token_and_no_file(
-    operation: object,
-) -> None:
+    )
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
-        run_token = workspace.start_run(relative).run_token
+        identity = workspace.place_issue()
+        run_token = workspace.start_run(identity).run_token
         before = workspace.snapshot()
 
         # Every request field, so the request carries fields its operation
-        # does not take, with the operation, the candidate, and the run named.
-        blocked = workspace.invoke(
-            {
-                **dict.fromkeys(Field),
-                Field.OPERATION: operation,
-                Field.PATH: relative,
-                Field.ROOT: str(workspace.root),
-                Field.RUN_TOKEN: run_token,
-            }
-        )
+        # does not take, with the operation, the record, and the run named.
+        blocked = [
+            workspace.invoke(
+                {
+                    **dict.fromkeys(Field),
+                    Field.OPERATION: operation,
+                    Field.ISSUE: identity,
+                    Field.ROOT: str(workspace.root),
+                    Field.RUN_TOKEN: run_token,
+                }
+            )
+            for operation in operations
+        ]
         changes = workspace.changes_since(before)
 
-        assert len(blocked.stdout_lines) == 1
-        assert blocked.result[Result.STATUS] == Status.BLOCKED
-        assert blocked.result[Result.OPERATION] == operation
-        assert blocked.result[Result.RUN_TOKEN] == run_token
-        assert blocked.runner_writes == ()
-        assert _started_executables([blocked]) <= PERMITTED_EXECUTABLES
+        for operation, call in zip(operations, blocked, strict=True):
+            assert len(call.stdout_lines) == 1
+            assert call.result[Result.STATUS] == Status.BLOCKED
+            assert call.result[Result.OPERATION] == operation
+            assert call.result[Result.RUN_TOKEN] == run_token
+            assert call.runner_writes == ()
+            assert _started_executables([call]) <= PERMITTED_EXECUTABLES
         assert changes.in_repository_outside_store == ()
         assert changes.in_runner_temporary_directory == ()
         assert changes.in_runner_home_directory == ()
+
+
+def test_the_record_read_returns_a_draft_of_the_stored_metadata_without_the_holder_then_the_stored_body() -> (
+    None
+):
+    with audit_workspace() as workspace:
+        identity = workspace.place_issue()
+        stored_body = workspace.body(identity)
+
+        read = workspace.invoke(
+            {
+                Field.OPERATION: Operation.READ_RECORD,
+                Field.ISSUE: identity,
+                Field.ROOT: str(workspace.root),
+            }
+        )
+
+        draft = str(read.result[Result.DRAFT])
+        front, _separator, body = draft.removeprefix("---\n").partition("\n---\n")
+        keys = [line.partition(":")[0] for line in front.splitlines() if line[0] != " "]
+        assert read.result[Result.STATUS] == Status.OK
+        assert draft.startswith("---\n")
+        assert keys == [str(key) for key in runner.DRAFT_KEYS]
+        assert Metadata.HOLDER not in keys
+        assert body == stored_body
+        assert (
+            read.result[Result.BODY_SHA256]
+            == hashlib.sha256(stored_body.encode(runner.TEXT_ENCODING)).hexdigest()
+        )
+        assert read.result[Result.ISSUE] == identity
+
+
+def test_a_path_read_at_the_base_returns_the_file_the_commit_holds_and_not_the_working_tree() -> (
+    None
+):
+    with audit_workspace() as workspace:
+        base = workspace.commit(
+            {"docs/example.md": "at the base\n", "docs/other.md": "other\n"},
+            message="add files",
+        )
+        workspace.commit({"docs/example.md": "after the base\n"}, message="edit a file")
+        request = {
+            Field.OPERATION: Operation.READ_AT_BASE,
+            Field.ROOT: str(workspace.root),
+            Field.BASE: base,
+        }
+
+        file = workspace.invoke({**request, Field.PATH: "docs/example.md"})
+        directory = workspace.invoke({**request, Field.PATH: "docs"})
+        missing = workspace.invoke({**request, Field.PATH: "docs/absent.md"})
+
+        assert file.result[Result.STATUS] == Status.OK
+        assert file.result[Result.KIND] == runner.BaseKind.FILE
+        assert file.result[Result.CONTENT] == "at the base\n"
+        assert directory.result[Result.KIND] == runner.BaseKind.DIRECTORY
+        assert directory.result[Result.ENTRIES] == ["example.md", "other.md"]
+        assert missing.result[Result.STATUS] == Status.OK
+        assert missing.result[Result.KIND] == runner.BaseKind.MISSING
+        assert (
+            Path(workspace.root / "docs" / "example.md").read_text(encoding="utf-8")
+            == "after the base\n"
+        )
+        for call in (file, directory, missing):
+            assert call.runner_writes == ()
+            assert _started_executables([call]) <= PERMITTED_EXECUTABLES
+
+
+def test_a_base_that_names_no_commit_blocks_naming_the_base() -> None:
+    with audit_workspace() as workspace:
+        workspace.commit({"docs/example.md": "text\n"}, message="add a file")
+        unknown = "0" * 40
+
+        blocked = workspace.invoke(
+            {
+                Field.OPERATION: Operation.READ_AT_BASE,
+                Field.ROOT: str(workspace.root),
+                Field.BASE: unknown,
+                Field.PATH: "docs/example.md",
+            }
+        )
+
+        assert blocked.exit_code == ExitCode.BLOCKED
+        assert blocked.result[Result.REASON] == Reason.BASE_UNRESOLVED
+        assert unknown in str(blocked.result[Result.DETAIL])
+        assert blocked.runner_writes == ()

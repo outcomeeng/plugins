@@ -1,0 +1,33 @@
+#!/usr/bin/env python3
+"""Replay recorded Change Store answers in place of the gh CLI.
+
+The audit-change runner starts ``gh api graphql`` with the issue number in
+``-F n=<number>``. This script answers with the issue object stored under that
+number in the JSON file the ``AUDIT_CHANGE_STORE`` variable names, in the shape
+of a GraphQL answer, and answers with a null issue for a number the file does
+not hold.
+"""
+
+import json
+import os
+import sys
+
+ISSUE_NUMBER_VARIABLE = "n"
+
+
+def main(argv: list[str]) -> int:
+    values: dict[str, str] = {}
+    arguments = iter(argv[1:])
+    for argument in arguments:
+        if argument in ("-f", "-F"):
+            name, _, value = next(arguments, "").partition("=")
+            values[name] = value
+    with open(os.environ["AUDIT_CHANGE_STORE"], encoding="utf-8") as handle:
+        store = json.load(handle)
+    issue = store.get(values.get(ISSUE_NUMBER_VARIABLE, ""))
+    print(json.dumps({"data": {"repository": {"issue": issue}}}))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

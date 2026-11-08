@@ -1,16 +1,18 @@
 """Workspace, invocation, and observation harness for the audit-change runner.
 
-Backs the ``[test]`` evidence that an audit-change run writes no file.
-Each workspace is a fresh Git repository in a temporary directory beside three
-initially empty directories: one the runner receives as its temporary
-directory, one it receives as its home directory, and one outside both that
-holds link targets. The harness places whole-payload Change records into the
-repository and starts the shipped runner as a subprocess, with one request on
-stdin, under the process observer in ``audit_change_run_observer``. Every
-invocation therefore exposes what the runner printed, every file the runner
-process wrote wherever the path lies, and every process it started. Directory
-snapshots add what changed in the repository, the SPX store, and the runner's
-temporary and home directories, which covers the processes the runner starts.
+Backs the ``[test]`` evidence that an audit-change run writes no file and reads
+the Change Store only through ``gh``. Each workspace is a fresh Git repository in
+a temporary directory beside four initially empty directories: one the runner
+receives as its temporary directory, one as its home directory, one outside
+both, and one holding an executable ``gh`` that replays recorded store answers
+from a store file beside the repository. The harness places whole-payload store
+issues into the store file and starts the shipped runner as a subprocess, with
+one request on stdin, under the process observer in
+``audit_change_run_observer``. Every invocation therefore exposes what the
+runner printed, every file the runner process wrote wherever the path lies, and
+every process it started. Directory snapshots add what changed in the
+repository, the SPX store, and the runner's temporary and home directories,
+which covers the processes the runner starts.
 
 Generated requests enter the runner's entry point in this process instead,
 under one observer ``Recorder`` installed here for that purpose, from one
@@ -45,7 +47,6 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import chdir, contextmanager
 from dataclasses import dataclass
-from enum import StrEnum
 from pathlib import Path
 from tempfile import TemporaryDirectory, mkstemp
 from types import ModuleType
@@ -84,43 +85,41 @@ PRODUCT_TREE_MANIFEST: Final = PRODUCT_TREE_DIR / ".claude-plugin" / "plugin.jso
 #: How many finding rule identifiers one generated audit records.
 RULE_IDENTIFIER_COUNT: Final = 10
 
-#: An author-change record template, a source-owned Change record.
-CHANGE_TEMPLATE: Final = (
-    PRODUCT_TREE_DIR / "skills" / "author-change" / "templates" / "proposed.md"
-)
 _FIXTURES_DIR: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "audit_change_run"
 )
-#: An abridged capture of Change outcomeeng/changes#162, an Executable record.
-CAPTURED_CHANGE_RECORD: Final = _FIXTURES_DIR / "change-record.md.txt"
-
-# An editor applying typographic apostrophes and saving in Windows-1252 writes
-# U+2019 as a byte no UTF-8 sequence starts with, so the saved record is not
-# UTF-8 text. The re-encoded record exists only inside a disposable workspace.
-_WINDOWS_1252_CODEC: Final = "cp1252"
-_WINDOWS_1252_PREFIX: Final = "windows-1252-"
-_TYPEWRITER_APOSTROPHE: Final = "'"
-_TYPOGRAPHIC_APOSTROPHE: Final = "\N{RIGHT SINGLE QUOTATION MARK}"
+#: A capture of a Sliced Leaf as the Change Store answers for it, the whole
+#: payload of the ``issue`` object of one GraphQL answer.
+STORE_ISSUE: Final = _FIXTURES_DIR / "store-issue.json"
+#: The executable that stands in for ``gh``, saved with a ``.txt`` suffix.
+GH_REPLAY: Final = _FIXTURES_DIR / "gh-replay.py.txt"
+_GH_REPLAY_NAME: Final = "gh"
+#: The executable that stands in for the Product's format command.
+FORMATTER: Final = _FIXTURES_DIR / "format-strip.py.txt"
+_FORMATTER_NAME: Final = "format-strip"
+_EXECUTABLE_MODE: Final = 0o755
+_COMMITTER: Final = "Audit Change Harness"
+_COMMITTER_EMAIL: Final = "harness@example.invalid"
+_DEFAULT_BRANCH: Final = "main"
 
 # Windows PowerShell's Out-File saves text as UTF-16 with a byte-order mark,
 # whose first byte no UTF-8 sequence starts with.
 _UTF16_CODEC: Final = "utf-16"
-#: Text appended to a candidate, as another session editing it would.
-CANDIDATE_EDIT: Final = "\n"
-# A mode that grants no permission, so the process cannot open the file.
-_NO_PERMISSIONS: Final = 0
+#: Text appended to a stored body, as another session editing the record would.
+BODY_EDIT: Final = "\n"
 
 #: Property run configuration for generated requests.
 MALFORMED_REQUEST_PROPERTY_SEED: Final = 20260929
 MALFORMED_REQUEST_PROPERTY_EXAMPLES: Final = settings().max_examples
 MALFORMED_REQUEST_PROPERTY_REPLAY: Final = (
-    "just test spx/31-outcomeeng.enabler/32-changes.enabler/tests/"
-    "test_audit_change_run.compliance.l1.py"
+    "just test spx/31-outcomeeng.enabler/32-changes.enabler/61-audit-change.enabler/"
+    "tests/test_audit_change_run.compliance.l1.py"
 )
 
-_CANDIDATE_DIRNAME: Final = "changes"
-_FIXTURE_SUFFIX: Final = ".txt"
 _TEMPORARY_DIRECTORY_VARIABLES: Final = ("TMPDIR", "TMP", "TEMP")
+#: The variable through which the replayed ``gh`` finds its store file.
+STORE_VARIABLE: Final = "AUDIT_CHANGE_STORE"
+_PATH_VARIABLE: Final = "PATH"
 # The GitHub CLI records a device identifier under its state directory on its
 # first run, in the home directory unless the host sets XDG_STATE_HOME. The
 # record is the CLI's own telemetry state, so the runner's environment turns
@@ -145,6 +144,41 @@ def load_runner() -> ModuleType:
     sys.modules["audit_change_run"] = module
     spec.loader.exec_module(module)
     return module
+
+
+def stored_issue() -> dict[str, object]:
+    """Return the captured store issue, decoded afresh."""
+    value = json.loads(STORE_ISSUE.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise TypeError(f"{STORE_ISSUE} holds no JSON object")
+    return value
+
+
+def issue_identity(issue: Mapping[str, object]) -> str:
+    """Return the ``owner/repository#number`` identity of a store issue."""
+    repository = issue["repository"]
+    if not isinstance(repository, Mapping):
+        raise TypeError("the store issue names no repository")
+    return f"{repository['nameWithOwner']}#{issue['number']}"
+
+
+#: Whole-payload files the format scenarios commit and declare: one the format
+#: command leaves unchanged, one it changes, and the first with a linked tag.
+FORMAT_CLEAN: Final = _FIXTURES_DIR / "format-clean.md.txt"
+FORMAT_DIRTY: Final = _FIXTURES_DIR / "format-dirty.md.txt"
+FORMAT_TAGGED: Final = _FIXTURES_DIR / "format-tagged.md.txt"
+
+
+def body_declaring(path: str, text: str) -> str:
+    """Return a record body whose one Declarations subsection replaces ``path`` with ``text``."""
+    return (
+        "## Statement of Intent\n\n- Output: a file replaced\n\n"
+        f"## Declarations\n\n### `{path}`\n\n````markdown\n{text}````\n"
+    )
+
+
+#: The identity of the captured store issue.
+FIXTURE_IDENTITY: Final = issue_identity(stored_issue())
 
 
 @dataclass(frozen=True)
@@ -187,7 +221,7 @@ class RunnerCall:
 
 @dataclass(frozen=True)
 class StartedRun:
-    """The ``read-candidate`` and ``start`` calls that opened one audit run."""
+    """The ``read-record`` and ``start`` calls that opened one audit run."""
 
     read: RunnerCall
     started: RunnerCall
@@ -265,115 +299,144 @@ def _changed(before: Mapping[str, str], after: Mapping[str, str]) -> tuple[str, 
     )
 
 
-class CandidateCondition(StrEnum):
-    """A candidate path the runner contract names as refused or missing."""
-
-    ABSENT = "absent"
-    DIRECTORY = "directory"
-    UNREADABLE = "unreadable"
-    LINKED_OUTSIDE = "linked-outside"
-    WINDOWS_1252 = "windows-1252"
-
-
 @dataclass
 class AuditWorkspace:
-    """A Git repository holding Change candidates, and the runner's own directories."""
+    """A Git repository, a replayed Change Store, and the runner's own directories."""
 
     root: Path
     runner_temporary_directory: Path
     runner_home_directory: Path
     outside_directory: Path
     observation_directory: Path
+    bin_directory: Path
+    store_file: Path
 
-    def path_for(self, source: Path) -> str:
-        """Return the relative path ``place`` gives ``source``, without placing it."""
-        name = source.name.removesuffix(_FIXTURE_SUFFIX)
-        return (Path(_CANDIDATE_DIRNAME) / name).as_posix()
+    def _store(self) -> dict[str, object]:
+        return json.loads(self.store_file.read_text(encoding="utf-8"))
 
-    def place(self, source: Path) -> str:
-        """Copy a whole-payload record into the repository; return its relative path."""
-        relative = self.path_for(source)
-        target = self.root / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, target)
-        return relative
+    def put_issue(self, issue: Mapping[str, object]) -> str:
+        """Store ``issue`` where the replayed ``gh`` finds it; return its identity."""
+        store = self._store()
+        store[str(issue["number"])] = dict(issue)
+        self.store_file.write_text(json.dumps(store), encoding="utf-8")
+        return issue_identity(issue)
 
-    def place_windows_1252(self, source: Path) -> str:
-        """Place ``source`` as an editor saving it in Windows-1252 would.
+    def place_issue(self, number: int | None = None) -> str:
+        """Store the captured issue, under ``number`` when given; return its identity."""
+        issue = stored_issue()
+        if number is not None:
+            issue["number"] = number
+            issue["title"] = f"{issue['title']} ({number})"
+        return self.put_issue(issue)
 
-        The UTF-8 record's apostrophes become typographic apostrophes and the
-        text is encoded in Windows-1252, so the placed candidate is the same
-        record in bytes that are not UTF-8 text. Return its relative path.
-        """
-        text = source.read_text(encoding="utf-8")
-        if _TYPEWRITER_APOSTROPHE not in text:
-            raise RuntimeError(
-                f"{source} carries no apostrophe to re-encode as Windows-1252"
-            )
-        name = source.name.removesuffix(_FIXTURE_SUFFIX)
-        relative = (
-            Path(_CANDIDATE_DIRNAME) / f"{_WINDOWS_1252_PREFIX}{name}"
-        ).as_posix()
-        target = self.root / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(
-            text.replace(_TYPEWRITER_APOSTROPHE, _TYPOGRAPHIC_APOSTROPHE).encode(
-                _WINDOWS_1252_CODEC
-            )
+    def absent_identity(self) -> str:
+        """Return an identity the store holds no issue for."""
+        owner_repository, _separator, _number = FIXTURE_IDENTITY.partition("#")
+        return f"{owner_repository}#{int(_number) + 1000}"
+
+    def body(self, identity: str) -> str:
+        """Return the stored body of ``identity`` exactly as stored."""
+        number = identity.partition("#")[2]
+        issue = self._store()[number]
+        if not isinstance(issue, dict):
+            raise TypeError(f"the store holds no issue {identity}")
+        return str(issue["body"])
+
+    def edit(self, identity: str) -> None:
+        """Change a stored body, as another session publishing the record would."""
+        number = identity.partition("#")[2]
+        store = self._store()
+        issue = store[number]
+        if not isinstance(issue, dict):
+            raise TypeError(f"the store holds no issue {identity}")
+        issue["body"] = f"{issue['body']}{BODY_EDIT}"
+        self.store_file.write_text(json.dumps(store), encoding="utf-8")
+
+    def set_title(self, identity: str, title: str) -> None:
+        """Replace a stored title, as a publish that writes only metadata would."""
+        number = identity.partition("#")[2]
+        store = self._store()
+        issue = store[number]
+        if not isinstance(issue, dict):
+            raise TypeError(f"the store holds no issue {identity}")
+        issue["title"] = title
+        self.store_file.write_text(json.dumps(store), encoding="utf-8")
+
+    def set_field(self, identity: str, name: str, value: str) -> None:
+        """Replace the stored value of the issue field ``name``."""
+        number = identity.partition("#")[2]
+        store = self._store()
+        issue = store[number]
+        if not isinstance(issue, dict):
+            raise TypeError(f"the store holds no issue {identity}")
+        for entry in issue["issueFieldValues"]["nodes"]:
+            if entry["field"]["name"] == name:
+                entry["value"] = value
+        self.store_file.write_text(json.dumps(store), encoding="utf-8")
+
+    def set_body(self, identity: str, body: str) -> None:
+        """Replace a stored body."""
+        number = identity.partition("#")[2]
+        store = self._store()
+        issue = store[number]
+        if not isinstance(issue, dict):
+            raise TypeError(f"the store holds no issue {identity}")
+        issue["body"] = body
+        self.store_file.write_text(json.dumps(store), encoding="utf-8")
+
+    def commit(self, files: Mapping[str, str], *, message: str) -> str:
+        """Commit ``files`` in the repository; return the full id of the new commit."""
+        for relative, content in files.items():
+            target = self.root / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+        for argv in (
+            ["git", "add", "--", *files],
+            [
+                "git",
+                "-c",
+                f"user.name={_COMMITTER}",
+                "-c",
+                f"user.email={_COMMITTER_EMAIL}",
+                "commit",
+                "--quiet",
+                "-m",
+                message,
+            ],
+        ):
+            subprocess.run(argv, cwd=self.root, check=True)  # noqa: S603
+        completed = subprocess.run(  # noqa: S603
+            ["git", "rev-parse", "HEAD"],  # noqa: S607
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            check=True,
         )
-        return relative
+        return completed.stdout.strip()
 
-    def place_link_outside(self, source: Path) -> str:
-        """Copy a record outside the repository and link a candidate path to it."""
-        relative = self.path_for(source)
-        outside = self.outside_directory / Path(relative).name
-        shutil.copyfile(source, outside)
-        link = self.root / relative
-        link.parent.mkdir(parents=True, exist_ok=True)
-        link.symlink_to(outside)
-        return relative
+    def publish_default_branch(self, commit: str) -> str:
+        """Point the remote-tracking default branch at ``commit``; return its short name."""
+        for argv in (
+            ["git", "update-ref", f"refs/remotes/origin/{_DEFAULT_BRANCH}", commit],
+            [
+                "git",
+                "symbolic-ref",
+                "refs/remotes/origin/HEAD",
+                f"refs/remotes/origin/{_DEFAULT_BRANCH}",
+            ],
+        ):
+            subprocess.run(argv, cwd=self.root, check=True)  # noqa: S603
+        return f"origin/{_DEFAULT_BRANCH}"
 
-    def place_unreadable(self, source: Path) -> str:
-        """Copy a record into the repository with no permission to read it."""
-        relative = self.place(source)
-        target = self.root / relative
-        target.chmod(_NO_PERMISSIONS)
-        if os.access(target, os.R_OK):
-            raise RuntimeError(
-                f"this user can read {target} with no permissions; "
-                "an unreadable candidate cannot be placed"
-            )
-        return relative
+    def install_formatter(self) -> Path:
+        """Place the stand-in format command in the replayed tools; return its path."""
+        formatter = self.bin_directory / _FORMATTER_NAME
+        shutil.copyfile(FORMATTER, formatter)
+        formatter.chmod(_EXECUTABLE_MODE)
+        return formatter
 
-    def place_directory(self, source: Path) -> str:
-        """Create a directory where ``place`` would put ``source``."""
-        relative = self.path_for(source)
-        (self.root / relative).mkdir(parents=True)
-        return relative
-
-    def place_in_condition(self, condition: CandidateCondition, source: Path) -> str:
-        """Put ``source`` at a candidate path in ``condition``; return the path."""
-        placements: Mapping[CandidateCondition, Callable[[Path], str]] = {
-            CandidateCondition.ABSENT: self.path_for,
-            CandidateCondition.DIRECTORY: self.place_directory,
-            CandidateCondition.UNREADABLE: self.place_unreadable,
-            CandidateCondition.LINKED_OUTSIDE: self.place_link_outside,
-            CandidateCondition.WINDOWS_1252: self.place_windows_1252,
-        }
-        return placements[condition](source)
-
-    def edit(self, relative: str) -> None:
-        """Change a placed candidate's content, as another session editing it would."""
-        encoding = load_runner().TEXT_ENCODING
-        with (self.root / relative).open("a", encoding=encoding) as handle:
-            handle.write(CANDIDATE_EDIT)
-
-    def content(self, relative: str) -> str:
-        """Return a placed candidate's current content exactly as stored."""
-        return (self.root / relative).read_bytes().decode(load_runner().TEXT_ENCODING)
-
-    def start_run(self, relative: str) -> StartedRun:
-        """Read a placed candidate and start a run over the content that read returned.
+    def start_run(self, identity: str) -> StartedRun:
+        """Read a stored record and start a run over the body and Base that read returned.
 
         Both calls are returned as observed; a read that returns no digest
         starts nothing the runner accepts, and the start call shows that.
@@ -383,17 +446,18 @@ class AuditWorkspace:
         operation = runner.Operation
         read = self.invoke(
             {
-                field.OPERATION: operation.READ_CANDIDATE,
-                field.PATH: relative,
+                field.OPERATION: operation.READ_RECORD,
+                field.ISSUE: identity,
                 field.ROOT: str(self.root),
             }
         )
         started = self.invoke(
             {
                 field.OPERATION: operation.START,
-                field.PATH: relative,
+                field.ISSUE: identity,
                 field.ROOT: str(self.root),
-                field.CANDIDATE_SHA256: read.result.get(runner.ResultField.SHA256),
+                field.BODY_SHA256: read.result.get(runner.ResultField.BODY_SHA256),
+                field.BASE: read.result.get(runner.ResultField.BASE),
             }
         )
         return StartedRun(read=read, started=started)
@@ -456,6 +520,10 @@ class AuditWorkspace:
             environment[variable] = str(self.runner_temporary_directory)
         environment[HOME_ENV] = str(self.runner_home_directory)
         environment[_GH_TELEMETRY_VARIABLE] = _GH_TELEMETRY_OFF
+        environment[STORE_VARIABLE] = str(self.store_file)
+        environment[_PATH_VARIABLE] = os.pathsep.join(
+            (str(self.bin_directory), environment.get(_PATH_VARIABLE, ""))
+        )
         return environment
 
     def _observe(
@@ -507,7 +575,7 @@ class AuditWorkspace:
 
 @contextmanager
 def audit_workspace() -> Iterator[AuditWorkspace]:
-    """Yield a fresh repository and the runner's empty temporary and home directories."""
+    """Yield a fresh repository, a replayed store, and the runner's empty directories."""
     with TemporaryDirectory() as temporary:
         base = Path(temporary)
         workspace = AuditWorkspace(
@@ -516,6 +584,8 @@ def audit_workspace() -> Iterator[AuditWorkspace]:
             runner_home_directory=base / "runner-home",
             outside_directory=base / "outside",
             observation_directory=base / "observations",
+            bin_directory=base / "bin",
+            store_file=base / "store.json",
         )
         for directory in (
             workspace.root,
@@ -523,8 +593,13 @@ def audit_workspace() -> Iterator[AuditWorkspace]:
             workspace.runner_home_directory,
             workspace.outside_directory,
             workspace.observation_directory,
+            workspace.bin_directory,
         ):
             directory.mkdir()
+        replay = workspace.bin_directory / _GH_REPLAY_NAME
+        shutil.copyfile(GH_REPLAY, replay)
+        replay.chmod(_EXECUTABLE_MODE)
+        workspace.store_file.write_text("{}", encoding="utf-8")
         subprocess.run(  # noqa: S603
             ["git", "init", "--quiet", str(workspace.root)],  # noqa: S607
             check=True,
@@ -546,7 +621,7 @@ def product_tree_plugin_version() -> str:
 
 @dataclass(frozen=True)
 class AuditPayloads:
-    """Scope and finding payloads for one candidate."""
+    """Scope and finding payloads for one record."""
 
     scopes: tuple[dict[str, object], ...]
     findings: tuple[dict[str, object], ...]
@@ -555,7 +630,7 @@ class AuditPayloads:
 def audit_payloads(*, subject: str, content: str, tool_version: str) -> AuditPayloads:
     """Build one scope unit per audit concern and one finding per record rule.
 
-    Every finding quotes the complete candidate as its observed state, so the
+    Every finding quotes the complete Draft as its observed state, so the
     rendered projection grows with the record rather than with the harness.
     """
     runner_field = load_runner().SpxField

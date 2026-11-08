@@ -1,11 +1,10 @@
-"""Command boundary for one change-record audit.
+"""Command boundary for one audit of a Change record.
 
-The runner reads one JSON request object on stdin, performs the requested file
-or ``spx verification run`` operation from the Product's checkout root, and writes one
-JSON result object on stdout. It writes no file: the SPX run journal is the only
-state that persists between requests, and every request names the candidate
-path and run token it acts on, so audits of different candidates started from
-one worktree share nothing but the journal store SPX keys by run.
+The runner reads one JSON request object on stdin, performs the requested read
+or ``spx verification run`` operation from the Product's checkout root, and
+writes one JSON result object on stdout. It writes no file: the SPX run journal
+is the only state that persists between requests, and every request names the
+Change by its store identity and the run token it acts on.
 
 Every invocation writes exactly one result, and every result carries
 ``operation`` and ``status``. ``operation`` is the listed operation the request
@@ -20,69 +19,39 @@ ends the request with a declared ``BlockReason``, never with a traceback.
 ``validate_request`` checks one parsed request completely before any process
 starts: the field set ``REQUIRED_FIELDS`` declares for its operation, then each
 field's form in the order ``_REQUEST_CHECKS`` lists. It raises ``Blocked`` with
-``invalid-request``, or with ``path-rejected`` for a path that no filesystem
-call can accept.
+``invalid-request``, or with ``path-rejected`` for a path that no git call can
+accept.
 
-Tested with, each run observed for every file the runner process writes
-anywhere and every process it starts:
+The Change is read from the store, never from a file. ``read-record`` returns
+the Change Draft the runner assembles from the stored record, which is the
+record's metadata except its holder, as YAML front matter, followed by its
+body, with the SHA-256 of the body and the Base the record names. ``start``
+retains that Draft as the run's input, and ``reconcile`` and ``finish`` block
+with ``record-changed`` when the stored body or the stored Base differs from the
+retained pair, so a run judges one body at one Base.
 
-- every operation of a complete rejected audit over a captured Change record;
-- two such audits started at once from one worktree;
-- a candidate edited before ``start``, and after it before ``reconcile``;
-- a scope payload SPX rejects, which blocks with SPX's exit code and stderr;
-- a request that is not UTF-8 text;
-- a candidate that is absent, a directory, unreadable, linked outside the
-  repository, or Windows-1252 text;
-- for each operation that takes a ``runToken``, a request naming a started
-  run with fields its operation does not take, which blocks with that
-  operation and run token;
-- generated request texts the runner cannot parse as one JSON object: a
-  truncated request object, a JSON value of another type, or an object
-  carrying an integer literal longer than the interpreter converts;
-- generated request objects outside the request contract: an absent or
-  unlisted operation; a missing field or one the operation does not take; a
-  ``path``, ``candidateSha256``, ``runToken``, or ``terminalStatus`` that is
-  not a non-empty string; a path, ``runToken``, or payload ``unitId`` carrying
-  a NUL character or text with no UTF-8 encoding; an absolute,
-  parent-traversing, or unnormalized candidate path; a payload that is not an
-  object with a non-empty ``unitId``; a finding rule that is not a lowercase
-  hyphenated ID; and an unlisted terminal status. Each blocks on stdout.
+``form-check`` passes the Draft to the one check function of the change-standards
+skill, reached by a ``__file__``-relative import, with the operation ``audit``,
+and returns each finding the check makes. ``format-at-close`` runs the
+Product's format command, given as an argument vector that reads the text on
+stdin and writes it on stdout, over each replacement the record declares, and
+returns one finding for each of its three comparisons that fails. Neither
+operation writes.
 
-None of these writes a file outside the SPX store, and none starts a process
-other than ``git`` and ``spx``; the generated requests start none.
+``read-authority`` and ``read-relations`` start ``gh`` and read the store within
+the page bound ``AUTHORITY_MAX_PAGES``; a connection that keeps reporting a
+further page blocks with ``page-bound-reached`` naming the bound.
 
-``read-authority`` starts ``gh`` and is tested apart from those runs, in this
-process over replayed store pages: it reads the issue's field-change events and
-no comment, a read that ends before the bound returns every event, and a connection that keeps reporting a further page blocks after
-the bound with ``page-bound-reached`` naming it.
-
-Every operation that names a candidate or a record path takes the Product's
-checkout root as ``root``, an absolute path: ``read-candidate``, ``start``,
-``add-scope``, ``add-finding``, ``reconcile``, ``finish``, and ``count-limits``
-resolve the candidate path under that root and run their ``git`` and ``spx``
-commands with that root as the working directory, and ``resolve-reference``
-resolves the path a record names under it, whatever checkout holds the draft
-or runs the audit. A request without ``root``, or one whose ``root`` is no
-repository checkout root, blocks naming it, and the containment check of the
-path stays against that root.
-
-``read-published`` starts ``gh`` once and returns the issue's published body,
-the empty string when the store holds none.
-
-``read-relations`` starts ``gh`` once per page of the store's issues and returns
-the named issue's Product and Parent, its Parent's Product, and the issues whose
-Parent is the named issue, and the issues whose Predecessors value names it,
-within the same page bound as ``read-authority``.
-
-``count-limits`` reads the candidate under ``root`` and starts no process beyond
-the repository-root lookup of that root; it returns the title's word count and the Intent
-section's word count, labels included, with the limit of each, and lists those
-over their limit.
+Every operation that reads a repository takes the Product's checkout root as
+``root``, an absolute path, and runs its ``git`` and ``spx`` commands with that
+root as the working directory. A request without ``root``, or one whose
+``root`` is no repository checkout root, blocks naming it.
 """
 
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import pathlib
 import re
@@ -91,7 +60,7 @@ import string
 import subprocess
 import sys
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum, StrEnum
 from typing import Final, Protocol, TextIO
 
@@ -99,31 +68,34 @@ from typing import Final, Protocol, TextIO
 class Operation(StrEnum):
     """Requests the runner accepts, one per invocation."""
 
-    READ_CANDIDATE = "read-candidate"
-    RESOLVE_REFERENCE = "resolve-reference"
     TOOL_VERSION = "tool-version"
+    READ_RECORD = "read-record"
+    READ_AT_BASE = "read-at-base"
     START = "start"
     ADD_SCOPE = "add-scope"
     ADD_FINDING = "add-finding"
     RECONCILE = "reconcile"
     FINISH = "finish"
+    FORM_CHECK = "form-check"
+    FORMAT_AT_CLOSE = "format-at-close"
     READ_AUTHORITY = "read-authority"
-    READ_PUBLISHED = "read-published"
     READ_RELATIONS = "read-relations"
-    COUNT_LIMITS = "count-limits"
 
 
 class RequestField(StrEnum):
     """Fields of a request object."""
 
     OPERATION = "operation"
+    ISSUE = "issue"
+    ROOT = "root"
+    BODY_SHA256 = "bodySha256"
+    BASE = "base"
     PATH = "path"
-    CANDIDATE_SHA256 = "candidateSha256"
     RUN_TOKEN = "runToken"
     PAYLOAD = "payload"
     TERMINAL_STATUS = "terminalStatus"
-    ISSUE = "issue"
-    ROOT = "root"
+    MERGE_COMMIT = "mergeCommit"
+    FORMAT_COMMAND = "formatCommand"
 
 
 class ResultField(StrEnum):
@@ -134,10 +106,17 @@ class ResultField(StrEnum):
     REASON = "reason"
     DETAIL = "detail"
     RUN_TOKEN = "runToken"
+    ISSUE = "issue"
+    DRAFT = "draft"
+    BODY_SHA256 = "bodySha256"
+    BASE = "base"
+    BLOCKERS = "blockers"
+    REFERENCE = "reference"
+    STATE = "state"
     PATH = "path"
+    KIND = "kind"
     CONTENT = "content"
-    SHA256 = "sha256"
-    RESOLUTION = "resolution"
+    ENTRIES = "entries"
     TOOL_VERSION = "toolVersion"
     IDEMPOTENCY_KEY = "idempotencyKey"
     SEQUENCE = "sequence"
@@ -154,7 +133,8 @@ class ResultField(StrEnum):
     STDERR = "stderr"
     RETAINED_SHA256 = "retainedSha256"
     LIVE_SHA256 = "liveSha256"
-    ISSUE = "issue"
+    RETAINED_BASE = "retainedBase"
+    LIVE_BASE = "liveBase"
     EVENTS = "events"
     BOUND = "bound"
     CREATED_AT = "createdAt"
@@ -162,18 +142,13 @@ class ResultField(StrEnum):
     FIELD = "field"
     PREVIOUS_VALUE = "previousValue"
     NEW_VALUE = "newValue"
-    BODY = "body"
     PRODUCT = "product"
     PARENT = "parent"
-    PARENT_PRODUCT = "parentProduct"
     CHILDREN = "children"
-    ABSORBERS = "absorbers"
     NUMBER = "number"
-    LIMITS = "limits"
-    VIOLATIONS = "violations"
-    SECTION = "section"
-    LIMIT = "limit"
-    COUNT = "count"
+    CHECK_STATUS = "checkStatus"
+    RULE = "rule"
+    WHERE = "where"
 
 
 class ResultStatus(StrEnum):
@@ -188,22 +163,16 @@ class BlockReason(StrEnum):
 
     INVALID_REQUEST = "invalid-request"
     PATH_REJECTED = "path-rejected"
-    CANDIDATE_MISSING = "candidate-missing"
-    CANDIDATE_UNREADABLE = "candidate-unreadable"
-    CANDIDATE_CHANGED = "candidate-changed"
+    RECORD_MISSING = "record-missing"
+    RECORD_CHANGED = "record-changed"
     RETAINED_INPUT_MISMATCH = "retained-input-mismatch"
+    BASE_UNRESOLVED = "base-unresolved"
     COMMAND_FAILED = "command-failed"
     UNREADABLE_OUTPUT = "unreadable-output"
     PAGE_BOUND_REACHED = "page-bound-reached"
-
-
-class Resolution(StrEnum):
-    """Where a path a candidate names resolves."""
-
-    RESOLVED = "resolved"
-    ABSOLUTE = "absolute"
-    OUTSIDE_REPOSITORY = "outside-repository"
-    MISSING = "missing"
+    FORM_CHECK_UNAVAILABLE = "form-check-unavailable"
+    FORM_CHECK_REJECTED = "form-check-rejected"
+    FORMAT_COMMAND_UNUSABLE = "format-command-unusable"
 
 
 class TerminalStatus(StrEnum):
@@ -217,6 +186,22 @@ class AuthorityRead(StrEnum):
     """The store connection ``read-authority`` reads."""
 
     EVENTS = "events"
+
+
+class BaseKind(StrEnum):
+    """What a path names at the Base."""
+
+    FILE = "file"
+    DIRECTORY = "directory"
+    MISSING = "missing"
+
+
+class FormatRule(StrEnum):
+    """Rule slugs of the three comparisons ``format-at-close`` makes."""
+
+    BASE_FORMATTER = "format-base"
+    MERGE_FORMATTER = "format-merge"
+    DEFAULT_BRANCH = "default-branch-differs"
 
 
 class ExitCode(IntEnum):
@@ -249,7 +234,7 @@ class SpxField(StrEnum):
 
 
 class StoreField(StrEnum):
-    """Fields of the store's GraphQL answer that ``read-authority`` reads."""
+    """Fields of the store's GraphQL answer that the runner reads."""
 
     DATA = "data"
     REPOSITORY = "repository"
@@ -267,11 +252,49 @@ class StoreField(StrEnum):
     ISSUE_FIELD = "issueField"
     NAME = "name"
     BODY = "body"
-    ISSUES = "issues"
+    TITLE = "title"
+    STATE = "state"
     NUMBER = "number"
     VALUE = "value"
+    FIELD = "field"
+    ISSUES = "issues"
     ISSUE_FIELD_VALUES = "issueFieldValues"
+    ASSIGNEES = "assignees"
+    BLOCKED_BY = "blockedBy"
+    NAME_WITH_OWNER = "nameWithOwner"
 
+
+class MetadataKey(StrEnum):
+    """The metadata keys of a Change record, in the order a Draft writes them."""
+
+    TITLE = "title"
+    PRODUCT = "product"
+    MATURITY = "maturity"
+    LIFECYCLE = "lifecycle"
+    HOLDER = "holder"
+    PARENT = "parent"
+    PREDECESSORS = "predecessors"
+    BLOCKERS = "blockers"
+    BASE = "base"
+    PRIORITY = "priority"
+    PRIMARY_VALUE = "primary_value"
+    INVESTMENT = "investment"
+
+
+#: The store's issue field behind each metadata key that a field holds.
+FIELD_NAMES: Final[Mapping[MetadataKey, str]] = {
+    MetadataKey.PRODUCT: "Product",
+    MetadataKey.MATURITY: "Maturity",
+    MetadataKey.LIFECYCLE: "Lifecycle",
+    MetadataKey.PARENT: "Parent",
+    MetadataKey.PREDECESSORS: "Predecessors",
+    MetadataKey.BASE: "Base",
+    MetadataKey.PRIORITY: "Priority",
+    MetadataKey.PRIMARY_VALUE: "Value",
+    MetadataKey.INVESTMENT: "Investment",
+}
+#: The keys a Change Draft writes: the record's metadata except its holder.
+DRAFT_KEYS: Final = tuple(key for key in MetadataKey if key is not MetadataKey.HOLDER)
 
 NOT_STARTED: Final = "not-started"
 NOT_APPLICABLE: Final = "none"
@@ -285,8 +308,13 @@ _RULE_ID_RUN: Final = f"[{re.escape(RULE_ID_ALPHABET)}]+"
 RULE_ID_PATTERN: Final = re.compile(
     f"{_RULE_ID_RUN}(?:{re.escape(RULE_ID_SEPARATOR)}{_RULE_ID_RUN})*"
 )
+COMMIT_PATTERN: Final = re.compile(r"[0-9a-f]{40}")
+SHA256_PATTERN: Final = re.compile(r"[0-9a-f]{64}")
 VERIFICATION_TYPE: Final = "audit"
 SCOPE_TYPE: Final = "file"
+FORM_CHECK_OPERATION: Final = "audit"
+FORM_CHECK_SIZE_LIMIT: Final = "github"
+PATH_PLACEHOLDER: Final = "{path}"
 
 #: Rendered-projection fields that hold evidence rather than run-level values.
 EVIDENCE_FIELDS: Final = frozenset(
@@ -296,14 +324,28 @@ EVIDENCE_FIELDS: Final = frozenset(
 SPX_EXECUTABLE: Final = "spx"
 GIT_EXECUTABLE: Final = "git"
 _GIT_TOPLEVEL: Final = (GIT_EXECUTABLE, "rev-parse", "--show-toplevel")
+_GIT_DEFAULT_BRANCH: Final = (
+    GIT_EXECUTABLE,
+    "symbolic-ref",
+    "--short",
+    "refs/remotes/origin/HEAD",
+)
 _SPX_VERSION: Final = (SPX_EXECUTABLE, "--version")
 _RUN_COMMAND: Final = (SPX_EXECUTABLE, "verification", "run")
 GH_EXECUTABLE: Final = "gh"
-_GRAPHQL: Final = (GH_EXECUTABLE, "api", "graphql")
+_GRAPHQL: Final = (
+    GH_EXECUTABLE,
+    "api",
+    "graphql",
+    "-H",
+    "GraphQL-Features: issue_fields",
+)
 
 #: One store read takes pages of this many entries, at most this many pages.
 AUTHORITY_PAGE_SIZE: Final = 100
 AUTHORITY_MAX_PAGES: Final = 10
+ISSUE_FIELD_VALUES_PAGE_SIZE: Final = 50
+BLOCKERS_PAGE_SIZE: Final = 100
 
 _QUERY_HEAD: Final = (
     "query($o:String!,$r:String!,$n:Int!,$after:String)"
@@ -322,41 +364,58 @@ _AUTHORITY_QUERIES: Final[Mapping[AuthorityRead, str]] = {
 _AUTHORITY_CONNECTIONS: Final[Mapping[AuthorityRead, StoreField]] = {
     AuthorityRead.EVENTS: StoreField.TIMELINE_ITEMS,
 }
-_PUBLISHED_QUERY: Final = (
-    "query($o:String!,$r:String!,$n:Int!)"
-    f"{{repository(owner:$o,name:$r){{issue(number:$n){{{StoreField.BODY}}}}}}}"
+_FIELD_VALUES_SELECTION: Final = (
+    f"issueFieldValues(first:{ISSUE_FIELD_VALUES_PAGE_SIZE})"
+    "{pageInfo{hasNextPage} nodes{"
+    "... on IssueFieldNumberValue{value field{... on IssueFieldNumber{name}}}"
+    " ... on IssueFieldTextValue{value field{... on IssueFieldText{name}}}"
+    " ... on IssueFieldSingleSelectValue{name field{... on IssueFieldSingleSelect"
+    "{name}}}}}"
 )
-ISSUE_FIELD_VALUES_PAGE_SIZE: Final = 50
+_RECORD_QUERY: Final = (
+    "query($o:String!,$r:String!,$n:Int!)"
+    "{repository(owner:$o,name:$r){issue(number:$n){...P "
+    f"blockedBy(first:{BLOCKERS_PAGE_SIZE})"
+    "{pageInfo{hasNextPage} nodes{...P}}}}} "
+    "fragment P on Issue{number title body state repository{nameWithOwner} "
+    "assignees(first:2){nodes{login}} "
+    f"{_FIELD_VALUES_SELECTION}"
+    "}"
+)
 _RELATIONS_QUERY: Final = (
     "query($o:String!,$r:String!,$after:String)"
     f"{{repository(owner:$o,name:$r){{{StoreField.ISSUES}"
     f"(first:{AUTHORITY_PAGE_SIZE},after:$after)"
     "{pageInfo{hasNextPage endCursor} nodes{number "
-    f"issueFieldValues(first:{ISSUE_FIELD_VALUES_PAGE_SIZE})"
-    "{pageInfo{hasNextPage} nodes{... on IssueFieldNumberValue{value field{... on IssueFieldNumber{name}}}"
-    " ... on IssueFieldTextValue{value field{... on IssueFieldText{name}}}"
-    " ... on IssueFieldSingleSelectValue{name field{... on IssueFieldSingleSelect"
-    "{name}}}}}}}}}"
+    f"{_FIELD_VALUES_SELECTION}"
+    "}}}}"
 )
-PRODUCT_FIELD: Final = "Product"
-PARENT_FIELD: Final = "Parent"
-PREDECESSORS_FIELD: Final = "Predecessors"
+PRODUCT_FIELD: Final = FIELD_NAMES[MetadataKey.PRODUCT]
+PARENT_FIELD: Final = FIELD_NAMES[MetadataKey.PARENT]
 PREDECESSOR_SEPARATOR: Final = ", "
 ISSUE_IDENTITY_PATTERN: Final = re.compile(
     r"([A-Za-z0-9][A-Za-z0-9-]*)/([A-Za-z0-9._-]+)#([1-9][0-9]*)"
 )
+ISSUE_URL_TEMPLATE: Final = "https://github.com/{owner}/{repository}/issues/{number}"
 
 #: The fields each operation's request carries besides ``operation``.
 REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
-    Operation.READ_CANDIDATE: frozenset({RequestField.PATH, RequestField.ROOT}),
-    Operation.RESOLVE_REFERENCE: frozenset({RequestField.PATH, RequestField.ROOT}),
     Operation.TOOL_VERSION: frozenset(),
+    Operation.READ_RECORD: frozenset({RequestField.ISSUE, RequestField.ROOT}),
+    Operation.READ_AT_BASE: frozenset(
+        {RequestField.ROOT, RequestField.BASE, RequestField.PATH}
+    ),
     Operation.START: frozenset(
-        {RequestField.PATH, RequestField.ROOT, RequestField.CANDIDATE_SHA256}
+        {
+            RequestField.ISSUE,
+            RequestField.ROOT,
+            RequestField.BODY_SHA256,
+            RequestField.BASE,
+        }
     ),
     Operation.ADD_SCOPE: frozenset(
         {
-            RequestField.PATH,
+            RequestField.ISSUE,
             RequestField.ROOT,
             RequestField.RUN_TOKEN,
             RequestField.PAYLOAD,
@@ -364,27 +423,34 @@ REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
     ),
     Operation.ADD_FINDING: frozenset(
         {
-            RequestField.PATH,
+            RequestField.ISSUE,
             RequestField.ROOT,
             RequestField.RUN_TOKEN,
             RequestField.PAYLOAD,
         }
     ),
     Operation.RECONCILE: frozenset(
-        {RequestField.PATH, RequestField.ROOT, RequestField.RUN_TOKEN}
+        {RequestField.ISSUE, RequestField.ROOT, RequestField.RUN_TOKEN}
     ),
     Operation.FINISH: frozenset(
         {
-            RequestField.PATH,
+            RequestField.ISSUE,
             RequestField.ROOT,
             RequestField.RUN_TOKEN,
             RequestField.TERMINAL_STATUS,
         }
     ),
+    Operation.FORM_CHECK: frozenset({RequestField.ISSUE, RequestField.ROOT}),
+    Operation.FORMAT_AT_CLOSE: frozenset(
+        {
+            RequestField.ISSUE,
+            RequestField.ROOT,
+            RequestField.MERGE_COMMIT,
+            RequestField.FORMAT_COMMAND,
+        }
+    ),
     Operation.READ_AUTHORITY: frozenset({RequestField.ISSUE}),
-    Operation.READ_PUBLISHED: frozenset({RequestField.ISSUE}),
     Operation.READ_RELATIONS: frozenset({RequestField.ISSUE}),
-    Operation.COUNT_LIMITS: frozenset({RequestField.PATH, RequestField.ROOT}),
 }
 
 
@@ -478,7 +544,7 @@ def _sha256(text: str) -> str:
 
 
 def _system_text_defect(text: str) -> str | None:
-    """Name why ``text`` cannot reach a filesystem call or an argument vector."""
+    """Name why ``text`` cannot reach a git call or an argument vector."""
     if NUL in text:
         return "contains a NUL character"
     try:
@@ -535,6 +601,29 @@ def _command(
             evidence=evidence,
         )
     return result.stdout
+
+
+def _probe(
+    context: _Context, argv: Sequence[str], *, cwd: pathlib.Path
+) -> CommandResult:
+    """Run one command whose nonzero exit is an answer, blocking only when it cannot run."""
+    try:
+        return context.runner(argv, cwd=cwd, stdin=None)
+    except UnicodeDecodeError as exc:
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"{argv[0]} printed output that is not UTF-8; rerun `{shlex.join(argv)}` by hand and confirm the installed tool prints UTF-8 text",
+        ) from exc
+    except (OSError, ValueError) as exc:
+        raise Blocked(
+            BlockReason.COMMAND_FAILED,
+            f"{argv[0]} could not be executed; confirm {argv[0]} is installed and on PATH, then repeat the request",
+            evidence={
+                ResultField.COMMAND: shlex.join(argv),
+                ResultField.EXIT_CODE: NOT_APPLICABLE,
+                ResultField.STDERR: str(exc),
+            },
+        ) from exc
 
 
 def _json_lines(
@@ -604,26 +693,27 @@ def _repository_root(context: _Context) -> pathlib.Path:
     return pathlib.Path(stdout)
 
 
-def _received(request: Mapping[str, object], field: RequestField) -> str:
-    """Describe the value a request carries for ``field``."""
-    if field not in request:
+def _received(request: Mapping[str, object], field_name: RequestField) -> str:
+    """Describe the value a request carries for ``field_name``."""
+    if field_name not in request:
         return "no value"
-    return f"a {type(request[field]).__name__}"
+    return f"a {type(request[field_name]).__name__}"
 
 
-def _string(request: Mapping[str, object], field: RequestField) -> str:
-    value = request.get(field)
+def _string(request: Mapping[str, object], field_name: RequestField) -> str:
+    value = request.get(field_name)
     if not isinstance(value, str) or not value:
         raise Blocked(
             BlockReason.INVALID_REQUEST,
-            f"request field {field.value} must be a non-empty JSON string, "
-            f"received {_received(request, field)}; set it to a non-empty string",
+            f"request field {field_name.value} must be a non-empty JSON string, "
+            f"received {_received(request, field_name)}; set it to a non-empty string",
         )
     return value
 
 
-def _normalized_path(value: str) -> str:
+def _repository_path(request: Mapping[str, object]) -> str:
     """Accept only a normalized repository-relative POSIX path."""
+    value = _string(request, RequestField.PATH)
     defect = _system_text_defect(value)
     if defect is not None:
         raise Blocked(
@@ -652,21 +742,6 @@ def _normalized_path(value: str) -> str:
     return value
 
 
-def _candidate_path(request: Mapping[str, object]) -> str:
-    return _normalized_path(_string(request, RequestField.PATH))
-
-
-def _reference_path(request: Mapping[str, object]) -> str:
-    named = _string(request, RequestField.PATH)
-    defect = _system_text_defect(named)
-    if defect is not None:
-        raise Blocked(
-            BlockReason.PATH_REJECTED,
-            f"path {defect}: {named!r}; pass a path of printable UTF-8 text",
-        )
-    return named
-
-
 def _checkout_root(request: Mapping[str, object]) -> pathlib.Path:
     """Return the Product's checkout root a request names, an absolute path."""
     named = _string(request, RequestField.ROOT)
@@ -685,8 +760,32 @@ def _checkout_root(request: Mapping[str, object]) -> pathlib.Path:
     return pathlib.Path(named)
 
 
-def _candidate_sha256(request: Mapping[str, object]) -> str:
-    return _string(request, RequestField.CANDIDATE_SHA256)
+def _commit(request: Mapping[str, object], field_name: RequestField) -> str:
+    value = _string(request, field_name)
+    if not COMMIT_PATTERN.fullmatch(value):
+        raise Blocked(
+            BlockReason.INVALID_REQUEST,
+            f"request field {field_name.value} must be a full 40-character lowercase hexadecimal commit id, received {value!r}; pass the commit id as the store holds it",
+        )
+    return value
+
+
+def _base(request: Mapping[str, object]) -> str:
+    return _commit(request, RequestField.BASE)
+
+
+def _merge_commit(request: Mapping[str, object]) -> str:
+    return _commit(request, RequestField.MERGE_COMMIT)
+
+
+def _body_sha256(request: Mapping[str, object]) -> str:
+    value = _string(request, RequestField.BODY_SHA256)
+    if not SHA256_PATTERN.fullmatch(value):
+        raise Blocked(
+            BlockReason.INVALID_REQUEST,
+            f"request field {RequestField.BODY_SHA256.value} must be a 64-character lowercase hexadecimal SHA-256, received {value!r}; pass the bodySha256 that read-record returned",
+        )
+    return value
 
 
 def _run_token(request: Mapping[str, object]) -> str:
@@ -761,35 +860,61 @@ def _issue_identity(request: Mapping[str, object]) -> tuple[str, str, str]:
     return owner, repository, number
 
 
+def _format_command(request: Mapping[str, object]) -> list[str]:
+    command = request.get(RequestField.FORMAT_COMMAND)
+    if (
+        not isinstance(command, list)
+        or not command
+        or not all(isinstance(part, str) and part for part in command)
+    ):
+        raise Blocked(
+            BlockReason.INVALID_REQUEST,
+            f"request field {RequestField.FORMAT_COMMAND.value} must be a non-empty array of non-empty strings, received {_received(request, RequestField.FORMAT_COMMAND)}; pass the Product's format command as an argument vector that reads the text on stdin and writes it on stdout",
+        )
+    for part in command:
+        defect = _system_text_defect(part)
+        if defect is not None:
+            raise Blocked(
+                BlockReason.INVALID_REQUEST,
+                f"request field {RequestField.FORMAT_COMMAND.value} holds an element that {defect}; pass printable UTF-8 text",
+            )
+    return list(command)
+
+
 #: The field checks ``validate_request`` applies to each operation, in order.
 _REQUEST_CHECKS: Final[
     Mapping[Operation, tuple[Callable[[Mapping[str, object]], object], ...]]
 ] = {
-    Operation.READ_CANDIDATE: (_candidate_path, _checkout_root),
-    Operation.RESOLVE_REFERENCE: (_reference_path, _checkout_root),
     Operation.TOOL_VERSION: (),
-    Operation.START: (_candidate_path, _checkout_root, _candidate_sha256),
+    Operation.READ_RECORD: (_issue_identity, _checkout_root),
+    Operation.READ_AT_BASE: (_checkout_root, _base, _repository_path),
+    Operation.START: (_issue_identity, _checkout_root, _body_sha256, _base),
     Operation.ADD_SCOPE: (
-        _candidate_path,
+        _issue_identity,
         _checkout_root,
         _run_token,
         _unit_id,
         _payload_text,
     ),
     Operation.ADD_FINDING: (
-        _candidate_path,
+        _issue_identity,
         _checkout_root,
         _run_token,
         _unit_id,
         _finding_rule,
         _payload_text,
     ),
-    Operation.RECONCILE: (_candidate_path, _checkout_root, _run_token),
-    Operation.FINISH: (_candidate_path, _checkout_root, _run_token, _terminal_status),
+    Operation.RECONCILE: (_issue_identity, _checkout_root, _run_token),
+    Operation.FINISH: (_issue_identity, _checkout_root, _run_token, _terminal_status),
+    Operation.FORM_CHECK: (_issue_identity, _checkout_root),
+    Operation.FORMAT_AT_CLOSE: (
+        _issue_identity,
+        _checkout_root,
+        _merge_commit,
+        _format_command,
+    ),
     Operation.READ_AUTHORITY: (_issue_identity,),
-    Operation.READ_PUBLISHED: (_issue_identity,),
     Operation.READ_RELATIONS: (_issue_identity,),
-    Operation.COUNT_LIMITS: (_candidate_path, _checkout_root),
 }
 
 
@@ -806,7 +931,7 @@ def validate_request(request: Mapping[str, object]) -> Operation:
     A request is well-formed when it names one listed operation, carries
     exactly that operation's ``REQUIRED_FIELDS`` besides ``operation``, and
     every field passes its check. The first failing check decides the reason:
-    ``path-rejected`` for a path no filesystem call accepts, ``invalid-request``
+    ``path-rejected`` for a path no git call accepts, ``invalid-request``
     for every other defect. No check starts a process or reads a file.
     """
     operation = _named_operation(request)
@@ -816,127 +941,16 @@ def validate_request(request: Mapping[str, object]) -> Operation:
             f"{RequestField.OPERATION} must be one of {', '.join(Operation)}, received {request.get(RequestField.OPERATION)!r}; name one of those operations",
         )
     allowed = REQUIRED_FIELDS[operation] | {RequestField.OPERATION}
-    missing = sorted(field.value for field in allowed if field not in request)
-    unexpected = sorted(str(field) for field in request if field not in allowed)
+    missing = sorted(name.value for name in allowed if name not in request)
+    unexpected = sorted(str(name) for name in request if name not in allowed)
     if missing or unexpected:
         raise Blocked(
             BlockReason.INVALID_REQUEST,
-            f"{operation} request fields: missing {missing}, unexpected {unexpected}; send exactly {sorted(str(field) for field in allowed)}",
+            f"{operation} request fields: missing {missing}, unexpected {unexpected}; send exactly {sorted(str(name) for name in allowed)}",
         )
     for check in _REQUEST_CHECKS[operation]:
         check(request)
     return operation
-
-
-def _within(root: pathlib.Path, path: pathlib.Path, named: str) -> bool:
-    """Report whether ``path`` resolves inside ``root``, blocking when it cannot resolve."""
-    try:
-        return path.resolve().is_relative_to(root.resolve())
-    except (OSError, ValueError) as exc:
-        raise Blocked(
-            BlockReason.PATH_REJECTED,
-            f"path cannot be resolved: {named!r}: {exc}; pass a path whose parent directories exist and are readable",
-        ) from exc
-
-
-def _live_content(root: pathlib.Path, relative: str) -> str:
-    """Read the candidate exactly as stored, refusing a path that escapes the root."""
-    candidate = root / relative
-    if not _within(root, candidate, relative):
-        raise Blocked(
-            BlockReason.PATH_REJECTED,
-            f"path resolves outside the repository: {relative}; pass a path that stays inside the repository and is not a link leaving it",
-        )
-    if not candidate.exists():
-        raise Blocked(
-            BlockReason.CANDIDATE_MISSING,
-            f"candidate is absent: {relative}; pass the repository-relative path of an existing file",
-        )
-    if not candidate.is_file():
-        raise Blocked(
-            BlockReason.PATH_REJECTED,
-            f"candidate is not a regular file: {relative}; pass the path of a file, not a directory or special file",
-        )
-    try:
-        stored = candidate.read_bytes()
-    except FileNotFoundError as exc:
-        raise Blocked(
-            BlockReason.CANDIDATE_MISSING,
-            f"candidate is absent: {relative}; pass the repository-relative path of an existing file",
-        ) from exc
-    except OSError as exc:
-        raise Blocked(
-            BlockReason.CANDIDATE_UNREADABLE,
-            f"candidate cannot be read: {relative}: {exc.strerror or exc}; fix the file's read permission and repeat the request",
-        ) from exc
-    try:
-        return stored.decode(TEXT_ENCODING)
-    except UnicodeDecodeError as exc:
-        raise Blocked(
-            BlockReason.PATH_REJECTED,
-            f"candidate is not UTF-8 text: {relative}; save the file as UTF-8 text and repeat the request",
-        ) from exc
-
-
-def _run_argv(verb: Sequence[str], relative: str, run_token: str) -> list[str]:
-    return [
-        *_RUN_COMMAND,
-        *verb,
-        "--verification-type",
-        VERIFICATION_TYPE,
-        "--scope-type",
-        SCOPE_TYPE,
-        "--scope",
-        relative,
-        "--run",
-        run_token,
-    ]
-
-
-def render_argv(relative: str, run_token: str) -> list[str]:
-    """Return the command that reproduces the complete rendered projection."""
-    return _run_argv(("render",), relative, run_token)
-
-
-def _run_json(
-    context: _Context,
-    root: pathlib.Path,
-    verb: Sequence[str],
-    relative: str,
-    run_token: str,
-) -> dict[str, object]:
-    stdout = _command(
-        context, _run_argv(verb, relative, run_token), cwd=root, run_token=run_token
-    )
-    return _json_lines(
-        stdout, argv=_run_argv(verb, relative, run_token), run_token=run_token
-    )[-1]
-
-
-def _retained_content(
-    context: _Context, root: pathlib.Path, relative: str, run_token: str
-) -> str:
-    replay = _run_json(context, root, ("input",), relative, run_token)
-    content = replay.get(SpxField.CONTENT)
-    if not isinstance(content, str):
-        raise Blocked(
-            BlockReason.UNREADABLE_OUTPUT,
-            f"retained input carries no content string{_RENDER_HINT}",
-            run_token=run_token,
-        )
-    return content
-
-
-def _read_candidate(
-    context: _Context, request: Mapping[str, object]
-) -> dict[str, object]:
-    relative = _candidate_path(request)
-    content = _live_content(_product_root(context, _checkout_root(request)), relative)
-    return {
-        ResultField.PATH: relative,
-        ResultField.SHA256: _sha256(content),
-        ResultField.CONTENT: content,
-    }
 
 
 def _product_root(context: _Context, named: pathlib.Path) -> pathlib.Path:
@@ -961,20 +975,290 @@ def _product_root(context: _Context, named: pathlib.Path) -> pathlib.Path:
     return top
 
 
-def _resolve_reference(
-    context: _Context, request: Mapping[str, object]
+def _run_argv(verb: Sequence[str], scope: str, run_token: str) -> list[str]:
+    return [
+        *_RUN_COMMAND,
+        *verb,
+        "--verification-type",
+        VERIFICATION_TYPE,
+        "--scope-type",
+        SCOPE_TYPE,
+        "--scope",
+        scope,
+        "--run",
+        run_token,
+    ]
+
+
+def render_argv(scope: str, run_token: str) -> list[str]:
+    """Return the command that reproduces the complete rendered projection."""
+    return _run_argv(("render",), scope, run_token)
+
+
+def _run_json(
+    context: _Context,
+    root: pathlib.Path,
+    verb: Sequence[str],
+    scope: str,
+    run_token: str,
 ) -> dict[str, object]:
-    named = _reference_path(request)
-    root = _product_root(context, _checkout_root(request))
-    if pathlib.PurePosixPath(named).is_absolute():
-        resolution = Resolution.ABSOLUTE
-    elif not _within(root, root / named, named):
-        resolution = Resolution.OUTSIDE_REPOSITORY
-    elif not (root / named).exists():
-        resolution = Resolution.MISSING
-    else:
-        resolution = Resolution.RESOLVED
-    return {ResultField.PATH: named, ResultField.RESOLUTION: resolution}
+    argv = _run_argv(verb, scope, run_token)
+    stdout = _command(context, argv, cwd=root, run_token=run_token)
+    return _json_lines(stdout, argv=argv, run_token=run_token)[-1]
+
+
+def _retained_draft(
+    context: _Context, root: pathlib.Path, scope: str, run_token: str
+) -> str:
+    replay = _run_json(context, root, ("input",), scope, run_token)
+    content = replay.get(SpxField.CONTENT)
+    if not isinstance(content, str):
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"retained input carries no content string{_RENDER_HINT}",
+            run_token=run_token,
+        )
+    return content
+
+
+# ---------------------------------------------------------------- the record
+
+
+@dataclass(frozen=True)
+class _Record:
+    """One Change record as the store holds it."""
+
+    reference: str
+    state: str
+    metadata: dict[str, object]
+    body: str
+    blockers: tuple[_Record, ...] = field(default=())
+
+
+def _graphql_argv(query: str, **variables: str) -> list[str]:
+    argv = [*_GRAPHQL, "-f", f"query={query}"]
+    for name, value in variables.items():
+        flag = "-F" if name == "n" else "-f"
+        argv += [flag, f"{name}={value}"]
+    return argv
+
+
+def _walk(answer: object, *keys: StoreField) -> object:
+    node = answer
+    for key in keys:
+        node = node.get(key) if isinstance(node, dict) else None
+    return node
+
+
+def _issue_url(owner: str, repository: str, number: object) -> str:
+    return ISSUE_URL_TEMPLATE.format(owner=owner, repository=repository, number=number)
+
+
+def _reference_url(text: str) -> str:
+    found = ISSUE_IDENTITY_PATTERN.fullmatch(text)
+    return _issue_url(*found.groups()) if found else text
+
+
+def _bounded(info: object, bound: str, subject: str) -> None:
+    if isinstance(info, dict) and info.get(StoreField.HAS_NEXT_PAGE) is True:
+        raise Blocked(
+            BlockReason.PAGE_BOUND_REACHED,
+            f"the {subject} read is not complete at {bound}{_BOUND_HINT}",
+            evidence={ResultField.BOUND: bound},
+        )
+
+
+def _field_map(node: Mapping[str, object]) -> dict[str, object]:
+    """Map each issue field name one store issue node carries to its value."""
+    container = node.get(StoreField.ISSUE_FIELD_VALUES)
+    _bounded(
+        container.get(StoreField.PAGE_INFO) if isinstance(container, dict) else None,
+        f"{ISSUE_FIELD_VALUES_PAGE_SIZE} issue field values per issue",
+        "issue field values",
+    )
+    entries = container.get(StoreField.NODES) if isinstance(container, dict) else None
+    values: dict[str, object] = {}
+    for entry in entries if isinstance(entries, list) else []:
+        if not isinstance(entry, dict):
+            continue
+        name = _walk(entry, StoreField.FIELD, StoreField.NAME)
+        if not isinstance(name, str):
+            continue
+        values[name] = (
+            entry.get(StoreField.VALUE)
+            if StoreField.VALUE in entry
+            else entry.get(StoreField.NAME)
+        )
+    return values
+
+
+def _record_of(node: object, *, blockers: tuple[_Record, ...] = ()) -> _Record:
+    """Build a record from one store issue node, or block when it is malformed."""
+    if not isinstance(node, dict):
+        raise Blocked(
+            BlockReason.RECORD_MISSING,
+            f"the store holds no such issue{_STORE_HINT}",
+        )
+    title = node.get(StoreField.TITLE)
+    body = node.get(StoreField.BODY)
+    number = node.get(StoreField.NUMBER)
+    state = node.get(StoreField.STATE)
+    named = _walk(node, StoreField.REPOSITORY, StoreField.NAME_WITH_OWNER)
+    if (
+        not isinstance(title, str)
+        or not isinstance(body, str)
+        or not isinstance(number, int)
+        or not isinstance(state, str)
+        or not isinstance(named, str)
+        or "/" not in named
+    ):
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"store issue lacks a title, body, number, state, or repository{_STORE_HINT}",
+        )
+    owner, repository = named.split("/", 1)
+    values = _field_map(node)
+    assignees = _walk(node, StoreField.ASSIGNEES, StoreField.NODES)
+    holder = (
+        assignees[0].get(StoreField.LOGIN)
+        if isinstance(assignees, list) and assignees and isinstance(assignees[0], dict)
+        else None
+    )
+    parent = values.get(FIELD_NAMES[MetadataKey.PARENT])
+    predecessors = values.get(FIELD_NAMES[MetadataKey.PREDECESSORS])
+    metadata: dict[str, object] = {
+        MetadataKey.TITLE: title,
+        MetadataKey.HOLDER: holder,
+        MetadataKey.PARENT: (
+            _issue_url(owner, repository, int(parent))
+            if isinstance(parent, int | float) and not isinstance(parent, bool)
+            else None
+        ),
+        MetadataKey.PREDECESSORS: [
+            _reference_url(item)
+            for item in predecessors.split(PREDECESSOR_SEPARATOR)
+            if item
+        ]
+        if isinstance(predecessors, str)
+        else [],
+        MetadataKey.BLOCKERS: [item.reference for item in blockers],
+    }
+    for key in (
+        MetadataKey.PRODUCT,
+        MetadataKey.MATURITY,
+        MetadataKey.LIFECYCLE,
+        MetadataKey.BASE,
+        MetadataKey.PRIORITY,
+        MetadataKey.PRIMARY_VALUE,
+        MetadataKey.INVESTMENT,
+    ):
+        value = values.get(FIELD_NAMES[key])
+        metadata[key] = value if isinstance(value, str) and value else None
+    return _Record(
+        reference=_issue_url(owner, repository, number),
+        state=state,
+        metadata={str(key): metadata[key] for key in MetadataKey},
+        body=body,
+        blockers=blockers,
+    )
+
+
+def _fetch_record(context: _Context, identity: tuple[str, str, str]) -> _Record:
+    """Read one record and the record of each Change it names as a blocker."""
+    owner, repository, number = identity
+    argv = _graphql_argv(_RECORD_QUERY, o=owner, r=repository, n=number)
+    answer = _json_lines(_command(context, argv, cwd=context.cwd), argv=argv)[-1]
+    issue = _walk(answer, StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUE)
+    if not isinstance(issue, dict):
+        raise Blocked(
+            BlockReason.RECORD_MISSING,
+            f"the store holds no issue {owner}/{repository}#{number}; pass the identity of a Change in the declared store",
+        )
+    connection = issue.get(StoreField.BLOCKED_BY)
+    _bounded(
+        connection.get(StoreField.PAGE_INFO) if isinstance(connection, dict) else None,
+        f"{BLOCKERS_PAGE_SIZE} blockers, one page",
+        "blockers",
+    )
+    nodes = connection.get(StoreField.NODES) if isinstance(connection, dict) else None
+    blockers = (
+        tuple(_record_of(node) for node in nodes) if isinstance(nodes, list) else ()
+    )
+    return _record_of(issue, blockers=blockers)
+
+
+def _yaml_value(value: object) -> str:
+    return "null" if value is None else str(value)
+
+
+def _draft_text(record: _Record) -> str:
+    """Assemble the Change Draft: the metadata except the holder, then the body."""
+    lines = ["---"]
+    for key in DRAFT_KEYS:
+        value = record.metadata[key]
+        if isinstance(value, list):
+            if value:
+                lines.append(f"{key}:")
+                lines += [f"  - {item}" for item in value]
+            else:
+                lines.append(f"{key}: []")
+        else:
+            lines.append(f"{key}: {_yaml_value(value)}")
+    lines.append("---")
+    return "\n".join(lines) + "\n" + record.body
+
+
+_FRONT_MATTER_PATTERN: Final = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
+_BASE_LINE_PATTERN: Final = re.compile(r"^base: ([0-9a-f]{40})$", re.MULTILINE)
+
+
+def _bound_pair(draft: str) -> tuple[str, str | None]:
+    """Return the body SHA-256 and the Base a Draft binds."""
+    front = _FRONT_MATTER_PATTERN.match(draft)
+    body = draft[front.end() :] if front else draft
+    base = _BASE_LINE_PATTERN.search(front.group(1)) if front else None
+    return _sha256(body), base.group(1) if base else None
+
+
+def _record_base(record: _Record) -> str | None:
+    base = record.metadata[MetadataKey.BASE]
+    return base if isinstance(base, str) else None
+
+
+def _block_changed(
+    *,
+    reason: BlockReason,
+    detail: str,
+    run_token: str | None,
+    retained: tuple[str, str | None],
+    live: tuple[str, str | None],
+) -> Blocked:
+    return Blocked(
+        reason,
+        detail,
+        run_token=run_token,
+        evidence={
+            ResultField.RETAINED_SHA256: retained[0],
+            ResultField.LIVE_SHA256: live[0],
+            ResultField.RETAINED_BASE: retained[1],
+            ResultField.LIVE_BASE: live[1],
+        },
+    )
+
+
+def _read_record(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
+    _product_root(context, _checkout_root(request))
+    record = _fetch_record(context, _issue_identity(request))
+    return {
+        ResultField.ISSUE: request[RequestField.ISSUE],
+        ResultField.DRAFT: _draft_text(record),
+        ResultField.BODY_SHA256: _sha256(record.body),
+        ResultField.BASE: _record_base(record),
+        ResultField.BLOCKERS: [
+            {ResultField.REFERENCE: item.reference, ResultField.STATE: item.state}
+            for item in record.blockers
+        ],
+    }
 
 
 def _tool_version(
@@ -991,20 +1275,63 @@ def _tool_version(
     return {ResultField.TOOL_VERSION: version}
 
 
-def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
-    relative = _candidate_path(request)
-    expected = _candidate_sha256(request)
+# ---------------------------------------------------------------- the Base
+
+
+def _read_at_base(
+    context: _Context, request: Mapping[str, object]
+) -> dict[str, object]:
+    """Return what the named path holds at the Base: a file, a directory, or nothing."""
     root = _product_root(context, _checkout_root(request))
-    content = _live_content(root, relative)
-    if _sha256(content) != expected:
+    base = _base(request)
+    path = _repository_path(request)
+    commit = _probe(
+        context, (GIT_EXECUTABLE, "cat-file", "-e", f"{base}^{{commit}}"), cwd=root
+    )
+    if commit.exit_code != 0:
         raise Blocked(
-            BlockReason.CANDIDATE_CHANGED,
-            "candidate differs from the content read before the run; call read-candidate again and restart with the new candidateSha256",
-            evidence={
-                ResultField.LIVE_SHA256: _sha256(content),
-                ResultField.SHA256: expected,
-            },
+            BlockReason.BASE_UNRESOLVED,
+            f"the Base {base} names no commit in {root}; fetch it, then repeat the request",
         )
+    revision = f"{base}:{path}"
+    kind = _probe(context, (GIT_EXECUTABLE, "cat-file", "-t", revision), cwd=root)
+    values: dict[str, object] = {ResultField.PATH: path, ResultField.BASE: base}
+    named = kind.stdout.strip() if kind.exit_code == 0 else ""
+    if named == "blob":
+        values[ResultField.KIND] = BaseKind.FILE
+        values[ResultField.CONTENT] = _command(
+            context, (GIT_EXECUTABLE, "cat-file", "blob", revision), cwd=root
+        )
+    elif named == "tree":
+        values[ResultField.KIND] = BaseKind.DIRECTORY
+        values[ResultField.ENTRIES] = _command(
+            context, (GIT_EXECUTABLE, "ls-tree", "--name-only", revision), cwd=root
+        ).splitlines()
+    else:
+        values[ResultField.KIND] = BaseKind.MISSING
+    return values
+
+
+# ---------------------------------------------------------------- the run
+
+
+def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
+    identity = _issue_identity(request)
+    scope = str(request[RequestField.ISSUE])
+    expected_body = _body_sha256(request)
+    expected_base = _base(request)
+    root = _product_root(context, _checkout_root(request))
+    record = _fetch_record(context, identity)
+    live = (_sha256(record.body), _record_base(record))
+    if live != (expected_body, expected_base):
+        raise _block_changed(
+            reason=BlockReason.RECORD_CHANGED,
+            detail="the stored record differs from the body and Base read before the run; call read-record again and restart with the new bodySha256 and base",
+            run_token=None,
+            retained=(expected_body, expected_base),
+            live=live,
+        )
+    draft = _draft_text(record)
     argv = [
         *_RUN_COMMAND,
         "start",
@@ -1013,11 +1340,15 @@ def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object
         "--scope-type",
         SCOPE_TYPE,
         "--scope",
-        relative,
+        scope,
         "--input",
-        relative,
+        PAYLOAD_FROM_STDIN,
+        "--expect-content-sha256",
+        _sha256(draft),
+        "--change",
+        scope,
     ]
-    lines = _json_lines(_command(context, argv, cwd=root), argv=argv)
+    lines = _json_lines(_command(context, argv, cwd=root, stdin=draft), argv=argv)
     run_token = next(
         (
             token
@@ -1035,21 +1366,22 @@ def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object
             "run token; confirm the installed spx version supports the run "
             "`start` verb",
         )
-    retained = _retained_content(context, root, relative, run_token)
-    if retained != content:
+    retained = _retained_draft(context, root, scope, run_token)
+    if retained != draft:
         raise Blocked(
             BlockReason.RETAINED_INPUT_MISMATCH,
-            "retained input differs from the candidate the runner read; the candidate changed during start, so repeat read-candidate and start",
+            "retained input differs from the Draft the runner assembled; the record changed during start, so repeat read-record and start",
             run_token=run_token,
             evidence={
                 ResultField.RETAINED_SHA256: _sha256(retained),
-                ResultField.LIVE_SHA256: _sha256(content),
+                ResultField.LIVE_SHA256: _sha256(draft),
             },
         )
     return {
         ResultField.RUN_TOKEN: run_token,
-        ResultField.PATH: relative,
-        ResultField.SHA256: _sha256(content),
+        ResultField.ISSUE: scope,
+        ResultField.BODY_SHA256: live[0],
+        ResultField.BASE: live[1],
     }
 
 
@@ -1060,10 +1392,10 @@ def _append(
     noun: str,
     idempotency_key: str,
 ) -> dict[str, object]:
-    relative = _candidate_path(request)
+    scope = str(request[RequestField.ISSUE])
     run_token = _run_token(request)
     argv = [
-        *_run_argv((noun, "add"), relative, run_token),
+        *_run_argv((noun, "add"), scope, run_token),
         "--idempotency-key",
         idempotency_key,
         "--payload",
@@ -1128,23 +1460,35 @@ def _finding_entries(
     return sorted(entries.items())
 
 
+def _check_binding(
+    context: _Context,
+    request: Mapping[str, object],
+    root: pathlib.Path,
+    run_token: str,
+) -> tuple[str, str | None]:
+    """Block unless the stored body and Base equal the pair the run retained."""
+    scope = str(request[RequestField.ISSUE])
+    retained = _bound_pair(_retained_draft(context, root, scope, run_token))
+    record = _fetch_record(context, _issue_identity(request))
+    live = (_sha256(record.body), _record_base(record))
+    if live != retained:
+        raise _block_changed(
+            reason=BlockReason.RECORD_CHANGED,
+            detail="the stored body or Base differs from the pair the run retained; the record was published after start, so call read-record again and start a new run for the changed record",
+            run_token=run_token,
+            retained=retained,
+            live=live,
+        )
+    return live
+
+
 def _reconcile(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
-    relative = _candidate_path(request)
+    scope = str(request[RequestField.ISSUE])
     run_token = _run_token(request)
     root = _product_root(context, _checkout_root(request))
-    retained = _retained_content(context, root, relative, run_token)
-    live = _live_content(root, relative)
-    if live != retained:
-        raise Blocked(
-            BlockReason.CANDIDATE_CHANGED,
-            "candidate differs from the retained input; the candidate changed after start, so call read-candidate again and start a new run for the changed content",
-            evidence={
-                ResultField.RETAINED_SHA256: _sha256(retained),
-                ResultField.LIVE_SHA256: _sha256(live),
-            },
-        )
-    run_status = _run_json(context, root, ("status",), relative, run_token)
-    projection = _run_json(context, root, ("render",), relative, run_token)
+    _check_binding(context, request, root, run_token)
+    run_status = _run_json(context, root, ("status",), scope, run_token)
+    projection = _run_json(context, root, ("render",), scope, run_token)
     units = projection.get(SpxField.AUDIT_SCOPE_UNITS)
     if not isinstance(units, list) or not all(isinstance(unit, dict) for unit in units):
         raise Blocked(
@@ -1153,8 +1497,8 @@ def _reconcile(context: _Context, request: Mapping[str, object]) -> dict[str, ob
         )
     scope_units = [
         {
-            field: unit.get(field)
-            for field in (
+            name: unit.get(name)
+            for name in (
                 SpxField.UNIT_ID,
                 SpxField.PARENT_UNIT_ID,
                 SpxField.SUBJECT,
@@ -1181,38 +1525,314 @@ def _reconcile(context: _Context, request: Mapping[str, object]) -> dict[str, ob
 
 
 def _finish(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
-    relative = _candidate_path(request)
+    scope = str(request[RequestField.ISSUE])
     run_token = _run_token(request)
     terminal = _terminal_status(request)
     root = _product_root(context, _checkout_root(request))
+    bound = _check_binding(context, request, root, run_token)
     finish_argv = [
-        *_run_argv(("finish",), relative, run_token),
+        *_run_argv(("finish",), scope, run_token),
         "--terminal-status",
         terminal,
     ]
     _command(context, finish_argv, cwd=root)
-    projection = _run_json(context, root, ("render",), relative, run_token)
+    projection = _run_json(context, root, ("render",), scope, run_token)
     return {
         ResultField.RUN_TOKEN: run_token,
+        ResultField.BODY_SHA256: bound[0],
+        ResultField.BASE: bound[1],
         ResultField.RUN: {
-            field: value
-            for field, value in projection.items()
-            if field not in EVIDENCE_FIELDS
+            name: value
+            for name, value in projection.items()
+            if name not in EVIDENCE_FIELDS
         },
         ResultField.FINDINGS: [
             payload for _seq, payload in _finding_entries(projection)
         ],
-        ResultField.RENDER_COMMAND: shlex.join(render_argv(relative, run_token)),
+        ResultField.RENDER_COMMAND: shlex.join(render_argv(scope, run_token)),
     }
+
+
+# ---------------------------------------------------------------- the form check
+
+
+def _form_check_function() -> Callable[..., dict[str, object]]:
+    """Return the check function of the change-standards skill, imported by path."""
+    path = (
+        pathlib.Path(__file__).resolve().parent.parent.parent
+        / "change-standards"
+        / "scripts"
+        / "form_check.py"
+    )
+    spec = importlib.util.spec_from_file_location("change_standards_form_check", path)
+    if not path.is_file() or spec is None or spec.loader is None:
+        raise Blocked(
+            BlockReason.FORM_CHECK_UNAVAILABLE,
+            f"the change-standards form check is absent at {path}; install the product-tree plugin whole, then repeat the request",
+        )
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    check = getattr(module, "check", None)
+    if not callable(check):
+        raise Blocked(
+            BlockReason.FORM_CHECK_UNAVAILABLE,
+            f"the form check at {path} defines no check function; install the product-tree plugin whole, then repeat the request",
+        )
+    return check
+
+
+def _stored_form(record: _Record) -> dict[str, object]:
+    return {"metadata": dict(record.metadata), "body": record.body}
+
+
+def _form_check(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
+    root = _product_root(context, _checkout_root(request))
+    record = _fetch_record(context, _issue_identity(request))
+    outcome = _form_check_function()(
+        {
+            "draft_text": _draft_text(record),
+            "checkout_root": str(root),
+            "operation": FORM_CHECK_OPERATION,
+            "stored_record": _stored_form(record),
+            "blocker_records": {
+                item.reference: _stored_form(item) for item in record.blockers
+            },
+            "size_limit": FORM_CHECK_SIZE_LIMIT,
+        }
+    )
+    status = outcome.get("status")
+    findings = outcome.get("findings")
+    if status == "invalid-request" or not isinstance(findings, list):
+        raise Blocked(
+            BlockReason.FORM_CHECK_REJECTED,
+            f"the form check rejected its request: {outcome.get('detail')}; report this block, since the runner built the request",
+        )
+    return {
+        ResultField.ISSUE: request[RequestField.ISSUE],
+        ResultField.BODY_SHA256: _sha256(record.body),
+        ResultField.BASE: _record_base(record),
+        ResultField.CHECK_STATUS: status,
+        ResultField.FINDINGS: [
+            {
+                ResultField.RULE: item.get("rule"),
+                ResultField.WHERE: item.get("where"),
+                ResultField.DETAIL: item.get("detail"),
+            }
+            for item in findings
+            if isinstance(item, dict)
+        ],
+    }
+
+
+# ---------------------------------------------------------------- format at close
+
+_FENCE_PATTERN: Final = re.compile(r"^(?P<fence>`{3,}|~{3,})(?P<info>.*)$")
+_HEADING_PATTERN: Final = re.compile(r"^###[ \t]+(?P<text>.+?)[ \t]*$")
+_DECLARATIONS_PATTERN: Final = re.compile(r"^##[ \t]+Declarations[ \t]*$")
+_SECTION_PATTERN: Final = re.compile(r"^##[ \t]+\S")
+_RENAME_TO_PATTERN: Final = re.compile(r"^rename to (?P<path>.+)$")
+_LINKED_TAG_PATTERN: Final = re.compile(r"[ \t]*\(\[(?:test|eval|probe)\]\([^)]*\)\)")
+
+
+@dataclass
+class _Block:
+    info: str
+    lines: list[str]
+
+
+@dataclass
+class _Subsection:
+    heading: str
+    blocks: list[_Block] = field(default_factory=list)
+
+
+def _subsections(body: str) -> list[_Subsection]:
+    """Return the ``###`` subsections of the ``## Declarations`` section with their fenced blocks."""
+    subsections: list[_Subsection] = []
+    in_declarations = False
+    block: _Block | None = None
+    fence = ""
+    for line in body.splitlines():
+        if block is not None:
+            closing = line.strip()
+            if closing and set(closing) == {fence[0]} and len(closing) >= len(fence):
+                block = None
+            else:
+                block.lines.append(line)
+            continue
+        opening = _FENCE_PATTERN.match(line)
+        if opening is not None and in_declarations and subsections:
+            fence = opening.group("fence")
+            block = _Block(opening.group("info").strip(), [])
+            subsections[-1].blocks.append(block)
+            continue
+        if _DECLARATIONS_PATTERN.match(line):
+            in_declarations = True
+        elif _SECTION_PATTERN.match(line):
+            in_declarations = False
+        elif in_declarations:
+            heading = _HEADING_PATTERN.match(line)
+            if heading is not None:
+                subsections.append(_Subsection(heading.group("text")))
+    return subsections
+
+
+def _replacement_of(subsection: _Subsection) -> tuple[str, str] | None:
+    """Return the file path and whole text of a replacement subsection, if it is one."""
+    blocks = subsection.blocks
+    path = subsection.heading.strip("`")
+    diffs = [block for block in blocks if block.info == "diff"]
+    if diffs:
+        renames = [
+            match.group("path").strip()
+            for line in diffs[0].lines
+            if (match := _RENAME_TO_PATTERN.match(line))
+        ]
+        headers_only = all(
+            line.startswith(("rename from ", "rename to ")) for line in diffs[0].lines
+        )
+        if len(blocks) < 2 or not headers_only or not renames:
+            return None
+        return renames[0], "\n".join(blocks[-1].lines) + "\n"
+    if len(blocks) != 1 or " " in path or "/" not in path and "." not in path:
+        return None
+    return path, "\n".join(blocks[0].lines) + "\n"
+
+
+def _format(
+    context: _Context,
+    root: pathlib.Path,
+    command: Sequence[str],
+    path: str,
+    text: str,
+) -> str:
+    argv = [part.replace(PATH_PLACEHOLDER, path) for part in command]
+    result = _probe_with_stdin(context, argv, root, text)
+    if result.exit_code != 0:
+        raise Blocked(
+            BlockReason.FORMAT_COMMAND_UNUSABLE,
+            f"the format command exited {result.exit_code} on {path}; run it by hand over that text on stdin and confirm it writes the formatted text on stdout",
+            evidence={
+                ResultField.COMMAND: shlex.join(argv),
+                ResultField.EXIT_CODE: result.exit_code,
+                ResultField.STDERR: result.stderr,
+            },
+        )
+    return result.stdout
+
+
+def _probe_with_stdin(
+    context: _Context, argv: Sequence[str], cwd: pathlib.Path, stdin: str
+) -> CommandResult:
+    try:
+        return context.runner(argv, cwd=cwd, stdin=stdin)
+    except UnicodeDecodeError as exc:
+        raise Blocked(
+            BlockReason.FORMAT_COMMAND_UNUSABLE,
+            f"the format command printed output that is not UTF-8; rerun `{shlex.join(argv)}` by hand and confirm it prints UTF-8 text",
+        ) from exc
+    except (OSError, ValueError) as exc:
+        raise Blocked(
+            BlockReason.FORMAT_COMMAND_UNUSABLE,
+            f"the format command could not be executed; confirm {argv[0]} is installed and on PATH, then repeat the request",
+            evidence={
+                ResultField.COMMAND: shlex.join(argv),
+                ResultField.EXIT_CODE: NOT_APPLICABLE,
+                ResultField.STDERR: str(exc),
+            },
+        ) from exc
+
+
+def _plain(text: str) -> str:
+    """Return ``text`` with its linked evidence tags removed."""
+    return "\n".join(_LINKED_TAG_PATTERN.sub("", line) for line in text.split("\n"))
+
+
+def _at_revision(context: _Context, root: pathlib.Path, revision: str) -> str | None:
+    kind = _probe(context, (GIT_EXECUTABLE, "cat-file", "-t", revision), cwd=root)
+    if kind.exit_code != 0 or kind.stdout.strip() != "blob":
+        return None
+    return _command(context, (GIT_EXECUTABLE, "cat-file", "blob", revision), cwd=root)
+
+
+def _finding(rule: FormatRule, path: str, detail: str) -> dict[str, object]:
+    return {
+        ResultField.RULE: rule,
+        ResultField.WHERE: path,
+        ResultField.DETAIL: detail,
+    }
+
+
+def _format_at_close(
+    context: _Context, request: Mapping[str, object]
+) -> dict[str, object]:
+    """Make the three comparisons of the audit at close for each declared replacement."""
+    root = _product_root(context, _checkout_root(request))
+    merge = _merge_commit(request)
+    command = _format_command(request)
+    record = _fetch_record(context, _issue_identity(request))
+    default = _command(context, _GIT_DEFAULT_BRANCH, cwd=root).strip()
+    if not default:
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"`{' '.join(_GIT_DEFAULT_BRANCH)}` printed no default branch; run `git remote set-head origin --auto` in {root} and repeat the request",
+        )
+    findings: list[dict[str, object]] = []
+    replacements = [
+        found
+        for subsection in _subsections(record.body)
+        if (found := _replacement_of(subsection)) is not None
+    ]
+    for path, declared in replacements:
+        if _format(context, root, command, path, declared) != declared:
+            findings.append(
+                _finding(
+                    FormatRule.BASE_FORMATTER,
+                    path,
+                    "the format command changes the declared replacement",
+                )
+            )
+        approved = _at_revision(context, root, f"{merge}:{path}")
+        if approved is None:
+            findings.append(
+                _finding(
+                    FormatRule.MERGE_FORMATTER,
+                    path,
+                    f"the merge commit {merge} holds no file at this path",
+                )
+            )
+        elif _format(context, root, command, path, approved) != approved:
+            findings.append(
+                _finding(
+                    FormatRule.MERGE_FORMATTER,
+                    path,
+                    "the format command changes the file at the merge commit",
+                )
+            )
+        on_default = _at_revision(context, root, f"{default}:{path}")
+        if on_default is None or _plain(on_default) != _plain(declared):
+            findings.append(
+                _finding(
+                    FormatRule.DEFAULT_BRANCH,
+                    path,
+                    f"the file on {default} is absent or differs from the declared replacement once its linked evidence tags are removed",
+                )
+            )
+    return {
+        ResultField.ISSUE: request[RequestField.ISSUE],
+        ResultField.FINDINGS: findings,
+    }
+
+
+# ---------------------------------------------------------------- the store
 
 
 def _connection(
     answer: Mapping[str, object], kind: AuthorityRead
 ) -> Mapping[str, object]:
     """Return the connection of ``kind`` from one store answer, or block."""
-    node: object = answer
-    for key in (StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUE):
-        node = node.get(key) if isinstance(node, dict) else None
+    node = _walk(answer, StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUE)
     connection = (
         node.get(_AUTHORITY_CONNECTIONS[kind]) if isinstance(node, dict) else None
     )
@@ -1229,12 +1849,12 @@ def _login(person: object) -> object:
 
 
 def _event(node: Mapping[str, object]) -> dict[str, object]:
-    field = node.get(StoreField.ISSUE_FIELD)
+    changed = node.get(StoreField.ISSUE_FIELD)
     return {
         ResultField.CREATED_AT: node.get(StoreField.CREATED_AT),
         ResultField.ACTOR: _login(node.get(StoreField.ACTOR)),
-        ResultField.FIELD: field.get(StoreField.NAME)
-        if isinstance(field, dict)
+        ResultField.FIELD: changed.get(StoreField.NAME)
+        if isinstance(changed, dict)
         else None,
         ResultField.PREVIOUS_VALUE: node.get(StoreField.PREVIOUS_VALUE),
         ResultField.NEW_VALUE: node.get(StoreField.NEW_VALUE),
@@ -1249,17 +1869,7 @@ def _read_connection(
     entries: list[dict[str, object]] = []
     cursor: str | None = None
     for _page in range(AUTHORITY_MAX_PAGES):
-        argv = [
-            *_GRAPHQL,
-            "-f",
-            f"query={_AUTHORITY_QUERIES[kind]}",
-            "-f",
-            f"o={owner}",
-            "-f",
-            f"r={repository}",
-            "-F",
-            f"n={number}",
-        ]
+        argv = _graphql_argv(_AUTHORITY_QUERIES[kind], o=owner, r=repository, n=number)
         if cursor is not None:
             argv += ["-f", f"after={cursor}"]
         connection = _connection(
@@ -1305,96 +1915,40 @@ def _read_authority(
     }
 
 
-def _read_published(
-    context: _Context, request: Mapping[str, object]
-) -> dict[str, object]:
-    """Return the store's published body of the named issue, or block."""
-    owner, repository, number = _issue_identity(request)
-    argv = [
-        *_GRAPHQL,
-        "-f",
-        f"query={_PUBLISHED_QUERY}",
-        "-f",
-        f"o={owner}",
-        "-f",
-        f"r={repository}",
-        "-F",
-        f"n={number}",
-    ]
-    node: object = _json_lines(_command(context, argv, cwd=context.cwd), argv=argv)[-1]
-    for key in (StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUE):
-        node = node.get(key) if isinstance(node, dict) else None
-    body = node.get(StoreField.BODY) if isinstance(node, dict) else None
-    if not isinstance(body, str):
-        raise Blocked(
-            BlockReason.UNREADABLE_OUTPUT,
-            f"store answer carries no issue {StoreField.BODY} string{_STORE_HINT}",
-        )
-    return {ResultField.ISSUE: request[RequestField.ISSUE], ResultField.BODY: body}
-
-
-def _field_values(node: Mapping[str, object]) -> dict[str, object]:
-    """Return the Product, Parent, and Predecessors values one store issue node carries."""
-    values: dict[str, object] = {}
-    container = node.get(StoreField.ISSUE_FIELD_VALUES)
-    entries = container.get(StoreField.NODES) if isinstance(container, dict) else None
-    info = container.get(StoreField.PAGE_INFO) if isinstance(container, dict) else None
-    if isinstance(info, dict) and info.get(StoreField.HAS_NEXT_PAGE) is True:
-        bound = f"{ISSUE_FIELD_VALUES_PAGE_SIZE} issue field values per issue"
-        raise Blocked(
-            BlockReason.PAGE_BOUND_REACHED,
-            f"the issue field values read is not complete at {bound}{_BOUND_HINT}",
-            evidence={ResultField.BOUND: bound},
-        )
-    for entry in entries if isinstance(entries, list) else []:
-        field = entry.get("field") if isinstance(entry, dict) else None
-        name = field.get(StoreField.NAME) if isinstance(field, dict) else None
-        if name == PRODUCT_FIELD:
-            values[PRODUCT_FIELD] = entry.get(StoreField.NAME)
-        elif (
-            name == PARENT_FIELD
-            and isinstance(entry.get(StoreField.VALUE), int | float)
-            and not isinstance(entry.get(StoreField.VALUE), bool)
-        ):
-            values[PARENT_FIELD] = int(entry[StoreField.VALUE])
-        elif name == PREDECESSORS_FIELD and isinstance(
-            entry.get(StoreField.VALUE), str
-        ):
-            values[PREDECESSORS_FIELD] = entry[StoreField.VALUE]
-    return values
+def _relation_values(node: Mapping[str, object]) -> dict[str, object]:
+    """Return the Product and Parent values one store issue node carries."""
+    values = _field_map(node)
+    parent = values.get(PARENT_FIELD)
+    return {
+        PRODUCT_FIELD: values.get(PRODUCT_FIELD),
+        PARENT_FIELD: int(parent)
+        if isinstance(parent, int | float) and not isinstance(parent, bool)
+        else None,
+    }
 
 
 def _read_relations(
     context: _Context, request: Mapping[str, object]
 ) -> dict[str, object]:
-    """Return the issue's Product and Parent, its Parent's Product, and its children.
+    """Return the issue's Product and Parent and the issues whose Parent it is.
 
     Reads every issue of the store's repository within the page bound; a child
-    is an issue whose ``Parent`` number field equals the named issue's number,
-    and an absorber is an issue whose ``Predecessors`` text field, split at
-    every comma followed by one space, holds the named issue's identity.
+    is an issue whose ``Parent`` number field equals the named issue's number.
     """
     owner, repository, number = _issue_identity(request)
     target = int(number)
     by_number: dict[int, dict[str, object]] = {}
     cursor: str | None = None
     for _page in range(AUTHORITY_MAX_PAGES):
-        argv = [
-            *_GRAPHQL,
-            "-f",
-            f"query={_RELATIONS_QUERY}",
-            "-f",
-            f"o={owner}",
-            "-f",
-            f"r={repository}",
-        ]
+        argv = _graphql_argv(_RELATIONS_QUERY, o=owner, r=repository)
         if cursor is not None:
             argv += ["-f", f"after={cursor}"]
-        node: object = _json_lines(_command(context, argv, cwd=context.cwd), argv=argv)[
-            -1
-        ]
-        for key in (StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUES):
-            node = node.get(key) if isinstance(node, dict) else None
+        node = _walk(
+            _json_lines(_command(context, argv, cwd=context.cwd), argv=argv)[-1],
+            StoreField.DATA,
+            StoreField.REPOSITORY,
+            StoreField.ISSUES,
+        )
         nodes = node.get(StoreField.NODES) if isinstance(node, dict) else None
         info = node.get(StoreField.PAGE_INFO) if isinstance(node, dict) else None
         if not isinstance(nodes, list) or not isinstance(info, dict):
@@ -1409,19 +1963,13 @@ def _read_relations(
                     BlockReason.UNREADABLE_OUTPUT,
                     f"relations page holds an entry with no issue number{_STORE_HINT}",
                 )
-            by_number[numbered] = _field_values(entry)
+            by_number[numbered] = _relation_values(entry)
         if info.get(StoreField.HAS_NEXT_PAGE) is not True:
             own = by_number.get(target, {})
-            parent = own.get(PARENT_FIELD)
             return {
                 ResultField.ISSUE: request[RequestField.ISSUE],
                 ResultField.PRODUCT: own.get(PRODUCT_FIELD),
-                ResultField.PARENT: parent,
-                ResultField.PARENT_PRODUCT: (
-                    by_number.get(parent, {}).get(PRODUCT_FIELD)
-                    if isinstance(parent, int)
-                    else None
-                ),
+                ResultField.PARENT: own.get(PARENT_FIELD),
                 ResultField.CHILDREN: [
                     {
                         ResultField.NUMBER: child,
@@ -1429,18 +1977,6 @@ def _read_relations(
                     }
                     for child, values in sorted(by_number.items())
                     if values.get(PARENT_FIELD) == target
-                ],
-                ResultField.ABSORBERS: [
-                    absorber
-                    for absorber, values in sorted(by_number.items())
-                    if request[RequestField.ISSUE]
-                    in str(values.get(PREDECESSORS_FIELD, "")).split(
-                        PREDECESSOR_SEPARATOR
-                    )
-                    and f"{owner}/{repository}#{absorber}"
-                    not in str(own.get(PREDECESSORS_FIELD, "")).split(
-                        PREDECESSOR_SEPARATOR
-                    )
                 ],
             }
         cursor = info.get(StoreField.END_CURSOR)
@@ -1457,97 +1993,21 @@ def _read_relations(
     )
 
 
-TITLE_WORD_LIMIT: Final = 15
-INTENT_WORD_LIMIT: Final = 60
-_FRONT_MATTER_PATTERN: Final = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
-_TITLE_PATTERN: Final = re.compile(r"^title:[ \t]*(.*)$", re.MULTILINE)
-_LINK_PATTERN: Final = re.compile(r"\[([^\]]*)\]\([^)]*\)")
-_LIST_MARKER_PATTERN: Final = re.compile(r"^[ \t]*(?:[-*]|\d+\.)[ \t]+", re.MULTILINE)
-_EMPHASIS_PATTERN: Final = re.compile(r"\*+|_{2,}")
-_HEADING_PATTERN: Final = re.compile(r"##[ \t]+(.+?)[ \t]*$")
-
-
-def count_words(text: str) -> int:
-    """Count words: whitespace-separated tokens that hold a letter or a digit.
-
-    A list marker and emphasis markup carry no word, a link counts its text, and
-    a label such as ``What:`` counts as one word.
-    """
-    plain = _LINK_PATTERN.sub(r"\1", text)
-    plain = _LIST_MARKER_PATTERN.sub("", plain)
-    plain = _EMPHASIS_PATTERN.sub("", plain)
-    return len([token for token in plain.split() if any(c.isalnum() for c in token)])
-
-
-def _body_sections(body: str) -> dict[str, str]:
-    """Map each level-two heading outside a code fence to its text."""
-    sections: dict[str, list[str]] = {}
-    current: list[str] | None = None
-    fenced = False
-    for line in body.splitlines():
-        if line.lstrip().startswith("```"):
-            fenced = not fenced
-        heading = None if fenced else _HEADING_PATTERN.match(line)
-        if heading:
-            current = sections.setdefault(heading.group(1), [])
-        elif current is not None:
-            current.append(line)
-    return {name: "\n".join(lines) for name, lines in sections.items()}
-
-
-def _count_limits(
-    context: _Context, request: Mapping[str, object]
-) -> dict[str, object]:
-    """Count the title's words and the Intent section's words, labels included."""
-    relative = _candidate_path(request)
-    content = _live_content(_product_root(context, _checkout_root(request)), relative)
-    front = _FRONT_MATTER_PATTERN.match(content)
-    body = content[front.end() :] if front else content
-    title_match = _TITLE_PATTERN.search(front.group(1)) if front else None
-    title = title_match.group(1).strip().strip("\"'") if title_match else ""
-    measured: list[dict[str, object]] = [
-        {
-            ResultField.SECTION: "title",
-            ResultField.LIMIT: TITLE_WORD_LIMIT,
-            ResultField.COUNT: len(title.split()),
-        }
-    ]
-    sections = _body_sections(body)
-    if "Intent" in sections:
-        measured.append(
-            {
-                ResultField.SECTION: "Intent",
-                ResultField.LIMIT: INTENT_WORD_LIMIT,
-                ResultField.COUNT: count_words(sections["Intent"]),
-            }
-        )
-    return {
-        ResultField.PATH: relative,
-        ResultField.SHA256: _sha256(content),
-        ResultField.LIMITS: measured,
-        ResultField.VIOLATIONS: [
-            item
-            for item in measured
-            if int(str(item[ResultField.COUNT])) > int(str(item[ResultField.LIMIT]))
-        ],
-    }
-
-
 _HANDLERS: Final[
     Mapping[Operation, Callable[[_Context, Mapping[str, object]], dict[str, object]]]
 ] = {
-    Operation.READ_CANDIDATE: _read_candidate,
-    Operation.RESOLVE_REFERENCE: _resolve_reference,
     Operation.TOOL_VERSION: _tool_version,
+    Operation.READ_RECORD: _read_record,
+    Operation.READ_AT_BASE: _read_at_base,
     Operation.START: _start,
     Operation.ADD_SCOPE: _add_scope,
     Operation.ADD_FINDING: _add_finding,
     Operation.RECONCILE: _reconcile,
     Operation.FINISH: _finish,
+    Operation.FORM_CHECK: _form_check,
+    Operation.FORMAT_AT_CLOSE: _format_at_close,
     Operation.READ_AUTHORITY: _read_authority,
-    Operation.READ_PUBLISHED: _read_published,
     Operation.READ_RELATIONS: _read_relations,
-    Operation.COUNT_LIMITS: _count_limits,
 }
 
 

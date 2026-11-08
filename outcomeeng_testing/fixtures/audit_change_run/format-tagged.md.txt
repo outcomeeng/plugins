@@ -1,0 +1,6 @@
+# Example
+
+A short document the format command leaves unchanged.
+
+- first-rule: ALWAYS: the document states one rule ([test](tests/test_example.compliance.l1.py))
+- second-rule: NEVER: the document states two rules in one line

@@ -29,10 +29,14 @@ from typing import Final
 
 from outcomeeng_testing.harnesses.audit_change_run import REPO_ROOT, load_runner
 
-_CHANGES_NODE: Final = (
-    REPO_ROOT / "spx" / "31-outcomeeng.enabler" / "32-changes.enabler"
+_AUDIT_CHANGE_NODE: Final = (
+    REPO_ROOT
+    / "spx"
+    / "31-outcomeeng.enabler"
+    / "32-changes.enabler"
+    / "61-audit-change.enabler"
 )
-CHANGES_SPEC: Final = _CHANGES_NODE / "changes.md"
+AUDIT_CHANGE_SPEC: Final = _AUDIT_CHANGE_NODE / "audit-change.md"
 _FIXTURES_DIR: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "audit_change_authority"
 )
@@ -105,9 +109,11 @@ class AuthorityObservation:
 
 def spec_page_bound() -> PageBound:
     """Read the page size and page count from the ``read-authority`` assertion."""
-    found = _BOUND_PHRASE.search(CHANGES_SPEC.read_text(encoding="utf-8"))
+    found = _BOUND_PHRASE.search(AUDIT_CHANGE_SPEC.read_text(encoding="utf-8"))
     if found is None:
-        raise RuntimeError(f"no read-authority page bound stated in {CHANGES_SPEC}")
+        raise RuntimeError(
+            f"no read-authority page bound stated in {AUDIT_CHANGE_SPEC}"
+        )
     return PageBound(page_size=int(found.group(1)), max_pages=int(found.group(2)))
 
 
