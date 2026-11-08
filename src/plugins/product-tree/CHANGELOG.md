@@ -10,6 +10,16 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.111.0
+
+### Changed
+
+- **`/author-change` records, publishes, splits, merges, and reframes a Change record through one script that runs the form check first.** The skill writes a Change Draft — YAML front matter and a body of a Statement of Intent and Declarations — and runs `author_change.py` with one JSON request. The script hands the Draft to the form check of `/change-standards` and writes nothing while the check fails. A publish fails when the record changed since the script read it, restores a revision another writer landed between its read and its write, and reads the record back against the Draft. A publish sets a Leaf's base only when it writes the body, and a publish of a body over an Applicable record lowers the Change to Sliced through `/operate-change` before the write. `split` accepts only a Leaf below Applicable and blocks, writing nothing, when its Children span more than one Product, because the Product field holds one option. Before this change, the skill ran one workflow per Maturity over four templates and published through `gh` commands with no program check of the record's form.
+
+### Removed
+
+- **The per-Maturity workflows, the four templates, and the repair-sweep reference of `/author-change`.** They stated the replaced record, and the skill's `SKILL.md` and script replace them.
+
 ## 0.110.0
 
 ### Changed
