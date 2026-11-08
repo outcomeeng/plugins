@@ -354,7 +354,28 @@ def _text(raw: Mapping[str, Any], name: str, *, optional: bool = False) -> str |
     if value is None and optional:
         return None
     if not isinstance(value, str) or not value.strip():
-        raise InvalidRequest(f"{name} must be a non-empty string")
+        raise InvalidRequest(
+            f"{name} must be a non-empty string; add a non-blank {name} to the request"
+        )
+    return value
+
+
+def _choice[E: StrEnum](kind: type[E], name: str, value: object) -> E:
+    try:
+        return kind(str(value))
+    except ValueError:
+        options = ", ".join(member.value for member in kind)
+        raise InvalidRequest(
+            f"{name} must be one of {options}; the request names {value!r}"
+        ) from None
+
+
+def _object(raw: Mapping[str, Any], name: str, shape: str) -> Mapping[str, Any] | None:
+    value = raw.get(name)
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise InvalidRequest(f"{name} must be an object {shape}")
     return value
 
 
@@ -362,7 +383,9 @@ def _pair(raw: Any, name: str) -> BoundPair | None:
     if raw is None:
         return None
     if not isinstance(raw, Mapping):
-        raise InvalidRequest(f"{name} must be an object")
+        raise InvalidRequest(
+            f"{name} must be an object of body_sha256 and base, both non-empty strings"
+        )
     return BoundPair(
         str(_text(raw, "body_sha256")),
         str(_text(raw, "base")),
@@ -371,59 +394,75 @@ def _pair(raw: Any, name: str) -> BoundPair | None:
 
 def read_request(raw: object) -> Request:
     if not isinstance(raw, Mapping):
-        raise InvalidRequest("the request must be a JSON object")
-    try:
-        kind = Transition(str(raw.get("transition")))
-        mover = Mover(str(raw.get("mover")))
-    except ValueError as error:
-        raise InvalidRequest(str(error)) from error
+        raise InvalidRequest(
+            "the request must be a JSON object holding transition, store, number, "
+            "mover, and identity"
+        )
+    kind = _choice(Transition, "transition", raw.get("transition"))
+    mover = _choice(Mover, "mover", raw.get("mover"))
     store = str(_text(raw, "store"))
     if not re.fullmatch(r"[\w.-]+/[\w.-]+", store):
-        raise InvalidRequest("store must read owner/repo")
+        raise InvalidRequest(
+            f"store must read owner/repo, as in outcomeeng/changes; got {store!r}"
+        )
     number = raw.get("number")
     if not isinstance(number, int) or isinstance(number, bool) or number < 1:
-        raise InvalidRequest("number must be a positive integer")
+        raise InvalidRequest(
+            "number must be a positive integer, the issue number of the Change"
+        )
     who = raw.get("identity")
+    keys = ", ".join(Identity.__dataclass_fields__)
     if not isinstance(who, Mapping):
-        raise InvalidRequest("identity must be an object")
+        raise InvalidRequest(
+            f"identity must be an object of {keys}, each a non-empty string"
+        )
     identity = Identity(
         *(str(_text(who, key)) for key in Identity.__dataclass_fields__)
     )
     target = raw.get("target")
     cause = raw.get("lower_cause")
-    close = raw.get("close_check")
-    try:
-        request = Request(
-            transition=kind,
-            store=store,
-            number=number,
-            mover=mover,
-            identity=identity,
-            target=None if target is None else Maturity(target),
-            reason=_text(raw, "reason", optional=True),
-            reopened=_text(raw, "reopened", optional=True),
-            lower_cause=None if cause is None else LowerCause(cause),
-            handoff=raw.get("handoff"),
-            changeset=raw.get("changeset"),
-            review=_pair(raw.get("review"), "review"),
-            review_body=raw.get("review_body"),
-            audit=_pair(raw.get("audit"), "audit"),
-            audit_status=_text(raw, "audit_status", optional=True),
-            form_check=raw.get("form_check"),
-            infrastructure=raw.get("infrastructure") or {},
-            close_check=None
-            if close is None
-            else CloseCheck(
-                bool(close.get("merge_gates_passed")),
-                bool(close.get("results_complete")),
-                bool(close.get("declarations_on_default")),
-                str(close.get("audit_at_close", "")),
-            ),
-            merged_into=raw.get("merged_into"),
-            application=bool(raw.get("application", False)),
-        )
-    except (ValueError, AttributeError) as error:
-        raise InvalidRequest(str(error)) from error
+    close = _object(
+        raw,
+        "close_check",
+        "of merge_gates_passed, results_complete, declarations_on_default, and audit_at_close",
+    )
+    handoff = _object(raw, "handoff", "of " + ", ".join(HandoffKey))
+    changeset = _object(raw, "changeset", "of " + ", ".join(ChangesetKey))
+    form_check = _object(raw, "form_check", "of status and body_sha256")
+    infrastructure = _object(
+        raw, "infrastructure", "mapping each path to Passing or {blocker: number}"
+    )
+    request = Request(
+        transition=kind,
+        store=store,
+        number=number,
+        mover=mover,
+        identity=identity,
+        target=None if target is None else _choice(Maturity, "target", target),
+        reason=_text(raw, "reason", optional=True),
+        reopened=_text(raw, "reopened", optional=True),
+        lower_cause=None
+        if cause is None
+        else _choice(LowerCause, "lower_cause", cause),
+        handoff=handoff,
+        changeset=changeset,
+        review=_pair(raw.get("review"), "review"),
+        review_body=raw.get("review_body"),
+        audit=_pair(raw.get("audit"), "audit"),
+        audit_status=_text(raw, "audit_status", optional=True),
+        form_check=form_check,
+        infrastructure=infrastructure or {},
+        close_check=None
+        if close is None
+        else CloseCheck(
+            bool(close.get("merge_gates_passed")),
+            bool(close.get("results_complete")),
+            bool(close.get("declarations_on_default")),
+            str(close.get("audit_at_close", "")),
+        ),
+        merged_into=raw.get("merged_into"),
+        application=bool(raw.get("application", False)),
+    )
     return request
 
 
@@ -525,6 +564,56 @@ def subsection_target(heading: str) -> str | None:
     return heading
 
 
+TABLE_ROW: Final = re.compile(r"^[+\- ]?\s*\|")
+LIST_ITEM: Final = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s")
+INNER_HEADING: Final = re.compile(r"^(#+)\s")
+
+Part = tuple[str, tuple[str, ...]]
+
+
+def parts(heading: str, lines: list[str]) -> list[Part]:
+    """Each row, heading, or other single line of a subsection with its context.
+
+    The context is every heading above the part, the header row of its table,
+    and the line that opens its Scenario or list.
+    """
+    found: list[Part] = []
+    headings: list[tuple[int, str]] = []
+    header = ""
+    opener = ""
+    previous_row = False
+    for line in lines:
+        if not line.strip():
+            previous_row = False
+            continue
+        level = INNER_HEADING.match(line)
+        if level:
+            headings = [h for h in headings if h[0] < len(level.group(1))]
+            above = tuple(text for _, text in headings)
+            headings.append((len(level.group(1)), line.strip()))
+            found.append((line.strip(), (heading, *above)))
+            header = ""
+            opener = ""
+            previous_row = False
+            continue
+        context = [heading, *(text for _, text in headings)]
+        if TABLE_ROW.match(line):
+            if not previous_row:
+                header = line.strip()
+            previous_row = True
+            context.append(header)
+        else:
+            previous_row = False
+            header = ""
+        if LIST_ITEM.match(line) or line[:1].isspace():
+            if opener:
+                context.append(opener)
+        elif not TABLE_ROW.match(line):
+            opener = line.strip()
+        found.append((line.strip(), tuple(context)))
+    return found
+
+
 def review_carries(
     reviewed_body: str,
     reviewed_base: str,
@@ -535,20 +624,16 @@ def review_carries(
     """Whether the review of every part carries forward, and the parts that do not."""
     if not reader.resolves(reviewed_base) or not reader.resolves(current_base):
         return False, ["base"]
-    old = dict(subsections(reviewed_body))
-    new = subsections(current_body)
+    reviewed = {
+        part
+        for heading, lines in subsections(reviewed_body)
+        for part in parts(heading, lines)
+    }
     lost: list[str] = []
-    if [heading for heading, _ in new] != [
-        heading for heading, _ in subsections(reviewed_body)
-    ]:
-        lost.append("headings")
-    for heading, lines in new:
-        before = old.get(heading)
-        if before is None or [line for line in before if line.strip()] != [
-            line for line in lines if line.strip()
-        ]:
-            lost.append(heading)
-            continue
+    for heading, lines in subsections(current_body):
+        for line, context in parts(heading, lines):
+            if (line, context) not in reviewed:
+                lost.append(f"{heading}: {line}")
         target = subsection_target(heading)
         if target is None:
             continue
@@ -1364,18 +1449,33 @@ class GitHubStore:
 
     def _option(self, field_name: str, option: str) -> tuple[str, str]:
         if self._options is None:
-            nodes = self._graphql(FIELDS_QUERY, o=self.owner)["organization"][
-                "issueFields"
-            ]["nodes"]
-            self._options = {
-                node["name"]: (
-                    node["id"],
-                    {item["name"]: item["id"] for item in node["options"]},
-                )
-                for node in nodes
-                if node.get("options")
-            }
+            try:
+                nodes = self._graphql(FIELDS_QUERY, o=self.owner)["organization"][
+                    "issueFields"
+                ]["nodes"]
+                self._options = {
+                    node["name"]: (
+                        node["id"],
+                        {item["name"]: item["id"] for item in node["options"]},
+                    )
+                    for node in nodes
+                    if node.get("options")
+                }
+            except (KeyError, TypeError) as error:
+                raise StoreError(
+                    f"unreadable issue fields answer for {self.owner}: {error!r}"
+                ) from error
+        if field_name not in self._options:
+            raise StoreError(
+                f"the store defines no issue field {field_name}; it defines "
+                f"{', '.join(sorted(self._options)) or 'none'}"
+            )
         field_id, options = self._options[field_name]
+        if option not in options:
+            raise StoreError(
+                f"the issue field {field_name} has no option {option}; it has "
+                f"{', '.join(sorted(options))}"
+            )
         return field_id, options[option]
 
     def write(self, change: Change, write: Write) -> str | None:
@@ -1422,11 +1522,7 @@ class GitHubStore:
                 ["issue", "comment", number, "--repo", self.store, "--body-file", "-"],
                 str(write.value),
             ).strip()
-        reason = (
-            "completed"
-            if change.lifecycle == Lifecycle.APPLIED or write.value == "completed"
-            else "not planned"
-        )
+        reason = "completed" if change.lifecycle == Lifecycle.APPLIED else "not planned"
         self._gh(["issue", "close", number, "--repo", self.store, "--reason", reason])
         return None
 
@@ -1514,7 +1610,7 @@ def observe(change: Change) -> dict[str, Any]:
     }
 
 
-def landed(write: Write, change: Change, url: str | None) -> bool:
+def landed(write: Write, change: Change) -> bool:
     if write.kind == WriteKind.MATURITY:
         return change.maturity == write.value
     if write.kind == WriteKind.LIFECYCLE:
@@ -1592,7 +1688,7 @@ def execute(
             return failed(
                 Reason.READ_FAILED, error.detail, done + [write.kind.value], None, None
             )
-        if not landed(write, current, url):
+        if not landed(write, current):
             return failed(
                 Reason.READBACK,
                 f"the {write.kind} write reads back {observe(current)}",
