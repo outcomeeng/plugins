@@ -12,20 +12,6 @@ Impact: none beyond the audit raising the finding again.
 
 Revisit and settlement condition: none; the entry records the judgment so a later audit meets it.
 
-## DEBT [composition]: author-change and release-change each compose the other
-
-Defect class: `composition`.
-
-Finding: `author-change`'s `<result>` composes `product-tree:release-change` when the session holds the Change and "work stops or transfers with continuation remaining", and `release-change` step 2 composes `product-tree:author-change` for the body revision while the session still holds the Change. `instructions:skill-auditor` run `2026-10-07_09-58-47-435-8a2d1e9aadb0` at head `84f119bf70464dc83a71927ce8c0d18e73bc39dc` raised it as a `blocking` finding, rule `unambiguous-instruction`: the release condition is not decidable from the skill's own state, and a revision inside a release can end by invoking a nested release. Base `0ec15959925f92f0b14891fe2cebd729651bf470` already carried both compositions and the condition; the changeset adds only the `submit` sentence, which is decidable from the persisted Maturity.
-
-Evidence: the sealed run above and the base text of both skills.
-
-Impact: every audit of `author-change` can raise the finding again, so its gate cannot close on this surface alone.
-
-Successor: the Proposed Change outcomeeng/changes#397 carries this defect.
-
-Revisit and settlement condition: one of the two compositions is removed or made decidable from the composing skill's own inputs, and one typed skill audit of `author-change` and of `release-change` raises neither the nested-release finding nor a caller-dependence finding.
-
 ## DEBT [adr-pdr-compliance]: the audit-change runner is a generic shipped script beyond fifty lines
 
 Defect class: `adr-pdr-compliance`.
@@ -76,20 +62,6 @@ Evidence: `instructions:subagent-auditor` findings f-003 (rule `description-styl
 Impact: the wrapper's copied field list drifts each time the runner contract changes, and a relaying session can take the narrower list as the expected shape; the description invites a launch the calling skills have not instructed.
 
 Revisit and settlement condition: the wrapper points at the skill's `<verdict_format>` for the completed, `OUTSIDE_CONTRACT`, and runner-blocked shapes and keeps only its own pre-run diagnostic shape, and the description states its subject and the conditions under which the owning skills invoke the role in passive wording; one typed subagent audit of `change-auditor` then raises neither warning.
-
-## DEBT [skill-audit]: close-change names no current-state source for the merge commit
-
-Defect class: `skill-audit`.
-
-Finding: `instructions:skill-auditor` run `2026-10-07_09-02-30-051-33c271dd97cd` at head `917d6106fd969e4baf593ab7b568f0740869537f` raised rule `ambiguous-instruction`, severity `blocking`, against step 3's `Integrated` check in `src/plugins/product-tree/skills/close-change/SKILL.md`: the check reads "the merge commit the record or conversation names", and no loaded rule names a record field that holds it, no grant reads a pull request's merge commit, and no current-state test separates a Change with no changeset from one whose merge commit nobody named. Change outcomeeng/changes#333 repaired the second finding of that run, the undefined noun Frame, in the same step.
-
-Evidence: the sealed run above.
-
-Impact: an `Applied` close can pass its integration check on a merge commit that only the conversation names.
-
-Successor: the Change outcomeeng/changes#392 carries this defect.
-
-Revisit and settlement condition: step 3 names the current-state source of the merge commit with the grant that reads it and the current-state test that establishes a Change has no changeset, and one typed skill audit of `close-change` raises no finding on it.
 
 ## DEBT [caller-independence]: the instructions auditors record a run-driver identity the rule reads as dependence on the caller
 

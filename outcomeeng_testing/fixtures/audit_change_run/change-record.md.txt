@@ -78,4 +78,4 @@ Intent attestation: attested by the operator on 2026-09-28.
 - [x] Advance to Executable: state the node's required state and evidence obligations, and the Activities that amend the spec, `audit-change` and the `change-auditor` wrapper.
 - [ ] Apply the Assertion operations to `spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`, route each new and amended assertion through `/verify` as Required state and evidence states, and pass the Validate commands.
 - [ ] In a separate Author session, add the runner under `src/plugins/product-tree/skills/audit-change/scripts/`.
-- [ ] Close the Change `Applied` through `/close-change`.
+- [ ] Close the Change `Applied` through `/operate-change`.

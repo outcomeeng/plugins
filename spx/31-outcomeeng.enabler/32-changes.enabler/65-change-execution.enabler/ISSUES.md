@@ -20,7 +20,7 @@
 
 **Evidence**: `instructions:skill-auditor` finding f-009, severity `WARNING`, against `src/plugins/product-tree/skills/execute-change/SKILL.md:6`, in the typed skill audit of head `c4ed94bfc0c440a7d0f0a55c0a8b541a0d67de49`. The grant `Bash(gh api graphql:*)` admits issue-field mutations as well as the field and successor reads `canonical-state` requires, while the skill's first constraint limits its session to deterministic commands, integration, and Lifecycle recorded through the Lifecycle skills, which carry their own `gh api graphql` grants.
 
-**Impact**: the Applier's approved surface can change store state outside `/claim-change`, `/release-change` and `/close-change`.
+**Impact**: the Applier's approved surface can change store state outside `/operate-change`.
 
 **Settlement condition**: the grant is narrowed to the read forms the Applier runs, and a retained invocation shows the harness admits those reads under the narrowed patterns without a prompt. The matcher's treatment of a pattern that is not a literal prefix of the issued command is the open question recorded in `spx/43-instructions.enabler/21-skills.enabler/ISSUES.md` under "A skill-directory token inside an `allowed-tools` pattern may never match".
 
@@ -66,7 +66,7 @@
 
 ## `/execute-change` resolves a held Change from a marker a compaction may drop
 
-**Evidence**: `instructions:skill-auditor` finding f-010, severity `WARNING`, rule `compaction_marker_survival`, against `src/plugins/product-tree/skills/execute-change/SKILL.md` step 1, in the typed skill audit of head `add3e3e862f7512a55e8b9655d07f78412abe87c`. Step 1 falls back to the newest `<CLAIMED_CHANGE>` marker in the conversation without the compaction caveat `/release-change` and `/close-change` state.
+**Evidence**: `instructions:skill-auditor` finding f-010, severity `WARNING`, rule `compaction_marker_survival`, against `src/plugins/product-tree/skills/execute-change/SKILL.md` step 1, in the typed skill audit of head `add3e3e862f7512a55e8b9655d07f78412abe87c`. Step 1 falls back to the newest `<CLAIMED_CHANGE>` marker in the conversation without a compaction caveat.
 
 **Impact**: an Applier resumed after a compaction finds no marker and stops with `not-held` instead of asking for the issue reference.
 
