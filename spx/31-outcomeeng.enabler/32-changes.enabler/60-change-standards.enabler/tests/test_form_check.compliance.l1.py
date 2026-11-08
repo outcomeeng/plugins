@@ -72,6 +72,7 @@ def test_each_compliance_case_gets_the_verdict_its_fixture_declares(
         observation = check_draft(workspace, case.name)
 
     if case.verdict is Verdict.PASS:
+        assert observation.findings == ()
         assert observation.status == Status.PASS
         assert observation.rules == ()
     else:
@@ -87,6 +88,7 @@ def test_each_compliance_case_of_a_product_with_no_tree_gets_its_declared_verdic
         observation = check_draft(workspace, case.name)
 
     if case.verdict is Verdict.PASS:
+        assert observation.findings == ()
         assert observation.status == Status.PASS
         assert observation.rules == ()
     else:

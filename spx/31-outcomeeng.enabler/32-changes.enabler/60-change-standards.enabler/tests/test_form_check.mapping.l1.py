@@ -29,15 +29,26 @@ import pytest
 from outcomeeng_testing.generators.change_standards_form_check import (
     GROUP_MAPPING,
     GROUP_MAPPING_NO_TREE,
+    YAML_NULL,
     FixtureCase,
     Verdict,
+    covering_fixtures,
     draft_keys,
+    enumerated_values,
     fixture_cases,
+    fixtures_of,
+    foreign_values,
     non_value,
     operations,
     operations_of,
+    spec_compliance_rules,
+    spec_key_values,
+    spec_mapping_rules,
+    spec_row_cases,
     stored_record_changed_at,
     table_row_name,
+    title_of_words,
+    title_word_limit,
     with_value,
     without_key,
 )
@@ -89,6 +100,78 @@ def test_a_draft_with_a_value_outside_a_keys_domain_fails_and_names_that_key(
     assert (Rule.RECORD_KEYS, key) in observation.located
 
 
+@pytest.mark.parametrize(
+    ("key", "value"),
+    enumerated_values(),
+    ids=[f"{key}={value}" for key, value in enumerated_values()],
+)
+def test_a_draft_holding_each_listed_value_of_an_enumerated_key_passes_that_key(
+    key: str, value: str
+) -> None:
+    with base_workspace() as workspace:
+        text = with_value(draft_text(workspace, VALID_DRAFT), key, value)
+        observation = check_text(workspace, text)
+
+    assert (Rule.RECORD_KEYS, key) not in observation.located
+
+
+@pytest.mark.parametrize(
+    ("key", "value"),
+    foreign_values(),
+    ids=[f"{key}={value}" for key, value in foreign_values()],
+)
+def test_a_draft_holding_a_value_of_another_keys_domain_fails_that_key(
+    key: str, value: str
+) -> None:
+    with base_workspace() as workspace:
+        text = with_value(draft_text(workspace, VALID_DRAFT), key, value)
+        observation = check_text(workspace, text)
+
+    assert (Rule.RECORD_KEYS, key) in observation.located
+
+
+@pytest.mark.parametrize(
+    "key", list(dict.fromkeys(key for key, _ in enumerated_values()))
+)
+def test_the_values_the_script_declares_for_an_enumerated_key_are_those_the_spec_row_lists(
+    key: str,
+) -> None:
+    declared = {value for name, value in enumerated_values() if name == key}
+    assert declared - {YAML_NULL} == spec_key_values(key)
+
+
+def test_a_title_of_exactly_the_word_limit_passes_the_title_key() -> None:
+    with base_workspace() as workspace:
+        text = with_value(
+            draft_text(workspace, VALID_DRAFT),
+            "title",
+            title_of_words(title_word_limit()),
+        )
+        observation = check_text(workspace, text)
+
+    assert (Rule.RECORD_KEYS, "title") not in observation.located
+
+
+@pytest.mark.parametrize("rule", spec_mapping_rules())
+def test_every_case_the_spec_table_lists_is_a_case_of_its_mapping(rule: str) -> None:
+    uncovered = [
+        case for case in spec_row_cases(rule) if not covering_fixtures(rule, case)
+    ]
+
+    assert uncovered == []
+
+
+@pytest.mark.parametrize("rule", spec_compliance_rules())
+def test_every_rule_the_spec_lists_for_compliance_has_a_violating_fixture(
+    rule: str,
+) -> None:
+    violating = [
+        fixture for fixture in fixtures_of(rule) if fixture.verdict is Verdict.FAIL
+    ]
+
+    assert violating != []
+
+
 @pytest.mark.parametrize("operation", operations())
 @pytest.mark.parametrize("key", draft_keys())
 def test_an_operation_changes_a_key_only_when_the_keys_row_names_it(
@@ -118,6 +201,7 @@ def test_each_mapping_case_gets_the_verdict_its_fixture_declares(
         observation = check_draft(workspace, case.name)
 
     if case.verdict is Verdict.PASS:
+        assert observation.findings == ()
         assert observation.status == Status.PASS
         assert observation.rules == ()
     else:
@@ -135,6 +219,7 @@ def test_each_mapping_case_of_a_product_with_no_tree_gets_its_declared_verdict(
         observation = check_draft(workspace, case.name)
 
     if case.verdict is Verdict.PASS:
+        assert observation.findings == ()
         assert observation.status == Status.PASS
         assert observation.rules == ()
     else:

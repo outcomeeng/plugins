@@ -40,6 +40,14 @@ SCRIPT: Final = (
     / "scripts"
     / "form_check.py"
 )
+SPEC: Final = (
+    REPO_ROOT
+    / "spx"
+    / "31-outcomeeng.enabler"
+    / "32-changes.enabler"
+    / "60-change-standards.enabler"
+    / "change-standards.md"
+)
 FIXTURE_ROOT: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "change_standards_form_check"
 )

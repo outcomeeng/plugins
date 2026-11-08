@@ -10,6 +10,7 @@ requests derive from the shipped script's own key and field vocabulary.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from enum import StrEnum
@@ -18,6 +19,7 @@ from typing import Any, Final
 from outcomeeng_testing.harnesses.change_standards_form_check import (
     DRAFT_DIR,
     DRAFT_SUFFIX,
+    SPEC,
     load_form_check,
 )
 
@@ -25,6 +27,21 @@ GROUP_MAPPING: Final = "mapping"
 GROUP_COMPLIANCE: Final = "compliance"
 GROUP_MAPPING_NO_TREE: Final = "mapping-no-tree"
 GROUP_COMPLIANCE_NO_TREE: Final = "compliance-no-tree"
+ALL_GROUPS: Final = (
+    GROUP_MAPPING,
+    GROUP_COMPLIANCE,
+    GROUP_MAPPING_NO_TREE,
+    GROUP_COMPLIANCE_NO_TREE,
+)
+YAML_NULL: Final = "null"
+TITLE_WORD: Final = "word"
+SPEC_HEADING_MARK: Final = "### "
+SPEC_MAPPING_KIND: Final = "Test.Mapping"
+SPEC_COMPLIANCE_KIND: Final = "Test.Compliance"
+SPEC_RECORD_KEYS: Final = "record-keys"
+SPEC_NULL_CLAUSE: Final = ", null"
+SPEC_TABLE_PREAMBLE_ROWS: Final = 1
+SPEC_RULE_PATTERN: Final = re.compile(r"^- (?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*): ")
 FRONT_MATTER_FENCE: Final = "---"
 TABLE_HEADING_MARK: Final = "### "
 FILLER_OPEN: Final = "<!-- "
@@ -77,6 +94,128 @@ def operations_of(key: str) -> frozenset[str]:
     """Return the operations the script lets change ``key``."""
     form = load_form_check()
     return frozenset(str(op.value) for op in form.KEY_OPERATIONS[form.Key(key)])
+
+
+def enumerated_values() -> tuple[tuple[str, str], ...]:
+    """Return each (key, yaml value) the script's enumerated domains accept.
+
+    A key the script lets hold null contributes the yaml null beside its members.
+    """
+    form = load_form_check()
+    pairs: list[tuple[str, str]] = []
+    for key, members in form.ENUMERATED_VALUES.items():
+        pairs.extend((str(key.value), str(member)) for member in members)
+        if key in form.NULLABLE_KEYS:
+            pairs.append((str(key.value), YAML_NULL))
+    return tuple(pairs)
+
+
+def foreign_values() -> tuple[tuple[str, str], ...]:
+    """Return each (key, value) where the value belongs to another enumerated key's domain only."""
+    form = load_form_check()
+    pairs: list[tuple[str, str]] = []
+    for key, members in form.ENUMERATED_VALUES.items():
+        for other, others in form.ENUMERATED_VALUES.items():
+            pairs.extend(
+                (str(key.value), str(value))
+                for value in others
+                if other is not key and value not in members
+            )
+    return tuple(pairs)
+
+
+def title_of_words(count: int) -> str:
+    """Return a title of ``count`` words."""
+    return " ".join([TITLE_WORD] * count)
+
+
+def title_word_limit() -> int:
+    """Return the number of words the script lets a title hold."""
+    return int(load_form_check().TITLE_WORD_LIMIT)
+
+
+def spec_key_values(key: str) -> frozenset[str]:
+    """Return the members the spec's record-keys row lists for an enumerated ``key``."""
+    for row in _spec_rows(SPEC_MAPPING_KIND, SPEC_RECORD_KEYS):
+        if row[0] == key:
+            listed = row[1].split(SPEC_NULL_CLAUSE)[0]
+            words = listed.replace(", or ", ", ").replace(" or ", ", ")
+            return frozenset(word.strip() for word in words.split(","))
+    raise AssertionError(f"the spec lists no record-keys row for {key}")
+
+
+def spec_row_cases(rule: str) -> tuple[str, ...]:
+    """Return the case of each row of the spec's mapping table for ``rule``."""
+    return tuple(row[0] for row in _spec_rows(SPEC_MAPPING_KIND, rule))
+
+
+def spec_mapping_rules() -> tuple[str, ...]:
+    """Return the slug of each mapping subsection whose table lists cases."""
+    return tuple(
+        rule
+        for rule in _spec_subsections(SPEC_MAPPING_KIND)
+        if rule != SPEC_RECORD_KEYS and _spec_rows(SPEC_MAPPING_KIND, rule)
+    )
+
+
+def spec_compliance_rules() -> tuple[str, ...]:
+    """Return the slug of each compliance rule the spec lists that the script names."""
+    names = {str(rule.value) for rule in load_form_check().Rule}
+    listed: list[str] = []
+    for body in _spec_subsections(SPEC_COMPLIANCE_KIND).values():
+        for line in body:
+            match = SPEC_RULE_PATTERN.match(line)
+            if match and match.group("slug") in names:
+                listed.append(match.group("slug"))
+    return tuple(listed)
+
+
+def covering_fixtures(rule: str, case: str) -> tuple[FixtureCase, ...]:
+    """Return the fixtures of ``rule`` whose case is ``case`` or begins with it."""
+    return tuple(
+        fixture
+        for group in ALL_GROUPS
+        for fixture in fixture_cases(group)
+        if fixture.rule == rule
+        and (fixture.case == case or fixture.case.startswith(f"{case}-"))
+    )
+
+
+def fixtures_of(rule: str) -> tuple[FixtureCase, ...]:
+    """Return every fixture that exercises ``rule``."""
+    return tuple(
+        fixture
+        for group in ALL_GROUPS
+        for fixture in fixture_cases(group)
+        if fixture.rule == rule
+    )
+
+
+def _spec_subsections(kind: str) -> dict[str, list[str]]:
+    subsections: dict[str, list[str]] = {}
+    current: list[str] | None = None
+    prefix = f"{SPEC_HEADING_MARK}{kind}: "
+    for line in SPEC.read_text(encoding="utf-8").split("\n"):
+        if line.startswith(SPEC_HEADING_MARK):
+            current = None
+            if line.startswith(prefix):
+                current = subsections.setdefault(line[len(prefix) :].strip(), [])
+        elif current is not None:
+            current.append(line)
+    return subsections
+
+
+def _spec_rows(kind: str, rule: str) -> list[list[str]]:
+    rows: list[list[str]] = []
+    for line in _spec_subsections(kind).get(rule, []):
+        if line.startswith("|"):
+            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+            rows.append(cells)
+    return [
+        row
+        for row in rows[SPEC_TABLE_PREAMBLE_ROWS:]
+        if row and not set(row[0]) <= set("-: ")
+    ]
 
 
 def without_key(text: str, key: str) -> str:
