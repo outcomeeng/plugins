@@ -101,8 +101,8 @@ The exception clause on the tagged portable-fields assertion in
 same evidence: its linked `tests/test_target_emission.compliance.l1.py` compares
 each target's rendered source with its emitted output, and both sides pass through
 the same removal, so disabling `_remove_unavailable_frontmatter_items` leaves that
-test passing. The clause keeps the assertion true for the one corpus case
-(`coordinate-agents` on Codex) without deterministic coverage of its own.
+test passing. The clause covers a case no shipped skill carries any more, and it
+has no deterministic coverage of its own.
 
 **Settlement condition**: Change #85 lands the deterministic evidence, tags
 the four assertions with `[test](...)` links, and covers the exception clause
