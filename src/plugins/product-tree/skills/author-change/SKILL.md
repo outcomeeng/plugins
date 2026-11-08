@@ -33,7 +33,7 @@ The script makes exactly these six operations. Each writes its record only after
 | `draft`   | `number`, `draft_path`                                | Writes a Change Draft from the stored record: its metadata except the holder, then its body.                                                                                                                                                                      |
 | `merge`   | `number` of the survivor, `absorbed`, `reason`        | Closes the absorbed Change Abandoned and adds it to the survivor's predecessors.                                                                                                                                                                                  |
 
-The common fields are `operation`, `store`, `checkout_root`, and, for `publish`, `reframe`, and `merge`, `identity`. Every other Transition of a Change belongs to `product-tree:operate-change`.
+The common fields are `operation`, `store`, `checkout_root`, the optional `size_limit` in characters of issue body (65,536 when absent), and, for `publish`, `reframe`, and `merge`, `identity`. Every other Transition of a Change belongs to `product-tree:operate-change`.
 
 </operations>
 
@@ -53,7 +53,7 @@ The common fields are `operation`, `store`, `checkout_root`, and, for `publish`,
 7. **Read the result.** The script writes one JSON result and exits `0` for `ok`, `1` for `failed`, `2` for `invalid-request`, and `3` for `blocked`.
    - `ok`: `writes` in order, and `number` or `numbers`.
    - `failed`: `detail`, `writes`, and the cause the result names. `findings` holds the form check's findings, and the publish wrote nothing: repair the Draft for every finding and run the operation again. A changed revision means the record changed since the script read it: run `draft` again, reconcile the new text into the Draft, and run again. A `mismatch` lists the values that read back differently; `restored` reports that the script put back a revision another writer wrote. Repair nothing in the store by hand, and make no later write.
-   - `invalid-request`: `detail` names the field or the value to correct.
+   - `invalid-request`: `detail` names the field or the value to correct, or the state of the stored record that the operation refuses, such as a split of an Applicable record or of a Parent.
    - `blocked`: `read` and `detail` name the read that failed, the bound it filled, or the sibling skill that is absent. Report them verbatim and write nothing.
 8. **Close out.** Return the issue URL, the operation, the status, the writes, and the findings verbatim. A recorded Change stays held by the recorder; `product-tree:release-change` releases it when work stops with continuation remaining.
 
@@ -75,15 +75,15 @@ The common fields are `operation`, `store`, `checkout_root`, and, for `publish`,
 The script is tested with controlled `gh` and `git` runners, and with controlled stand-ins for the form check and the transition function of the sibling skills.
 
 - Sample inputs: one Draft for each of `record`, `publish`, `reframe`, `split`, `draft`, and `merge`; a publish of an Applicable record that writes the body and one that writes metadata only; a reframe of a held Change with a handoff. Each returns `ok` with its writes in order.
-- Error cases: a Draft the form check fails, a record edited after the publish read it, a foreign revision that landed between the read and the write and one that landed after the write, a readback that differs, a refused lower, a refused abandonment, and a split of an Applicable record, of a Parent, and of Children that span two Products. Each returns `failed` or `blocked` and writes nothing past the stop.
+- Error cases: a Draft the form check fails, a record edited after the publish read it, a foreign revision that landed between the read and the write and one that landed after the write, a readback that differs, a refused lower, a refused abandonment, and a split of an Applicable record, of a Parent, and of Children that span two Products, and a form check or transition script that is absent. Each returns `failed`, `invalid-request`, or `blocked` and writes nothing past the stop.
 - Cleanup: the script writes every intermediate file in a temporary directory it removes on every exit path. The only file it leaves is the Draft that `draft` writes at `draft_path`.
 
 </testing>
 
 <success_criteria>
 
-- The script published the Draft only after the form check returned `pass`, and a `failed` result with findings left the store unchanged.
-- Every value of the record read back equal to the Draft, with the Maturity a lower wrote where the publish made one.
-- A stopped result reports the writes that landed, the check or read that stopped it, and no repair by hand.
+- No write to the Change Store precedes a form check result of `pass`.
+- A `failed` result that carries findings leaves the store as the script found it.
+- A stopped result lists the writes that landed, and no repair by hand or later write follows it.
 
 </success_criteria>

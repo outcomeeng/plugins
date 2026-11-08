@@ -390,10 +390,19 @@ def load_sibling(skill: str, module_file: str, name: str) -> ModuleType:
     """Import a sibling skill's module by a `__file__`-relative path."""
     path = Path(__file__).resolve().parents[2] / skill / "scripts" / module_file
     if not path.is_file():
-        raise Blocked(skill, f"the {skill} skill's {module_file} is absent")
+        raise Blocked(
+            skill,
+            f"the {skill} skill's {module_file} is absent at {path}; "
+            f"install the product-tree plugin version that ships the {skill} skill "
+            "beside author-change",
+        )
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
-        raise Blocked(skill, f"the {skill} skill's {module_file} cannot be imported")
+        raise Blocked(
+            skill,
+            f"the {skill} skill's {module_file} at {path} cannot be imported; "
+            "reinstall the product-tree plugin",
+        )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -421,9 +430,16 @@ def gh(session: Session, arguments: Sequence[str], read: str) -> str:
     try:
         result = session.run(["gh", *arguments])
     except OSError as error:
-        raise Blocked(read, f"gh could not start: {error}") from error
+        raise Blocked(
+            read, f"gh could not start: {error}; install gh and put it on PATH"
+        ) from error
     if result.returncode != 0:
-        raise Blocked(read, result.stderr.strip() or f"gh exited {result.returncode}")
+        raise Blocked(
+            read,
+            result.stderr.strip()
+            or f"gh exited {result.returncode} with no message; "
+            "run gh auth status and retry the operation",
+        )
     return result.stdout
 
 
@@ -432,7 +448,10 @@ def gh_json(session: Session, arguments: Sequence[str], read: str) -> Any:
     try:
         return json.loads(output)
     except json.JSONDecodeError as error:
-        raise Blocked(read, "gh printed output that is not JSON") from error
+        raise Blocked(
+            read,
+            "gh printed output that is not JSON; update gh and retry the operation",
+        ) from error
 
 
 def graphql(
@@ -562,7 +581,9 @@ def read_field_ids(session: Session) -> dict[str, tuple[str, dict[str, str]]]:
             }
         except (KeyError, TypeError) as error:
             raise Blocked(
-                "organization issue fields", "the answer holds no issue fields"
+                "organization issue fields",
+                "the answer holds no issue fields; the organization must define "
+                f"{', '.join(item.value for item in FieldName)} for the store {session.store}",
             ) from error
     return session.field_ids
 
@@ -581,7 +602,12 @@ def read_stored(session: Session, number: int) -> Stored:
             for node in issue["userContentEdits"]["nodes"]
         ]
         if len(values) >= FIELD_VALUE_LIMIT:
-            raise Blocked(f"issue {number}", f"{FIELD_VALUE_LIMIT} field values")
+            raise Blocked(
+                f"issue {number}",
+                f"the issue holds {FIELD_VALUE_LIMIT} or more field values, which fills "
+                f"the {FIELD_VALUE_LIMIT} the script reads, so a Product or Parent could be "
+                "missing; remove the field values that are not Change fields and retry",
+            )
         by_name: dict[str, Any] = {}
         for node in values:
             if not node:
@@ -589,7 +615,11 @@ def read_stored(session: Session, number: int) -> Stored:
             name = node["field"]["name"]
             by_name[name] = node["name"] if "name" in node else node["value"]
     except (KeyError, TypeError) as error:
-        raise Blocked(f"issue {number}", "the answer holds no issue") from error
+        raise Blocked(
+            f"issue {number}",
+            f"the answer holds no issue {number} of {session.store}; check that the "
+            "number names an issue of that store",
+        ) from error
     blockers = [
         issue_reference(session.store, entry["number"])
         for entry in blocker_entries(session, number)
@@ -643,10 +673,15 @@ def blocker_entries(session: Session, number: int) -> list[dict[str, Any]]:
         f"blockers of issue {number}",
     )
     if not isinstance(entries, list):
-        raise Blocked(f"blockers of issue {number}", "the answer is no list")
+        raise Blocked(
+            f"blockers of issue {number}",
+            "the answer is no list of blockers; update gh and retry the operation",
+        )
     if len(entries) >= BLOCKER_PAGE:
         raise Blocked(
-            f"blockers of issue {number}", f"{BLOCKER_PAGE} blockers, one page"
+            f"blockers of issue {number}",
+            f"the issue holds {BLOCKER_PAGE} or more blockers, which fills the one page "
+            "the script reads; remove blockers the Change no longer waits for and retry",
         )
     return entries
 
@@ -660,7 +695,11 @@ def issue_id(session: Session, number: int) -> int:
     try:
         return int(output.strip())
     except ValueError as error:
-        raise Blocked(f"issue id of {number}", "the answer is no number") from error
+        raise Blocked(
+            f"issue id of {number}",
+            f"the answer {output.strip()!r} is no issue id; check that issue {number} "
+            f"exists in {session.store}",
+        ) from error
 
 
 def check_form(
@@ -707,13 +746,17 @@ def set_field(
     ids = read_field_ids(session)
     if name not in ids:
         raise Blocked(
-            "organization issue fields", f"the organization has no field {name}"
+            "organization issue fields",
+            f"the organization has no field {name}; the fields it defines are "
+            f"{', '.join(sorted(str(item) for item in ids))}; define {name} for the store",
         )
     field_id, options = ids[name]
     if name in SINGLE_SELECT_FIELDS:
         if value not in options:
             raise Blocked(
-                "organization issue fields", f"the field {name} has no option {value}"
+                "organization issue fields",
+                f"the field {name} has no option {value}; its options are "
+                f"{', '.join(options)}; add the option or correct the Draft",
             )
         query, variable = SET_SINGLE_SELECT, options[value]
     elif name == FieldName.PARENT:
@@ -833,11 +876,17 @@ def make_transition(
         request[TransitionRequestField.MERGED_INTO] = merged_into
     if held:
         if session.handoff is None:
-            raise InvalidRequest("a held Change needs a handoff to lower")
+            raise InvalidRequest(
+                "a held Change needs a handoff to lower; add a handoff object with "
+                "branch, head, and next to the request"
+            )
         request[TransitionRequestField.HANDOFF] = session.handoff
     result = transition({key.value: value for key, value in request.items()})
     if result.get(TransitionResultField.STATUS) != TRANSITION_DONE:
-        raise Failed(f"the {move.value} Transition did not complete: {result}")
+        raise Failed(
+            f"the {move.value} Transition did not complete: {result}; "
+            "the body is unwritten, so fix what the Transition reports and run again"
+        )
     session.writes.append(f"transition {move.value}")
 
 
@@ -954,7 +1003,10 @@ def publish(
         lowered = Maturity.SLICED.value
     latest = read_stored(session, number)
     if latest.last_edit() != stored.last_edit():
-        raise Failed("the record changed since the publish read it")
+        raise Failed(
+            "the record changed since the publish read it; run draft again, "
+            "reconcile the new text into the Draft, and publish again"
+        )
     if lowered is not None:
         make_transition(
             session,
@@ -1015,7 +1067,12 @@ def default_branch_head(session: Session) -> str:
         raise Blocked("default branch head", f"git could not start: {error}") from error
     head = result.stdout.strip()
     if result.returncode != 0 or not head:
-        raise Blocked("default branch head", result.stderr.strip() or "no head")
+        raise Blocked(
+            "default branch head",
+            result.stderr.strip()
+            or f"git printed no head for origin/HEAD in {session.checkout_root}; "
+            "run git fetch origin and git remote set-head origin --auto there",
+        )
     return head
 
 
@@ -1034,7 +1091,10 @@ def record(
     check_form(session, draft, operation, None, blockers)
     title = metadata.get(Metadata.TITLE)
     if not title:
-        raise InvalidRequest("the Draft names no title")
+        raise InvalidRequest(
+            "the Draft names no title; add a title line to its front matter "
+            "holding the intended Output in at most 15 words"
+        )
     path = write_file(directory, "record-body.md", draft.body)
     output = gh(
         session,
@@ -1052,7 +1112,11 @@ def record(
     )
     match = ISSUE_URL_PATTERN.match(output.strip())
     if match is None:
-        raise Blocked("issue creation", "gh printed no issue URL")
+        raise Blocked(
+            "issue creation",
+            f"gh printed {output.strip()!r} where an issue URL of {session.store} "
+            "belongs; find the issue it may have created and reconcile before a retry",
+        )
     number = int(match.group(2))
     session.writes.append("create")
     created = read_stored(session, number)
@@ -1098,7 +1162,10 @@ def statement_of_intent(body: str) -> str:
     start = body.find(STATEMENT_HEADING)
     end = body.find(DECLARATIONS_HEADING)
     if start < 0:
-        raise InvalidRequest("the record holds no Statement of Intent")
+        raise InvalidRequest(
+            f"the record holds no {STATEMENT_HEADING} heading; add it to the body "
+            "of the record before a split"
+        )
     return body[start : end if end > start else len(body)].rstrip("\n") + "\n"
 
 
@@ -1107,9 +1174,15 @@ def split(
 ) -> dict[str, Any]:
     stored = read_stored(session, number)
     if stored.metadata.get(Metadata.MATURITY.value) == Maturity.APPLICABLE.value:
-        raise InvalidRequest("a split accepts only a Leaf below Applicable")
+        raise InvalidRequest(
+            f"issue {number} is Applicable, and a split accepts only a Leaf below "
+            "Applicable; reframe it to a lower Maturity first"
+        )
     if stored.metadata.get(Metadata.BASE.value) is None:
-        raise InvalidRequest("a split accepts only a Leaf, and a Parent holds no base")
+        raise InvalidRequest(
+            f"issue {number} holds no base, so it is a Parent, and a split accepts "
+            "only a Leaf; split one of its Children"
+        )
     reference = issue_reference(session.store, number)
     drafts = [read_draft(child_path) for child_path in children]
     products: list[str] = []
@@ -1120,7 +1193,9 @@ def split(
     if len(products) > 1:
         raise Blocked(
             "organization issue field Product",
-            "a Parent's list of Products has no home: the field holds one option",
+            "a Parent's list of Products has no home: the field holds one option; "
+            f"the Children name {', '.join(products)}; split by Product, so that "
+            "each split's Children share one Product",
         )
     created: list[int] = []
     for child in drafts:
@@ -1321,7 +1396,10 @@ def main(
     try:
         request = json.loads(source.read())
         if not isinstance(request, dict):
-            raise InvalidRequest("the request is no JSON object")
+            raise InvalidRequest(
+                "the request is no JSON object; write one object with the "
+                "operation, store, and checkout_root fields"
+            )
         result = execute(request, run)
     except json.JSONDecodeError as error:
         result = {
