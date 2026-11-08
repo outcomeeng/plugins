@@ -137,30 +137,6 @@ Impact: a `filed` finding recorded once can reappear under a new key after an un
 
 Revisit and settlement condition: the runner builds the key from the unit and the rule alone, and a linked case asserts that one finding keeps its key when the list around it changes.
 
-## DEBT [property-quality]: the Sliced Parent criterion and the Framed Spec mutations criterion read as in tension
-
-Defect class: `property-quality`.
-
-Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states the Framed Definition of Ready as "`## Spec mutations` holds a block for each affected or intended Node" and "`## Governance mutations` holds a block for each amended or new record", and Sliced as "the Framed Definition of Ready holds" plus "a Parent is Sliced when every child exists naming it in `parent` and its record carries neither a Governance mutations nor a Spec mutations block". The Definitions of Ready are cumulative, so the Framed criterion and the Parent's no-block condition read as in tension unless a Parent has no affected or intended Node of its own, and the PDR does not say so. The `## Slice` criterion names a Leaf only, so a Parent's `## Slice` is likewise unstated. Location: `## Definitions of Ready` (Framed, Sliced) and `## Final format` (record-sections, change-type).
-
-Evidence: the Framed and Sliced criteria and the `change-type` decision of the PDR above show the unstated reading. The original finding came from `product-tree:pdr-auditor` launch 1 at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`, against an earlier form of the same criteria.
-
-Impact: a reviewer who reads the Framed criterion as requiring at least one Spec mutations block rejects a Sliced Parent the Sliced criterion admits.
-
-Revisit and settlement condition: the PDR states that a Parent has no Node of its own and satisfies the Framed `## Governance mutations` and `## Spec mutations` criteria with no block, or states the Parent's Framed criterion apart from the block-bearing one; one PDR audit then raises no `ambiguous-criterion` finding on the Framed and Sliced criteria.
-
-## DEBT [property-quality]: a top-level Parent has no stated close rule
-
-Defect class: `property-quality`.
-
-Finding: [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) derives a Change's type in `change-type` as Leaf (a Governance mutations or Spec mutations block), Parent (another Change names it in `parent`), or root (neither), so a Change with children is a Parent and never a root. `## Lifecycle` states the Parent close only for "a Parent that has a Parent", which closes `Applied` when every child has closed and its last child closed `Applied`, and states the root close as the operator's judgment of its Intent. A Parent with `parent: null` is covered by neither sentence. Location: `## Lifecycle` (close rule), with the `close-contract` and `parent-cascade-close` assertions of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md), which refuse `Applied` for a Parent while a child is open and cascade only to a Parent that has a Parent.
-
-Evidence: the `change-type` decision and the close paragraph of `## Lifecycle` in the PDR above. The original finding came from `product-tree:pdr-auditor` launch 1 at commit `a4f46721c9e1d94beddb8295eba53ecfb496e0c1`, verdict `APPROVED`, rule `property-quality`, class `ambiguous-criterion`, severity `WARNING`, against an earlier form of the same terms.
-
-Impact: two reviewers can apply different close rules to a top-level Parent, one closing it when its children have closed and one waiting for the operator's judgment of its Intent.
-
-Revisit and settlement condition: `## Lifecycle` names the close rule that governs a Parent with `parent: null`; one PDR audit then raises no `ambiguous-criterion` finding on the type derivation and the close rule.
-
 ## DEBT [consistency]: the path-rejected row of the audit-change runner contract omits count-limits
 
 Defect class: `consistency`.
@@ -222,15 +198,3 @@ Evidence: `instructions:skill-auditor` run `2026-10-17_18-16-04-154-bd168bad0aee
 Impact: a later audit of `change-standards` can raise the finding again.
 
 Revisit and settlement condition: `inert-stdin` in `lifecycle.md` states the instruction in imperative voice or names Claude as its subject, and one typed skill audit of `change-standards` raises no `banned_subject` finding on it.
-
-## DEBT [invalid-tag]: Pathless audit tags
-
-Defect class: `invalid-tag`.
-
-Finding: five assertions of [`spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`](spx/31-outcomeeng.enabler/32-changes.enabler/changes.md) carry the pathless `[audit]` tag, while the repository declares methodology 4.0 and the other assertions of the node carry `[audit:{rule-slug}]` with a slug unique within the spec. The five are the assertions that open "ALWAYS: `author-change` repairs a valid change-audit finding across every instance", "ALWAYS: `audit-change` treats a new record as touched text in full", "`confirm-change` moves a `Submitted` Change to `Available`", "`audit-change` reads every authority event from the store's field-change events", and "ALWAYS: `audit-change` judges a revision of a published record only on the sections the revision changes".
-
-Evidence: `product-tree:spec-auditor` launch 2 on `spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`, rule `invalid-tag`, severity `filed`, `baseRefEvidence` `dd3ddc1766da65127aea58fd3f9d95838c10faa6..784f9a9b6896a816a14716472d0619b8109d0e22`, in the same result that rejected the touched assertion carrying the pathless tag on the `author-change` dispatch of the `change-auditor`.
-
-Impact: a later spec audit of the node raises the finding again, and the five assertions key no audit result in a status claim until each carries a slug.
-
-Revisit and settlement condition: each of the five assertions carries `[audit:{rule-slug}]` with a slug unique within the spec, and one spec audit of the node raises no `invalid-tag` finding.

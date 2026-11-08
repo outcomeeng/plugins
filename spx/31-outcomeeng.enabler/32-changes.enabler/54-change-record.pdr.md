@@ -1,176 +1,247 @@
-# Change Record Contract
+# Change Record
 
-A Change is a self-contained, store-neutral coordination record for one intended Output. Its body carries content only and opens with an Intent; every state and every authority event is read from the coordination store. Its record shape, Maturity-specific Definitions of Ready, authority, Lifecycle transitions, persistence behavior, and compatibility boundary are fixed by this decision; `audit-change` produces its Agentic verdict under [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md).
+DEFINES Change record AS the metadata and the body of one Change, held only in the Change Store
+DEFINES Change Draft AS a local copy of a Change record's metadata, except its holder, as YAML front matter, followed by its body
+DEFINES Base AS the commit a Change record's base field names
+DEFINES Transition AS one of the seven moves of a Change: claim, release, submit, advance, lower, applied, and abandoned
 
-## Record
-
-Every Change begins with YAML front matter containing exactly these required keys:
-
-| Key            | Contract                                                                                                                                                                                                                                                                          |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `title`        | The intended Output, stated as a title.                                                                                                                                                                                                                                           |
-| `product`      | The one Product that owns the Change; a root whose work spans Products carries none.                                                                                                                                                                                              |
-| `maturity`     | Exactly one of `Proposed`, `Framed`, `Sliced`, or `Executable`.                                                                                                                                                                                                                   |
-| `lifecycle`    | Exactly one of `Available`, `Claimed`, `Submitted`, `Applied`, or `Abandoned`; Lifecycle changes independently of Maturity.                                                                                                                                                       |
-| `predecessors` | The append-only list of Change identities this Change absorbed by a merge; a Change that absorbed none carries `[]`.                                                                                                                                                              |
-| `blocked_by`   | The mutable list of Change identities that must close `Applied`, or resolve through the Change that absorbed them, before this Change is unblocked; a blocker closed `Abandoned` that no Change absorbed returns this Change to refinement, and an unblocked Change carries `[]`. |
-| `parent`       | The canonical identity of the Parent Change in the same store; a Change with no Parent carries `null`.                                                                                                                                                                            |
-
-No other front-matter key is valid. The body opens with `## Intent`, which carries these parts:
-
-| Part        | Content                                                                                                                                               |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| What        | The Output the Change achieves: a decision or spec evolution, a lower-layer reconciliation, or both.                                                  |
-| Why         | What makes the work worth doing: truth brought to a lower layer, an operator judgment, a prototype question, or an Output and the condition it moves. |
-| Observation | Optional: the observed state that gives rise to the Change.                                                                                           |
-| Evidence    | The observable result by which anyone checks that the Output is achieved.                                                                             |
-
-The title has at most 15 words.
-
-The body carries no attestation, accountable-person, priority, or overrule text; the authority for each Maturity is read from the store, as Authority states. Front-matter values are never restated or maintained as body lines; each place that holds a Change keeps each field in its one home, as Persistence states. Provider conversations, transcripts, cost estimates, resource accounting, and routine local commands are not record content.
-
-## Final format
-
-- final-format-only: Skills write, judge, and execute only a Change record in the final format. A record in another form receives no migration, alias, or inferred field, and its next revision authors the record anew from the proposal it carries.
-- record-sections: The record body opens with `## Intent`. Proposed adds `## Governance`, `## Governance mutations`, and `## Spec mutations`, whose blocks name each affected Node by its opening line; Framed states each Node's assertions and adds `## Assumptions` when the Frame settled a question; Sliced adds `## Slice`; Executable adds no section. The order is Intent, Governance, Governance mutations, Spec mutations, Assumptions, Slice, and a Proposed record may end with `## Open questions`, which a Framed record leaves empty.
-- record-intent: The Intent runs at most 60 words including its labels. It holds What, Why, an optional Observation, and Evidence, and a list inside a part stands in parentheses.
-- record-governance: `## Governance` lists every record the Output touches or that governs it, by its path from `spx/`, each with the verdict `in line`, `amended`, or `new`.
-- record-governance-mutations: `## Governance mutations` holds one block for each amended or new record. The block opens with `<path> states:`, lists its decisions in exact text, each opening with a slug and a colon.
-- record-spec-mutations: `## Spec mutations` holds one block for each Node in execution order. The block opens with `<path>: <malleability before> -> <malleability after>`. The block continues with `<file> states:` and the Node's assertions as bare bullets.
-- record-slice: `## Slice` holds `- Repository:` and `- Check:`, one repository and one observable check, which is one trigger and its result.
-- no-execution-status: The record carries no execution status: no Node state, no link to produced content, and no progress. Execution records its progress only in its Handoff.
-- draft-predecessors: The local draft names the Changes this Change absorbed by a merge in the key `predecessors`, and the store field `Predecessors` holds the same value.
-- change-type: A Change whose record carries a Governance mutations or Spec mutations block is a Leaf, a Change that another Change names in `parent` is a Parent, and a Change with neither is a root.
-- parent-product: A Change carries the Product that owns its Output, and a Parent and its children may carry different Products.
-- execution-order: Execution takes the Governance mutations blocks, then the Spec mutations blocks, each in record order. The merge composition for the Node's malleability after, and the decision-record audit of a record, select each block's results and Verifiers.
-- applied-leaf: A Leaf closes Applied when the merge commit of the pull request or branch its newest Handoff names is an ancestor of the default branch, every Node holds every result the merge composition for its malleability after selects, every amended or new record holds an approving decision-record audit, and the Intent's Evidence is met.
-- handoff-blocks: A Handoff names the branch or pull request with its head commit, the completed Governance mutations and Spec mutations blocks by path, and the next block, or `refinement: <Maturity> → <next level>` below Executable.
-- change-path-root: A change audit resolves each path a record names, its Governance records and its Spec mutations Nodes, in the repository of the Change's Product, whatever checkout holds the draft or runs the audit.
-
-## Definitions of Ready
-
-Each Definition of Ready is an independently loadable criterion set, and the sets are cumulative: a level's Definition of Ready includes every criterion of the preceding level's. No criterion is an audit verdict, and no criterion requires a body authority line.
-
-### Proposed
-
-- proposed-ready: A Proposed Change is ready when its Intent states What, Why, and Evidence, `## Governance mutations` holds the exact text of every decision the Output adds or amends, `## Governance` lists every record the Output touches or that governs it, and `## Spec mutations` names every Node the Output touches.
-
-Readiness at Proposed requires no operator review statement in the record.
-
-### Framed
-
-- framed-ready: A Framed Change is ready when the Proposed Definition of Ready holds, every affected or intended Node has a Spec mutations block stating its assertions, and no question stays open: each question the Frame settled stands under `## Assumptions` as its answer and one sentence of reason.
-
-### Sliced
-
-A Sliced Change is ready when:
-
-- the Framed Definition of Ready holds;
-- a Leaf's `## Slice` names the one repository and the one observable check of one coherent, independently integrable unit whose dependencies and sequence are resolved; and
-- a Parent is Sliced when every child exists naming it in `parent` and its record carries neither a Governance mutations nor a Spec mutations block; a Parent never reaches Executable.
-
-### Executable
-
-An Executable Change is ready when:
-
-- the Sliced Definition of Ready holds;
-- `## Slice` is complete and the Governance mutations and Spec mutations blocks state every consequential decision for the changeset; Executable adds no section.
-
-The merge composition is the one the `Merge` section of the 4.0 Projection chapter states — `versions/4.0/methodology/product-tree/verification/projection.md` inside the declared `methodology.source` — which defines when a changeset touches a node, the predicates a changeset selects by its least malleable touched node and by a product spec or outcome-record change, when a result is produced again before merge, the dependency protection that fails a changeset raising a malleability or ending `Passing` in the closure of an effectively `Passing` consumer, and the decision-record audit as an authoring check that produces no node-local result.
-
-## Review bar
-
-- review-bar: A Change record is held only to what its review needs. A failed Definition of Ready criterion is a blocking finding; a finding against any other record rule, among them the title and Intent word limits, section order, heading form, verdict wording, and malleability notation, is non-blocking and is returned `filed`.
-- one-audit: Each revision of a Change record receives at most one change audit, and its findings never withhold publication, claiming, or execution; the Author repairs what takes a minute and publishes. A blocking finding refuses only the Maturity it judges: the record publishes at the highest Maturity whose blocking criteria it meets, and at Proposed when it meets none.
-- unsettled-question: A question no assumption can defend goes, with the Refiner's best answer, to the superior that assigned the refinement — the agent that gave the task, or the operator when no agent did — and refinement continues on every part that does not depend on the answer.
-
-## Authority
-
-Maturity advances past Proposed, Framed, and Sliced only when the store shows the Product's Maintainer's move of the Change out of `Submitted` at that Maturity. At Proposed that move is the priority decision; at Framed it attests that the Change captures the operator's intent; at Sliced it confirms the slice. The Refiner advances Sliced to Executable inside the authority of the confirmed slice, with no further move.
-
-- authority-move: The authority for leaving a Maturity is the Product's Maintainer's Lifecycle move of the Change out of `Submitted` to `Available` while the Change held that Maturity; the store's field-change event gives its actor and time, and no confirmation comment is posted or read. A rejection is an instruction naming what to fix, sent to the Director or the Product's Maintainer or written as a plain comment on the Change; no rejection record exists, and the holder repairs the record and submits it again.
-- frame-next: A Change the Product's Maintainer confirms at Proposed is framed next, ahead of the Product's other Proposed Changes.
-- rejection-lowering: A rejection at Framed or Sliced lowers Maturity one level in the same move that takes the Change out of `Submitted`, written by whoever rejects, so that move authorizes leaving only the lowered Maturity, the one the Change held before the rejected stage; whoever rejects writes the lowered Maturity before the Lifecycle move out of `Submitted`; `author-change` writes no rejection lowering; a rejection at Proposed leaves the Change `Submitted`, and it means not now. `change-standards`, `author-change`, and `release-change` state one order: the holder's release comes first, the rejecting lowering of Maturity second, the rejecting move out of `Submitted` third, and further refinement only after a session claims the Change again.
-
-## Lifecycle
-
-- lifecycle-transitions: Lifecycle records who holds the Change, whether it waits for the Product's Maintainer, or how it ended: `Available` means no holder; `Claimed` means one holder; `Submitted` means a published stage waits for the Product's Maintainer, with no holder; `Applied` and `Abandoned` are terminal. One skill moves each transition and moves nothing else: `claim-change` moves `Available` to `Claimed`; `release-change` moves `Claimed` to `Available`, or to `Submitted` for its `submit` result; `confirm-change` moves `Submitted` to `Available`; and `close-change` moves `Claimed` to the terminal value its one argument names. None of the four writes Maturity or a body section; `claim-change`, `release-change`, and `close-change` each post only their own comment — the Claim, the Handoff, or the terminal record — and `confirm-change` posts none. Maturity moves only through `author-change`, except that a rejection lowers it one level, written before the move out of `Submitted`. Author, Fixer, and Verifier roles hold no claim.
-- submitted-not-ready: Lifecycle `Submitted` means the record waits for the Product's Maintainer's review and is not ready for work at the next Maturity; no session claims, refines, or executes it until the Maintainer moves it out of `Submitted`.
-
-A claim requires an open record whose Product is the configured Product, or that is a root carrying no Product, whose Maturity is one declared value, whose Lifecycle is `Available`, and whose holder is empty; any other state, `Submitted` included, is reported without mutation. The claim adds the holder, records the Claim — the claiming agent session and the worktree root the Change is claimed for, which is the session's own assigned root or a root it names — and writes `Claimed`. When two sessions claim at once, the earliest Claim after the latest Handoff wins, and the losing session withdraws its own holder record and reports the winner. The Change's holder is the session whose assigned worktree root equals the root the winning Claim names; a release or a close runs only for that session.
-
-A release requires the Handoff: branch or changeset, the completed Governance mutations and Spec mutations blocks and the next one, blockers, and the hazards the next holder cannot derive quickly — never a secret and never content that belongs in the body. What the holder learned about the Output is refined into the body through `author-change` before the release. The release writes the Handoff, removes the holder, and writes `Available`; with the `submit` result, the holder publishes the record at the Maturity it reached and the release writes `Submitted` in place of `Available`. Maturity stays as it is, and an `Available` Change may be claimed by any agent session next.
-
-- lifecycle-confirmation: A confirmation acts for the Product's Maintainer on a `Submitted` Change only, and reports any other Lifecycle without mutation. It writes `Available` and posts no comment.
-
-A close requires its terminal precondition from current state, not from the holder's account. A Leaf's `Applied` follows the decision applied-leaf of `## Final format`; a merged pull request alone is not `Applied`. A Parent that has a Parent closes `Applied` when every child has closed and its last child closed `Applied`. A root closes `Applied` when the operator judges its Intent met, and `Abandoned` when the operator drops it. `Abandoned` requires the operator's explicit direction and records the operator's stated reason. The close writes the terminal record, removes the holder, writes the terminal Lifecycle, and closes the record with the matching reason. A terminal Change receives no Handoff and never returns to `Available`.
-
-A split creates children that name the source in `parent`, and the source drops its Governance mutations and Spec mutations blocks. A merge closes the absorbed Change `Abandoned` and adds it to the survivor's `predecessors`. A reframe edits the Change in place and lowers its Maturity to `Proposed`. Execution begins only on a Claimed, Executable Leaf whose every predecessor is closed and whose blockers are resolved.
-
-Every transition is an ordered write with a complete readback: each write lands in its declared order, the transition reads Product, Maturity, Lifecycle, the holder, and the newest Claim, Handoff, or terminal record back from the store, and it completes only when every value equals the intended state. When a write fails or a readback differs, the transition stops before every later mutation and reports the completed writes in order, the failed operation, and the observed state; no later write is guessed to make a partial transition look complete.
-
-## Persistence
-
-Each of the seven fields has exactly one home in each place that holds the Change, and no place writes a field twice. A local draft carries all seven as its front matter above the body; authoring imports a published Change into a draft and publishes the draft back. A coordination store holds each field in the one native feature the plugin assigns it, and its body holds the Intent and the sections the Maturity adds, with no front matter and no lineage line. Persistence writes each field to its home and the body to the store body, reads each back unchanged, and reports success only then. A coordination-store limit never shapes the record.
-
-In the GitHub store the homes are:
-
-| Field          | Home                                                                                                                                                                                     |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `title`        | The issue title                                                                                                                                                                          |
-| `product`      | The organization issue field `Product`                                                                                                                                                   |
-| `maturity`     | The organization issue field `Maturity`                                                                                                                                                  |
-| `lifecycle`    | The organization issue field `Lifecycle`                                                                                                                                                 |
-| `predecessors` | The organization text issue field `Predecessors`: the canonical identities, such as `outcomeeng/changes#17`, separated by a comma and one space, and empty when the Change absorbed none |
-| `parent`       | The organization number issue field `Parent`: the Parent's issue number, empty for none                                                                                                  |
-| `blocked_by`   | GitHub's native issue dependencies                                                                                                                                                       |
-
-No project field holds a Change field.
-
-- persistence-authority: The GitHub store records each change of an issue field as an `IssueFieldChangedEvent` carrying its actor, its time, and the previous and new value; the event for a Lifecycle move out of `Submitted` is the store's record of authority. The Lifecycle comments — the Claim, the Handoff, and the terminal record — are the store's record of holding and continuation, not of the Change's content.
-
-The persistence skill instruction selects the client for the configured store; the record embeds no store commands or provider identifiers.
-
-## Compatibility
-
-`audit-change` accepts only records whose front matter carries this contract's closed key set. A record whose front matter does not carry that closed key set is outside the contract: it receives no migration, alias, inferred front matter, body-line lineage interpretation, or audit verdict, and the Auditor reports it as outside the contract.
-
-A record whose body opens with `# Output` is outside the contract. It takes the Intent form at its next revision through `author-change`; no other workflow rewrites it.
-
-A record that carries `## Nodes`, `## Assertion operations`, `## Decisions`, `## Mutations`, or `## Activities` is outside the final format and takes its Maturity's sections at its next revision through `author-change`, before its next execution.
-
-## Rationale
-
-One self-contained record preserves Change meaning across local drafting and coordination stores, and one home per field in each place leaves no second copy to drift from the first, while cumulative, independently loadable Definitions of Ready let authoring and audit judge exactly the Maturity a record declares. The Intent opens every record so that what a Change achieves and how anyone checks it are settled before refinement starts.
-
-- authority-rationale: Authority lives in the store because any writer of the body can type an attestation line, while the store's field-change event carries an actor and a time no body writer controls. Proposed readiness is the Proposed Definition of Ready, and the audit verdict stays outside every criterion set it judges, so each Definition of Ready is decidable and a higher level inherits the preceding level's criteria, never a verdict about another level.
-
-Excluding records without the closed front-matter key set keeps the contract closed and avoids treating inference as product truth, and authoring a record in another form anew from its proposal leaves no inferred field to disagree with the final format. The holder is keyed on the worktree the Claim names, because one account runs several sessions and a session that claims for another — one that starts the Executor's session in a worktree of its own — is not the session that later releases or closes; the worktree separates the holder from every other session of the account while letting the session started in it hold what was claimed for it. Execution derives each block's results and Verifiers from the merge composition, because an obligation the composition does not select sends an Executor through Verifier rounds no gate requires, and an omitted one lets a Change reach `Applied` short of the results its Nodes' merge compositions select. A Change's type derives from what its record and the store name, so no stored type can disagree with them, and a Parent hands its Governance mutations and Spec mutations blocks to its children, so no Change both coordinates children and carries a changeset.
-
-## Product properties
-
-1. A Change's record carries content only — its Intent and the sections its Maturity adds — and remains portable across coordination stores; who holds the Change, who authorized each Maturity, and where its work continues are read from the store's field-change events and Lifecycle comments under the Lifecycle rules.
-2. Maturity advances only when the declared level's cumulative Definition of Ready holds and, past Proposed, Framed, and Sliced, the store shows the Product's Maintainer's move out of `Submitted` at that Maturity.
-3. Lifecycle moves through one skill per transition — claim, release with a Handoff or submission, confirmation, close to a named terminal value — each an ordered write with a complete readback that never touches Maturity; persistence preserves field equality, while audit accepts only records whose front matter carries the contract's closed key set.
+GOVERNS the Change record SO THAT the Operator and the agents that refine and apply Changes CAN RELY ON a record whose form a program checks before every publish below Applicable, an Applier that starts only on an audited record, and an advance to Framed or Sliced that only the Operator makes
 
 ## Verification
 
-- ALWAYS: a Change record contains exactly the seven required front-matter keys, and its body opens with `## Intent` carrying What, Why, and Evidence, followed by the sections its declared Maturity adds in their declared order.
-- ALWAYS: Proposed, Framed, Sliced, and Executable each have one independently loadable, cumulative Definition of Ready, and no Definition of Ready requires a body authority line.
-- ALWAYS: Maturity advances past Proposed, Framed, and Sliced only when the target level's Definition of Ready holds and the store shows the Product's Maintainer's move of the Change out of `Submitted` at the Maturity it leaves, read from the store's field-change event with its actor and time.
-- NEVER: a Change body carries attestation, accountable-person, priority or overrule text.
-- ALWAYS: the change audit counts the title's words and the Intent's words and reports a record over a limit as a non-blocking finding naming the section, the limit, and the count.
-- ALWAYS: persistence writes each field to its one home in the configured coordination store and the body to the store body, and reads each back unchanged before reporting success; a coordination-store limit never shapes the record.
-- NEVER: a place holds a Change field in two homes, a store body carries front matter or a lineage line, or a project field holds a Change field.
-- NEVER: `audit-change` judges or migrates a record whose front matter does not carry the contract's closed key set; the Auditor reports it as outside the contract.
-- ALWAYS: a record whose body opens with `# Output` is outside the contract and takes the Intent form at its next revision through `author-change`.
-- ALWAYS: `claim-change` claims only an open record whose Product — the configured Product, or none for a root — Maturity, `Available` Lifecycle, and empty holder verify from current state, and reports any other Lifecycle, `Submitted` included, without mutation; it adds the holder, records the Claim naming the claiming session and the worktree root the Change is claimed for, writes `Claimed`, and reads the complete state back before execution begins, and a losing concurrent claim withdraws its own holder record and reports the winner.
-- ALWAYS: `release-change` and `close-change` run only for the session whose assigned worktree root equals the root the winning Claim names, and report any other caller without mutation.
-- ALWAYS: `release-change` writes a Handoff carrying branch or changeset, the completed Governance mutations and Spec mutations blocks and the next one, blockers, and hazards, then removes the holder, writes `Available` — or `Submitted` for its `submit` result — and reads the complete state back, leaving Maturity unchanged.
-- ALWAYS: `confirm-change` moves only a `Submitted` Change, writing `Available` with no comment, and reads the complete state back; it reports any other Lifecycle without mutation.
-- ALWAYS: `close-change` verifies the named terminal precondition from current state, writes the terminal record, removes the holder, writes the terminal Lifecycle, closes the record with the matching reason, and reads the complete terminal state back; it refuses an argument outside `Applied` and `Abandoned`, refuses `Applied` for a Leaf while the merge commit of the pull request or branch its newest Handoff names is not an ancestor of the default branch, a Node lacks a result the merge composition for its malleability after selects, an amended or new record lacks an approving decision-record audit, or the Intent's Evidence is unmet, refuses `Applied` for a Parent while a child is open or its last child closed other than `Applied`, and closes a root only on the operator's direction.
-- NEVER: a Lifecycle skill writes Maturity or a body section, or posts a comment other than its Claim, Handoff, or terminal record.
-- NEVER: a Lifecycle transition performs a later mutation after a required write fails or a readback differs from the intended state; its diagnostic names every completed write, the failed operation, and the observed state.
-- NEVER: a Handoff, Claim, terminal record, or rejection instruction carries a secret value or credential payload.
-- ALWAYS: the change audit resolves each path a record names, its Governance records and its Spec mutations Nodes, in the repository of the Change's Product, whatever checkout holds the draft or runs the audit.
-- ALWAYS: a Change that another Change names in `parent` carries no Governance mutations or Spec mutations block and never reaches Executable; the change audit rejects a record that breaks the rule.
+### Test.Mapping: record-keys
+
+A record's metadata holds exactly these keys, each with this value, and each changes only through the operations its row names. A key with no value holds null, and a list with no entry holds [].
+
+| Case          | Value                                                                                                             | Changes through                                                                                         |
+| ------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| title         | the intended Output, in at most 15 words                                                                          | recording or a publish                                                                                  |
+| product       | a Leaf's one Product; a Parent's list of the Products its Children span                                           | recording, a publish, a split, or recording a Child                                                     |
+| maturity      | Proposed, Framed, Sliced, or Applicable                                                                           | recording, an advance, or a lower                                                                       |
+| lifecycle     | Available, Submitted, Applied, or Abandoned                                                                       | recording, which sets Submitted for a Change with no Parent and Available for a Child, or a Transition  |
+| holder        | the one person or agent that holds the Change, or null; absent from a Change Draft                                | recording, which sets the recorder, a claim, or a release                                               |
+| parent        | the Parent's Change reference, or null                                                                            | recording or a split                                                                                    |
+| predecessors  | the Changes this Change absorbed by a merge, [] when it absorbed none                                             | a merge                                                                                                 |
+| blockers      | the Changes this Change waits for, [] when it waits for none                                                      | a publish                                                                                               |
+| base          | for a Leaf, the head of the default branch at its latest publish that writes the body; a Parent holds no base key | recording a Leaf, a publish that writes its body, or its removal when a Child makes the record a Parent |
+| priority      | the Change's Priority, null until the Priority decision                                                           | the Priority decision                                                                                   |
+| primary_value | Offering, Quality, Capability, or Safety, null until the Priority decision                                        | the Priority decision                                                                                   |
+| investment    | Harvest, Shield, Frontier, or Seed, null until the Priority decision                                              | the Priority decision                                                                                   |
+
+### Test.Mapping: record-body
+
+A record's body holds exactly these sections, in this order.
+
+| Case   | Record   | Sections                                                                                      |
+| ------ | -------- | --------------------------------------------------------------------------------------------- |
+| leaf   | a Leaf   | Statement of Intent, then Declarations; a Proposed Leaf may hold only its Statement of Intent |
+| parent | a Parent | Statement of Intent                                                                           |
+
+### Test.Mapping: statement-of-intent
+
+The Statement of Intent states these three parts, in this order, in at most 120 words.
+
+| Case         | Part         | States                                                                                                                                                                                                                                  |
+| ------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| output       | Output       | the Output the Change achieves                                                                                                                                                                                                          |
+| why          | Why          | the truth the work brings a lower layer up to, what the Operator settled by judgment, the question a prototype answers, or the Output and the condition it moves, with the observed state that gave rise to the Change where one exists |
+| verification | Verification | the verification that shows the Output achieved, by its type, and what it finds                                                                                                                                                         |
+
+### Test.Mapping: subsection-headings
+
+Each Declarations subsection stands in Application order under the heading its row names.
+
+| Case     | Subsection for                                                                                                   | Heading                                                                                |
+| -------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| existing | an existing Node, Decision Record, or file, a moved one included                                                 | its path from spx/ at the Base                                                         |
+| new      | a new Node or Decision Record                                                                                    | its kind, its slug, and the two existing siblings between which the Applier inserts it |
+| created  | a contract file, Outcome record, Product spec, or file of a Product with no Product Tree that the Change creates | its path from spx/, or from the repository root for a Product with no Product Tree     |
+| no-tree  | an existing file of a Product with no Product Tree                                                               | the file's path from the repository root at the Base                                   |
+| in-moved | a file inside a moved Node, other than its spec                                                                  | its path after the move, after the Node's move subsection                              |
+
+### Test.Mapping: payloads
+
+Below its heading, a subsection holds the one payload its row names.
+
+| Case         | Payload                                                                                       | Holds                                                   |
+| ------------ | --------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| line-edits   | an optional yaml front-matter block, then one block fenced as diff                            | the lines the Change adds, removes, or keeps as context |
+| replacement  | one block fenced with the file's own language, and text for a file whose own language is diff | the whole file after the Change, front matter included  |
+| move-rewrite | a diff block of only the two rename headers, then a replacement                               | the move, and the whole file at its new path            |
+
+### Test.Mapping: headers
+
+A diff block can open with the git extended header its row names, before any - or + line, and the header declares the row's operation.
+
+| Case   | Header                                                      | Operation                                                                                                                                                |
+| ------ | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| delete | deleted file                                                | deletes the file the heading names; under a Node's directory heading, prunes the Node and its branch under the pruning check; nothing follows the header |
+| create | new file                                                    | creates the file the heading names; every line after it is a + line                                                                                      |
+| move   | rename from the heading's path, then rename to the new path | moves the file or the Node directory; - and + lines can follow, and under a moved Node's heading they edit its spec                                      |
+
+### Test.Mapping: diff-lines
+
+Each line of a diff block takes the form its row names and holds what that row states.
+
+| Case            | Line      | Holds                                                                                                                     |
+| --------------- | --------- | ------------------------------------------------------------------------------------------------------------------------- |
+| added           | +         | a row as its spec or Decision Record holds it after the Change, with every line of a Scenario and every row of a table    |
+| removed         | -         | a row as the Base holds it, with every line of a Scenario and every row of a table                                        |
+| context         | unmarked  | a heading the Change keeps; for a table row, the heading of its Mapping or Evaluate subsection and the table's header row |
+| heading-added   | + heading | a heading the Change adds                                                                                                 |
+| heading-removed | - heading | a heading the Change removes; a renamed heading is a - and + pair                                                         |
+| file-added      | +         | a line of a contract file, Outcome record, or Product spec after the Change                                               |
+| file-removed    | -         | a line of such a file as the Base holds it                                                                                |
+| file-context    | unmarked  | a line of such a file around an edit, as the Base holds it                                                                |
+| no-tree-added   | +         | a statement of a Product with no Product Tree, by its slug                                                                |
+| no-tree-removed | -         | a statement, a section, or a Glossary entry of a Product with no Product Tree, as the Base holds it                       |
+
+### Test.Compliance: Declaration lines
+
+- body-lines-only: ALWAYS: below its headers, the diff block of a Node or Decision Record holds only lines of its body, each naming its target by slug, each line of an opening by its keyword, and a DEFINES line by its keyword and its term; the diff block of a contract file, Outcome record, or Product spec holds literal lines of the file.
+- no-tag: NEVER: a Declarations line adds a tag.
+- plain-slug: ALWAYS: a slug whose test file, eval rule, or probe protocol is absent at the Base stands plain in its + line.
+- table-case: ALWAYS: a table row's case reads as its subsection's slug, a slash, and the case slug, such as date-phrases/tomorrow-5pm.
+- front-matter-block: ALWAYS: line edits that set a Node's front-matter field hold the field and its value after the Change in a yaml block before the diff, a replacement holds the whole front matter instead, a replaced spec keeps its Node's id, and a moved Node keeps its id.
+- no-index: NEVER: a record names an Index for a new Node or Decision Record.
+- move-reads: ALWAYS: under a move, a - line and each context line read the old path at the Base, and a + line holds the row as the new path holds it after the Change.
+
+### Test.Compliance: Declaration operations
+
+- one-payload: NEVER: a subsection holds both payloads, except a move that rewrites its file.
+- fence: ALWAYS: a replacement's outer fence is longer than any fence inside the file, and a block with no language fails the form check.
+- no-mode: NEVER: a header carries a file mode, or another git header stands in a record; a replacement or a move keeps the file's mode, which nothing checks.
+- operation-kinds: ALWAYS: new file creates only a contract file, an Outcome record, the Product spec, or a file of a Product with no Product Tree; a deletion or a move acts on a Node or on a Decision Record, a spec, a contract file, an Outcome record, the Product spec, or a file of a Product with no Product Tree; a replacement acts on a file of these kinds; and every file an operation names is a regular text file.
+- spec-deletion: NEVER: a Change deletes a spec apart from its Node, or deletes the Product spec.
+- one-subsection-per-file: NEVER: two subsections of a Change write, move, or delete the same file, except a file inside a moved Node other than its spec, which takes its edits in its own subsection whose reads at the Base resolve through the move, a slug rename included.
+- slug-rename: ALWAYS: a move that changes a Node's slug also renames its spec and its Outcome record to the new slug.
+- path-naming: ALWAYS: the form check names each file at the Base that names, in a link or in any other text, the path of a file or Node the Change deletes or moves, or of a file inside such a Node, and skips every Knowledge root and every file the Product declares as dated history.
+- format-at-close: ALWAYS: the Product's format command at the Base leaves a replacement unchanged; at close the command at the merge commit leaves the approved result, the approved replacement with its plain slugs linked, unchanged, and the file on the default branch reads the same as that result; after any difference the Change stays open and the Refiner rewrites the replacement under the merge-commit formatter.
+
+### Test.Compliance: infrastructure lines
+
+- infrastructure-line: ALWAYS: a Node subsection ends with one infrastructure line for each Assertion it adds or replaces at verification or implementation Malleability after the Change, and a subsection that hardens its Node holds one for every Assertion the Node holds after the Change.
+- replaced-assertion: ALWAYS: an Assertion counts as added or replaced when its complete declaration differs from the Base, its complete declaration being its row and the group heading that fixes its verification type, or the whole subsection for a Mapping or Evaluate Assertion.
+- infrastructure-form: ALWAYS: the line reads `Infrastructure:`, the Assertion's slug, and the path of each Node whose test infrastructure that Assertion's Evidence needs, each path in a code span and a comma between two paths, or `none` in their place.
+- infrastructure-exists: ALWAYS: when the Refiner writes the line, each Node it names exists at the Base, or a blocking Change builds it.
+- spec-node-none: NEVER: an Assertion of a spec-malleable Node carries an infrastructure line.
+- none-leaf: ALWAYS: a Leaf that declares nothing holds none and its reason.
+
+### Test.Mapping: maturity-ready
+
+A Leaf's record meets a Maturity's row only when it meets that row and every row above it.
+
+| Case       | The Leaf's record                                                                                                                                               |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| proposed   | its Statement of Intent states Output, Why, and Verification                                                                                                    |
+| framed     | its Declarations hold a subsection for each Node and Decision Record it touches, or none and its reason                                                         |
+| sliced     | at most five Node subsections, a Node subsection with an operation included                                                                                     |
+| applicable | each Node its infrastructure lines name stands on the default branch with State Passing or is blocked on the Change that builds it, and the record passed audit |
+
+### Test.Mapping: transitions
+
+Each Transition takes a Change in the state its row requires and changes what its row states.
+
+| Case      | Requires                                                                                                                          | Changes                                                    |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| claim     | an Available Change with no holder                                                                                                | sets the holder                                            |
+| release   | a held Change                                                                                                                     | clears the holder; a Submitted Change returns to Available |
+| submit    | an Available Change that waits for the Operator's next move, or whose settled judgment the holder finds reopened, with its reason | Available to Submitted                                     |
+| advance   | a Submitted Change that meets its next maturity-ready row, or a Sliced Leaf that meets the applicable row                         | raises the Maturity                                        |
+| lower     | a Framed, Sliced, or Applicable Change, with a reason                                                                             | lowers the Maturity                                        |
+| applied   | the close condition of the Change's type                                                                                          | to Applied                                                 |
+| abandoned | an open Change                                                                                                                    | to Abandoned                                               |
+
+### Test.Compliance: binding
+
+- review-binding: ALWAYS: the Operator's review binds the record body and the Base it read, the advance to Sliced records both, and the advance and the Application check confirm that the current record is that one or one the review carries forward to.
+- review-carry: ALWAYS: after a later publish, the review of a part carries forward only while the operation keeps its kind and its paths, the Decision Records that govern the part stay the same, and the part and each line of its context read the same in the old and the new revision, at each Base and after the Change; a Base that no longer resolves carries no review forward.
+- review-part: ALWAYS: a part is a row by its slug, a heading, or any other single line, with every heading above it, the header row of its table, and the line that opens its Scenario or list as its context; for a deletion or a move of a file the part is the file, and for a deletion or a move of a Node it is the Nodes its branch holds, with every spec, Decision Record, contract file, and Outcome record in them.
+- audit-binding: ALWAYS: the audit binds the body and the Base it judged, the advance to Applicable records both, a publish that writes the body of an Applicable record returns the Change to Sliced and takes the form check before the audit runs again, and a publish that writes only metadata keeps the audit.
+
+### Test.Compliance: closing
+
+- leaf-applied: ALWAYS: a Leaf closes Applied only when the merge commit of the Changeset its holder closes it on is an ancestor of the default branch, every merge gate passed, each Node holds every result its Malleability requires, every Declarations line stands on the default branch, and the audit at close found nothing.
+- terminal: NEVER: a Transition moves an Applied or Abandoned Change.
+- reframe: ALWAYS: a reframe edits a Change in place and lowers its Maturity to Proposed.
+- lower-claim: ALWAYS: an Applier that lowers its Applicable record to Sliced to write a decision line keeps its Claim, and after every other lowering the holder writes a Handoff and releases the Change.
+
+### Test.Compliance: structure and lineage
+
+- change-type: ALWAYS: a Change is a Parent when another record names it as its parent, and a Leaf otherwise; the type derives from those relations and is never stored.
+- parent-maturity: ALWAYS: only the Operator's advances on a Parent's Statement of Intent set its Maturity, its Children set nothing, and a Parent never reaches Applicable.
+- merge: ALWAYS: a merge closes the absorbed Change Abandoned and adds it to the survivor's predecessors.
+- blocker-abandoned: ALWAYS: a blocking Change that closes Abandoned through a merge passes its block to the Change that names it as predecessor, and one that closes Abandoned without a merge returns the dependent Change to Refinement.
+- blocker-cycle: NEVER: a member of a blocker cycle remains Sliced or Applicable until the Refiner removes the cycle.
+
+### Test.Compliance: transition log
+
+- log-block: ALWAYS: every Transition posts one comment holding one fenced YAML block and nothing else, and the comment's time is the Transition's time.
+- log-keys: ALWAYS: the block holds transition, the move; maturity, the Change's Maturity at the move as the Change Store spells it; harness, the token the Provider assigns to the agent harness; session, the harness's session id; machine, the user and the short host name as user@host; and worktree, the absolute path of the worktree the session works in.
+- log-extras: ALWAYS: a lower adds reason, a release adds handoff with at least the branch, the head commit, and the next subsection, and an applied Transition of a Leaf adds changeset with its merge commit.
+- log-closed: NEVER: the block holds another key, prose outside reason, or a position key; the plugins name no Position.
+- log-no-authority: NEVER: anyone reads authority from a Transition comment, and no delegate, no party the agent acts for, and no words of the Operator appear in it.
+
+### Test.Compliance: form check
+
+- form-check: ALWAYS: below Applicable, and on a publish that writes the body of an Applicable record, a program checks the form of a record before the publish, and nothing publishes while the check fails.
+- base-on-body: ALWAYS: base moves only on a publish that writes the record's body, and a publish that writes only metadata, such as a claim, a submission, or a blocker, keeps it.
+- stale-revision: ALWAYS: the form check fails a publish when the revision the Change Store holds changed since the publisher read it.
+- detect-restore: ALWAYS: where the Change Store accepts no expected revision, the Provider reads the record's edit history after the write, restores a revision it did not write that landed between its own read and its own write, and counts the publish as failed; a revision that landed after its own write stands, and that publish counts as failed too.
+- size-limit: ALWAYS: the form check fails a publish whose record exceeds the Change Store's size limit, and names the limit.
+- operator-bound-base: ALWAYS: the form check fails the publish of a Sliced record whose new base changes a file the record deletes, moves, or replaces, where the Operator's review binds that operation, and a former Base that no longer resolves counts as such a change; every other such publish succeeds, and the audit reads the operation at the new Base.
+- one-home: NEVER: a metadata field stands in the body, or the Change Store holds a field in two places.
+
+### Test.Mapping: github-store
+
+Where the Change Store is a GitHub repository, each part of a record has the one home its row names.
+
+| Case          | Home                                                                                     |
+| ------------- | ---------------------------------------------------------------------------------------- |
+| title         | the issue title                                                                          |
+| body          | the issue body                                                                           |
+| product       | the organization issue field Product                                                     |
+| maturity      | the organization issue field Maturity                                                    |
+| lifecycle     | the organization issue field Lifecycle                                                   |
+| holder        | the issue's one assignee, with the session and worktree its newest claim comment records |
+| parent        | the organization number issue field Parent                                               |
+| predecessors  | the organization text issue field Predecessors                                           |
+| blockers      | the issue's native dependencies                                                          |
+| base          | the organization text issue field Base                                                   |
+| priority      | the organization issue field Priority                                                    |
+| primary_value | the organization issue field Value                                                       |
+| investment    | the organization issue field Investment                                                  |
+| transition    | one issue comment                                                                        |
+
+### Test.Compliance: github-store
+
+- github-binding: ALWAYS: an advance to Sliced or to Applicable binds the body revision the issue's edit history holds at the time of the advance's comment and the Base value the Base field's change events hold at that time, and the Provider confirms the binding only while the current body equals that revision and the current Base equals that value, or the Operator's review carries forward to them.
+- github-later-edit: ALWAYS: a body edit after an advance keeps the review of each part that review-carry carries forward, and takes a new audit.
+- github-race: ALWAYS: because GitHub's issue update takes no expected revision, the Provider records the body's last edit at its read and fails the publish when the last edit right before its write differs; after its write it reads the edit history, restores a revision another writer wrote between its read and its write, where GitHub still holds it, and fails the publish; a revision written after its write stands, and that publish fails too.
+- github-one-holder: ALWAYS: the Provider keeps at most one assignee on a Change issue.
+- github-parent: ALWAYS: a Child lives in its Parent's Change Store, so the Parent number names the Parent's issue in that store.
+- github-limit: ALWAYS: the size limit of a GitHub Change Store is 65,536 characters of issue body.
+
+### Audit: record content
+
+- audit-before-applicable: ALWAYS: an Auditor audits a Sliced Leaf before its holder advances it to Applicable, each Declarations line against every Decision Record that governs its Node at the Base, read as the Declarations change it, and every finding blocks.
+- audit-at-close: ALWAYS: before a Leaf closes Applied, an Auditor audits the default branch against its record: each Assertion and decision stands as its line states, and the verification the Statement of Intent names finds what it states.
+- operator-answers: ALWAYS: every answer the Operator gives in Refinement reaches a Declarations line, with each condition, exception, boundary, and expected outcome.
+- facts-checked: ALWAYS: the Refiner checks every fact the record cites against the latest checkout of the owning repository, or, for a Product with no Product Tree, against the cited source by path and commit.
+- sets-apart: ALWAYS: each part of the body holds only what sets this Change apart; a Child links settled rationale, and a Parent copies none of its Children's content.
+- no-person: NEVER: a record or a Handoff names an accountable person or holds conversation text.
+- first-intent: ALWAYS: the Statement of Intent as first written stays readable while the Refiner edits the current content.
+- terminal-kept: ALWAYS: a Change in a terminal Lifecycle and its edit history stay queryable until the owning Product's Change-retention policy permits their removal.
+- provider-rules: ALWAYS: the Change skills carry every rule they apply, cite no methodology chapter path, and name no methodology version.
+
+### Audit: actors and judgment
+
+- transition-actor: ALWAYS: any person or agent claims; the holder releases, submits, advances a Sliced Leaf to Applicable, and closes a Leaf Applied; only the Operator advances to Framed or Sliced, lowers when a settled judgment reopens, closes a Change Abandoned other than the Change a merge absorbs, and closes a Parent Applied; the Refiner closes the absorbed Change of a merge Abandoned, on the Operator's direction; the Applier lowers its Applicable Change to Sliced to write a decision line; a failed Application check and a publish that writes the body of an Applicable record lower to Sliced; and a Refiner's reframe lowers to Proposed.
+- maturity-actor: ALWAYS: the recorder records a Leaf at Proposed; the Operator advances it to Framed on judging every Declarations line settled, and to Sliced after reviewing every decision line and every removal, deletion, move, and replacement on a Decision Record or on a Node whose Malleability is not spec, and each file in such a Node; and its holder advances it to Applicable.
+- one-unit: ALWAYS: a Sliced Leaf is one unit an Applier integrates on its own.
+- parent-applied: ALWAYS: only the Operator closes a Parent Applied, once the Operator judges its intent met and no Child is open.
+- merge-direction: ALWAYS: the Refiner merges two Changes only on the Operator's direction.
+- same-passage: ALWAYS: of two open Changes that amend the same passage of a file, the one that reaches Application second names the other as a blocking Change.
+- store-outside: ALWAYS: the Change Store of each Product is a fixed parameter the Operator records outside the Product Tree, and no move between Change Stores exists.
+- path-repair: ALWAYS: a file that names a path a Change deletes or moves takes its own subsection when it is of a kind a subsection holds; the Applier repairs any other such file as a Mechanical Repair, or a delegate repairs it; a generated file is repaired at its declared source and regenerated; and Validate reads every surviving link.
+- github-advance-read: ALWAYS: the Operator advances to Sliced only after reading the body and the Base that stand at the advance, and the holder advances to Applicable only while the body and the Base stand as the audit read them.
