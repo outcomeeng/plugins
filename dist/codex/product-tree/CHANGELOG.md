@@ -10,6 +10,16 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.111.0
+
+### Breaking
+
+- **`/change-standards` states the Change record of the Change record decision and drops the Proposed, Framed, Sliced, Executable, and Lifecycle selections.** The skill states the record's metadata keys, body sections, Statement of Intent, and Declarations subsections, the Change Draft, and the form check's request and result. The reference files `dor-proposed`, `dor-framed`, `dor-sliced`, `dor-executable`, and `lifecycle` are gone. A skill that loads one of these selections finds none; the Change skills that do so, `/claim-change`, `/close-change`, `/execute-change`, `/release-change`, `/audit-change`, `/author-change`, and `/confirm-change`, are rewritten or removed by the Changes that replace them. Before this change, the skill stated the maturity and lifecycle record the methodology replaced.
+
+### Added
+
+- **`/change-standards` ships a form check for a Change Draft.** One standard-library script, `scripts/form_check.py`, reads a JSON request on stdin and writes a JSON result on stdout with status `pass`, `fail`, or `invalid-request` and one finding per broken rule, each named by its rule slug. A sibling Change skill's script reaches the same check through the `check` function by a `__file__`-relative import. The request carries the Draft's text or path, the Product's checkout root, the operation, the stored record, the records of the Draft's blockers, and the Change Store's size limit. The operations are `record`, `publish`, `split`, `record-child`, `merge`, `priority-decision`, `audit`, and the Transitions `claim`, `release`, `submit`, `advance`, `lower`, `applied`, and `abandoned`. Before this change, no program checked a Draft's form before a publish.
+
 ## 0.110.0
 
 ### Changed
