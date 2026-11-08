@@ -109,7 +109,7 @@ def _keys(name: str, record: Any) -> Any:
     members = {
         field_name.upper(): field_name for field_name in record.__dataclass_fields__
     }
-    return StrEnum(name, members)  # type: ignore[misc]
+    return StrEnum(name, members)
 
 
 #: The keys of the session identity and of a bound pair, named by the fields of the script's records.
