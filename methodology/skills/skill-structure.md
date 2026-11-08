@@ -502,7 +502,7 @@ Orchestrates the full declare → spec → apply flow. Spans all three steps bec
 
 Internal protocol loaded by `manage-github-pr`.
 
-1. Load `merging-standards`, `commit-changes`, and `task-tracking-standards`.
+1. Load `merging-standards` and `commit-changes`.
 2. Establish branch hygiene and topology.
 3. Establish `VERIFICATION_READINESS` through deterministic verification and local review convergence.
 4. Push with explicit destination ref.
