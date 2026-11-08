@@ -10,6 +10,16 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.111.0
+
+### Breaking
+
+- **`/claim-change`, `/release-change`, `/close-change`, and `/confirm-change` are removed; `/operate-change` makes their Transitions.** Invoke `/operate-change claim`, `release`, `submit`, `advance`, `lower`, `applied`, or `abandoned` with the Change reference. Before this change, the four skills wrote the Lifecycle `Claimed`, a `Claim:` comment, a `Handoff:` comment, and the Maturity `Executable`, which the Change record no longer holds.
+
+### Added
+
+- **`/operate-change` makes every Transition of a Change other than recording and publishing, in the record form.** Its script refuses a Change whose state the Transition does not admit, with nothing written. Otherwise it makes the writes in the order Maturity, Lifecycle, assignee, comment, issue state, reads the Change back after each one, and stops at a failed write or a differing readback, naming the writes that landed. Each Transition posts one comment holding one fenced YAML block with `transition`, `maturity`, `harness`, `session`, `machine`, and `worktree`, plus `reason`, `handoff`, or `changeset` where the Transition adds one. An advance to Sliced binds the body revision and the Base the Operator's review read, or a pair that review carries forward to; an advance to Applicable binds the pair the sealed audit judged. The script exposes one `transition` function, which `/author-change` reaches by import.
+
 ## 0.110.0
 
 ### Changed
