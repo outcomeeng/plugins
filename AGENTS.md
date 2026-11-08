@@ -245,9 +245,9 @@ The table routes tasks to skills. Only an active skill's explicit invocation ins
 | "Audit eval evidence"                                   | `/audit-eval-evidence` |
 | "Audit this spec node"                                  | `/audit-specs`         |
 | "Diagnose the spx environment"                          | `/diagnose`            |
-| "Claim this Change"                                     | `/claim-change`        |
-| "Release this Change" or "Hand this off"                | `/release-change`      |
-| "Close this Change as Applied"                          | `/close-change`        |
+| "Claim this Change"                                     | `/operate-change`      |
+| "Release this Change" or "Hand this off"                | `/operate-change`      |
+| "Close this Change as Applied"                          | `/operate-change`      |
 
 Per-language code, architecture, and test audits ship as `audit-{lang}-{code|test|architecture}` skills. The active verification workflow composes the skills for the languages recorded in this instruction block's opening marker.
 
@@ -275,7 +275,7 @@ Test level is encoded in the filename. The `{evidence}` segment is chosen by `/t
 
 ## Change Lifecycle
 
-Work is coordinated through Changes in the store `spx/local/coordination.md` declares. Hold a Change through `/claim-change` before refining or executing it. When the work stops with continuation remaining, `/release-change` writes the Handoff, removes the holder, and returns the Change to Available for any agent to claim; when the Change reaches a terminal Lifecycle, `/close-change <Applied|Abandoned>` writes the terminal record and closes it. A follow-up is a Proposed Change created through `/author-change`. Maturity moves only through `/author-change`; the three Lifecycle skills move Lifecycle and nothing else.
+Work is coordinated through Changes in the store `spx/local/coordination.md` declares. `/operate-change` makes every Transition of a Change other than recording and publishing. Hold a Change through `/operate-change claim` before refining or applying it. When the work stops with continuation remaining, `/operate-change release` posts the Handoff in its release comment and removes the holder, so any agent can claim the Change; when the Change reaches a terminal Lifecycle, `/operate-change <applied|abandoned>` posts the terminal comment and closes it. A follow-up is a Proposed Change recorded through `/author-change`, which also records, publishes, splits, merges, and reframes a Change.
 
 <!-- /PRODUCT-TREE -->
 

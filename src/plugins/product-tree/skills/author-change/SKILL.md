@@ -136,7 +136,7 @@ Any mismatch or partial write is a failed persistence result. Preserve the local
 
 Return the canonical Change reference, each finding with its severity, key, rule, and run token, exact persisted Maturity and Lifecycle, whether the operation created or revised the Change, the equality result for every front-matter field, and the next block, with each question no assumption can defend and its best answer. A stop at `<authority_gate>` returns the result `authority-required` instead, naming the Maturity the Change holds and the move the store lacks.
 
-Use skill `product-tree:release-change`. Invoke it only when this session holds the Change (Lifecycle `Claimed`, with the winning Claim naming this session's assigned worktree root) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Invoke it with `submit` when the persisted record is at `Proposed`, `Framed`, or `Sliced` and waits for the Product's Maintainer's confirmation. Preserve any local candidate that received no audit locally and leave the published Change unchanged.
+Use skill `product-tree:operate-change`. Invoke it with `release` only when this session holds the Change (its one assignee, with the newest claim comment naming this session) and work stops or transfers with continuation remaining; a Change this session does not hold needs no release. Invoke it with `submit` first when the persisted record is at `Proposed`, `Framed`, or `Sliced` and waits for the Operator's next move. Preserve any local candidate that received no audit locally and leave the published Change unchanged.
 
 </result>
 
