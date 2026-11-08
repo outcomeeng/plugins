@@ -1,0 +1,8 @@
+{
+  "blocker_records": {
+    "101": {
+      "body": "\n\n## Statement of Intent\n\n- Output: The catalog lists its items in order.\n- Why: A listing in no order hides the item a reader looks for.\n- Verification: The audit at close finds the catalog spec stating the order.\n\n## Declarations\n\n### new enabler `payments`, between `54-billing.enabler` and `54-invoices.enabler`\n\n```yaml\nmalleability: spec\n```\n\n```diff\n+ PROVIDES payments\n```\n",
+      "metadata": {}
+    }
+  }
+}

@@ -2,228 +2,183 @@
 name: change-standards
 user-invocable: false
 description: >-
-  Change record standards for Intent, maturity, lifecycle, authority,
-  refinement, and continuation. Loaded by other skills, not invoked directly.
-argument-hint: "<Proposed|Framed|Sliced|Executable|Lifecycle>"
-arguments: selection
+  Change record standards — the record's metadata and body, the Change Draft,
+  and the form check that judges a Draft. Loaded by other skills, not invoked
+  directly.
 allowed-tools: Read
 ---
 
 <objective>
-The complete Change record contract, accompanied by exactly one selected reference: the cumulative Definition of Ready for one Maturity, or the Lifecycle transition rules for the declared store.
+The Change record, the Change Draft, and the form check's request and result, stated as the Change record decision states them.
 </objective>
 
-<loading_contract>
+<terms>
 
-Require `$selection` to equal `Proposed`, `Framed`, `Sliced`, `Executable`, or `Lifecycle` exactly. A missing or unsupported value is a blocked standards load and names the accepted values.
+- **Change record**: the metadata and the body of one Change, held only in the Change Store.
+- **Change Draft**: a local copy of a Change record's metadata, except its holder, as YAML front matter, followed by its body.
+- **Base**: the commit a Change record's base field names.
+- **Transition**: one of the seven moves of a Change: claim, release, submit, advance, lower, applied, and abandoned.
 
-Apply `<authority>` and `<record_rules>` below for every selection. Then read exactly one selected reference:
+</terms>
 
-| `$selection` | Reference                                   |
-| ------------ | ------------------------------------------- |
-| `Proposed`   | `${SKILL_DIR}/references/dor-proposed.md`   |
-| `Framed`     | `${SKILL_DIR}/references/dor-framed.md`     |
-| `Sliced`     | `${SKILL_DIR}/references/dor-sliced.md`     |
-| `Executable` | `${SKILL_DIR}/references/dor-executable.md` |
-| `Lifecycle`  | `${SKILL_DIR}/references/lifecycle.md`      |
+<record_keys>
 
-NEVER load another Maturity's Definition of Ready in the same invocation. Each Definition of Ready is cumulative and complete for its level.
+A record's metadata holds exactly these keys, each with this value, and each changes only through the operations its row names. A key with no value holds null, and a list with no entry holds [].
 
-`<record_rules>` states the record rules, and each Definition of Ready states criteria that judge a record against those rules by identifier; the Executable Definition of Ready also carries the `<merge_composition>` that execution applies, and none of them carries a store command. `lifecycle.md` carries the store-binding, canonical-state, authority-read, ordered-write, complete-readback, write-inspection, inert-stdin, claim-record, handoff-record, and terminal-record rules, together with the store commands those rules name; it alone assigns each field's home in the declared store and names the store reads — fields, lineage, blockers, and authority. A criterion whose evidence is store state, such as the blocker graph of `*-relationships`, is judged from those reads, which a separate `Lifecycle` load supplies; a Maturity selection never infers that state from the record alone.
+| Key           | Value                                                                                                             | Changes through                                                                                         |
+| ------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| title         | the intended Output, in at most 15 words                                                                          | recording or a publish                                                                                  |
+| product       | a Leaf's one Product; a Parent's list of the Products its Children span                                           | recording, a publish, a split, or recording a Child                                                     |
+| maturity      | Proposed, Framed, Sliced, or Applicable                                                                           | recording, an advance, or a lower                                                                       |
+| lifecycle     | Available, Submitted, Applied, or Abandoned                                                                       | recording, which sets Submitted for a Change with no Parent and Available for a Child, or a Transition  |
+| holder        | the one person or agent that holds the Change, or null; absent from a Change Draft                                | recording, which sets the recorder, a claim, or a release                                               |
+| parent        | the Parent's Change reference, or null                                                                            | recording or a split                                                                                    |
+| predecessors  | the Changes this Change absorbed by a merge, [] when it absorbed none                                             | a merge                                                                                                 |
+| blockers      | the Changes this Change waits for, [] when it waits for none                                                      | a publish                                                                                               |
+| base          | for a Leaf, the head of the default branch at its latest publish that writes the body; a Parent holds no base key | recording a Leaf, a publish that writes its body, or its removal when a Child makes the record a Parent |
+| priority      | the Change's Priority, null until the Priority decision                                                           | the Priority decision                                                                                   |
+| primary_value | Offering, Quality, Capability, or Safety, null until the Priority decision                                        | the Priority decision                                                                                   |
+| investment    | Harvest, Shield, Frontier, or Seed, null until the Priority decision                                              | the Priority decision                                                                                   |
 
-</loading_contract>
+Where the Change Store is a GitHub repository, each part of a record has one home: title in the issue title, body in the issue body, product, maturity, lifecycle, priority, and investment in the organization issue fields of those names, primary_value in the field Value, holder in the issue's one assignee, parent in the number field Parent, predecessors and base in the text fields of those names, blockers in the issue's native dependencies, and each Transition in one issue comment.
+
+</record_keys>
+
+<record_body>
+
+A record's body holds exactly these sections, in this order.
 
-<authority>
+| Record   | Sections                                                                                      |
+| -------- | --------------------------------------------------------------------------------------------- |
+| a Leaf   | Statement of Intent, then Declarations; a Proposed Leaf may hold only its Statement of Intent |
+| a Parent | Statement of Intent                                                                           |
 
-The governing methodology is the Change chapter selected by the consumer repository's `spx.config.yaml`. An accepted `methodology.version` is exactly `4.0`, or exactly `4.0.N` with `N` one or more decimal digits representing a non-negative integer. Both accepted forms select `versions/4.0/methodology/change/changes.md` inside the declared `methodology.source`. An absent configuration, absent `methodology` block, the sentinel `installed`, another major or minor line, a non-integer patch component, an extra version component, and a prerelease suffix are invalid selections. The invalid-selection diagnostic contains the observed value — `absent` when no value exists — and the accepted forms `4.0` and `4.0.N`, where `N` is a non-negative integer. These standards operationalize the selected chapter without replacing it. A Change is mutable coordination for one intended Output in one Product, or in a root that spans Products; it declares no product, architecture, or methodology truth. Its body carries content only; every state and every authority event is read from the store.
+A Change is a Parent when another record names it as its parent, and a Leaf otherwise.
 
-</authority>
+The Statement of Intent states these three parts, in this order, in at most 120 words.
 
-<record_rules>
+| Part         | States                                                                                                                                                                                                                                  |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Output       | the Output the Change achieves                                                                                                                                                                                                          |
+| Why          | the truth the work brings a lower layer up to, what the Operator settled by judgment, the question a prototype answers, or the Output and the condition it moves, with the observed state that gave rise to the Change where one exists |
+| Verification | the verification that shows the Output achieved, by its type, and what it finds                                                                                                                                                         |
 
-<rule id="record-shape">
+Each part opens a list item that starts with its label: `- Output:`, `- Why:`, and `- Verification:`.
+</record_body>
+
+<declarations>
+
+Each Declarations subsection stands in Application order under the heading its row names.
+
+| Subsection for                                                                                                   | Heading                                                                                |
+| ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| an existing Node, Decision Record, or file, a moved one included                                                 | its path from spx/ at the Base                                                         |
+| a new Node or Decision Record                                                                                    | its kind, its slug, and the two existing siblings between which the Applier inserts it |
+| a contract file, Outcome record, Product spec, or file of a Product with no Product Tree that the Change creates | its path from spx/, or from the repository root for a Product with no Product Tree     |
+| an existing file of a Product with no Product Tree                                                               | the file's path from the repository root at the Base                                   |
+| a file inside a moved Node, other than its spec                                                                  | its path after the move, after the Node's move subsection                              |
 
-Every Change begins with YAML front matter containing exactly these required keys:
+The heading of a new Node or Decision Record reads `` new <kind> `<slug>`, between `<sibling>` and `<sibling>` ``.
 
-| Key            | Contract                                                                                                                                                                          |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `title`        | Non-empty string naming the intended Output.                                                                                                                                      |
-| `product`      | Non-empty string naming the one Product that owns the Change's Output; a root whose work spans Products carries none, and a Parent and its children may carry different Products. |
-| `maturity`     | `Proposed`, `Framed`, `Sliced`, or `Executable`.                                                                                                                                  |
-| `lifecycle`    | `Available`, `Claimed`, `Submitted`, `Applied`, or `Abandoned`.                                                                                                                   |
-| `predecessors` | Append-only list of canonical identities of the Changes this Change absorbed by a merge; `[]` for a Change that absorbed none.                                                    |
-| `blocked_by`   | Mutable list of canonical blocker Change identities; `[]` when unblocked.                                                                                                         |
-| `parent`       | The canonical identity of the Parent Change in the same store; `null` for a Change with no Parent.                                                                                |
+Below its heading, a subsection holds the one payload its row names.
 
-Each required key appears exactly once. The `compatibility-boundary` rule governs a candidate whose front matter omits, repeats, or adds a key. For a candidate inside the contract, an invalid value type or value is a defect. Store coordinates, issue identities, holder data, timestamps, and verification data stay outside front matter.
+| Payload      | Holds                                                                                                                                                         |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| line edits   | an optional yaml front-matter block, then one block fenced as diff, holding the lines the Change adds, removes, or keeps as context                           |
+| replacement  | one block fenced with the file's own language, and text for a file whose own language is diff, holding the whole file after the Change, front matter included |
+| move-rewrite | a diff block of only the two rename headers, then a replacement holding the move and the whole file at its new path                                           |
 
-The body opens with `## Intent`. Each Maturity adds its sections after the Intent, in this order:
+A diff block can open with the git extended header its row names, before any - or + line, and the header declares the row's operation.
 
-| Section                   | First required at                         | Rule                   |
-| ------------------------- | ----------------------------------------- | ---------------------- |
-| `## Intent`               | Proposed                                  | `intent`               |
-| `## Governance`           | Proposed                                  | `governance`           |
-| `## Governance mutations` | Proposed                                  | `governance-mutations` |
-| `## Spec mutations`       | Proposed                                  | `spec-mutations`       |
-| `## Assumptions`          | Framed, when the Frame settled a question | `assumptions`          |
-| `## Slice`                | Sliced                                    | `slice`                |
-| `## Open questions`       | optional, Proposed only                   | `open-questions`       |
+| Header                                                      | Operation                                                                                                                                                |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| deleted file                                                | deletes the file the heading names; under a Node's directory heading, prunes the Node and its branch under the pruning check; nothing follows the header |
+| new file                                                    | creates the file the heading names; every line after it is a + line                                                                                      |
+| rename from the heading's path, then rename to the new path | moves the file or the Node directory; - and + lines can follow, and under a moved Node's heading they edit its spec                                      |
 
-A known section may stand before the Maturity that first requires it — the sections a higher Maturity added before the Change's Maturity was lowered — and the declared Maturity's Definition of Ready judges such a section only where one of its criteria names it. Every section present stands in this order, with `## Open questions` last, appears once, and is a level-two heading; a missing required section, a reordered or duplicated section, and an unknown level-two section are defects. Subsections may refine a section. Front-matter values are never restated or maintained as body lines.
+Each line of a diff block takes the form its row names and holds what that row states.
 
-</rule>
+| Line                    | Holds                                                                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| +                       | a row as its spec or Decision Record holds it after the Change, with every line of a Scenario and every row of a table    |
+| -                       | a row as the Base holds it, with every line of a Scenario and every row of a table                                        |
+| unmarked                | a heading the Change keeps; for a table row, the heading of its Mapping or Evaluate subsection and the table's header row |
+| + heading               | a heading the Change adds                                                                                                 |
+| - heading               | a heading the Change removes; a renamed heading is a - and + pair                                                         |
+| + line of a file        | a line of a contract file, Outcome record, or Product spec after the Change                                               |
+| - line of a file        | a line of such a file as the Base holds it                                                                                |
+| unmarked line of a file | a line of such a file around an edit, as the Base holds it                                                                |
+| + line, no Product Tree | a statement of a Product with no Product Tree, by its slug                                                                |
+| - line, no Product Tree | a statement, a section, or a Glossary entry of a Product with no Product Tree, as the Base holds it                       |
 
-<rule id="review-bar">
+</declarations>
 
-A record is held only to what its review needs. A failed criterion of the declared Maturity's Definition of Ready is a blocking finding. A finding against any other record rule — among them the title and Intent word limits, section order, heading form, verdict wording, and malleability notation — is non-blocking and is returned `filed`. A blocking finding refuses only the Maturity it judges: the record publishes at the highest Maturity whose blocking criteria it meets, and at Proposed when it meets none.
+<declaration_rules>
 
-</rule>
+Declaration lines:
 
-<rule id="one-audit">
+- body-lines-only: ALWAYS: below its headers, the diff block of a Node or Decision Record holds only lines of its body, each naming its target by slug, each line of an opening by its keyword, and a DEFINES line by its keyword and its term; the diff block of a contract file, Outcome record, or Product spec holds literal lines of the file.
+- no-tag: NEVER: a Declarations line adds a tag.
+- plain-slug: ALWAYS: a slug whose test file, eval rule, or probe protocol is absent at the Base stands plain in its + line.
+- table-case: ALWAYS: a table row's case reads as its subsection's slug, a slash, and the case slug, such as date-phrases/tomorrow-5pm.
+- front-matter-block: ALWAYS: line edits that set a Node's front-matter field hold the field and its value after the Change in a yaml block before the diff, a replacement holds the whole front matter instead, a replaced spec keeps its Node's id, and a moved Node keeps its id.
+- no-index: NEVER: a record names an Index for a new Node or Decision Record.
+- move-reads: ALWAYS: under a move, a - line and each context line read the old path at the Base, and a + line holds the row as the new path holds it after the Change.
 
-Each revision of a record receives at most one change audit, and its findings never withhold publication, claiming, or execution. The author repairs what takes a minute and publishes. Before the first audit of a revision, the author checks every same-class site and every section the repair changed.
+Declaration operations:
 
-</rule>
+- one-payload: NEVER: a subsection holds both payloads, except a move that rewrites its file.
+- fence: ALWAYS: a replacement's outer fence is longer than any fence inside the file, and a block with no language fails the form check.
+- no-mode: NEVER: a header carries a file mode, or another git header stands in a record; a replacement or a move keeps the file's mode, which nothing checks.
+- operation-kinds: ALWAYS: new file creates only a contract file, an Outcome record, the Product spec, or a file of a Product with no Product Tree; a deletion or a move acts on a Node or on a Decision Record, a spec, a contract file, an Outcome record, the Product spec, or a file of a Product with no Product Tree; a replacement acts on a file of these kinds; and every file an operation names is a regular text file.
+- spec-deletion: NEVER: a Change deletes a spec apart from its Node, or deletes the Product spec.
+- one-subsection-per-file: NEVER: two subsections of a Change write, move, or delete the same file, except a file inside a moved Node other than its spec, which takes its edits in its own subsection whose reads at the Base resolve through the move, a slug rename included.
+- slug-rename: ALWAYS: a move that changes a Node's slug also renames its spec and its Outcome record to the new slug.
+- path-naming: ALWAYS: the form check names each file at the Base that names, in a link or in any other text, the path of a file or Node the Change deletes or moves, or of a file inside such a Node, and skips every Knowledge root and every file the Product declares as dated history.
 
-<rule id="intent">
+Infrastructure lines:
 
-`## Intent` runs at most 60 words including its labels and carries four parts, each a labeled line; a list inside a part stands in parentheses:
+- infrastructure-line: ALWAYS: a Node subsection ends with one infrastructure line for each Assertion it adds or replaces at verification or implementation Malleability after the Change, and a subsection that hardens its Node holds one for every Assertion the Node holds after the Change.
+- replaced-assertion: ALWAYS: an Assertion counts as added or replaced when its complete declaration differs from the Base, its complete declaration being its row and the group heading that fixes its verification type, or the whole subsection for a Mapping or Evaluate Assertion.
+- infrastructure-form: ALWAYS: the line reads `Infrastructure:`, the Assertion's slug, and the path of each Node whose test infrastructure that Assertion's Evidence needs, each path in a code span and a comma between two paths, or `none` in their place.
+- infrastructure-exists: ALWAYS: when the Refiner writes the line, each Node it names exists at the Base, or a blocking Change builds it.
+- spec-node-none: NEVER: an Assertion of a spec-malleable Node carries an infrastructure line.
+- none-leaf: ALWAYS: a Leaf that declares nothing holds none and its reason.
 
-- **What** — the Output the Change achieves: a decision or spec evolution, a lower-layer reconciliation, or both. The title names the same Output.
-- **Why** — what makes the work worth doing, in one established form: truth brought to a lower layer, an operator judgment, a prototype question, or an Output and the condition it moves.
-- **Observation** — optional: the observed state that gives rise to the Change. It is present only where such an observation exists.
-- **Evidence** — the observable result by which anyone checks that the Output is achieved.
+</declaration_rules>
 
-What, Why, and Evidence are required. Preserve observable behavior, consequential exclusions, and operator-approved prototype constraints when they shape the Output. Keep detail proportional to consequences. NEVER invent beneficiaries, measurements, business benefits, research, or rejected alternatives to lengthen the record.
+<form_check>
 
-When the Change derives from a raw submission, the Intent restates that submission in the proposer's terms as What, Why, Observation, and Evidence; an unclear part is recorded as an open question under `## Open questions`, never answered by invention.
+The form check is one standard-library script, `${SKILL_DIR}/scripts/form_check.py`, that judges a Change Draft against the record this skill states. Its module exposes one function, `check`, that returns for a request the result the script writes for it, so a sibling Change skill's script reaches the check through a `__file__`-relative import of that module.
 
-</rule>
+- form-check: ALWAYS: below Applicable, and on a publish that writes the body of an Applicable record, a program checks the form of a record before the publish, and nothing publishes while the check fails.
+- size-limit: ALWAYS: the form check fails a record that exceeds the Change Store's size limit, and names the limit.
+- one-home: NEVER: a metadata field stands in the body, or the Change Store holds a field in two places.
+- github-limit: ALWAYS: the size limit of a GitHub Change Store is 65,536 characters of issue body.
+- check-reads-only: NEVER: the form check writes a file or the Change Store; it reads the Draft and runs only reading git commands at the Base in the checkout root.
 
-<rule id="record-limits">
+The request is one JSON object on stdin with these fields:
 
-The title has at most 15 words and the Intent at most 60 words, labels included. A record over a limit is a non-blocking finding under `review-bar` that names the section, the limit, and the count.
+| Field             | Value                                                                                                                                                                 |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `draft_text`      | the Draft's text; the request names exactly one of `draft_text` and `draft_path`                                                                                      |
+| `draft_path`      | the path of the Draft's file                                                                                                                                          |
+| `checkout_root`   | the absolute path of the Product's checkout root                                                                                                                      |
+| `operation`       | `record`, `publish`, `split`, `record-child`, `merge`, `priority-decision`, or a Transition: `claim`, `release`, `submit`, `advance`, `lower`, `applied`, `abandoned` |
+| `stored_record`   | the record the Change Store holds, as an object with `metadata` and `body`, or null                                                                                   |
+| `blocker_records` | optional; the record of each Change the Draft names as a blocker, keyed by the blocker's reference in the Draft                                                       |
+| `size_limit`      | the Change Store's size limit in characters, or `github`                                                                                                              |
 
-</rule>
+The result is one JSON object on stdout. Its `status` is `pass`, `fail`, or `invalid-request`, and the script exits 0, 1, or 2 for them. Its `findings` list holds one object for each finding, with `rule`, the slug of the rule it breaks, `where`, the subsection, key, or line it names, and `detail`. A request the script cannot read yields `invalid-request`, no finding, and a `detail` that names the field.
 
-<rule id="change-type">
+The form check judges each key's presence, the type of its value, and the values a row lists; what a value states stays with the audit. It judges each Statement of Intent part's label, the order of the parts, and the word count, which holds each word that carries a letter or a digit, labels excluded, and each subsection heading's form; the Application order of the subsections and what each + line states stay with the audit.
 
-A Change whose record carries a Governance mutations or Spec mutations block is a Leaf, a Change that another Change names in `parent` is a Parent, and a Change with neither is a root. A Change never carries a mutations block while it has a child. The type derives from what the record and the store name and is never stored. A Parent carries neither a Governance mutations nor a Spec mutations block and never reaches Executable.
-
-</rule>
-
-<rule id="received-input-boundary">
-
-Preserve the proposal in the proposer's terms while excluding provider conversations, transcripts, prompt copies, cost estimates, resource accounting, routine local commands, and received conversation input from the record. The coordination store owns native issue history. Reusable learning belongs in the owning Product's knowledge root when separately authored.
-
-</rule>
-
-<rule id="lineage">
-
-`predecessors` is `[]` or the complete append-only set of Changes this Change absorbed by a merge; it contains canonical Change identities and no duplicate or self reference. `parent` is `null` or the canonical identity of the one Parent Change in the same store, and is no self reference.
-
-The `predecessors` set and the `parent` value are the only authored lineage directions. Derive roots, Leaves, Parents, children, and reverse changeset views. NEVER restate lineage in the body or maintain an authoritative child list. A split creates every child naming the source in `parent`, and the source drops its Governance mutations and Spec mutations blocks. A merge closes the absorbed Change `Abandoned` and adds it to the survivor's `predecessors`. A reframe edits the Change in place and lowers its Maturity to `Proposed`. No operation writes or accepts `Refined`.
-
-</rule>
-
-<rule id="blockers">
-
-`blocked_by` names every known Change that must close `Applied`, or resolve through the Change that absorbed it, before this Change is unblocked. The list is mutable, contains canonical Change identities, and contains no duplicate or self reference. A blocker cycle prevents Sliced and Executable Maturity.
-
-A blocker closed `Applied` satisfies the dependency; an open blocker remains a blocker; a blocker closed `Abandoned` that another Change absorbed resolves through the Change that absorbed it, which satisfies the dependency once it closes `Applied`; a blocker closed `Abandoned` that no Change absorbed returns the dependent Change to refinement. Refinement may continue while blockers remain unresolved. Execution requires a Claimed, Executable Leaf whose every predecessor is closed and whose blockers are resolved.
-
-</rule>
-
-<rule id="governance">
-
-`## Governance` lists every record the Output touches or that governs it, by its path from `spx/`, each with the verdict `in line`, `amended`, or `new`. A record the Change amends or adds takes a block under `governance-mutations`; an `in line` record takes none. Existing paths resolve; a `new` record is labeled as new.
-
-</rule>
-
-<rule id="governance-mutations">
-
-`## Governance mutations` holds one block for each amended or new record, in record order. The block opens with `<path> states:` and lists the exact text of every decision the Output adds or amends, each opening with a slug and a colon. A Change never overrides a decision or an assertion; the blocks author truth changes before dependent specs and implementation.
-
-</rule>
-
-<rule id="spec-mutations">
-
-`## Spec mutations` holds one block for each affected or intended Node, in execution order, providers first. The block opens with `<path>: <malleability before> -> <malleability after>`, which names the Node. From Framed on, the block continues with `<file> states:` and the Node's assertions as bare bullets. Malleability before is the value the Node declares before the Change, `none` for a Node the Change creates. Malleability after is the value the Node declares once the Change is applied: `spec`, `verification`, or `implementation`, an absent field meaning `implementation`. The malleability order from most to least malleable is `spec`, `verification`, `implementation`; the least malleable target is the Malleability after value latest in that order. Malleability is a per-Node fact; the record carries no Change-wide target. Existing paths resolve; an intended Node is labeled as intended.
-
-Execution takes the Governance mutations blocks, then the Spec mutations blocks, each in record order. The record names no result, producer, or Verifier: execution selects each block's results and Verifiers from the merge composition for the Node's malleability after and from the decision-record audit of a record.
-
-</rule>
-
-<rule id="assumptions">
-
-`## Assumptions` stands between `## Spec mutations` and `## Slice` and holds each question the Frame settled as its answer and one sentence of reason. It is absent when the Frame settled no question. A question that no assumption can defend is not recorded here: refinement returns it, with its best answer, in its result, records it under `open-questions` where the Maturity admits that section, leaves the record at the Maturity the question blocks, and continues on every part that does not depend on the answer.
-
-</rule>
-
-<rule id="slice">
-
-`## Slice` holds `- Repository:` and `- Check:`: the one repository of the slice and its one observable check, which is one trigger and its result. The slice is one coherent, independently integrable unit whose dependencies and sequence are resolved.
-
-</rule>
-
-<rule id="open-questions">
-
-`## Open questions` holds each known question that can change the intended Output, unanswered, and ends the record. A Proposed record may carry it; a Framed record and every higher Maturity leave it empty or omit it, because a Frame settles each question as an assumption under `assumptions` or in a Governance mutations or Spec mutations block. A question no assumption can defend stays an open question, as `assumptions` states, and blocks Framed.
-
-</rule>
-
-<rule id="no-execution-status">
-
-The record carries no execution status: no Node state, no required state, no `## Artifacts` section or link to produced content, and no progress. Execution records its progress only in its Handoff, which the Executor posts after every completed block and after integration, and which carries transient continuation: branch or changeset with its head commit, the completed Governance mutations and Spec mutations blocks, and the next block, blockers, and non-obvious hazards. Routine command logs, run tokens, verdicts, findings, verification history, and session narrative stay outside the Change.
-
-</rule>
-
-<rule id="body-authority">
-
-The body carries no attestation, accountable-person, priority, or overrule text. A line that records who approved, attested, prioritized, confirmed, or is accountable for the Change, or that overrides a rule, is a defect wherever it stands in the body.
-
-</rule>
-
-<rule id="maturity-and-authority">
-
-Maturity records refinement readiness and may move backward when its Definition of Ready becomes false. Lifecycle records holding, submission, or termination and changes independently. Applied and Abandoned are terminal Lifecycle values.
-
-Maturity advances past Proposed, Framed, and Sliced only when the target level's complete Definition of Ready holds and the store shows the Product's Maintainer's move of the Change out of `Submitted` to `Available` while the Change held the Maturity it leaves. At Proposed that move is the priority decision; at Framed it attests that the Change captures the operator's intent; at Sliced it confirms the slice. A Change the Maintainer moves out of `Submitted` at Proposed is framed next, ahead of the Product's other Proposed Changes. The Refiner advances Sliced to Executable inside the authority of the confirmed slice, with no further move, by resolving implementation detail; a reopened product or architecture judgment blocks Executable advancement.
-
-Authority is read from the store and never from the body. The store's field-change event for the Lifecycle move out of `Submitted` gives the actor and the time; no confirmation comment is posted or read.
-
-A Change is submitted only at Proposed, Framed, or Sliced; an Executable Change is never submitted, because no authority follows Executable. `Submitted` means the record waits for the Product's Maintainer's review and is not ready for work at the next Maturity: no session claims, refines, or executes it until the Maintainer moves it out of `Submitted`. A confirming move changes Lifecycle only and writes no Maturity; a rejecting move follows a Maturity lowering as the rule's next paragraph states.
-
-A rejection is an instruction naming what to fix, sent to the Director or the Product's Maintainer or written as a plain comment on the Change; no rejection record exists, and the holder repairs the record and submits it again. A rejection at Framed or Sliced lowers Maturity one level, and whoever rejects writes the lowered Maturity before the Lifecycle move out of `Submitted`, so that move is read at the lowered Maturity under `authority-read` and authorizes leaving only the lowered Maturity, the one the Change held before the rejected stage. The order is one: the holder's release comes first, the rejecting lowering of Maturity second, the rejecting move out of `Submitted` third, and further refinement only after a session claims the Change again. A rejection at Proposed leaves the Change `Submitted`, and it means not now.
-
-A Claimed holder writes a Handoff and releases the Change before the rejecting move lowers Maturity; the Executor's Handoffs after a completed block and after integration leave the Change Claimed. Author, Fixer, and Verifier roles hold no claim and gain no integration authority from editing or auditing the record.
-
-</rule>
-
-<rule id="store-independence">
-
-Each of the seven fields has exactly one home in each place that holds the Change, and no place writes a field twice. The local draft carries all seven as its front matter above the body. A coordination store holds each field in one native feature assigned to that field for that store, and its body holds the Intent and the sections the Maturity adds, with no front matter and no lineage line. Persistence writes each field to its home and the body to the store body, reads each back unchanged, and reports success only then; importing a published Change into a draft reads each field from its home. A coordination-store limit never shapes the record.
-
-Store commands, provider identifiers, issue and field identifiers, revision selectors, concurrency observations, holder observations, field-change events, and Lifecycle comments are store state outside the record.
-
-</rule>
-
-<rule id="compatibility-boundary">
-
-Inventory the front-matter key occurrences before interpreting the body. A candidate is inside the contract only when it carries each of the seven closed-set keys exactly once and no other key, and its body does not open with `# Output`. Stripped front matter, a missing or repeated required key, and any extra key — including `change_ref` — place the candidate outside the contract, and so does a body that opens with `# Output`.
-
-A candidate outside the contract receives no judgment, migration, alias, inferred front matter, or body-line lineage interpretation; report it as outside the contract with the expected and observed key inventories, or with the observed opening heading. A record in the `# Output` form is never converted in place: its next revision authors the record anew in the final format from the proposal it carries, and only that newly authored record is judged against the contract. No revision preserves the `# Output` form. A candidate inside the contract remains judgeable when a value, section, body line, or Maturity-specific requirement violates the record contract or the selected Definition of Ready. Only the final format is written, judged, and executed: a record that carries `## Nodes`, `## Assertion operations`, `## Decisions`, `## Mutations`, `## Activities`, or `## Artifacts` receives no migration, alias, or inferred field, and its next revision authors the record anew from the proposal it carries, before its next execution.
-
-</rule>
-
-</record_rules>
+</form_check>
 
 <success_criteria>
 
-- Each record rule is stated once, in `<record_rules>`; a Definition of Ready criterion cites the record rule it applies and adds only the level's own condition.
-- Every loaded criterion has a stable identifier and can be judged from the complete record, the store state the `Lifecycle` reads return, and necessary repository references.
-- The authority for each Maturity advance is read from the store's field-change event for the move out of `Submitted` under `authority-read`, and no rule or criterion requires body authority text or a confirmation comment.
-- Every finding's blocking status follows `review-bar` alone.
-- The four Maturity values, the five Lifecycle values, lineage, the Leaf, Parent, and root types, blockers, authority, product truth, and continuation remain distinct.
+- The skill states the Change record, the Change Draft, and the form check's request and result as the Change record decision states them, and names no rule the decision does not state.
+- Each rule appears once, under the slug the decision gives it.
+- A consumer reaches the form check through the `check` function of the script, or through the script's stdin and stdout, and publishes only after a result with status `pass`.
 
 </success_criteria>
