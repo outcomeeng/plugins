@@ -33,7 +33,7 @@ Exact external API fields, command names, filesystem paths, and attributed quota
 
 `runtime` remains valid for execution-time behavior or an execution environment such as Python when no agent concept is meant.
 
-**Change, Output, Leaf, and Parent.** The chapter `versions/4.0/methodology/change/changes.md` of `outcomeeng/methodology` is the home of what a Change, an Output, a Leaf, and a Parent are; the roles below use those terms as that chapter defines them and hold whether or not a repository declares a coordination overlay.
+**Change, Output, Leaf, and Parent.** The chapter `versions/4.0/methodology/changes/changes.md` of `outcomeeng/methodology` is the home of what a Change, an Output, a Leaf, and a Parent are; the roles below use those terms as that chapter defines them and hold whether or not a repository declares a coordination overlay.
 
 **Role.** What an agent session does for a Change; a session holds a role for that Change and may hold another in a different one. A role name is capitalized, so it stands apart from the everyday word. One round is one Author or Fixer pass together with every Verifier pass it triggers.
 
@@ -41,13 +41,13 @@ A Role does not identify a subagent definition. A configured Verifier names a su
 
 **Refiner.** The role of the Change's holder during refinement. The agent session in conversation with the operator holds it, realized by loading into that conversation the refinement skills the Change's Maturity routes to; the role is never dispatched as a subagent and never loaded from an agent definition.
 
-**Executor.** The role of the Change's holder during execution. The Executor takes a Leaf's `## Governance mutations` blocks and then its `## Spec mutations` blocks, each in record order, delegates production and verification, integrates the changeset, and escalates a reopened product or architecture judgment to the operator. The Executor produces no artifact other than a mechanical repair. A mechanical repair fixes a finding and changes no behavior or decision: a path or link, a typo, a wording the finding states, or a renamed identifier. A mechanical repair never covers decision-record text. The Executor makes it directly, with no Fixer round, and every other repair goes to a Fixer.
+**Applier.** The role of the Change's holder during Application. The Applier takes a Leaf's Declarations subsections in Application order, delegates production and verification, integrates the Changeset, and escalates a reopened product or architecture judgment to the operator. The Applier produces no artifact other than a mechanical repair. A mechanical repair fixes a finding and changes no behavior or decision: a path or link, a typo, a wording the finding states, or a renamed identifier. A mechanical repair never covers decision-record text. The Applier makes it directly, with no Fixer round, and every other repair goes to a Fixer.
 
 **Author.** The role held by the agent session that produces the artifacts of one round: decisions, specs, verification artifacts, or implementation.
 
 **Fixer.** The Author role in a later round on the same subject.
 
-The Author and the Fixer use separate agent sessions, whoever calls them. A mechanical repair is no round, and the Executor that makes it holds neither the Author nor the Fixer Role.
+The Author and the Fixer use separate agent sessions, whoever calls them. A mechanical repair is no round, and the Applier that makes it holds neither the Author nor the Fixer Role.
 
 **Verifier.** The role held by the agent session that produces an agentic verdict: an Auditor for audit, a Reviewer for review.
 
@@ -61,30 +61,30 @@ The terms agent harness, agent, agent adapter, and agent session stay separate s
 
 The five roles name what a session does for a Change independently of which harness, agent, or adapter runs it. Separate sessions reduce attachment to earlier choices.
 
-The Refiner is the operator's conversation because refinement is an interview. Field names in the SPX CLI's verification payloads — `producer`, `expectedProducer`, `recordedByRunDriver`, the run driver — are schema vocabulary for run provenance, and pattern words such as orchestrator or applier describe a shape of dispatch; neither is a role name.
+The Refiner is the operator's conversation because refinement is an interview. Field names in the SPX CLI's verification payloads — `producer`, `expectedProducer`, `recordedByRunDriver`, the run driver — are schema vocabulary for run provenance, and a pattern word such as orchestrator describes a shape of dispatch; neither is a role name.
 
 ## Product properties
 
-1. Agent-facing decisions, specs, skills, and instructions use agent harness, agent, agent adapter, agent session, subagent, and subagent definition for their defined meanings; product domains identify which concept they govern and preserve those distinctions in configuration, invocation, observation, and resume behavior.
-2. Agent-facing decisions, specs, skills, and instructions name who refines, executes, produces, repairs, or verifies a Change with the capitalized Role names Refiner, Executor, Author, Fixer, and Verifier, with Auditor and Reviewer as the two Verifier kinds; the Refiner is held by the operator's conversation.
-3. The Author and the Fixer use separate agent sessions, whoever calls them; a mechanical repair is no round, and the Executor that makes it holds neither Role.
-4. Agent-facing decisions, specs, skills, and instructions call authority over a scope that its holder keeps across Changes a position and the next higher rank that holds a question's context the principal of the position that passes it, and never use position for a Role.
+1. concept-distinctions: Agent-facing decisions, specs, skills, and instructions use agent harness, agent, agent adapter, agent session, subagent, and subagent definition for their defined meanings; product domains identify which concept they govern and preserve those distinctions in configuration, invocation, observation, and resume behavior.
+2. capitalized-roles: Agent-facing decisions, specs, skills, and instructions name who refines, applies, produces, repairs, or verifies a Change with the capitalized Role names Refiner, Applier, Author, Fixer, and Verifier, with Auditor and Reviewer as the two Verifier kinds; the Refiner is held by the operator's conversation.
+3. separate-author-fixer: The Author and the Fixer use separate agent sessions, whoever calls them; a mechanical repair is no round, and the Applier that makes it holds neither Role.
+4. position-and-principal: Agent-facing decisions, specs, skills, and instructions call authority over a scope that its holder keeps across Changes a position and the next higher rank that holds a question's context the principal of the position that passes it, and never use position for a Role.
 
 ## Verification
 
-- ALWAYS: the Executor produces no artifact other than a mechanical repair, which fixes a finding, changes no behavior or decision, and never covers decision-record text; the Executor makes it directly with no Fixer round, and every other repair goes to a Fixer
-- ALWAYS: a mechanical repair is no round, and the Executor that makes it holds neither the Author nor the Fixer Role
+- applier-mechanical-only: ALWAYS: the Applier produces no artifact other than a mechanical repair, which fixes a finding, changes no behavior or decision, and never covers decision-record text; the Applier makes it directly with no Fixer round, and every other repair goes to a Fixer
+- repair-no-round: ALWAYS: a mechanical repair is no round, and the Applier that makes it holds neither the Author nor the Fixer Role
 
 ### Audit
 
-- ALWAYS: decisions, specs, skills, and instructions that govern Codex, Claude Code, agent selection, agent configuration, agent adapters, agent sessions, plugin bootstrap, skill bootstrap, isolated agent execution, or agent observation identify whether they describe the agent harness, an agent, an agent adapter, or an agent session ([audit])
-- ALWAYS: each product domain whose behavior configures, launches, resumes, isolates, equips, or observes coding agents states in its governing spec or decision whether it governs the agent harness, an agent, an agent adapter, or an agent session ([audit])
-- NEVER: use unqualified agent for adapter implementation, session identity, plugin package, marketplace package, or the repository-managed agent harness when that specific concept is meant ([audit])
-- ALWAYS: authored agent terminology follows the prohibited-terminology table, choosing the replacement from the subject's meaning and preserving exact external identifiers and attributed quotations only where their spelling is required ([audit])
-- NEVER: conflate discovery of a subagent definition with execution of an agent session ([audit])
-- NEVER: introduce a separate Fixer subagent definition solely to represent the Fixer Role ([audit])
-- ALWAYS: decisions, specs, skills, and instructions that describe who refines, executes, produces, repairs, or verifies a Change name the role — Refiner, Executor, Author, Fixer, or Verifier, with Auditor and Reviewer as the Verifier kinds — capitalized ([audit])
-- ALWAYS: the Refiner role is held by the agent session in conversation with the operator, realized by loading into that conversation the refinement skills the Change's Maturity routes to, never by dispatching a subagent or loading an agent definition ([audit])
-- ALWAYS: the Author and the Fixer use separate agent sessions, whoever calls them ([audit])
-- NEVER: an SPX payload field name — `producer`, `expectedProducer`, `recordedByRunDriver`, the run driver — or a dispatch-pattern word such as orchestrator or applier stands in for a role name ([audit])
-- ALWAYS: decisions, specs, skills, and instructions that name authority over a scope that its holder keeps across Changes call it a position and the next higher rank that holds a question's context its principal, and never use position as a synonym for a Role ([audit])
+- harness-concept-named: ALWAYS: decisions, specs, skills, and instructions that govern Codex, Claude Code, agent selection, agent configuration, agent adapters, agent sessions, plugin bootstrap, skill bootstrap, isolated agent execution, or agent observation identify whether they describe the agent harness, an agent, an agent adapter, or an agent session ([audit])
+- domain-states-concept: ALWAYS: each product domain whose behavior configures, launches, resumes, isolates, equips, or observes coding agents states in its governing spec or decision whether it governs the agent harness, an agent, an agent adapter, or an agent session ([audit])
+- no-unqualified-agent: NEVER: use unqualified agent for adapter implementation, session identity, plugin package, marketplace package, or the repository-managed agent harness when that specific concept is meant ([audit])
+- prohibited-terms: ALWAYS: authored agent terminology follows the prohibited-terminology table, choosing the replacement from the subject's meaning and preserving exact external identifiers and attributed quotations only where their spelling is required ([audit])
+- discovery-not-execution: NEVER: conflate discovery of a subagent definition with execution of an agent session ([audit])
+- no-fixer-definition: NEVER: introduce a separate Fixer subagent definition solely to represent the Fixer Role ([audit])
+- role-names: ALWAYS: decisions, specs, skills, and instructions that describe who refines, applies, produces, repairs, or verifies a Change name the role — Refiner, Applier, Author, Fixer, or Verifier, with Auditor and Reviewer as the Verifier kinds — capitalized ([audit])
+- refiner-conversation: ALWAYS: the Refiner role is held by the agent session in conversation with the operator, realized by loading into that conversation the refinement skills the Change's Maturity routes to, never by dispatching a subagent or loading an agent definition ([audit])
+- separate-sessions: ALWAYS: the Author and the Fixer use separate agent sessions, whoever calls them ([audit])
+- no-payload-role: NEVER: an SPX payload field name — `producer`, `expectedProducer`, `recordedByRunDriver`, the run driver — or a dispatch-pattern word such as orchestrator stands in for a role name ([audit])
+- position-term: ALWAYS: decisions, specs, skills, and instructions that name authority over a scope that its holder keeps across Changes call it a position and the next higher rank that holds a question's context its principal, and never use position as a synonym for a Role ([audit])
