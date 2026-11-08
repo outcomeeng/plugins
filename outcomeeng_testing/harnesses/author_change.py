@@ -32,6 +32,7 @@ import sys
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
+from functools import cache
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType
@@ -44,6 +45,33 @@ FIXTURES: Final = REPO_ROOT / "outcomeeng_testing" / "fixtures" / "author_change
 
 STORE_IDENTITY: Final = "example-org/example-changes"
 DEFAULT_BRANCH_HEAD: Final = "2222222222222222222222222222222222222222"
+STORED_BASE: Final = "1111111111111111111111111111111111111111"
+SUBJECT_NUMBER: Final = 5
+BLOCKER_NUMBER: Final = 101
+ABSORBED_NUMBER: Final = 6
+EARLIER_PREDECESSOR_NUMBER: Final = 7
+ALTERNATE_SIZE_LIMIT: Final = 4096
+HANDOFF: Final = {
+    "branch": "example-branch",
+    "head": "4444444444444444444444444444444444444444",
+    "next": "example-subsection",
+}
+SESSION_IDENTITY: Final = {
+    "login": "example-login",
+    "harness": "example-harness",
+    "session": "example-session",
+    "machine": "example-user@example-host",
+    "worktree": "/example/worktree",
+}
+CHECK_PASSES: Final = {"status": "pass", "findings": []}
+CHECK_FAILS: Final = {
+    "status": "fail",
+    "findings": [
+        {"rule": "record-keys", "where": "metadata", "detail": "a key is missing"}
+    ],
+}
+TRANSITION_DONE: Final = {"status": "done"}
+TRANSITION_REFUSED: Final = {"status": "refused"}
 
 #: Vocabulary of the `gh` command line and of GitHub's REST and GraphQL
 #: interfaces, which `gh` and GitHub own.
@@ -66,6 +94,16 @@ SINGLE_SELECT_FIELDS: Final = frozenset(
     {"Product", "Maturity", "Lifecycle", "Priority", "Value", "Investment"}
 )
 NUMBER_FIELDS: Final = frozenset({"Parent"})
+
+
+def issue_url(number: int) -> str:
+    """The URL the controlled store reports for an issue."""
+    return f"https://github.com/{STORE_IDENTITY}/issues/{number}"
+
+
+def canonical_identity(number: int) -> str:
+    """The canonical identity of a Change, as the Predecessors field holds it."""
+    return f"{STORE_IDENTITY}#{number}"
 
 
 class Stub(StrEnum):
@@ -160,6 +198,15 @@ ORGANIZATION_FIELDS: Final = {
 }
 
 
+@dataclass
+class Result:
+    """What one command the store answered returned; the script's shape."""
+
+    returncode: int
+    stdout: str
+    stderr: str
+
+
 class Store:
     """The Change store: issues, fields, blockers, comments, and body edits."""
 
@@ -210,8 +257,6 @@ class Store:
 
     # --- the command runner the script receives ---------------------------
     def runner(self, arguments: Sequence[str]) -> Any:
-        from outcomeeng_testing.harnesses.author_change import Result
-
         argv = list(arguments)
         program = argv[0]
         if program == GIT:
@@ -238,8 +283,6 @@ class Store:
         return variables
 
     def _graphql(self, rest: Sequence[str]) -> Any:
-        from outcomeeng_testing.harnesses.author_change import Result
-
         variables = self._variables(rest)
         query = variables["query"]
         if GRAPHQL_ORGANIZATION in query:
@@ -287,7 +330,7 @@ class Store:
                         "number": number,
                         "title": issue.title,
                         "body": issue.body,
-                        "url": f"https://github.com/{STORE_IDENTITY}/issues/{number}",
+                        "url": issue_url(number),
                         "assignees": {"nodes": [{"login": a} for a in issue.assignees]},
                         "userContentEdits": {
                             "nodes": [
@@ -302,8 +345,6 @@ class Store:
         }
 
     def _set_field(self, variables: Mapping[str, str]) -> Any:
-        from outcomeeng_testing.harnesses.author_change import Result
-
         issue = next(i for i in self.issues.values() if i.node_id == variables["i"])
         name = variables["f"].removeprefix("IF_")
         raw = variables["v"]
@@ -320,8 +361,6 @@ class Store:
 
     # --- REST -------------------------------------------------------------
     def _rest(self, rest: Sequence[str]) -> Any:
-        from outcomeeng_testing.harnesses.author_change import Result
-
         path = rest[1]
         _, _, tail = path.partition(f"repos/{STORE_IDENTITY}/issues/")
         number = int(tail.split("/")[0])
@@ -333,7 +372,7 @@ class Store:
                     {
                         "number": blocker,
                         "id": self.issues[blocker].database_id,
-                        "html_url": f"https://github.com/{STORE_IDENTITY}/issues/{blocker}",
+                        "html_url": issue_url(blocker),
                     }
                     for blocker in issue.blockers
                 ]
@@ -359,8 +398,6 @@ class Store:
 
     # --- gh issue edit and create ----------------------------------------
     def _edit(self, rest: Sequence[str]) -> Any:
-        from outcomeeng_testing.harnesses.author_change import Result
-
         number = int(rest[2])
         issue = self.issues[number]
         interference = self.interference
@@ -390,8 +427,6 @@ class Store:
         return Result(0, "", "")
 
     def _create(self, rest: Sequence[str]) -> Any:
-        from outcomeeng_testing.harnesses.author_change import Result
-
         number = self._next_number
         self._next_number += 1
         title = rest[rest.index(GH_TITLE_FLAG) + 1]
@@ -399,7 +434,7 @@ class Store:
         issue = self.seed(number, title, body, {})
         self.land(issue, body)
         self.log(EventKind.CREATE, number=number, title=title, body=body)
-        return Result(0, f"https://github.com/{STORE_IDENTITY}/issues/{number}\n", "")
+        return Result(0, issue_url(number) + "\n", "")
 
     # --- effect of a Transition ------------------------------------------
     def apply_transition(self, request: Mapping[str, Any]) -> None:
@@ -410,15 +445,6 @@ class Store:
             issue.fields["Lifecycle"] = "Abandoned"
             issue.open = False
         issue.comments.append(dict(request))
-
-
-@dataclass
-class Result:
-    """What one command the store answered returned; the script's shape."""
-
-    returncode: int
-    stdout: str
-    stderr: str
 
 
 @dataclass
@@ -484,6 +510,62 @@ def transition(request, store=None, *, run=None, root=None):
 '''
 
 
+def seed_leaf(
+    store: Store,
+    maturity: str,
+    *,
+    number: int = SUBJECT_NUMBER,
+    title: str = "Greet the addressee by name",
+    body: str | None = None,
+    assignees: Sequence[str] = (),
+    blockers: Sequence[int] = (),
+    base: str | None = STORED_BASE,
+    extra_fields: Mapping[str, Any] | None = None,
+) -> Issue:
+    """Seed a Leaf at a Maturity with the body of the stored-leaf fixture."""
+    text = body if body is not None else (FIXTURES / "stored-leaf-body.md").read_text()
+    issue = store.seed(
+        number,
+        title,
+        text,
+        {
+            "Product": "example",
+            "Maturity": maturity,
+            "Lifecycle": "Available",
+            "Base": base,
+            **(extra_fields or {}),
+        },
+        blockers=blockers,
+        assignees=assignees,
+    )
+    store.land(issue, text)
+    return issue
+
+
+def request_for(
+    operation: str, fields: Mapping[StrEnum, Any]
+) -> Callable[[Path], dict[str, Any]]:
+    """The request the script reads: the operation, the store, the root, and the fields.
+
+    A field value that is callable receives the checkout root the harness
+    provisions, so a request can name a path inside it.
+    """
+
+    def build(checkout: Path) -> dict[str, Any]:
+        vocabulary = load_script().RequestField
+        request: dict[str, Any] = {
+            vocabulary.OPERATION: operation,
+            vocabulary.STORE: STORE_IDENTITY,
+            vocabulary.CHECKOUT_ROOT: str(checkout),
+            vocabulary.IDENTITY: SESSION_IDENTITY,
+        }
+        for key, value in fields.items():
+            request[key] = value(checkout) if callable(value) else value
+        return request
+
+    return build
+
+
 @dataclass
 class Observation:
     exit_code: int
@@ -492,6 +574,7 @@ class Observation:
     bridge: Bridge
     calls: list[list[str]]
     checkout_entries_after: tuple[str, ...]
+    checkout_files: dict[str, str]
 
 
 def build_plugin_tree(
@@ -522,6 +605,7 @@ def load_copied_script(path: Path) -> ModuleType:
     return module
 
 
+@cache
 def load_script() -> ModuleType:
     """The script as authored, for its exported vocabulary."""
     spec = importlib.util.spec_from_file_location("author_change_source", SCRIPT)
@@ -584,4 +668,9 @@ def run_script(
             checkout_entries_after=tuple(
                 sorted(path.name for path in checkout.iterdir())
             ),
+            checkout_files={
+                path.name: path.read_text(encoding="utf-8")
+                for path in checkout.iterdir()
+                if path.is_file()
+            },
         )

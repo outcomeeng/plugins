@@ -405,12 +405,16 @@ def form_check(request: dict[str, Any]) -> dict[str, Any]:
     return function(request)
 
 
-def transition(request: dict[str, Any]) -> dict[str, Any]:
+def transition_function() -> Callable[[dict[str, Any]], dict[str, Any]]:
     module = load_sibling(TRANSITION_SKILL, TRANSITION_MODULE, "change_transition")
     function: Callable[[dict[str, Any]], dict[str, Any]] = getattr(
         module, TRANSITION_FUNCTION
     )
-    return function(request)
+    return function
+
+
+def transition(request: dict[str, Any]) -> dict[str, Any]:
+    return transition_function()(request)
 
 
 def gh(session: Session, arguments: Sequence[str], read: str) -> str:
@@ -579,7 +583,7 @@ def read_stored(session: Session, number: int) -> Stored:
     ]
     parent = by_name.get(FieldName.PARENT)
     predecessors = by_name.get(FieldName.PREDECESSORS)
-    metadata: dict[str, Any] = {
+    metadata: dict[Metadata, Any] = {
         Metadata.TITLE: issue["title"],
         Metadata.PRODUCT: by_name.get(FieldName.PRODUCT),
         Metadata.MATURITY: by_name.get(FieldName.MATURITY),
@@ -590,7 +594,11 @@ def read_stored(session: Session, number: int) -> Stored:
         else issue_reference(session.store, int(float(parent))),
         Metadata.PREDECESSORS: []
         if not predecessors
-        else [item for item in str(predecessors).split(LIST_SEPARATOR) if item],
+        else [
+            issue_reference(session.store, parse_reference(item, session.store))
+            for item in str(predecessors).split(LIST_SEPARATOR)
+            if item
+        ],
         Metadata.BLOCKERS: blockers,
         Metadata.BASE: by_name.get(FieldName.BASE),
         Metadata.PRIORITY: by_name.get(FieldName.PRIORITY),
@@ -647,14 +655,16 @@ def check_form(
     draft: Draft,
     operation: FormCheckOperation,
     stored: Stored | None,
-    blockers: Sequence[Stored],
+    blockers: Mapping[str, Stored],
 ) -> None:
     request = {
         CheckRequestField.DRAFT_TEXT: draft.text,
         CheckRequestField.CHECKOUT_ROOT: session.checkout_root,
         CheckRequestField.OPERATION: operation.value,
         CheckRequestField.STORED_RECORD: stored.as_record() if stored else None,
-        CheckRequestField.BLOCKER_RECORDS: [entry.as_record() for entry in blockers],
+        CheckRequestField.BLOCKER_RECORDS: {
+            reference: entry.as_record() for reference, entry in blockers.items()
+        },
         CheckRequestField.SIZE_LIMIT: session.size_limit,
     }
     result = form_check({key.value: value for key, value in request.items()})
@@ -665,11 +675,11 @@ def check_form(
         )
 
 
-def read_blockers(session: Session, draft: Draft) -> list[Stored]:
-    return [
-        read_stored(session, parse_reference(reference, session.store))
+def read_blockers(session: Session, draft: Draft) -> dict[str, Stored]:
+    return {
+        str(reference): read_stored(session, parse_reference(reference, session.store))
         for reference in draft.metadata.get(Metadata.BLOCKERS, []) or []
-    ]
+    }
 
 
 def write_file(directory: Path, name: str, content: str) -> Path:
@@ -857,7 +867,9 @@ def intended_metadata(
 ) -> dict[str, Any]:
     intended = dict(stored.metadata)
     for key in Metadata:
-        if key == Metadata.HOLDER or key.value not in draft.metadata:
+        if key in (Metadata.HOLDER, Metadata.MATURITY):
+            continue
+        if key.value not in draft.metadata:
             continue
         if key == Metadata.BASE and not body_written:
             continue
@@ -923,7 +935,8 @@ def publish(
     stored_maturity = stored.metadata.get(Metadata.MATURITY.value)
     lowered: str | None = None
     if reframe:
-        lowered = Maturity.PROPOSED.value
+        if stored_maturity != Maturity.PROPOSED.value:
+            lowered = Maturity.PROPOSED.value
     elif body_changed and stored_maturity == Maturity.APPLICABLE.value:
         lowered = Maturity.SLICED.value
     latest = read_stored(session, number)
@@ -1031,7 +1044,6 @@ def record(
     session.writes.append("create")
     created = read_stored(session, number)
     is_child = metadata.get(Metadata.PARENT.value) is not None
-    leaf = DECLARATIONS_HEADING in draft.body
     wanted: dict[FieldName, Any] = {
         FieldName.PRODUCT: metadata.get(Metadata.PRODUCT.value),
         FieldName.MATURITY: Maturity.PROPOSED.value,
@@ -1047,8 +1059,7 @@ def record(
         wanted[FieldName.PREDECESSORS] = field_value(
             FieldName.PREDECESSORS, metadata[Metadata.PREDECESSORS.value], session.store
         )
-    if leaf:
-        wanted[FieldName.BASE] = default_branch_head(session)
+    wanted[FieldName.BASE] = default_branch_head(session)
     for name, value in wanted.items():
         if value is not None:
             set_field(session, created.node_id, name, value)
@@ -1084,8 +1095,8 @@ def split(
     stored = read_stored(session, number)
     if stored.metadata.get(Metadata.MATURITY.value) == Maturity.APPLICABLE.value:
         raise InvalidRequest("a split accepts only a Leaf below Applicable")
-    if DECLARATIONS_HEADING not in stored.body:
-        raise InvalidRequest("a split accepts only a Leaf")
+    if stored.metadata.get(Metadata.BASE.value) is None:
+        raise InvalidRequest("a split accepts only a Leaf, and a Parent holds no base")
     reference = issue_reference(session.store, number)
     created: list[int] = []
     products: list[str] = []
@@ -1142,6 +1153,7 @@ def draft_from_store(session: Session, number: int, destination: str) -> dict[st
 def merge(
     session: Session, survivor: int, absorbed: int, reason: str
 ) -> dict[str, Any]:
+    transition_function()
     kept = read_stored(session, survivor)
     predecessors = list(kept.metadata.get(Metadata.PREDECESSORS.value) or [])
     entry = issue_reference(session.store, absorbed)
