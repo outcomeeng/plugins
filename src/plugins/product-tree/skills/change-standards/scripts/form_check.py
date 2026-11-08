@@ -23,11 +23,11 @@ import json
 import re
 import subprocess
 import sys
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Final, Protocol, TextIO
+from typing import Any, Final, Literal, Protocol, TextIO
 
 EXIT_PASS: Final = 0
 EXIT_FAIL: Final = 1
@@ -223,7 +223,6 @@ GIT_HEADER_CREATE: Final = "new file"
 GIT_HEADER_RENAME_FROM: Final = "rename from "
 GIT_HEADER_RENAME_TO: Final = "rename to "
 
-READING_GIT_COMMANDS: Final = frozenset({"cat-file", "ls-tree", "grep", "rev-parse"})
 
 SHA_PATTERN: Final = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 SLUG_PATTERN: Final = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -296,7 +295,6 @@ DIFF_LANGUAGE: Final = "diff"
 TEXT_LANGUAGE: Final = "text"
 YAML_LANGUAGE: Final = "yaml"
 REGULAR_MODES: Final = frozenset({"100644", "100755"})
-TREE_MODE: Final = "040000"
 
 
 @dataclass(frozen=True)
@@ -462,7 +460,7 @@ class Section:
 
 @dataclass
 class Draft:
-    metadata: dict[str, Any]
+    metadata: dict[str, Scalar]
     duplicate_keys: list[str]
     bad_lines: list[tuple[int, str]]
     body_lines: list[tuple[int, str]]
@@ -472,7 +470,10 @@ class Draft:
     has_front_matter: bool
 
 
-def parse_scalar(raw: str) -> Any:
+type Scalar = str | int | list[Scalar] | None
+
+
+def parse_scalar(raw: str) -> Scalar:
     text = raw.strip()
     if text in {"", "null", "~"}:
         return None
@@ -509,8 +510,8 @@ def split_flow(inner: str) -> list[str]:
 
 def parse_metadata(
     lines: Sequence[tuple[int, str]],
-) -> tuple[dict[str, Any], list[str], list[tuple[int, str]]]:
-    metadata: dict[str, Any] = {}
+) -> tuple[dict[str, Scalar], list[str], list[tuple[int, str]]]:
+    metadata: dict[str, Scalar] = {}
     duplicates: list[str] = []
     bad: list[tuple[int, str]] = []
     current: str | None = None
@@ -520,9 +521,11 @@ def parse_metadata(
         if text.startswith((" ", "\t")) and current is not None:
             stripped = text.strip()
             if stripped.startswith("- "):
-                if not isinstance(metadata[current], list):
-                    metadata[current] = []
-                metadata[current].append(parse_scalar(stripped[2:]))
+                items = metadata[current]
+                if not isinstance(items, list):
+                    items = []
+                    metadata[current] = items
+                items.append(parse_scalar(stripped[2:]))
                 continue
         match = METADATA_LINE_PATTERN.match(text)
         if match is None:
@@ -536,10 +539,15 @@ def parse_metadata(
     return metadata, duplicates, bad
 
 
-def scan_elements(lines: Sequence[tuple[int, str]]) -> list[Any]:
+type HeadingElement = tuple[Literal["heading"], int, str, int]
+type LineElement = tuple[Literal["line"], int, str]
+type Element = Block | HeadingElement | LineElement
+
+
+def scan_elements(lines: Sequence[tuple[int, str]]) -> list[Element]:
     """Split numbered lines into headings, fenced blocks, and loose lines."""
 
-    elements: list[Any] = []
+    elements: list[Element] = []
     index = 0
     while index < len(lines):
         number, text = lines[index]
@@ -580,7 +588,7 @@ def scan_elements(lines: Sequence[tuple[int, str]]) -> list[Any]:
 def parse_draft(text: str) -> Draft:
     lines = text.split("\n")
     numbered = list(enumerate(lines, start=1))
-    metadata: dict[str, Any] = {}
+    metadata: dict[str, Scalar] = {}
     duplicates: list[str] = []
     bad: list[tuple[int, str]] = []
     has_front_matter = bool(lines) and lines[0].strip() == "---"
@@ -624,7 +632,7 @@ def parse_draft(text: str) -> Draft:
 
 
 def place_element(
-    element: Any, sections: list[Section], preamble: list[tuple[int, str]]
+    element: Element, sections: list[Section], preamble: list[tuple[int, str]]
 ) -> None:
     if not sections:
         if isinstance(element, tuple) and element[0] == "line" and element[2].strip():
@@ -660,7 +668,7 @@ def word_count(text: str) -> int:
     return sum(1 for token in text.split() if any(char.isalnum() for char in token))
 
 
-def is_reference(value: Any) -> bool:
+def is_reference(value: object) -> bool:
     if isinstance(value, bool):
         return False
     if isinstance(value, int):
@@ -675,7 +683,7 @@ def check_value(key: Key, draft: Draft, findings: Findings) -> None:
         findings.add(Rule.RECORD_KEYS, key, problem)
 
 
-def value_problem(key: Key, value: Any, metadata: Mapping[str, Any]) -> str:
+def value_problem(key: Key, value: Scalar, metadata: Mapping[str, Scalar]) -> str:
     if key is Key.TITLE:
         if not isinstance(value, str) or not value.strip():
             return "the title is a non-empty string"
@@ -730,7 +738,7 @@ def value_problem(key: Key, value: Any, metadata: Mapping[str, Any]) -> str:
     return ""
 
 
-def comparable(value: Any) -> Any:
+def comparable(value: object) -> str:
     return json.dumps(value, sort_keys=True)
 
 
@@ -779,7 +787,7 @@ def check_metadata(
 
 
 def check_operation(
-    draft: Mapping[str, Any],
+    draft: Mapping[str, Scalar],
     stored: Mapping[str, Any],
     operation: Operation,
     findings: Findings,
@@ -1580,8 +1588,7 @@ class DeclarationChecker:
             if (
                 not lines
                 or lines[0].strip() != "---"
-                or front_matter_value(lines, "id") is None
-                and "---" not in [t.strip() for t in lines[1:]]
+                or "---" not in [text.strip() for text in lines[1:]]
             ):
                 self.findings.add(
                     Rule.FRONT_MATTER_BLOCK,
@@ -1591,7 +1598,7 @@ class DeclarationChecker:
             else:
                 self.check_id(analysis, front_matter_value(lines, "id"))
 
-    def check_id(self, analysis: Analysis, declared: Any) -> None:
+    def check_id(self, analysis: Analysis, declared: Scalar) -> None:
         if declared is None or not analysis.read_path:
             return
         spec = (
@@ -1916,9 +1923,7 @@ class DeclarationChecker:
         base_lines = self.base_lines(analysis) if analysis.new is None else None
         before = malleability_of(base_lines) if base_lines is not None else None
         before_units = parse_units(base_lines) if base_lines is not None else {}
-        if analysis.replacement is not None and analysis.diff is None:
-            lines = list(analysis.replacement.lines)
-        elif analysis.replacement is not None:
+        if analysis.replacement is not None:
             lines = list(analysis.replacement.lines)
         else:
             edits = analysis.edit_lines
@@ -2156,11 +2161,12 @@ def judge(
         (s for s in draft.sections if s.title == SECTION_DECLARATIONS), None
     )
     commit = draft.metadata.get(Key.BASE)
+    listed = draft.metadata.get(Key.BLOCKERS)
     if leaf and declarations is not None and has_declarations:
         base = Base(root, commit if isinstance(commit, str) else "", run)
         blockers = [
             str(item)
-            for item in draft.metadata.get(Key.BLOCKERS, [])
+            for item in (listed if isinstance(listed, list) else [])
             if isinstance(item, (str, int))
         ]
         DeclarationChecker(base, draft, blockers, blocker_records, findings).run(
@@ -2195,8 +2201,6 @@ def main(
         return EXIT_PASS
     return EXIT_FAIL if status == Status.FAIL else EXIT_INVALID_REQUEST
 
-
-Callback = Callable[..., Any]
 
 if __name__ == "__main__":
     sys.exit(main())
