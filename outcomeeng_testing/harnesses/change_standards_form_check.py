@@ -212,7 +212,9 @@ def observe(workspace: Workspace, request: Mapping[str, Any]) -> Observation:
 def check_draft(workspace: Workspace, name: str, **fields: Any) -> Observation:
     """Run the check on the Draft fixture ``name`` with its sidecar fields."""
     text = draft_text(workspace, name)
-    return observe(workspace, request_for(workspace, text, **{**sidecar(name), **fields}))
+    return observe(
+        workspace, request_for(workspace, text, **{**sidecar(name), **fields})
+    )
 
 
 def check_text(workspace: Workspace, text: str, **fields: Any) -> Observation:

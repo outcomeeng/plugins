@@ -125,9 +125,7 @@ def test_a_request_that_breaks_the_request_shape_yields_invalid_request_and_no_f
 def test_a_request_naming_the_draft_by_path_gets_the_result_of_its_text() -> None:
     with base_workspace() as workspace:
         by_text = check_draft(workspace, "compliance/no-tag.test-tag-added.fail")
-        with draft_on_disk(
-            workspace, "compliance/no-tag.test-tag-added.fail"
-        ) as path:
+        with draft_on_disk(workspace, "compliance/no-tag.test-tag-added.fail") as path:
             request = request_for(workspace, "")
             del request[Request.DRAFT_TEXT]
             request[Request.DRAFT_PATH] = str(path)

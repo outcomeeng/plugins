@@ -159,15 +159,15 @@ The form check is one standard-library script, `${SKILL_DIR}/scripts/form_check.
 
 The request is one JSON object on stdin with these fields:
 
-| Field             | Value                                                                                                                                                                 |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `draft_text`      | the Draft's text; the request names exactly one of `draft_text` and `draft_path`                                                                                      |
-| `draft_path`      | the path of the Draft's file                                                                                                                                          |
-| `checkout_root`   | the absolute path of the Product's checkout root                                                                                                                      |
-| `operation`       | `record`, `publish`, `split`, `record-child`, `merge`, `priority-decision`, or a Transition: `claim`, `release`, `submit`, `advance`, `lower`, `applied`, `abandoned` |
-| `stored_record`   | the record the Change Store holds, as an object with `metadata` and `body`, or null                                                                                   |
-| `blocker_records` | optional; the record of each Change the Draft names as a blocker, keyed by the blocker's reference in the Draft                                                       |
-| `size_limit`      | the Change Store's size limit in characters, or `github`                                                                                                              |
+| Field             | Value                                                                                                                                                                                                |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `draft_text`      | the Draft's text; the request names exactly one of `draft_text` and `draft_path`                                                                                                                     |
+| `draft_path`      | the path of the Draft's file                                                                                                                                                                         |
+| `checkout_root`   | the absolute path of the Product's checkout root                                                                                                                                                     |
+| `operation`       | `record`, `publish`, `split`, `record-child`, `merge`, `priority-decision`, `audit`, which changes no key, or a Transition: `claim`, `release`, `submit`, `advance`, `lower`, `applied`, `abandoned` |
+| `stored_record`   | the record the Change Store holds, as an object with `metadata` and `body`, or null                                                                                                                  |
+| `blocker_records` | optional; the record of each Change the Draft names as a blocker, keyed by the blocker's reference in the Draft                                                                                      |
+| `size_limit`      | the Change Store's size limit in characters, or `github`                                                                                                                                             |
 
 The result is one JSON object on stdout. Its `status` is `pass`, `fail`, or `invalid-request`, and the script exits 0, 1, or 2 for them. Its `findings` list holds one object for each finding, with `rule`, the slug of the rule it breaks, `where`, the subsection, key, or line it names, and `detail`. A request the script cannot read yields `invalid-request`, no finding, and a `detail` that names the field.
 

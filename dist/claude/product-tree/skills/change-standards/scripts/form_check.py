@@ -124,6 +124,7 @@ class Operation(StrEnum):
     LOWER = "lower"
     APPLIED = "applied"
     ABANDONED = "abandoned"
+    AUDIT = "audit"
 
 
 TRANSITIONS: Final = frozenset(

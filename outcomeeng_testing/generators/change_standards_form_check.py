@@ -85,7 +85,10 @@ def without_key(text: str, key: str) -> str:
 
 def with_value(text: str, key: str, value: str) -> str:
     """Return Draft ``text`` with metadata ``key`` set to ``value``."""
-    lines = [f"{key}: {value}" if line.startswith(f"{key}:") else line for line in text.split("\n")]
+    lines = [
+        f"{key}: {value}" if line.startswith(f"{key}:") else line
+        for line in text.split("\n")
+    ]
     return "\n".join(lines)
 
 
@@ -108,13 +111,18 @@ def stored_record_changed_at(text: str, key: str) -> dict[str, Any]:
     """Return the record a store holds that differs from Draft ``text`` at ``key``."""
     metadata = dict(load_form_check().parse_draft(text).metadata)
     metadata[key] = json.dumps(metadata.get(key)) + STORED_CHANGE_SUFFIX
-    return {load_form_check().RecordField.METADATA: metadata, load_form_check().RecordField.BODY: ""}
+    return {
+        load_form_check().RecordField.METADATA: metadata,
+        load_form_check().RecordField.BODY: "",
+    }
 
 
 def body_length(text: str) -> int:
     """Return the number of characters in the body of Draft ``text``."""
     lines = text.split("\n")
-    closing = [index for index, line in enumerate(lines) if line.strip() == FRONT_MATTER_FENCE][1]
+    closing = [
+        index for index, line in enumerate(lines) if line.strip() == FRONT_MATTER_FENCE
+    ][1]
     return len("\n".join(lines[closing + 1 :]))
 
 
@@ -129,7 +137,11 @@ def padded_to(text: str, size: int) -> str:
 def table_row_name(fixture_name: str, mark: str) -> str:
     """Return ``<subsection slug>/<case>`` for the first table row a fixture marks with ``mark``."""
     heading = ""
-    for line in (DRAFT_DIR / f"{fixture_name}{DRAFT_SUFFIX}").read_text(encoding="utf-8").split("\n"):
+    for line in (
+        (DRAFT_DIR / f"{fixture_name}{DRAFT_SUFFIX}")
+        .read_text(encoding="utf-8")
+        .split("\n")
+    ):
         stripped = line.lstrip("+- ")
         if stripped.startswith(TABLE_HEADING_MARK) and ":" in stripped:
             heading = stripped.split(":", 1)[1].strip()
@@ -138,17 +150,33 @@ def table_row_name(fixture_name: str, mark: str) -> str:
     raise AssertionError(f"{fixture_name} has no table row marked {mark}")
 
 
-def unreadable_requests(valid: Mapping[str, Any]) -> Iterator[tuple[str, dict[str, Any]]]:
+def unreadable_requests(
+    valid: Mapping[str, Any],
+) -> Iterator[tuple[str, dict[str, Any]]]:
     """Yield each request that breaks the request shape, with the field it names."""
     form = load_form_check()
     fields = form.RequestField
-    required = (fields.CHECKOUT_ROOT, fields.OPERATION, fields.STORED_RECORD, fields.SIZE_LIMIT)
+    required = (
+        fields.CHECKOUT_ROOT,
+        fields.OPERATION,
+        fields.STORED_RECORD,
+        fields.SIZE_LIMIT,
+    )
     for field in required:
         request = {name: value for name, value in valid.items() if name != field}
         yield str(field.value), request
-    yield str(fields.DRAFT_TEXT.value), {name: value for name, value in valid.items() if name != fields.DRAFT_TEXT}
+    yield (
+        str(fields.DRAFT_TEXT.value),
+        {name: value for name, value in valid.items() if name != fields.DRAFT_TEXT},
+    )
     yield str(fields.DRAFT_PATH.value), {**valid, fields.DRAFT_PATH: "/nonexistent.md"}
     yield UNKNOWN_FIELD, {**valid, UNKNOWN_FIELD: 1}
-    yield str(fields.OPERATION.value), {**valid, fields.OPERATION: OUTSIDE_PREFIX + "an-operation"}
+    yield (
+        str(fields.OPERATION.value),
+        {**valid, fields.OPERATION: OUTSIDE_PREFIX + "an-operation"},
+    )
     yield str(fields.SIZE_LIMIT.value), {**valid, fields.SIZE_LIMIT: 0}
-    yield str(fields.CHECKOUT_ROOT.value), {**valid, fields.CHECKOUT_ROOT: DRAFT_DIR.name}
+    yield (
+        str(fields.CHECKOUT_ROOT.value),
+        {**valid, fields.CHECKOUT_ROOT: DRAFT_DIR.name},
+    )
