@@ -20,18 +20,17 @@ from itertools import product
 from typing import Any, Final
 
 from outcomeeng_testing.harnesses.operate_change import (
-    APPROVED,
     LOGIN,
-    PASSING,
     SPECIFIED,
-    ChangesetKey,
+    AuditStatus,
     HandoffKey,
+    InfrastructureState,
     IssueState,
     Lifecycle,
-    LogKey,
     LowerCause,
     Maturity,
     Mover,
+    ObservedKey,
     SimulatedGitHub,
     Transition,
     WriteKind,
@@ -139,15 +138,6 @@ def add_child(github: SimulatedGitHub, state: str = IssueState.OPEN.value) -> No
 # ---------------------------------------------------------- transition rows
 
 
-class Observed(StrEnum):
-    """What a case observes of a Change."""
-
-    MATURITY = "maturity"
-    LIFECYCLE = "lifecycle"
-    HOLDER = "holder"
-    STATE = "state"
-
-
 @dataclass(frozen=True)
 class State:
     """A Change state a Transition row is judged against."""
@@ -163,7 +153,7 @@ class TransitionRow:
 
     start: State
     admits: frozenset[State]
-    changes: Mapping[Observed, Any]
+    changes: Mapping[ObservedKey, Any]
 
 
 ALL_STATES: Final = frozenset(
@@ -187,17 +177,17 @@ ROWS: Final[Mapping[Transition, TransitionRow]] = {
     Transition.CLAIM: TransitionRow(
         State(Maturity.SLICED, Lifecycle.AVAILABLE, False),
         _states(Maturity, (Lifecycle.AVAILABLE,), (False,)),
-        {Observed.HOLDER: (LOGIN,)},
+        {ObservedKey.ASSIGNEES: (LOGIN,)},
     ),
     Transition.RELEASE: TransitionRow(
         State(Maturity.SLICED, Lifecycle.SUBMITTED, True),
         _states(Maturity, OPEN_LIFECYCLES, (True,)),
-        {Observed.HOLDER: (), Observed.LIFECYCLE: Lifecycle.AVAILABLE.value},
+        {ObservedKey.ASSIGNEES: (), ObservedKey.LIFECYCLE: Lifecycle.AVAILABLE.value},
     ),
     Transition.SUBMIT: TransitionRow(
         State(Maturity.PROPOSED, Lifecycle.AVAILABLE, True),
         _states(Maturity, (Lifecycle.AVAILABLE,), (True,)),
-        {Observed.LIFECYCLE: Lifecycle.SUBMITTED.value},
+        {ObservedKey.LIFECYCLE: Lifecycle.SUBMITTED.value},
     ),
     Transition.ADVANCE: TransitionRow(
         State(Maturity.PROPOSED, Lifecycle.SUBMITTED, False),
@@ -207,27 +197,27 @@ ROWS: Final[Mapping[Transition, TransitionRow]] = {
             (False, True),
         )
         | {State(Maturity.SLICED, Lifecycle.AVAILABLE, True)},
-        {Observed.MATURITY: Maturity.FRAMED.value},
+        {ObservedKey.MATURITY: Maturity.FRAMED.value},
     ),
     Transition.LOWER: TransitionRow(
         State(Maturity.SLICED, Lifecycle.AVAILABLE, False),
         _states(LOWERABLE, OPEN_LIFECYCLES, (False, True)),
-        {Observed.MATURITY: Maturity.FRAMED.value},
+        {ObservedKey.MATURITY: Maturity.FRAMED.value},
     ),
     Transition.APPLIED: TransitionRow(
         State(Maturity.APPLICABLE, Lifecycle.AVAILABLE, True),
         _states(Maturity, OPEN_LIFECYCLES, (True,)),
         {
-            Observed.LIFECYCLE: Lifecycle.APPLIED.value,
-            Observed.STATE: IssueState.CLOSED.value,
+            ObservedKey.LIFECYCLE: Lifecycle.APPLIED.value,
+            ObservedKey.STATE: IssueState.CLOSED.value,
         },
     ),
     Transition.ABANDONED: TransitionRow(
         State(Maturity.FRAMED, Lifecycle.AVAILABLE, False),
         _states(Maturity, OPEN_LIFECYCLES, (False, True)),
         {
-            Observed.LIFECYCLE: Lifecycle.ABANDONED.value,
-            Observed.STATE: IssueState.CLOSED.value,
+            ObservedKey.LIFECYCLE: Lifecycle.ABANDONED.value,
+            ObservedKey.STATE: IssueState.CLOSED.value,
         },
     ),
 }
@@ -332,8 +322,10 @@ def ready(row: Maturity, *, met: bool = True) -> tuple[SimulatedGitHub, dict[str
         Mover.HOLDER,
         form_check=passing_form_check(github),
         audit=bound_pair(github),
-        audit_status=APPROVED,
-        infrastructure={INFRASTRUCTURE_NODE: PASSING if met else SPECIFIED},
+        audit_status=AuditStatus.APPROVED,
+        infrastructure={
+            INFRASTRUCTURE_NODE: InfrastructureState.PASSING if met else SPECIFIED
+        },
     )
 
 
@@ -358,40 +350,7 @@ STORE_HOMES: Final[Mapping[Part, tuple[Transition, WriteKind]]] = {
 }
 
 
-# ------------------------------------------------------ spec-derived oracles
-
-#: The write order of the write-order line.
-SPEC_WRITE_ORDER: Final = (
-    WriteKind.MATURITY,
-    WriteKind.LIFECYCLE,
-    WriteKind.ASSIGNEE,
-    WriteKind.COMMENT,
-    WriteKind.STATE,
-)
-
-#: The keys every Transition block holds, per the log-keys line.
-SPEC_LOG_KEYS: Final = (
-    LogKey.TRANSITION,
-    LogKey.MATURITY,
-    LogKey.HARNESS,
-    LogKey.SESSION,
-    LogKey.MACHINE,
-    LogKey.WORKTREE,
-)
-
-#: The keys a Transition block may add, per the log-extras line.
-SPEC_LOG_EXTRAS: Final = (LogKey.REASON, LogKey.HANDOFF, LogKey.CHANGESET)
-
-#: The keys of a release Handoff, per the handoff-keys line.
-SPEC_HANDOFF_KEYS: Final = (
-    HandoffKey.BRANCH,
-    HandoffKey.HEAD,
-    HandoffKey.NEXT,
-    HandoffKey.PULL_REQUEST,
-)
-
-#: The keys of a Changeset, per the log-extras line.
-SPEC_CHANGESET_KEYS: Final = (ChangesetKey.MERGE_COMMIT,)
+# ------------------------------------------------------ cases the spec names
 
 #: Keys the log-closed line forbids in a block, and a request value no block may carry.
 POSITION_KEY: Final = "position"

@@ -56,15 +56,8 @@ PRODUCT_REPOSITORY: Final = "example-org/example-product"
 MERGE_COMMIT: Final = "a" * 40
 UNMERGED_COMMIT: Final = "b" * 40
 
-#: The words the form check, the audit, and the infrastructure lookup hand the script.
-APPROVED: Final = "approved"
-REJECTED: Final = "rejected"
-PASSING: Final = "Passing"
+#: A node state the infrastructure lookup hands the script that is not Passing.
 SPECIFIED: Final = "Specified"
-FORM_STATUS: Final = "status"
-FORM_BODY: Final = "body_sha256"
-FORM_PASS: Final = "pass"
-FORM_FAIL: Final = "fail"
 
 _EPOCH: Final = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -101,6 +94,14 @@ Field = script.Field
 LogKey = script.LogKey
 HandoffKey = script.HandoffKey
 ChangesetKey = script.ChangesetKey
+RequestKey = script.RequestKey
+ResultKey = script.ResultKey
+ObservedKey = script.ObservedKey
+FormCheckKey = script.FormCheckKey
+FormStatus = script.FormStatus
+AuditStatus = script.AuditStatus
+CloseCheckKey = script.CloseCheckKey
+InfrastructureState = script.InfrastructureState
 
 
 def _keys(name: str, record: Any) -> Any:
@@ -111,11 +112,9 @@ def _keys(name: str, record: Any) -> Any:
     return StrEnum(name, members)  # type: ignore[misc]
 
 
-#: The keys of a request, of the session identity, of a bound pair, and of a close check.
-RequestKey = _keys("RequestKey", script.Request)
+#: The keys of the session identity and of a bound pair, named by the fields of the script's records.
 IdentityKey = _keys("IdentityKey", script.Identity)
 PairKey = _keys("PairKey", script.BoundPair)
-CloseKey = _keys("CloseKey", script.CloseCheck)
 
 #: The organization issue field each issue-field write reaches.
 FIELD_WRITES: Final = {
@@ -535,7 +534,7 @@ def close_check(**overrides: Any) -> dict[str, Any]:
             merge_gates_passed=True,
             results_complete=True,
             declarations_on_default=True,
-            audit_at_close=APPROVED,
+            audit_at_close=AuditStatus.APPROVED,
         )
     )
     return {**found, **overrides}
@@ -561,12 +560,18 @@ def handoff(**overrides: str) -> dict[str, str]:
 
 def passing_form_check(github: SimulatedGitHub, number: int = 10) -> dict[str, str]:
     """The form check's pass result for the current body revision."""
-    return {FORM_STATUS: FORM_PASS, FORM_BODY: sha256(github.issues[number].body)}
+    return {
+        FormCheckKey.STATUS: FormStatus.PASS,
+        FormCheckKey.BODY_SHA256: sha256(github.issues[number].body),
+    }
 
 
 def failing_form_check(github: SimulatedGitHub, number: int = 10) -> dict[str, str]:
     """The form check's fail result for the current body revision."""
-    return {FORM_STATUS: FORM_FAIL, FORM_BODY: sha256(github.issues[number].body)}
+    return {
+        FormCheckKey.STATUS: FormStatus.FAIL,
+        FormCheckKey.BODY_SHA256: sha256(github.issues[number].body),
+    }
 
 
 def run(

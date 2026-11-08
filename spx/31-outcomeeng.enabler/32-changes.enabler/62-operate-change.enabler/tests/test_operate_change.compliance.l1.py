@@ -27,10 +27,6 @@ from outcomeeng_testing.generators.operate_change import (
     POSITION_KEY,
     RACES,
     REASON,
-    SPEC_HANDOFF_KEYS,
-    SPEC_LOG_EXTRAS,
-    SPEC_LOG_KEYS,
-    SPEC_WRITE_ORDER,
     TARGET,
     UNRESOLVED_BASE,
     add_child,
@@ -50,24 +46,27 @@ from outcomeeng_testing.generators.operate_change import (
     PartCase,
 )
 from outcomeeng_testing.harnesses.operate_change import (
-    APPROVED,
     LOGIN,
     MERGE_COMMIT,
     OTHER_SESSION,
-    REJECTED,
     STORE,
     UNMERGED_COMMIT,
+    AuditStatus,
     ChangesetKey,
+    CloseCheckKey,
     Field,
+    HandoffKey,
     IssueState,
     Lifecycle,
     LogKey,
     LowerCause,
     Maturity,
     Mover,
+    ObservedKey,
     PairKey,
     Reason,
     RequestKey,
+    ResultKey,
     SimulatedGitHub,
     Status,
     Transition,
@@ -90,8 +89,6 @@ from outcomeeng_testing.harnesses.operate_change import (
     write_kind,
 )
 
-CLOSE_KEYS = tuple(close_check())
-
 
 def blocks(github: SimulatedGitHub, number: int = 10) -> list[dict[str, str]]:
     return [script.parse_block(body) for body in github.blocks(number)]
@@ -104,7 +101,7 @@ def to_applicable(github: SimulatedGitHub, **values: object) -> dict[str, Any]:
         Mover.HOLDER,
         form_check=passing_form_check(github),
         audit=bound_pair(github),
-        audit_status=APPROVED,
+        audit_status=AuditStatus.APPROVED,
     )
     payload.update(values)
     return payload
@@ -117,7 +114,7 @@ def maturity_write(command: Sequence[str]) -> bool:
 # ----------------------------------------------------------------- closing
 
 
-@pytest.mark.parametrize("broken", ["ancestor", *CLOSE_KEYS])
+@pytest.mark.parametrize("broken", ["ancestor", *CloseCheckKey])
 def test_leaf_applied_only_on_its_close_condition(broken: str) -> None:
     github = applicable_held()
     if broken == "ancestor":
@@ -135,12 +132,18 @@ def test_leaf_applied_only_on_its_close_condition(broken: str) -> None:
             10,
             Mover.HOLDER,
             changeset=changeset(),
-            close_check=close_check(**{broken: REJECTED if met == APPROVED else False}),
+            close_check=close_check(
+                **{
+                    broken: AuditStatus.REJECTED
+                    if met == AuditStatus.APPROVED
+                    else False
+                }
+            ),
         )
 
     result = run(github, payload)
 
-    assert result["status"] == Status.REFUSED
+    assert result[ResultKey.STATUS] == Status.REFUSED
     assert github.issues[10].fields[Field.LIFECYCLE] == Lifecycle.AVAILABLE
     assert (
         run(
@@ -152,7 +155,7 @@ def test_leaf_applied_only_on_its_close_condition(broken: str) -> None:
                 changeset=changeset(),
                 close_check=close_check(),
             ),
-        )["status"]
+        )[ResultKey.STATUS]
         == Status.DONE
     )
 
@@ -179,7 +182,7 @@ def test_terminal_change_never_moves(terminal: Lifecycle, move: Transition) -> N
         ),
     )
 
-    assert result["status"] == Status.REFUSED
+    assert result[ResultKey.STATUS] == Status.REFUSED
     assert github.writes() == []
 
 
@@ -225,8 +228,8 @@ def test_lower_claim_keeps_or_releases() -> None:
             lower_cause=LowerCause.DECISION_LINE,
         ),
     )
-    assert result["status"] == Status.DONE
-    assert Transition.RELEASE not in result
+    assert result[ResultKey.STATUS] == Status.DONE
+    assert ResultKey.RELEASE not in result
     assert kept.issues[10].assignees == [LOGIN]
 
     released = applicable_held()
@@ -242,8 +245,8 @@ def test_lower_claim_keeps_or_releases() -> None:
             handoff=handoff(),
         ),
     )
-    assert result["status"] == Status.DONE
-    assert result["release"]["status"] == Status.DONE
+    assert result[ResultKey.STATUS] == Status.DONE
+    assert result[ResultKey.RELEASE][ResultKey.STATUS] == Status.DONE
     assert released.issues[10].assignees == []
     assert [b[LogKey.TRANSITION] for b in blocks(released)][-2:] == [
         Transition.LOWER,
@@ -262,7 +265,7 @@ def test_lower_claim_keeps_or_releases() -> None:
             lower_cause=LowerCause.APPLICATION_CHECK,
         ),
     )
-    assert result["status"] == Status.REFUSED
+    assert result[ResultKey.STATUS] == Status.REFUSED
     assert missing.writes() == []
 
 
@@ -283,8 +286,8 @@ def test_review_binding_on_advance_to_sliced() -> None:
             review=stale,
         ),
     )
-    assert refused["status"] == Status.REFUSED
-    assert refused["reason"] == Reason.REVIEW_BINDING
+    assert refused[ResultKey.STATUS] == Status.REFUSED
+    assert refused[ResultKey.REASON] == Reason.REVIEW_BINDING
 
     done = run(
         github,
@@ -296,7 +299,7 @@ def test_review_binding_on_advance_to_sliced() -> None:
             review=bound_pair(github),
         ),
     )
-    assert done["status"] == Status.DONE
+    assert done[ResultKey.STATUS] == Status.DONE
 
 
 def test_review_binding_on_claim_for_application() -> None:
@@ -304,7 +307,9 @@ def test_review_binding_on_claim_for_application() -> None:
     stale = pair_of(edited(github.issues[10].body), BASE)
 
     assert (
-        run(github, request(Transition.CLAIM, 10, Mover.AGENT, review=stale))["status"]
+        run(github, request(Transition.CLAIM, 10, Mover.AGENT, review=stale))[
+            ResultKey.STATUS
+        ]
         == Status.REFUSED
     )
     assert github.writes() == []
@@ -312,7 +317,7 @@ def test_review_binding_on_claim_for_application() -> None:
         run(
             github,
             request(Transition.CLAIM, 10, Mover.AGENT, review=bound_pair(github)),
-        )["status"]
+        )[ResultKey.STATUS]
         == Status.DONE
     )
 
@@ -348,9 +353,9 @@ def test_review_binding_comment_only_while_the_pair_stands(race: str) -> None:
         ),
     )
 
-    assert result["status"] == Status.FAILED
-    assert result["reason"] == Reason.BINDING_RACED
-    assert result["failed_write"] == WriteKind.COMMENT
+    assert result[ResultKey.STATUS] == Status.FAILED
+    assert result[ResultKey.REASON] == Reason.BINDING_RACED
+    assert result[ResultKey.FAILED_WRITE] == WriteKind.COMMENT
     assert all(write_kind(command) != WriteKind.COMMENT for command in github.writes())
 
 
@@ -363,31 +368,33 @@ def test_audit_binding_comment_only_while_the_pair_stands(race: str) -> None:
 
     result = run(github, payload)
 
-    assert result["status"] == Status.FAILED
-    assert result["reason"] == Reason.BINDING_RACED
-    assert result["failed_write"] == WriteKind.COMMENT
+    assert result[ResultKey.STATUS] == Status.FAILED
+    assert result[ResultKey.REASON] == Reason.BINDING_RACED
+    assert result[ResultKey.FAILED_WRITE] == WriteKind.COMMENT
     assert all(write_kind(command) != WriteKind.COMMENT for command in github.writes())
 
 
-@pytest.mark.parametrize("broken", ["body", "base", "status"])
+@pytest.mark.parametrize(
+    "broken", [PairKey.BODY_SHA256, PairKey.BASE, RequestKey.AUDIT_STATUS]
+)
 def test_audit_binding(broken: str) -> None:
     github = change_store(Maturity.SLICED, Lifecycle.AVAILABLE)
     held(github, 10)
     audit = bound_pair(github)
-    status = APPROVED
-    if broken == "body":
+    status = AuditStatus.APPROVED
+    if broken == PairKey.BODY_SHA256:
         audit = {**audit, PairKey.BODY_SHA256: sha256(edited(github.issues[10].body))}
-    elif broken == "base":
+    elif broken == PairKey.BASE:
         audit = {**audit, PairKey.BASE: OTHER_BASE}
     else:
-        status = REJECTED
+        status = AuditStatus.REJECTED
 
     refused = run(github, to_applicable(github, audit=audit, audit_status=status))
 
-    assert refused["status"] == Status.REFUSED
-    assert refused["reason"] == Reason.AUDIT_BINDING
+    assert refused[ResultKey.STATUS] == Status.REFUSED
+    assert refused[ResultKey.REASON] == Reason.AUDIT_BINDING
     assert github.issues[10].fields[Field.MATURITY] == Maturity.SLICED
-    assert run(github, to_applicable(github))["status"] == Status.DONE
+    assert run(github, to_applicable(github))[ResultKey.STATUS] == Status.DONE
 
 
 def carried_advance(
@@ -415,15 +422,15 @@ def carry(case: CarryCase) -> dict[str, Any]:
 
 @pytest.mark.parametrize("case", carrying_cases(), ids=lambda case: case.name)
 def test_review_carry_forward_while_parts_read_the_same(case: CarryCase) -> None:
-    assert carry(case)["status"] == Status.DONE
+    assert carry(case)[ResultKey.STATUS] == Status.DONE
 
 
 @pytest.mark.parametrize("case", breaking_cases(), ids=lambda case: case.name)
 def test_review_carry_forward_stops_when_a_part_moves(case: CarryCase) -> None:
     result = carry(case)
 
-    assert result["status"] == Status.REFUSED
-    assert result["reason"] == Reason.REVIEW_BINDING
+    assert result[ResultKey.STATUS] == Status.REFUSED
+    assert result[ResultKey.REASON] == Reason.REVIEW_BINDING
 
 
 @pytest.mark.parametrize("case", part_cases(), ids=lambda case: case.name)
@@ -439,12 +446,12 @@ def test_review_part_context(case: PartCase) -> None:
 
     result = carry(carry_case)
 
-    assert result["status"] == Status.REFUSED
-    assert result["reason"] == Reason.REVIEW_BINDING
+    assert result[ResultKey.STATUS] == Status.REFUSED
+    assert result[ResultKey.REASON] == Reason.REVIEW_BINDING
     for line in case.lost:
-        assert f"{TARGET}: {line}" in result["detail"]
+        assert f"{TARGET}: {line}" in result[ResultKey.DETAIL]
     for line in case.kept:
-        assert line not in result["detail"]
+        assert line not in result[ResultKey.DETAIL]
 
 
 # ------------------------------------------------------ structure and blockers
@@ -455,12 +462,12 @@ def test_change_type_derives_from_relations() -> None:
     add_child(parent)
     held(parent, 10)
     result = run(parent, to_applicable(parent))
-    assert result["status"] == Status.REFUSED
-    assert result["reason"] == Reason.PARENT
+    assert result[ResultKey.STATUS] == Status.REFUSED
+    assert result[ResultKey.REASON] == Reason.PARENT
 
     leaf = change_store(Maturity.SLICED, Lifecycle.AVAILABLE)
     held(leaf, 10)
-    assert run(leaf, to_applicable(leaf))["status"] == Status.DONE
+    assert run(leaf, to_applicable(leaf))[ResultKey.STATUS] == Status.DONE
 
 
 def test_parent_maturity() -> None:
@@ -475,7 +482,7 @@ def test_parent_maturity() -> None:
                 Mover.OPERATOR,
                 form_check=passing_form_check(github),
             ),
-        )["status"]
+        )[ResultKey.STATUS]
         == Status.DONE
     )
 
@@ -499,7 +506,7 @@ def test_parent_maturity() -> None:
                 Mover.OPERATOR,
                 form_check=passing_form_check(child_moves, 11),
             ),
-        )["status"]
+        )[ResultKey.STATUS]
         == Status.DONE
     )
     assert all(
@@ -530,7 +537,7 @@ def test_blocker_abandoned_passes_or_returns() -> None:
     )
     merged.issues[11].blocked_by.append(10)
     result = run(merged, request(Transition.ABANDONED, 10, Mover.AGENT, merged_into=12))
-    assert result["status"] == Status.DONE
+    assert result[ResultKey.STATUS] == Status.DONE
     assert 12 in merged.issues[11].blocked_by
 
     unmerged = change_store(Maturity.SLICED, Lifecycle.AVAILABLE)
@@ -545,7 +552,7 @@ def test_blocker_abandoned_passes_or_returns() -> None:
     )
     unmerged.issues[11].blocked_by.append(10)
     result = run(unmerged, request(Transition.ABANDONED, 10, Mover.OPERATOR))
-    assert result["status"] == Status.DONE
+    assert result[ResultKey.STATUS] == Status.DONE
     assert unmerged.issues[11].fields[Field.MATURITY] == Maturity.SLICED
 
 
@@ -575,18 +582,18 @@ def test_blocker_cycle_never_advances_or_claims() -> None:
             ),
         )
 
-    assert advance()["status"] == Status.REFUSED
+    assert advance()[ResultKey.STATUS] == Status.REFUSED
     assert (
         run(
             github,
             request(Transition.CLAIM, 11, Mover.AGENT, review=bound_pair(github, 11)),
-        )["status"]
+        )[ResultKey.STATUS]
         == Status.REFUSED
     )
     assert github.writes() == []
 
     github.issues[11].blocked_by.clear()
-    assert advance()["status"] == Status.DONE
+    assert advance()[ResultKey.STATUS] == Status.DONE
 
 
 # ------------------------------------------------------- transition function
@@ -602,8 +609,8 @@ def test_transition_function_is_what_main_writes() -> None:
     code, written = run_main(second, payload)
 
     assert code == 0
-    assert {k: v for k, v in returned.items() if k != "comment_url"} == {
-        k: v for k, v in written.items() if k != "comment_url"
+    assert {k: v for k, v in returned.items() if k != ResultKey.COMMENT_URL} == {
+        k: v for k, v in written.items() if k != ResultKey.COMMENT_URL
     }
 
 
@@ -613,7 +620,7 @@ def test_transition_function_is_what_main_writes() -> None:
 def test_log_block_one_fenced_block_per_transition() -> None:
     for github, payload in every_transition():
         before = len(github.blocks(10))
-        assert run(github, payload)["status"] == Status.DONE
+        assert run(github, payload)[ResultKey.STATUS] == Status.DONE
         posted = github.blocks(10)[before:]
         assert len(posted) == 1
         text = posted[0].strip()
@@ -629,7 +636,7 @@ def test_log_keys() -> None:
         run(github, payload)
         block = blocks(github)[-1]
         who = payload[RequestKey.IDENTITY]
-        assert set(SPEC_LOG_KEYS) <= set(block)
+        assert set(script.LOG_KEYS) <= set(block)
         assert block[LogKey.TRANSITION] == payload[RequestKey.TRANSITION]
         assert block[LogKey.MATURITY] == github.issues[10].fields[Field.MATURITY]
         for key in (LogKey.HARNESS, LogKey.SESSION, LogKey.MACHINE, LogKey.WORKTREE):
@@ -645,7 +652,7 @@ def test_log_extras_and_handoff_keys() -> None:
     assert reason in texts[Transition.LOWER]
     assert reason in texts[Transition.SUBMIT]
     assert f"{LogKey.HANDOFF}:" in texts[Transition.RELEASE]
-    for key in SPEC_HANDOFF_KEYS:
+    for key in HandoffKey:
         assert f"  {key}:" in texts[Transition.RELEASE]
     assert f"{LogKey.CHANGESET}:" in texts[Transition.APPLIED]
     assert f"  {ChangesetKey.MERGE_COMMIT}: {MERGE_COMMIT}" in texts[Transition.APPLIED]
@@ -659,7 +666,7 @@ def test_log_extras_and_handoff_keys() -> None:
 
 
 def test_log_closed_set() -> None:
-    allowed = {str(key) for key in (*SPEC_LOG_KEYS, *SPEC_LOG_EXTRAS)}
+    allowed = {str(key) for key in (*script.LOG_KEYS, *script.LOG_EXTRAS)}
     for github, payload in every_transition():
         payload[POSITION_KEY] = "Plugins Maintainer"
         payload[DELEGATE_KEY] = "a delegate"
@@ -674,7 +681,7 @@ def test_log_closed_set() -> None:
 
 
 def test_log_closed_check_refuses_another_key() -> None:
-    entries = {str(key): "x" for key in SPEC_LOG_KEYS}
+    entries = {str(key): "x" for key in script.LOG_KEYS}
     with pytest.raises(ValueError):
         script.render_block({**entries, POSITION_KEY: "a position"})
     with pytest.raises(ValueError):
@@ -706,7 +713,7 @@ def test_log_no_authority() -> None:
         ),
     )
 
-    assert result["status"] == Status.REFUSED
+    assert result[ResultKey.STATUS] == Status.REFUSED
     assert github.writes() == []
 
 
@@ -740,7 +747,7 @@ def test_github_one_holder() -> None:
     github = change_store(Maturity.SLICED, Lifecycle.AVAILABLE)
     github.issues[10].assignees = [ANOTHER_ACCOUNT]
     assert (
-        run(github, request(Transition.CLAIM, 10, Mover.AGENT))["status"]
+        run(github, request(Transition.CLAIM, 10, Mover.AGENT))[ResultKey.STATUS]
         == Status.REFUSED
     )
 
@@ -782,7 +789,7 @@ def test_write_order(index: int) -> None:
     run(github, payload)
     kinds = [write_kind(command) for command in github.writes()]
     assert kinds
-    assert kinds == sorted(kinds, key=SPEC_WRITE_ORDER.index)
+    assert kinds == sorted(kinds, key=script.WRITE_ORDER.index)
     assert len(set(kinds)) == len(kinds)
     if WriteKind.COMMENT in kinds:
         after = kinds[kinds.index(WriteKind.COMMENT) + 1 :]
@@ -804,21 +811,21 @@ def test_ordered_write_stops_and_reports() -> None:
 
     result = run(github, payload)
 
-    assert result["status"] == Status.FAILED
-    assert result["failed_write"] == WriteKind.LIFECYCLE
-    assert result["writes"] == []
+    assert result[ResultKey.STATUS] == Status.FAILED
+    assert result[ResultKey.FAILED_WRITE] == WriteKind.LIFECYCLE
+    assert result[ResultKey.WRITES] == []
     assert [
         write_kind(c)
         for c in github.commands
         if write_kind(c) in (WriteKind.COMMENT, WriteKind.STATE)
     ] == []
-    assert result["observed"]["lifecycle"] == Lifecycle.AVAILABLE
+    assert result[ResultKey.OBSERVED][ObservedKey.LIFECYCLE] == Lifecycle.AVAILABLE
 
     diverging = applicable_held()
     diverging.ignore_when = lambda command: write_kind(command) == WriteKind.COMMENT
     result = run(diverging, payload)
-    assert result["status"] == Status.FAILED
-    assert result["reason"] == Reason.READBACK
-    assert result["writes"] == [WriteKind.LIFECYCLE]
+    assert result[ResultKey.STATUS] == Status.FAILED
+    assert result[ResultKey.REASON] == Reason.READBACK
+    assert result[ResultKey.WRITES] == [WriteKind.LIFECYCLE]
     assert diverging.issues[10].state == IssueState.OPEN
     assert diverging.issues[10].fields[Field.LIFECYCLE] == Lifecycle.APPLIED
