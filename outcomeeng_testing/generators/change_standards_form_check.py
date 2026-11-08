@@ -97,7 +97,7 @@ def non_value(key: str) -> str:
     form = load_form_check()
     member = form.Key(key)
     if member in form.ENUMERATED_VALUES:
-        return OUTSIDE_PREFIX + form.ENUMERATED_VALUES[member][0]
+        return OUTSIDE_PREFIX + str(form.ENUMERATED_VALUES[member][0])
     if member is form.Key.TITLE:
         return " ".join([OUTSIDE_PREFIX.strip("-")] * (form.TITLE_WORD_LIMIT + 1))
     if member in {form.Key.PREDECESSORS, form.Key.BLOCKERS}:

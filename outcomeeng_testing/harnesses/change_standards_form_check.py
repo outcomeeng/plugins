@@ -152,7 +152,8 @@ def sidecar(name: str) -> dict[str, Any]:
     path = DRAFT_DIR / f"{name}{SIDECAR_SUFFIX}"
     if not path.exists():
         return {}
-    return json.loads(path.read_text(encoding="utf-8"))
+    fields: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    return fields
 
 
 def request_for(
