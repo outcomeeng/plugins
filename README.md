@@ -293,13 +293,12 @@ Skills are available in both Claude Code and Codex, with generated plugin surfac
 
 ### coding-agents
 
-Coding-agent environments, coordination, and change orchestration: /operate-prowl, /operate-herdr, /operate-agent-mail, /message-agents, /coordinate-agents, /recover-prowl-agents, /orchestrate-change
+Coding-agent environments, coordination, and change orchestration: /operate-prowl, /operate-herdr, /operate-agent-mail, /message-agents, /recover-prowl-agents, /orchestrate-change
 
 | Type  | Name                    | Purpose                                                                                                                                                                                                                                          |
 | ----- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Skill | `/control-positions`    | Pacing token spend across positions hosted in Prowl panes, running one control pass, or installing, checking, stopping, or restarting the scheduled position-control job                                                                         |
 | Skill | `/control-token-spend`  | Measuring coding-session token consumption, explaining context and cache costs, detecting spending bursts, or managing local usage-report schedules                                                                                              |
-| Skill | `/coordinate-agents`    | Coding agents in separate worktrees may overlap, depend on each other, share an external blocker, or need ownership coordination                                                                                                                 |
 | Skill | `/direct-positions`     | Directing positions across Products: resuming the directing session after a compaction, observing, waking, or steering a position's pane, or reading a position's mail                                                                           |
 | Skill | `/message-agents`       | Sending a message record to a registered agent-mail name with its one-line doorbell, discovering a Prowl coding-agent recipient, or sending facts, ownership proposals, state reports, authorizations, or acknowledgements to another agent pane |
 | Skill | `/operate-agent-mail`   | A workflow registers a mail identity, sends a message record, lists a recipient's records, reads or acknowledges one message, or waits for a later record in the agent-mail store                                                                |
