@@ -97,3 +97,15 @@ Evidence: `instructions:skill-auditor` run `2026-10-17_18-16-04-154-bd168bad0aee
 Impact: a later audit of `change-standards` can raise the finding again.
 
 Revisit and settlement condition: `inert-stdin` in `lifecycle.md` states the instruction in imperative voice or names Claude as its subject, and one typed skill audit of `change-standards` raises no `banned_subject` finding on it.
+
+## DEBT [source-ownership]: the audit-change harnesses read their expected bounds from spec prose `outcomeeng_testing/harnesses/audit_change_authority.py` `read-authority` `source-ownership`
+
+Defect class: `source-ownership`.
+
+Finding: `spec_page_bound()` in `outcomeeng_testing/harnesses/audit_change_authority.py` reads the page size and page count of `read-authority` from the text of the `audit-change.md` assertion by regular expression, and `spec_issue_page_bound()` and `spec_field_value_bound()` in `outcomeeng_testing/harnesses/audit_change_relations.py` read the `read-relations` bounds the same way. The spec-declared value and the runner that complies with it agree as audit evidence, and a rewording of an assertion breaks the harness while no behavior changes.
+
+Evidence: `product-tree:test-evidence-auditor` on `spx/31-outcomeeng.enabler/32-changes.enabler/61-audit-change.enabler` at head `6e585cb782cd868ed3e4e1cafe5ef80ca11b0414`, finding `f-004`, severity `WARNING`, property `source-ownership`, rule `source-ownership`. The harness text lies outside the changeset's edit, which changes only the spec path in the authority harness and removes the absorbers fixture from the relations harness. The Maintainer ruled the finding filed.
+
+Impact: a rewording of the `read-authority`, `read-relations-pages`, or `read-relations-fields` assertion fails three linked tests with no change in the runner's behavior.
+
+Revisit and settlement condition: the runner exports the bounds it enforces as source-owned constants, the harnesses import them, the agreement between the assertion text and those constants is audit evidence, and one test-evidence audit of the Node raises no `source-ownership` finding on the harnesses.
