@@ -7,18 +7,18 @@ malleability: spec
 
 PROVIDES the Orchestrator position's duties for one Change — claiming it for an Applier, starting that Applier's agent session, checking its progress, and passing questions up the chain of positions
 SO THAT an operator
-CAN have each Applicable Change executed by its own Applier session without opening that session's pane
+CAN have each Applicable Change applied by its own Applier session without opening that session's pane
 
-The Orchestrator is a position, never one of the five Roles: it holds no Role for the Change it orchestrates and produces no artifact of it. The Applier it starts holds the Change and executes it through `spx/31-outcomeeng.enabler/32-changes.enabler/65-change-execution.enabler`.
+The Orchestrator is a position, never one of the five Roles: it holds no Role for the Change it orchestrates and produces no artifact of it. The Applier it starts holds the Change and applies it through `spx/31-outcomeeng.enabler/32-changes.enabler/65-change-application.enabler`.
 
 ## Assertions
 
 ### Audit: orchestration
 
-- claim-and-start: ALWAYS: `/orchestrate-change` claims one Change for its Applier, naming the Applier's worktree root, and starts one Applier session for it in the root pane `spx/43-coding-agents.enabler/18-herdr-environment.enabler` returns when it creates the Applier's worktree, for a root absent from the pool, or opens the existing one, either grouped with the herdr workspace the invocation names; on Claude Code the session starts with the product-tree definition `change-executor` selected
+- claim-and-start: ALWAYS: `/orchestrate-change` claims one Change for its Applier, naming the Applier's worktree root, and starts one Applier session for it in the root pane `spx/43-coding-agents.enabler/18-herdr-environment.enabler` returns when it creates the Applier's worktree, for a root absent from the pool, or opens the existing one, either grouped with the herdr workspace the invocation names; on Claude Code the session starts with the product-tree definition `change-applier` selected
 - codex-start-unavailable: ALWAYS: on Codex, `/orchestrate-change` Start returns an explicit `unavailable` result naming the Change and writes no store state, while Check runs unchanged; on Claude Code, Start returns no such result
 - no-question-tool: ALWAYS: the Applier session's start and every resume withhold the harness's structured-question tool through the harness setting alone; no skill detects whether its session is an Applier
-- one-definition: ALWAYS: `/orchestrate-change` names `change-executor` as the one configured definition it starts, and starts no session through any other definition
+- one-definition: ALWAYS: `/orchestrate-change` names `change-applier` as the one configured definition it starts, and starts no session through any other definition
 - classifier-retry: ALWAYS: a start the harness's classifier refuses is retried once, only after retracing the refused request, the classifier's reason, and each step that shaped the request, and changed only by the correction that retrace finds, so a retrace that finds no defect resubmits the request unchanged; a second refusal stops the start and reports the refused request, the reason, and the Claim still held to the Orchestrator's principal
 - periodic-checks: ALWAYS: the Orchestrator checks each Applier at regular intervals and, finding one stalled or near its context limit, prompts, compacts or restarts it; a restarted Applier relaunches into the pane its stop kept, keeps the Claim it holds and confirms it against the Change's holder and the worktree its newest claim comment records, and continues from the Change and its latest Handoff; a new claim follows only a release that left the Change Available with no holder
 - priority-order: ALWAYS: across the Changes one Orchestrator orchestrates, it settles blockers and questions in the order the coordination overlay declares for the Change store's priority field, and orders Changes of equal priority, and every Change when the overlay declares no priority field, by ascending issue number
