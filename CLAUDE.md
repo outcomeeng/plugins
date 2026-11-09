@@ -533,3 +533,15 @@ When the host dprint updates:
 4. In every other checkout, pull and rebase onto it, and install the same dprint version before the next commit.
 
 <!-- /PRODUCT-TREE:shared formatter-pin -->
+
+<!-- PRODUCT-TREE:shared sibling-repositories -->
+
+## Sibling repositories
+
+The repositories this product reads beside its own — `methodology`, `spx`, `changes`, `orchestration`, and every other `outcomeeng` repository — are checked out as siblings of this repository, each in the bare-repository worktree layout [`spx/21-product-tree.enabler/11-repository-layout.pdr.md`](spx/21-product-tree.enabler/11-repository-layout.pdr.md) declares. The workspace is the parent of this repository's container directory: `git rev-parse --git-common-dir` prints `<workspace>/plugins/plugins.git`, and every sibling sits at `<workspace>/<repo>/`, with its bare repository at `<workspace>/<repo>/<repo>.git`, its main checkout on the default branch at `<workspace>/<repo>/<repo>`, and its pool worktrees under `<workspace>/<repo>/worktrees/`.
+
+- ALWAYS: read a sibling repository from its local main checkout, `<workspace>/<repo>/<repo>` — "methodology main" is `<workspace>/methodology/methodology` — and run `git -C <workspace>/<repo>/<repo> fetch origin` first, reporting the main checkout as stale when its `HEAD` lags `origin/<default>`.
+- NEVER: read a sibling repository through the GitHub API, `gh api repos/.../contents`, a raw URL, or a web fetch while its local checkout exists.
+- NEVER: write to a sibling repository's checkout beyond that fetch; its own sessions own it, and a change to it goes through that repository's Change Store and lifecycle.
+
+<!-- /PRODUCT-TREE:shared sibling-repositories -->
