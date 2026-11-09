@@ -173,7 +173,7 @@ diagnostic: <configuration error naming the refused path, or none>
 
 - The run retains exactly the record `read-record` composed, and every Declarations subsection has a reconciled judgment.
 - Before Applicable, every line was judged against every Decision Record that governs its Node at the Base, read as the Declarations change it; at close, every line was judged against the default branch and the Verification part against what it names.
-- The terminal status is `approved` only when the run holds no finding.
+- Repeating the audit on the same record, Base, and default branch yields the same units, finding keys, and terminal status.
 - The audit changed no product content, Change, comment, or field.
 
 </success_criteria>
