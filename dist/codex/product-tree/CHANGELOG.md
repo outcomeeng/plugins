@@ -10,6 +10,20 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.112.0
+
+### Breaking
+
+- **`/manage-change` replaces `/claim-change`, `/release-change`, `/close-change`, and `/confirm-change`.** One skill makes the seven Transitions of a Change — `claim`, `release`, `submit`, `advance`, `lower`, `applied`, and `abandoned` — each as one subcommand, and refuses a Transition on a Change in another state or for an actor the Change record does not name for it. Each Transition posts one comment holding one YAML block with `transition`, `maturity`, `harness`, `session`, `machine`, and `worktree`, and an optional `position`; a release adds `handoff`, a lower `reason`, and an applied Leaf `changeset`. Before this change, four skills moved the Lifecycle and posted `Claim:`, `Handoff:`, and terminal comments in prose. A consumer instruction that names one of the four retired skills names a skill the plugin does not ship.
+- **`/apply-change` replaces `/execute-change`, and the `change-applier` agent replaces `change-executor`.** The Applier takes an Applicable Leaf's Declarations subsections in record order after it runs the Application check, hands a Fixer exactly the rejected run's sealed run file and one fixed instruction, and makes every Transition through `/manage-change`. The six round agents name `/apply-change` and a Declarations subsection.
+- **A Change record holds twelve metadata keys and a body of `## Statement of Intent` and `## Declarations`.** `/change-standards` states the keys `title`, `product`, `maturity`, `lifecycle`, `holder`, `parent`, `predecessors`, `blockers`, `base`, `priority`, `primary_value`, and `investment`; the Maturities Proposed, Framed, Sliced, and Applicable; the Lifecycles Available, Submitted, Applied, and Abandoned; the Declarations form, one subsection per artifact in Application order; and the home of each part of a record in a GitHub Change Store. Before this change, a record held seven keys, an `## Intent` section, Governance and Spec mutations blocks, an `Executable` Maturity, and a `Claimed` Lifecycle, and `/change-standards` took a Maturity or `Lifecycle` argument.
+
+### Changed
+
+- **`/author-change` records, publishes, splits, merges, and reframes a Change from a Change Draft, and runs a form check before each publish below Applicable.** The check is one standard-library script in `/change-standards`; it names the slug of each rule a Draft breaks and writes nothing. Before each publish at Framed or Sliced, the skill traces each result the Verification part of the Statement of Intent names to a Declarations line, and for a Sliced Leaf it dispatches `change-auditor` with the record's issue reference and the checkout root.
+- **`/audit-change` audits a stored Leaf.** For a Sliced Leaf it judges each Declarations line against every Decision Record that governs its Node at the Base, and for an Applicable Leaf it judges the default branch against the record before the Leaf closes; every finding blocks. `change-auditor` takes the issue reference and the checkout root as its task message and returns a blocked result for any other task message. Before this change, the audit judged a local file against a Maturity's Definition of Ready.
+- **The Change and Application text of `/understand` and the instruction-block Change Lifecycle section name the Applier, the Declarations, the Applicable Maturity, and `/manage-change`.**
+
 ## 0.111.0
 
 ### Removed

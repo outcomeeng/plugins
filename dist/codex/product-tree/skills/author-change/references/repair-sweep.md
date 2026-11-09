@@ -1,38 +1,37 @@
 <objective>
 
-The sweep table of one Change-candidate repair batch: every same-class site and every changed-section dependent with its disposition, resolved before the first audit of a revision and again after the repairs that follow it.
+The sweep table of one Change Draft repair batch: every same-class site and every changed-part dependent with its disposition, resolved before the repaired Draft takes the form check again.
 
 </objective>
 
 <same_class_site>
 
-A same-class site is any location in the candidate, in the front matter or any `##` section, that carries the defect class a finding cites: a violation of the criterion the finding cites, as its standard defines it, or the same wording or structure the repair rewrites. The finding's examples are instances of the class, never its definition, and the repair changes nothing the criterion does not require. Find each by searching the whole candidate for the rewritten pattern and the rule's characteristic text, never by reading only the sections the finding names.
+A same-class site is any location in the Draft, in the front matter or any section, that carries the defect class a finding cites: a breach of the rule the finding names by its slug, as `product-tree:change-standards` states that rule, or the same wording or structure the repair rewrites. The finding's examples are instances of the class, never its definition, and the repair changes nothing the rule does not require. Find each by searching the whole Draft for the rewritten pattern and the rule's characteristic text, never by reading only the subsection the finding names.
 
 </same_class_site>
 
 <changed_dependent>
 
-A changed-section dependent is text in another section or in the front matter that cites, quotes, restates, or relies on text the repair changes and now disagrees with it. Check each edit against these dependents:
+A changed-part dependent is text elsewhere in the Draft that cites, restates, or relies on text the repair changes and now disagrees with it. Check each edit against these dependents:
 
-| Edit                                                                     | Dependents to check                                                                                      |
-| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Changed `## Governance` entry or verdict                                 | The Governance mutations block of the record, and every Spec mutations assertion that cites its decision |
-| Changed Governance mutations decision                                    | Every Spec mutations assertion and every `## Governance` verdict the decision determines                 |
-| Changed Spec mutations block, malleability before, or malleability after | Every other block that names the Node                                                                    |
-| Changed Spec mutations assertion                                         | Every Governance mutations decision that governs it and every `## Slice` check that observes it          |
-| Changed block order or count                                             | Every block that depends on it and every sentence that states the number or order                        |
-| Changed `## Slice` repository or check                                   | Every block, Node, and blocker that lies outside the new slice                                           |
-| Changed `blocked_by` or `predecessors`                                   | Every section that names the blocker or predecessor                                                      |
+| Edit                                                  | Dependents to check                                                                                    |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| A changed Statement of Intent part                    | The title, and every Declarations line that carries a result the Verification part names               |
+| A changed decision line                               | Every Assertion line that cites the decision, and every subsection the decision's scope governs        |
+| A changed heading path, or a new artifact's `NN` path | Every later subsection, `Depends on:`, `Precedes:`, and `Infrastructure:` line that names the path     |
+| A changed malleability                                | The subsection's infrastructure lines under `infrastructure-line` and `spec-node-none`                 |
+| A changed operation header                            | The payload kind under `payloads`, and every file `path-naming` names for a deleted or moved path      |
+| A changed `base`                                      | Every `-` line and context line, which read at the Base, and `operator-bound-base` for a Sliced record |
 
 </changed_dependent>
 
 <sweep_table>
 
-One row per site or dependent found:
+Record one row per site and per dependent:
 
-| Site | Class or dependent | Disposition |
-| ---- | ------------------ | ----------- |
+| Location | Rule slug | Disposition (`repaired`, `unaffected`, or `not-applicable`) | Check that shows it |
+| -------- | --------- | ----------------------------------------------------------- | ------------------- |
 
-The disposition is `repaired` with the section changed and, for each repair of a finding, the criterion applied and the check that shows the class closed, or `unresolved` with the reason. An edit made to resolve a row is itself an edit, so its own same-class sites and dependents enter the table before the sweep ends.
+Leave no row without a disposition. A `repaired` row names the check that shows the class closed, such as the form check's next result.
 
 </sweep_table>

@@ -19,11 +19,3 @@ Category consistency, severity debt, finding F-001 of local review run 2026-10-1
 **Impact**: a blocking finding's deferral is not checkable against the finding it defers, so an unrelated entry can release the merge-readiness predicate.
 
 **Settlement condition**: a blocking deferral entry is matched to its finding by the same entry key a debt ruling uses.
-
-## The subagent-execution decision names change-applier before the definition is renamed [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) `3. Every subagent selects one of four centrally owned profiles` `consistency: decision names an unshipped definition`
-
-**Evidence**: the local `changes-reviewer` run `2026-11-09_05-53-32-481-eea1673bc571` on head `2825fc88d885afded2e139ddc33c5a46d15dacf3` raised this `DEBT [consistency]` finding. Product property 3 of [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md) names `change-applier` as the definition that selects Executor, while the shipped definition is `src/plugins/product-tree/agents/change-executor.md` and `spx/43-coding-agents.enabler/32-change-orchestration.enabler/change-orchestration.md` names `change-executor`. The line is the exact text of the Declarations of https://github.com/outcomeeng/changes/issues/939. The Methodology Director accepted the finding.
-
-**Impact**: the decision leads the shipped definition; a reader of the agent definitions meets the old name until the rename ships.
-
-**Settlement condition**: the Changeset of https://github.com/outcomeeng/changes/issues/915 renames `change-executor` to `change-applier` and removes this entry.

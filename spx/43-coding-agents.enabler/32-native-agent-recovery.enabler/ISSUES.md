@@ -77,7 +77,7 @@ and cover it with a compliance test that supplies several unprepared key forms.
 
 **Deferral reason**: the fix needs a decision line and a spec assertion that
 outcomeeng/changes#593's record does not state. The exact-native-recovery decision changes only through
-a Change's Governance mutations, and the node's spec assertion has no decision to trace to. A Proposed
+a Change's Declarations, and the node's spec assertion has no decision to trace to. A Proposed
 follow-up Change will state the decision line and the assertion, and carries the fix.
 
 **Settlement condition**: a recover request whose `writableRoots` names a worktree held by no prepared

@@ -227,9 +227,8 @@ The table routes tasks to skills. Only an active skill's explicit invocation ins
 | "Audit eval evidence"                                   | `/audit-eval-evidence` |
 | "Audit this spec node"                                  | `/audit-specs`         |
 | "Diagnose the spx environment"                          | `/diagnose`            |
-| "Claim this Change"                                     | `/claim-change`        |
-| "Release this Change" or "Hand this off"                | `/release-change`      |
-| "Close this Change as Applied"                          | `/close-change`        |
+| "Claim this Change" or "Hand this off"                  | `/manage-change`       |
+| "Close this Change as Applied"                          | `/manage-change`       |
 
 Per-language code, architecture, and test audits ship as `audit-{lang}-{code|test|architecture}` skills. The active verification workflow composes the skills for the languages recorded in this instruction block's opening marker.
 
@@ -257,7 +256,7 @@ Test level is encoded in the filename. The `{evidence}` segment is chosen by `/t
 
 ## Change Lifecycle
 
-Work is coordinated through Changes in the store `spx/local/coordination.md` declares. Hold a Change through `/claim-change` before refining or executing it. When the work stops with continuation remaining, `/release-change` writes the Handoff, removes the holder, and returns the Change to Available for any agent to claim; when the Change reaches a terminal Lifecycle, `/close-change <Applied|Abandoned>` writes the terminal record and closes it. A follow-up is a Proposed Change created through `/author-change`. Maturity moves only through `/author-change`; the three Lifecycle skills move Lifecycle and nothing else.
+Work is coordinated through Changes in the store `spx/local/coordination.md` declares. Hold a Change through the `claim` Transition of `/manage-change` before refining or applying it. When the work stops with continuation remaining, its `release` Transition writes the Handoff, removes the holder, and returns the Change to Available for any agent to claim; when the Change meets the close condition of its type, its `applied` Transition closes it; when the work ends before it produces its Output, or a merge absorbs the Change into another, its `abandoned` Transition closes it. A follow-up is a Proposed Change recorded through `/author-change`, which also writes every record body.
 
 <!-- /PRODUCT-TREE -->
 

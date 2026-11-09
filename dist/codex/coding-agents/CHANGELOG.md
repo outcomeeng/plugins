@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.19.0
+
+### Changed
+
+- **`/orchestrate-change` starts the Applier as `change-applier` and claims through `/manage-change`.** It reads the session's worktree from the newest `claim` Transition comment and a release's blockers and hazards from the newest `release` comment's `handoff`. Before this change, it started `change-executor`, claimed through `/claim-change`, and read `Claim:` and `Handoff:` comments.
+
 ## 0.18.0
 
 ### Removed
