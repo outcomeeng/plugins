@@ -46,7 +46,7 @@
 
 **Impact**: a round produces the changelog entry only as far as its fronted skill follows an instruction its declared scope does not name, and the Applier can neither detect nor fill the gap without producing an artifact itself.
 
-**Settlement condition**: `instructions:author-skill` and `instructions:author-subagent` each declare a changelog step with its scope for a surface outside any plugin, or the entry moves to its own Activity and definition; the change-execution spec assertion, the `execute-change` task-message rule and the product-tree changelog entry then name that owner.
+**Settlement condition**: `instructions:author-skill` and `instructions:author-subagent` each declare a changelog step with its scope for a surface outside any plugin, or the entry moves to its own Activity and definition; the change-application spec assertion, the `execute-change` task-message rule and the product-tree changelog entry then name that owner.
 
 ## A subagent-definition round carries no committed-head skill audit for its calling-skill update
 
@@ -54,7 +54,7 @@
 
 **Impact**: when a Change's subagent-definition Activity also edits a calling skill, that edit reaches `/merge` with a skill audit only if the Change's Frame names a skill-surface obligation for it.
 
-**Settlement condition**: the pairing of a subagent-definition round names `instructions:skill-auditor` as well whenever the round's committed diff changes a skill surface, in the `execute-change` definitions text, its step 5.3 and the change-execution assertion, and one typed skill audit of `execute-change` then approves.
+**Settlement condition**: the pairing of a subagent-definition round names `instructions:skill-auditor` as well whenever the round's committed diff changes a skill surface, in the `execute-change` definitions text, its step 5.3 and the change-application assertion, and one typed skill audit of `execute-change` then approves.
 
 ## No route produces the invocation evidence of a subagent definition an Applier delivers
 
@@ -62,7 +62,7 @@
 
 **Impact**: a subagent-definition Activity completes only when its auditor finds the invocation evidence present, so a definition whose evidence is absent reaches the repeated-defect stop of `/execute-change` with no round that can produce it.
 
-**Settlement condition**: a `<definitions>` row or named Activity result produces and retains the invocation run for the committed emitted definition, steps 5.3 and 5.4 of `/execute-change` require it before the round completes, and the change-execution assertion on the subagent-definition round names it.
+**Settlement condition**: a `<definitions>` row or named Activity result produces and retains the invocation run for the committed emitted definition, steps 5.3 and 5.4 of `/execute-change` require it before the round completes, and the change-application assertion on the subagent-definition round names it.
 
 ## `/execute-change` resolves a held Change from a marker a compaction may drop
 
@@ -90,7 +90,7 @@
 
 ## `/execute-change` reads six auditor verdicts from a sealed run that their shipped skills do not yet produce
 
-**Evidence**: the sealed-run assertion of `spx/31-outcomeeng.enabler/32-changes.enabler/65-change-execution.enabler/change-execution.md` names `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, `eval-evidence-auditor` and `changeset-coherence-auditor` beside the four auditors that seal a run. `src/plugins/product-tree/skills/execute-change/SKILL.md` step 5.3 reads the verdict of a `skill-auditor`, `subagent-auditor` or `assertion-auditor` launch from the sealed run and states that the decision-record audit of a PDR or an ADR seals no verification run, so its approval is the verdict the launch returns and it carries no token into a Handoff or a close. The shipped `audit-adr`, `audit-pdr`, `audit-specs`, `audit-tests`, `audit-eval-evidence` and `audit-changeset-coherence` skills and their wrappers still emit the plain JSON verdict with no run token or run file, as each of their nodes records in its `ISSUES.md`.
+**Evidence**: the sealed-run assertion of `spx/31-outcomeeng.enabler/32-changes.enabler/65-change-application.enabler/change-application.md` names `adr-auditor`, `pdr-auditor`, `spec-auditor`, `test-evidence-auditor`, `eval-evidence-auditor` and `changeset-coherence-auditor` beside the four auditors that seal a run. `src/plugins/product-tree/skills/execute-change/SKILL.md` step 5.3 reads the verdict of a `skill-auditor`, `subagent-auditor` or `assertion-auditor` launch from the sealed run and states that the decision-record audit of a PDR or an ADR seals no verification run, so its approval is the verdict the launch returns and it carries no token into a Handoff or a close. The shipped `audit-adr`, `audit-pdr`, `audit-specs`, `audit-tests`, `audit-eval-evidence` and `audit-changeset-coherence` skills and their wrappers still emit the plain JSON verdict with no run token or run file, as each of their nodes records in its `ISSUES.md`.
 
 **Impact**: an Applier launching one of the six auditors receives a verdict object and no run, which the assertion classifies as an unusable result. `/execute-change` names no sealed-run route for the six and carves out the decision-record audits.
 
@@ -98,7 +98,7 @@
 
 ## `/execute-change` builds the Fixer's input from findings and its Author's task message
 
-**Evidence**: `product-tree:changes-reviewer` run `2026-10-16_10-53-24-065-92fe6cead926`, finding severity `warning`, category consistency, against `src/plugins/product-tree/skills/execute-change/SKILL.md` line 42 and step 5.5. The Fixer entry of `<definitions>` builds the repair block from the verbatim finding that names the round's file, or the verbatim result of every rejected verdict plus failed command output, and hands the Fixer its Author's task message. The assertions of `change-execution.md` give the Fixer exactly the rejected run's sealed run file, unchanged, and the instruction "attend to every rule the run names and sweep each named class across the whole target", and forbid the Applier any summary, remedy, class name or interpretation.
+**Evidence**: `product-tree:changes-reviewer` run `2026-10-16_10-53-24-065-92fe6cead926`, finding severity `warning`, category consistency, against `src/plugins/product-tree/skills/execute-change/SKILL.md` line 42 and step 5.5. The Fixer entry of `<definitions>` builds the repair block from the verbatim finding that names the round's file, or the verbatim result of every rejected verdict plus failed command output, and hands the Fixer its Author's task message. The assertions of `change-application.md` give the Fixer exactly the rejected run's sealed run file, unchanged, and the instruction "attend to every rule the run names and sweep each named class across the whole target", and forbid the Applier any summary, remedy, class name or interpretation.
 
 **Impact**: a Fixer launched by the shipped skill receives input the assertions do not allow, so the Applier's launch contradicts the governing assertions.
 
