@@ -12,7 +12,7 @@ allowed-tools: Read, Grep, Glob, Write, {{! tool('use_skill') !}}, Bash(python3 
 
 <objective>
 
-A sealed `spx verification run` on one stored Change Leaf, whose terminal status is `approved` when the audit found nothing and `rejected` otherwise, each finding naming the Declarations subsection, the governing rule or the line it judges, and the evidence; or the complete `BLOCKED` diagnostic when the run cannot finish.
+A verdict on one stored Change Leaf against `product-tree:change-standards` and the Decision Records that govern its Nodes — a sealed `spx verification run`, `approved` when the audit found nothing and `rejected` otherwise, each finding naming the Declarations subsection, the violated rule or the line it judges, and the evidence — or the complete `BLOCKED` diagnostic when the run cannot finish.
 
 </objective>
 
@@ -27,6 +27,8 @@ A sealed `spx verification run` on one stored Change Leaf, whose terminal status
 - When the native permission policy refuses a write, stop at that write, retry it no more, write nowhere else, and return `BLOCKED` with `diagnostic: configuration error` naming the refused path.
 
 </constraints>
+
+<audit_workflow>
 
 <request_contract>
 
@@ -44,7 +46,7 @@ Write each request with the file-write tool to its own file in the scratch direc
 python3 "${CLAUDE_SKILL_DIR}/scripts/audit_change_run.py" < "<request-file>"
 ```
 
-Copy each request path from the file-write result character for character, issue one invocation per request, serially, and never remove a request file. When the shell reports the request file absent, run once more with the path copied from the file-write result; on a second failure return `BLOCKED`.
+Copy the scratch directory the harness names into each request path and each payload path character for character. When a file-write result reports a path that the scratch directory does not contain by whole path components, stop before the command that reads that file and return `BLOCKED` naming the reported path. Pass each path to its command exactly as the file-write result reports it, written out literally, never retyped from memory. Issue one invocation per request, serially, and never remove a request or payload file. When a command reports its request or payload file absent, run it once more with the path copied from the file-write result; on a second failure return `BLOCKED` naming the run token.
 
 | `operation`           | Request fields                                                        | `ok` result fields                                                      |
 | --------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------------------- |
@@ -143,6 +145,8 @@ A finding payload has this shape; `producerIdentity` and `producerProvenance` eq
 A blocked result stops the audit with `BLOCKED`; never retry, reshape a payload to pass validation, or manufacture a terminal result.
 
 </persistence_contract>
+
+</audit_workflow>
 
 <verdict_format>
 

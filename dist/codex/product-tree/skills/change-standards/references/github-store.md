@@ -95,7 +95,7 @@ harness: <claude or codex>
 session: <the harness's session id>
 machine: <user>@<short host name>
 worktree: <absolute path of the worktree the session works in>
-position: <the Position of the agent, only when the agent holds one>
+position: <the Position held, only when one is held>
 ```
 ````
 

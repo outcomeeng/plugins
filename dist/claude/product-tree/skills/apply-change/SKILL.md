@@ -18,7 +18,9 @@ Use skill `product-tree:merging-standards`. Its merge composition derives each s
 
 Use skill `product-tree:wait-for-load` for every resource-intensive command a step below runs: run each one under that skill's lock line in the foreground, and report a result only after every such line has exited.
 
-Make every Transition through `product-tree:manage-change`, and every record write through `product-tree:author-change`.
+Use skill `product-tree:manage-change`. It makes every Transition the steps below name.
+
+Use skill `product-tree:author-change`. It makes every record write the steps below name.
 
 </required_reading>
 

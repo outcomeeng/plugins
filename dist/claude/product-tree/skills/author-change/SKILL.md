@@ -18,9 +18,15 @@ One Change record in the declared Change Store, written from a Change Draft that
 - Read `spx/local/coordination.md` for the Change Store and the Product.
 - Every record starts from a Change Draft in the Product's checkout. Keep conversation text, transcripts, and audit bookkeeping out of the Draft under `no-person`.
 - Ask only about a choice that changes a Declarations line and that the request, the Product Tree, and the repository leave open, one question at a time through the structured-question tool. Every answer the Operator gives reaches a Declarations line under `operator-answers`. Use skill `product-tree:interview` for an open choice of scope, failure behavior, dependency, evidence, or rollout.
-- Make every Transition through `product-tree:manage-change`; this skill writes no Maturity or Lifecycle after recording.
+- Use skill `product-tree:manage-change`. It makes every Transition the steps below name; this skill writes no Maturity or Lifecycle after recording.
 
 </essential_principles>
+
+<intake>
+
+Read `$ARGUMENTS` as the operation, one of `record`, `publish`, `split`, `merge`, and `reframe`, then its input: the intended Output for `record`, a Draft path or a Change reference otherwise. When `$ARGUMENTS` is empty, take one unambiguous active request from the conversation; when none exists, ask for the operation and its input through the structured-question tool and wait. An operation outside the five is refused, naming them.
+
+</intake>
 
 <draft>
 

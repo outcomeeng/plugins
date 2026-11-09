@@ -18,11 +18,15 @@ One Transition made on one Change in the declared Change Store — its Transitio
 
 Use skill `product-tree:change-standards`. Its `<transitions>` table, `transition-actor`, and `<github_store>` rules govern every step below by their slugs. Read its `references/github-store.md` for every read and write, the Transition comment, and the write discipline.
 
+Use skill `product-tree:commit-changes`. It commits the uncommitted session-owned work a `release` carries, in step 5.
+
+Use skill `product-tree:sync-base`. It brings the claimed branch current, in step 8.
+
 </required_reading>
 
 <intake>
 
-Take `$transition` as one of `claim`, `release`, `submit`, `advance`, `lower`, `applied`, and `abandoned`; any other value, an empty one included, is refused naming the seven, with nothing read. Take `$reference` as `#N`, `owner/repo#N`, or an issue URL; any other form is refused naming the three. `advance` takes a target Maturity as its next token, and an `advance` to Applicable then takes the run token of the audit `product-tree:author-change` dispatched for the record; `lower` takes a target Maturity and then its reason, the rest of the arguments; a missing or unknown Maturity, or a `lower` without a reason, is refused naming what it lacks. `claim` takes an optional absolute worktree root to claim for, which must hold no `.` or `..` segment; without it, the claim is for this session's worktree. No other Transition takes a further token.
+Take `$transition` as one of `claim`, `release`, `submit`, `advance`, `lower`, `applied`, and `abandoned`; any other value, an empty one included, is refused naming the seven, with nothing read. Take `$reference` as `#N`, `owner/repo#N`, or an issue URL; any other form is refused naming the three. `advance` takes a target Maturity as its next token, and an `advance` to Applicable then takes the run token of the record's sealed audit run; `lower` takes a target Maturity and then its reason, the rest of the arguments; a missing or unknown Maturity, or a `lower` without a reason, is refused naming what it lacks. `claim` takes an optional absolute worktree root to claim for, which must hold no `.` or `..` segment; without it, the claim is for this session's worktree. No other Transition takes a further token.
 
 </intake>
 
