@@ -84,9 +84,9 @@ PRODUCT_TREE_MANIFEST: Final = PRODUCT_TREE_DIR / ".claude-plugin" / "plugin.jso
 #: How many finding rule identifiers one generated audit records.
 RULE_IDENTIFIER_COUNT: Final = 10
 
-#: An author-change record template, a source-owned Change record.
+#: The author-change Leaf Draft template, a source-owned Change record.
 CHANGE_TEMPLATE: Final = (
-    PRODUCT_TREE_DIR / "skills" / "author-change" / "templates" / "proposed.md"
+    PRODUCT_TREE_DIR / "skills" / "author-change" / "templates" / "leaf.md"
 )
 _FIXTURES_DIR: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "audit_change_run"
