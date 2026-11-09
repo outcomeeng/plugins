@@ -38,7 +38,7 @@ The file's TOML front matter between `+++` lines sets keys, parsed as TOML. Its 
 | `mail.agent`                   | unset; every mail operation reports unavailable                                                                   |
 | `positions`                    | empty; each entry names a display name, environment, working directory, mail name, stall minutes, context percent |
 | `executor_groups`              | empty; each entry names a label, environment, working-directory prefix, and exclusions                            |
-| `launchers`                    | empty; maps a Product checkout path to the position that launches its Executors                                   |
+| `launchers`                    | empty; maps a Product checkout path to the position that launches its Appliers                                    |
 | `untouchable_panes`            | empty                                                                                                             |
 | `advisor`                      | unset; forwarding reports unavailable                                                                             |
 | `interval_seconds`             | 1800                                                                                                              |

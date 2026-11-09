@@ -49,8 +49,8 @@ It prints the total and non-coordination-note counts over the full changed-file 
 
 **Step 4 — Continue or close.** Reaching merged state ends the transport, not necessarily the session. When in-scope parts of the user's stated goal remain, continue with them rather than closing. Otherwise follow /merging-standards `<close_phase>`: close when the goal is met with no in-scope work remaining, or continuation by Claude is impossible, by producing the operator-useful closeout from live state — product summary, verification evidence, delivered state, the branch-state closeout record with **Remaining Branches**, and the remaining-work disposition — and disposing of the held Change by the one case that applies:
 
-- The Change's Output is delivered: {!% require_skill 'product-tree:close-change' %!} Close the Change `Applied`.
-- Continuation remains for another holder: {!% require_skill 'product-tree:release-change' %!} Release the Change with a Handoff.
+- The Change's Output is delivered: {!% require_skill 'product-tree:manage-change' %!} Make its `applied` Transition.
+- Continuation remains for another holder: use the same skill to make its `release` Transition with a Handoff.
 - The conversation holds no Change: {!% require_skill 'product-tree:author-change' %!} Record the remaining work as a Proposed Change.
 
 Do not emit an independent merge, push, or sync receipt in place of that closeout. A Change closed or released earlier in the same conversation never accounts for work merged after it: new merged work reopens the disposition.
@@ -102,7 +102,7 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 
 **Reloaded the whole methodology before the first PR inspection.** Claude resumed an open-PR continuation after a compaction by invoking `/understand`, rereading the complete root instruction file, and contextualizing nodes before running the first live PR inspection, on a pass whose next actions — current-head review inspection, check state, merge handling — touched no product content. On a 258K-token window that reload — the truncated root instruction file reread whole, the foundation, node contexts, and the lifecycle skills — cost roughly a quarter to a third of the window before any PR state was read. Reload only immediately before the first product content the pass reads or modifies or the first node it discusses; inspection, waiting, merge, deploy, and release proceed on live PR and repository state alone.
 
-**A prior closeout substituted for CLOSE.** Claude merged new work after closing out earlier in the conversation, judged a second disposition redundant, and reported the earlier closeout as the final one. The message looked operator-useful, but the duties behind it — the branch-state record from live state, the Change's transition with its precondition verified and read back — never ran for the new work. New merged work reopens the disposition. Avoid: at CLOSE, either continue in-scope work or build the closeout from live state and dispose of the held Change through `close-change` or `release-change`.
+**A prior closeout substituted for CLOSE.** Claude merged new work after closing out earlier in the conversation, judged a second disposition redundant, and reported the earlier closeout as the final one. The message looked operator-useful, but the duties behind it — the branch-state record from live state, the Change's transition with its precondition verified and read back — never ran for the new work. New merged work reopens the disposition. Avoid: at CLOSE, either continue in-scope work or build the closeout from live state and dispose of the held Change through the `applied` or `release` Transition of `manage-change`.
 
 </failure_modes>
 
@@ -114,6 +114,6 @@ After the plan or required confirmation, run every overlay-declared preflight ch
 - By default the flow proceeded autonomously from the determined changeset; where the merge overlay opted into a pre-mutation confirmation, a proposal was presented through the runtime's structured-question tool and confirmed before the first mutation.
 - The four gates and the finding-disposition rule stayed transport-neutral; only the predicate bindings differed by transport.
 - `/understand` and the governing node's `/contextualize` were invoked before every product-content read or modification and every node discussion in the pass, only immediately before the first such access or discussion, never earlier, and not at all in a pass that touched no product content and discussed no node.
-- The changeset reached the default branch on origin through the selected transport's authority, then continued any remaining in-scope work or closed through a closeout built from live state after the merge and a `close-change` or `release-change` disposition of the held Change — an earlier disposition in the same conversation does not count; the flow stopped only at an explicit gate surfaced to the user.
+- The changeset reached the default branch on origin through the selected transport's authority, then continued any remaining in-scope work or closed through a closeout built from live state after the merge and an `applied` or `release` Transition of the held Change through `manage-change` — an earlier disposition in the same conversation does not count; the flow stopped only at an explicit gate surfaced to the user.
 
 </success_criteria>

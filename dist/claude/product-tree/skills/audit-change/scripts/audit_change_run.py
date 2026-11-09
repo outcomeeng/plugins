@@ -110,7 +110,9 @@ class Operation(StrEnum):
     READ_AUTHORITY = "read-authority"
     READ_PUBLISHED = "read-published"
     READ_RELATIONS = "read-relations"
-    COUNT_LIMITS = "count-limits"
+    READ_RECORD = "read-record"
+    READ_AT = "read-at"
+    GOVERNING_DECISIONS = "governing-decisions"
 
 
 class RequestField(StrEnum):
@@ -124,6 +126,7 @@ class RequestField(StrEnum):
     TERMINAL_STATUS = "terminalStatus"
     ISSUE = "issue"
     ROOT = "root"
+    REF = "ref"
 
 
 class ResultField(StrEnum):
@@ -165,15 +168,17 @@ class ResultField(StrEnum):
     BODY = "body"
     PRODUCT = "product"
     PARENT = "parent"
-    PARENT_PRODUCT = "parentProduct"
     CHILDREN = "children"
     ABSORBERS = "absorbers"
     NUMBER = "number"
-    LIMITS = "limits"
-    VIOLATIONS = "violations"
-    SECTION = "section"
-    LIMIT = "limit"
-    COUNT = "count"
+    DRAFT = "draft"
+    MATURITY = "maturity"
+    LIFECYCLE = "lifecycle"
+    BASE = "base"
+    EDITED_AT = "editedAt"
+    REF = "ref"
+    PRESENT = "present"
+    DECISIONS = "decisions"
 
 
 class ResultStatus(StrEnum):
@@ -384,7 +389,13 @@ REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
     Operation.READ_AUTHORITY: frozenset({RequestField.ISSUE}),
     Operation.READ_PUBLISHED: frozenset({RequestField.ISSUE}),
     Operation.READ_RELATIONS: frozenset({RequestField.ISSUE}),
-    Operation.COUNT_LIMITS: frozenset({RequestField.PATH, RequestField.ROOT}),
+    Operation.READ_RECORD: frozenset({RequestField.ISSUE, RequestField.ROOT}),
+    Operation.READ_AT: frozenset(
+        {RequestField.PATH, RequestField.ROOT, RequestField.REF}
+    ),
+    Operation.GOVERNING_DECISIONS: frozenset(
+        {RequestField.PATH, RequestField.ROOT, RequestField.REF}
+    ),
 }
 
 
@@ -789,7 +800,13 @@ _REQUEST_CHECKS: Final[
     Operation.READ_AUTHORITY: (_issue_identity,),
     Operation.READ_PUBLISHED: (_issue_identity,),
     Operation.READ_RELATIONS: (_issue_identity,),
-    Operation.COUNT_LIMITS: (_candidate_path, _checkout_root),
+    Operation.READ_RECORD: (_issue_identity, _checkout_root),
+    Operation.READ_AT: (_candidate_path, _checkout_root, lambda request: _ref(request)),
+    Operation.GOVERNING_DECISIONS: (
+        _candidate_path,
+        _checkout_root,
+        lambda request: _ref(request),
+    ),
 }
 
 
@@ -1417,11 +1434,6 @@ def _read_relations(
                 ResultField.ISSUE: request[RequestField.ISSUE],
                 ResultField.PRODUCT: own.get(PRODUCT_FIELD),
                 ResultField.PARENT: parent,
-                ResultField.PARENT_PRODUCT: (
-                    by_number.get(parent, {}).get(PRODUCT_FIELD)
-                    if isinstance(parent, int)
-                    else None
-                ),
                 ResultField.CHILDREN: [
                     {
                         ResultField.NUMBER: child,
@@ -1457,79 +1469,264 @@ def _read_relations(
     )
 
 
-TITLE_WORD_LIMIT: Final = 15
-INTENT_WORD_LIMIT: Final = 60
-_FRONT_MATTER_PATTERN: Final = re.compile(r"\A---\n(.*?)\n---\n", re.DOTALL)
-_TITLE_PATTERN: Final = re.compile(r"^title:[ \t]*(.*)$", re.MULTILINE)
-_LINK_PATTERN: Final = re.compile(r"\[([^\]]*)\]\([^)]*\)")
-_LIST_MARKER_PATTERN: Final = re.compile(r"^[ \t]*(?:[-*]|\d+\.)[ \t]+", re.MULTILINE)
-_EMPHASIS_PATTERN: Final = re.compile(r"\*+|_{2,}")
-_HEADING_PATTERN: Final = re.compile(r"##[ \t]+(.+?)[ \t]*$")
+#: The record keys a Change Draft carries, in order; the holder stays in the store.
+DRAFT_KEYS: Final = (
+    "title",
+    "product",
+    "maturity",
+    "lifecycle",
+    "parent",
+    "predecessors",
+    "blockers",
+    "base",
+    "priority",
+    "primary_value",
+    "investment",
+)
+#: The organization issue field that holds each single-valued record key.
+FIELD_HOMES: Final[Mapping[str, str]] = {
+    "product": "Product",
+    "maturity": "Maturity",
+    "lifecycle": "Lifecycle",
+    "base": "Base",
+    "priority": "Priority",
+    "primary_value": "Value",
+    "investment": "Investment",
+}
+_RECORD_QUERY: Final = (
+    "query($o:String!,$r:String!,$n:Int!)"
+    "{repository(owner:$o,name:$r){issue(number:$n){title body createdAt lastEditedAt "
+    f"issueFieldValues(first:{ISSUE_FIELD_VALUES_PAGE_SIZE})"
+    "{pageInfo{hasNextPage} nodes{... on IssueFieldNumberValue{value field{... on IssueFieldNumber{name}}}"
+    " ... on IssueFieldTextValue{value field{... on IssueFieldText{name}}}"
+    " ... on IssueFieldSingleSelectValue{name field{... on IssueFieldSingleSelect"
+    "{name}}}}}}}}"
+)
+BLOCKERS_PAGE_SIZE: Final = 100
+_ISSUE_URL_PATTERN: Final = re.compile(
+    r"https://github\.com/([A-Za-z0-9][A-Za-z0-9-]*)/([A-Za-z0-9._-]+)/issues/([1-9][0-9]*)"
+)
+_DECISION_SUFFIXES: Final = (".adr.md", ".pdr.md")
+_PLAIN_SCALAR: Final = re.compile(r"[A-Za-z0-9](?:[^:#\n]|:(?! )|(?<! )#)*")
 
 
-def count_words(text: str) -> int:
-    """Count words: whitespace-separated tokens that hold a letter or a digit.
-
-    A list marker and emphasis markup carry no word, a link counts its text, and
-    a label such as ``What:`` counts as one word.
-    """
-    plain = _LINK_PATTERN.sub(r"\1", text)
-    plain = _LIST_MARKER_PATTERN.sub("", plain)
-    plain = _EMPHASIS_PATTERN.sub("", plain)
-    return len([token for token in plain.split() if any(c.isalnum() for c in token)])
+def _yaml_scalar(value: object) -> str:
+    """Write one front-matter scalar, quoting text YAML would misread."""
+    if value is None:
+        return "null"
+    text = str(value)
+    if _PLAIN_SCALAR.fullmatch(text) and text not in ("null", "true", "false"):
+        return text
+    return json.dumps(text)
 
 
-def _body_sections(body: str) -> dict[str, str]:
-    """Map each level-two heading outside a code fence to its text."""
-    sections: dict[str, list[str]] = {}
-    current: list[str] | None = None
-    fenced = False
-    for line in body.splitlines():
-        if line.lstrip().startswith("```"):
-            fenced = not fenced
-        heading = None if fenced else _HEADING_PATTERN.match(line)
-        if heading:
-            current = sections.setdefault(heading.group(1), [])
-        elif current is not None:
-            current.append(line)
-    return {name: "\n".join(lines) for name, lines in sections.items()}
+def _single_values(node: Mapping[str, object]) -> dict[str, object]:
+    """Return every field value one issue node carries, keyed by field name."""
+    values: dict[str, object] = {}
+    container = node.get(StoreField.ISSUE_FIELD_VALUES)
+    info = container.get(StoreField.PAGE_INFO) if isinstance(container, dict) else None
+    if isinstance(info, dict) and info.get(StoreField.HAS_NEXT_PAGE) is True:
+        bound = f"{ISSUE_FIELD_VALUES_PAGE_SIZE} issue field values per issue"
+        raise Blocked(
+            BlockReason.PAGE_BOUND_REACHED,
+            f"the issue field values read is not complete at {bound}{_BOUND_HINT}",
+            evidence={ResultField.BOUND: bound},
+        )
+    entries = container.get(StoreField.NODES) if isinstance(container, dict) else None
+    for entry in entries if isinstance(entries, list) else []:
+        field = entry.get("field") if isinstance(entry, dict) else None
+        name = field.get(StoreField.NAME) if isinstance(field, dict) else None
+        if not isinstance(name, str):
+            continue
+        if isinstance(entry.get(StoreField.NAME), str):
+            values[name] = entry[StoreField.NAME]
+        elif isinstance(entry.get(StoreField.VALUE), int | float) and not isinstance(
+            entry.get(StoreField.VALUE), bool
+        ):
+            values[name] = int(entry[StoreField.VALUE])
+        elif isinstance(entry.get(StoreField.VALUE), str):
+            values[name] = entry[StoreField.VALUE]
+    return values
 
 
-def _count_limits(
+def _blocker_references(
+    context: _Context, owner: str, repository: str, number: str
+) -> list[str]:
+    """Return the issue's native blockers as owner/repo#N references, or block."""
+    argv = [
+        GH_EXECUTABLE,
+        "api",
+        f"repos/{owner}/{repository}/issues/{number}/dependencies/blocked_by",
+        "--method",
+        "GET",
+        "-F",
+        f"per_page={BLOCKERS_PAGE_SIZE}",
+    ]
+    try:
+        entries: object = json.loads(_command(context, argv, cwd=context.cwd))
+    except ValueError as exc:
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"`{' '.join(argv)}` printed no JSON{_STORE_HINT}",
+        ) from exc
+    if not isinstance(entries, list):
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"the blockers answer is no array{_STORE_HINT}",
+        )
+    if len(entries) >= BLOCKERS_PAGE_SIZE:
+        bound = f"{BLOCKERS_PAGE_SIZE} blockers, one page"
+        raise Blocked(
+            BlockReason.PAGE_BOUND_REACHED,
+            f"the blockers read is not complete at {bound}{_BOUND_HINT}",
+            evidence={ResultField.BOUND: bound},
+        )
+    references: list[str] = []
+    for entry in entries:
+        url = entry.get("html_url") if isinstance(entry, dict) else None
+        found = _ISSUE_URL_PATTERN.fullmatch(url) if isinstance(url, str) else None
+        if found is None:
+            raise Blocked(
+                BlockReason.UNREADABLE_OUTPUT,
+                f"a blocker carries no issue URL{_STORE_HINT}",
+            )
+        references.append("{}/{}#{}".format(*found.groups()))
+    return references
+
+
+def _read_record(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
+    """Compose the Change Draft of the named issue from each part's home."""
+    owner, repository, number = _issue_identity(request)
+    _product_root(context, _checkout_root(request))
+    argv = [
+        *_GRAPHQL,
+        "-f",
+        f"query={_RECORD_QUERY}",
+        "-f",
+        f"o={owner}",
+        "-f",
+        f"r={repository}",
+        "-F",
+        f"n={number}",
+    ]
+    node: object = _json_lines(_command(context, argv, cwd=context.cwd), argv=argv)[-1]
+    for key in (StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUE):
+        node = node.get(key) if isinstance(node, dict) else None
+    if (
+        not isinstance(node, dict)
+        or not isinstance(node.get("title"), str)
+        or not isinstance(node.get(StoreField.BODY), str)
+    ):
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"store answer carries no issue title and body strings{_STORE_HINT}",
+        )
+    values = _single_values(node)
+    parent = values.get(PARENT_FIELD)
+    predecessors = [
+        entry
+        for entry in str(values.get(PREDECESSORS_FIELD, "")).split(
+            PREDECESSOR_SEPARATOR
+        )
+        if entry
+    ]
+    record: dict[str, object] = {
+        "title": node["title"],
+        "parent": f"{owner}/{repository}#{parent}" if isinstance(parent, int) else None,
+        "predecessors": predecessors,
+        "blockers": _blocker_references(context, owner, repository, number),
+    }
+    for key, home in FIELD_HOMES.items():
+        record[key] = values.get(home)
+    lines = ["---"]
+    for key in DRAFT_KEYS:
+        if key == "base" and record["base"] is None:
+            continue
+        value = record[key]
+        if isinstance(value, list):
+            lines.append(f"{key}: [{', '.join(value)}]")
+        else:
+            lines.append(f"{key}: {_yaml_scalar(value)}")
+    body = str(node[StoreField.BODY]).replace("\r\n", "\n")
+    draft = "\n".join([*lines, "---", "", body.rstrip("\n"), ""])
+    return {
+        ResultField.ISSUE: request[RequestField.ISSUE],
+        ResultField.DRAFT: draft,
+        ResultField.SHA256: _sha256(draft),
+        ResultField.MATURITY: record["maturity"],
+        ResultField.LIFECYCLE: record["lifecycle"],
+        ResultField.BASE: record["base"],
+        ResultField.EDITED_AT: node.get("lastEditedAt") or node.get("createdAt"),
+    }
+
+
+def _ref(request: Mapping[str, object]) -> str:
+    """Return the commit a request names; a ref that could pass for an option blocks."""
+    named = _string(request, RequestField.REF)
+    if (
+        named.startswith("-")
+        or _system_text_defect(named) is not None
+        or any(character.isspace() for character in named)
+    ):
+        raise Blocked(
+            BlockReason.INVALID_REQUEST,
+            f"{RequestField.REF} must name a commit, received {named!r}; pass a full commit SHA or a ref such as origin/main",
+        )
+    return named
+
+
+def _read_at(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
+    """Return one file as the named commit holds it, with whether it is present."""
+    relative = _candidate_path(request)
+    root = _product_root(context, _checkout_root(request))
+    ref = _ref(request)
+    argv = [GIT_EXECUTABLE, "cat-file", "-e", f"{ref}:{relative}"]
+    present = context.runner(argv, cwd=root, stdin=None).exit_code == 0
+    content = (
+        _command(context, [GIT_EXECUTABLE, "show", f"{ref}:{relative}"], cwd=root)
+        if present
+        else ""
+    )
+    return {
+        ResultField.REF: ref,
+        ResultField.PATH: relative,
+        ResultField.PRESENT: present,
+        ResultField.CONTENT: content,
+    }
+
+
+def _governing_decisions(
     context: _Context, request: Mapping[str, object]
 ) -> dict[str, object]:
-    """Count the title's words and the Intent section's words, labels included."""
+    """List the Decision Records at each directory from ``spx/`` down to the path."""
     relative = _candidate_path(request)
-    content = _live_content(_product_root(context, _checkout_root(request)), relative)
-    front = _FRONT_MATTER_PATTERN.match(content)
-    body = content[front.end() :] if front else content
-    title_match = _TITLE_PATTERN.search(front.group(1)) if front else None
-    title = title_match.group(1).strip().strip("\"'") if title_match else ""
-    measured: list[dict[str, object]] = [
-        {
-            ResultField.SECTION: "title",
-            ResultField.LIMIT: TITLE_WORD_LIMIT,
-            ResultField.COUNT: len(title.split()),
-        }
-    ]
-    sections = _body_sections(body)
-    if "Intent" in sections:
-        measured.append(
-            {
-                ResultField.SECTION: "Intent",
-                ResultField.LIMIT: INTENT_WORD_LIMIT,
-                ResultField.COUNT: count_words(sections["Intent"]),
-            }
+    root = _product_root(context, _checkout_root(request))
+    ref = _ref(request)
+    parts = pathlib.PurePosixPath(relative).parts
+    if not parts or parts[0] != "spx":
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"path lies outside spx/: {relative}; pass the path of a Node or Decision Record from spx/",
+        )
+    last = len(parts) if not relative.endswith(_DECISION_SUFFIXES) else len(parts) - 1
+    decisions: list[str] = []
+    for depth in range(1, last + 1):
+        directory = "/".join(parts[:depth])
+        listing = _command(
+            context,
+            [GIT_EXECUTABLE, "ls-tree", "--name-only", ref, "--", f"{directory}/"],
+            cwd=root,
+        )
+        decisions.extend(
+            entry
+            for entry in sorted(listing.splitlines())
+            if entry.endswith(_DECISION_SUFFIXES)
+            and "/" not in entry[len(directory) + 1 :]
         )
     return {
+        ResultField.REF: ref,
         ResultField.PATH: relative,
-        ResultField.SHA256: _sha256(content),
-        ResultField.LIMITS: measured,
-        ResultField.VIOLATIONS: [
-            item
-            for item in measured
-            if int(str(item[ResultField.COUNT])) > int(str(item[ResultField.LIMIT]))
-        ],
+        ResultField.DECISIONS: decisions,
     }
 
 
@@ -1547,7 +1744,9 @@ _HANDLERS: Final[
     Operation.READ_AUTHORITY: _read_authority,
     Operation.READ_PUBLISHED: _read_published,
     Operation.READ_RELATIONS: _read_relations,
-    Operation.COUNT_LIMITS: _count_limits,
+    Operation.READ_RECORD: _read_record,
+    Operation.READ_AT: _read_at,
+    Operation.GOVERNING_DECISIONS: _governing_decisions,
 }
 
 

@@ -19,7 +19,7 @@
   "interface": {
     "displayName": "Coding Agents",
     "shortDescription": "Operate, coordinate, and supervise coding agents",
-    "longDescription": "Operate public Prowl and herdr environments, deliver durable agent-mail records, prepare and recover exact native sessions, coordinate independent workflows, and start and check the Executor session of each Change from one operator-facing session.",
+    "longDescription": "Operate public Prowl and herdr environments, deliver durable agent-mail records, prepare and recover exact native sessions, coordinate independent workflows, and start and check the Applier session of each Change from one operator-facing session.",
     "developerName": "Outcome Engineering",
     "category": "Developer Tools",
     "capabilities": [
