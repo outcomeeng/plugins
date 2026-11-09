@@ -16,7 +16,11 @@ PROVIDER = (
 
 
 def main() -> int:
-    spec = importlib.util.spec_from_file_location("form_check", PROVIDER)
+    spec = (
+        importlib.util.spec_from_file_location("form_check", PROVIDER)
+        if PROVIDER.is_file()
+        else None
+    )
     if spec is None or spec.loader is None:
         print(
             f"error: the form check is absent at {PROVIDER}; reinstall the product-tree plugin",

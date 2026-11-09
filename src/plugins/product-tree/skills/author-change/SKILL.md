@@ -50,6 +50,19 @@ Before each publish at Framed or Sliced, trace each result the Verification part
 
 </form_check_gate>
 
+<testing>
+
+`scripts/check_form.py` runs the form check `product-tree:change-standards` ships, through a `__file__`-relative path. It was run with these inputs, each output matching the expected one; no run writes a file:
+
+| Input                                                                         | Expected output                                                                                  | Observed    |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------- |
+| a Leaf Draft that passes the form check                                       | the form check's `pass` result, exit 0                                                           | as expected |
+| a Draft that breaks form rules                                                | the form check's `fail` result, exit 1                                                           | as expected |
+| `--root` a relative path                                                      | the form check's `unusable` result, exit 2                                                       | as expected |
+| the entrypoint copied to a skill directory with no `change-standards` sibling | `error: the form check is absent at <path>; reinstall the product-tree plugin` on stderr, exit 2 | as expected |
+
+</testing>
+
 <publish>
 
 Write the Draft to the store in this order, under `<write_discipline>`, and record each write:
