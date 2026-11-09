@@ -536,8 +536,6 @@ When the host dprint updates:
 
 <!-- PRODUCT-TREE:shared sibling-repositories -->
 
-## Sibling repositories
-
-Every `outcomeeng` repository is checked out beside this one: methodology main is `../methodology/methodology` from the directory that holds `plugins.git`. Read a sibling there after `git fetch`, never through the GitHub API or the web.
+🛑 **STOP TRIGGER — about to read another `outcomeeng` repository through `gh`, the GitHub API, or the web.** Read its local main checkout instead, `../<repo>/<repo>` from the directory that holds `plugins.git`, after `git fetch`.
 
 <!-- /PRODUCT-TREE:shared sibling-repositories -->
