@@ -87,11 +87,3 @@
 **Impact**: `/apply-change` reads all ten verdicts from a sealed run, as the assertion requires, so an Applier launching one of the six auditors receives a verdict object and no run, which both classify as an unusable result, and Application stops at that gate.
 
 **Settlement condition**: outcomeeng/changes#513 rewrites the six audit skills and wrappers onto one `spx verification run` each, and one launch of each from `/apply-change` returns a sealed run.
-
-## The definition-invocation probe records `change-executor`
-
-**Evidence**: `probes/definition-invocation/` holds `change-executor.result.json`, the attested run of the definition the Changeset of outcomeeng/changes#915 renames to `change-applier`, and the six round definitions' results record descriptions that named `/execute-change`. The `definition-invocation` assertion names the seven definitions as the Claude Code build emits them.
-
-**Impact**: the probe's pins read definitions the build no longer emits, so the attested result no longer stands for the renamed `change-applier` or for the six round definitions as they now read.
-
-**Settlement condition**: a fresh attested run of the protocol launches each of the seven definitions the build emits, `change-applier` among them, and retains its results under `probes/definition-invocation/`.
