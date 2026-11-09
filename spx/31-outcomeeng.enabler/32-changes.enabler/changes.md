@@ -5,7 +5,7 @@ malleability: spec
 
 # Changes
 
-PROVIDES the Change skills change-standards, author-change, audit-change, operate-change, and report-changes
+PROVIDES the Change skills change-standards, author-change, audit-change, manage-change, and report-changes
 SO THAT product engineers and the agents that refine and apply Changes
 CAN move a prioritized Output from proposal to applicable work without placing mutable work state in product truth
 
@@ -13,7 +13,7 @@ CAN move a prioritized Output from proposal to applicable work without placing m
 
 ### Audit: Change skills
 
-- skill-set: The author-change skill records, publishes, splits, merges, and reframes a Change; the operate-change skill makes every other Transition on one Change; the audit-change skill audits a record; the report-changes skill lists the open Changes; and the change-standards skill states the record they share.
+- skill-set: The author-change skill records, publishes, splits, merges, and reframes a Change; the manage-change skill makes every other Transition on one Change; the audit-change skill audits a record; the report-changes skill lists the open Changes; and the change-standards skill states the record they share.
 - record-form-only: The Change skills write and read only the record the Change record decision states, and read another form only to carry its proposal into a new record.
 - provider-rules: The Change skills carry every rule they apply, cite no methodology chapter path, and name no methodology version.
 
