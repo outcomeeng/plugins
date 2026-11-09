@@ -228,3 +228,11 @@ Its attested run is dated 2026-10-06 against head `45772763e227a276a609f76c455fb
 **Impact**: a merging flow following the reference classifies a rejected run that carries no finding as nothing, contrary to the governing assertions.
 
 **Settlement condition**: outcomeeng/changes#513 converts the shipped skills, after which the Loop semantics and Verdict handling of `merge-policy.md` read an Auditor verdict from the sealed run's terminal status, and one typed skill audit of `merging-standards` raises no consistency finding against `merge.md`.
+
+## The closeout specs name `manage-change` before a shipped skill provides it `spx/21-product-tree.enabler/76-merge.enabler/merge.md` `close-phase` `CLAUDE.md authority hierarchy`
+
+**Evidence**: the CI review of https://github.com/outcomeeng/plugins/pull/739 at head `6ba175a7743cc3175a0d515ef53fda2c268a8b5b` raised `DEBT [consistency]` against `close-phase` in `merge.md`, `lifecycle-closeout` in `32-github-pr.enabler/github-pr.md`, `direct-push-closeout` in `32-direct-push.enabler/direct-push.md`, and `manage-pr-closeout` in `32-github-pr.enabler/54-managing-pr.enabler/managing-pr.md`. Each rule disposes of a held Change through the applied or the release Transition of `manage-change`, while no skill under `src/plugins/product-tree/skills/` is named `manage-change`, and the `merge`, `manage-github-pr`, `manage-pr`, and `merging-standards` skills still route the closeout to `close-change` and `release-change`. The four lines are the exact text of the Declarations of https://github.com/outcomeeng/changes/issues/938, so the finding was returned `filed`.
+
+**Impact**: the specs lead the shipped skills; a reader of the skills meets the old closeout route until the skills change.
+
+**Settlement condition**: the Changeset of https://github.com/outcomeeng/changes/issues/915 ships `manage-change` and the merge-lifecycle skills route the closeout through its applied and release Transitions.
