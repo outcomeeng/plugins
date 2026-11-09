@@ -55,7 +55,7 @@ definitions a plugin ships and audits without adding behavior the skills lack.
 3. Every subagent selects one of four centrally owned profiles: Standard,
    Strong, Executor, or Fast. Standard is the default; Strong, Executor, and
    Fast require an explicit selection by the governing skill or product
-   decision. The `change-executor` definition selects Executor. Each profile contains
+   decision. The `change-applier` definition selects Executor. Each profile contains
    a complete native configuration for each supported agent harness. Model and
    reasoning controls form one configuration; their fields, value domains, and
    absence are harness-specific, with no shared effort scale. Products cannot
