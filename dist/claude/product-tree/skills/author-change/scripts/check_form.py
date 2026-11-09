@@ -7,13 +7,21 @@ import importlib.util
 import pathlib
 import sys
 
-PROVIDER = pathlib.Path(__file__).resolve().parents[2] / "change-standards" / "scripts" / "form_check.py"
+PROVIDER = (
+    pathlib.Path(__file__).resolve().parents[2]
+    / "change-standards"
+    / "scripts"
+    / "form_check.py"
+)
 
 
 def main() -> int:
     spec = importlib.util.spec_from_file_location("form_check", PROVIDER)
     if spec is None or spec.loader is None:
-        print(f"error: the form check is absent at {PROVIDER}; reinstall the product-tree plugin", file=sys.stderr)
+        print(
+            f"error: the form check is absent at {PROVIDER}; reinstall the product-tree plugin",
+            file=sys.stderr,
+        )
         return 2
     module = importlib.util.module_from_spec(spec)
     sys.modules["form_check"] = module
