@@ -550,3 +550,9 @@ When the host dprint updates:
 4. In every other checkout, pull and rebase onto it, and install the same dprint version before the next commit.
 
 <!-- /PRODUCT-TREE:shared formatter-pin -->
+
+<!-- PRODUCT-TREE:shared sibling-repositories -->
+
+🛑 **STOP TRIGGER — about to read another `outcomeeng` repository through `gh`, the GitHub API, or the web.** Read its local main checkout instead, `../<repo>/<repo>` from the directory that holds `plugins.git`, after `git fetch`.
+
+<!-- /PRODUCT-TREE:shared sibling-repositories -->
