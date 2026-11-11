@@ -228,7 +228,10 @@ def _git(repo: pathlib.Path, *args: str, cwd: pathlib.Path | None = None) -> str
 
 
 def commit_file(repo: pathlib.Path, name: str, content: str, message: str) -> None:
-    path = repo / name
+    root = repo.resolve()
+    path = (root / name).resolve()
+    if not path.is_relative_to(root):
+        raise ValueError(f"commit path {name!r} resolves outside the repository {root}")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
     _git(repo, "add", name)
