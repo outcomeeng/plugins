@@ -1,4 +1,4 @@
-# Change Coordination
+# Changes
 
 Loaded by `/manage-change`, `/author-change`, `/audit-change`, `/apply-change`, and `/report-changes` when present. It names where this repository's Changes and Handoffs live. Values only; the workflow is the skill's.
 

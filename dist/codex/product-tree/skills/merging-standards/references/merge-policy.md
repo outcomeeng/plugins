@@ -118,7 +118,7 @@ NEVER stop with blocked-by-worktree, cannot-use-other-worktree, or cannot-create
 
 Run `spx worktree status` from the assigned root before the first checkout-sensitive mutation in the delivery lifecycle and immediately before every checkout or worktree transition. Re-run it after compaction, restart, or any observed claim-state change. A prior reading, a sibling worktree's reading, cleanliness, branch topology, and path naming are never reusable occupancy proof.
 
-The fresh output must identify the assigned root exactly, show the current session's live claim there, and show no different live holder for that root. Preserve the command result with the mutation plan. When any predicate is absent, stay in the assigned worktree, preserve its state, record the defect in the governing node's `ISSUES.md`, repair the session/worktree claim through the governing coordination workflow, and rerun this preflight before mutation. Never move the work into a worktree selected by inference.
+The fresh output must identify the assigned root exactly, show the current session's live claim there, and show no different live holder for that root. Preserve the command result with the mutation plan. When any predicate is absent, stay in the assigned worktree, preserve its state, record the defect in the governing node's `ISSUES.md`, repair the session/worktree claim through the workflow that governs that claim, and rerun this preflight before mutation. Never move the work into a worktree selected by inference.
 
 </occupancy_preflight>
 

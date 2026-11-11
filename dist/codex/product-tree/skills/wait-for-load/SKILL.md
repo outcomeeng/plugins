@@ -65,7 +65,7 @@ No script ships with this skill and no test covers it; an assertion audit of thi
 **Timer-driven host-load checks**
 
 - **What happened:** Claude used timers and repeated 60-second result-collection turns for host-load convergence.
-- **Why it failed:** The timer knew elapsed time but did not know readiness, so each re-entry reconstructed context and repeated coordination.
+- **Why it failed:** The timer knew elapsed time but did not know readiness, so each re-entry reconstructed context and repeated its checks.
 - **How to avoid:** Run the guarded line and collect that one line; never substitute a timer or start another guard while one is still running.
 
 **Heavy commands released together**

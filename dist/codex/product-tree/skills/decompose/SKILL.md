@@ -81,7 +81,7 @@ Placement holds for either target form: a node needs an index among the target's
 Classify the target with the product-domain-shapes reference before deciding whether to split it:
 
 - **One coherent concern**: keep the target whole when one hypothesis or enables statement covers all assertions, assertions are tightly coupled, or proposed children would carry only 1-2 trivial assertions.
-- **Aggregate domain plus first concrete behavior**: create both parent and child from the first slice when the aggregate owns shared policy, vocabulary, scope, routing, coordination, or cross-child assertions and the concrete behavior owns an independently validated contract.
+- **Aggregate domain plus first concrete behavior**: create both parent and child from the first slice when the aggregate owns shared policy, vocabulary, scope, routing, or cross-child assertions and the concrete behavior owns an independently validated contract.
 - **Implementation layer**: translate code-shaped names back to product dimensions before proposing nodes.
 - **Unsettled boundary**: use skill `product-tree:interview` with the unresolved boundary as the current coverage area.
 

@@ -4,7 +4,7 @@ Known defects, contradictions and gaps in this node. Coordination note; not spec
 
 ## The authoring flows still instruct creating PLAN.md notes
 
-Methodology 4.0 admits `ISSUES.md` as the only node-local note and routes pending work to a Change; the `/understand` foundation states both rules in its coordination model, and `spx/knowledge/log.md` records the retirement of every `PLAN.md` note in this repository. The authoring and delivery surfaces still teach the retired artifact as live input or as the place to record deferred work:
+Methodology 4.0 admits `ISSUES.md` as the only node-local note and routes pending work to a Change; the `/understand` foundation states both rules in its change model, and `spx/knowledge/log.md` records the retirement of every `PLAN.md` note in this repository. The authoring and delivery surfaces still teach the retired artifact as live input or as the place to record deferred work:
 
 - `bootstrapping.md` asserts "record top-level product intent, constraints, examples, and unresolved questions in `spx/PLAN.md` when the user provides candidate areas", and the shipped `/bootstrap` skill creates `spx/PLAN.md` for every newly bootstrapped Product Tree (`src/plugins/product-tree/skills/bootstrap/SKILL.md` lines 81, 110, 121, 133, 158, 164 and 184).
 - `/decompose` reads `spx/PLAN.md` and node-local `PLAN.md` files as structure intent and records reserved index horizons in them (`src/plugins/product-tree/skills/decompose/SKILL.md` lines 48, 55, 57, 77, 92, 212, 275 and 276), and `decomposing.md` states the same behavior at its lines 19 and 28.

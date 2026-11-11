@@ -197,7 +197,7 @@ Multiple concerns = multiple commits. The skill never uses `git add .`.
 
 ## 8. Claim, release, and close a Change
 
-Work is coordinated through Changes in the store `spx/local/coordination.md` declares. Claim one before working on it:
+The Changes of this Product live in the Change Store `spx/local/changes.md` names. Claim one before working on it:
 
 ```text
 > /manage-change claim #42             # this session becomes the holder; the Change stays Available
@@ -246,16 +246,16 @@ This stops the current ad hoc work and restarts the proper TDD flow from Step 1.
 
 ## Workflow summary
 
-| Step           | What you do                                       | Command/Skill                                  |
-| -------------- | ------------------------------------------------- | ---------------------------------------------- |
-| **Setup**      | Install spx CLI, add marketplace, install plugins | `npm install -g @outcomeeng/spx`               |
-| **Bootstrap**  | Create Product Tree for your product              | `/bootstrap`                                   |
-| **Author**     | Create specs, decisions, nodes                    | `/author`                                      |
-| **Decompose**  | Break down large nodes                            | `/decompose`                                   |
-| **Align**      | Check consistency and quality                     | `/align`                                       |
-| **Test**       | Write tests from spec assertions                  | `/test`                                        |
-| **Implement**  | TDD flow: architect → test → code                 | `/apply`                                       |
-| **Commit**     | Selective staging, Conventional Commits           | `/commit-changes`                              |
-| **Coordinate** | Claim, release, and close a Change                | `/manage-change` `claim`, `release`, `applied` |
-| **Refactor**   | Restructure the tree                              | `/refactor`                                    |
-| **Correct**    | Stop ad hoc work, restart methodology             | `/refocus`                                     |
+| Step          | What you do                                       | Command/Skill                                  |
+| ------------- | ------------------------------------------------- | ---------------------------------------------- |
+| **Setup**     | Install spx CLI, add marketplace, install plugins | `npm install -g @outcomeeng/spx`               |
+| **Bootstrap** | Create Product Tree for your product              | `/bootstrap`                                   |
+| **Author**    | Create specs, decisions, nodes                    | `/author`                                      |
+| **Decompose** | Break down large nodes                            | `/decompose`                                   |
+| **Align**     | Check consistency and quality                     | `/align`                                       |
+| **Test**      | Write tests from spec assertions                  | `/test`                                        |
+| **Implement** | TDD flow: architect → test → code                 | `/apply`                                       |
+| **Commit**    | Selective staging, Conventional Commits           | `/commit-changes`                              |
+| **Hold**      | Claim, release, and close a Change                | `/manage-change` `claim`, `release`, `applied` |
+| **Refactor**  | Restructure the tree                              | `/refactor`                                    |
+| **Correct**   | Stop ad hoc work, restart methodology             | `/refocus`                                     |

@@ -12,7 +12,7 @@ Three methodology steps drive all work. Audit gates operate within each step. Se
 2. **Spec** — establish test, evaluate, or audit evidence that makes assertions verifiable. Node becomes Specified.
 3. **Apply** — write implementation code that makes deterministic evidence pass and satisfies agentic evidence. Node becomes Passing.
 
-Planning is transient — a Change and its Handoff in the coordination store, not durable artifacts.
+Planning is transient — a Change and its Handoff in the Change Store, not durable artifacts.
 
 Within these steps:
 

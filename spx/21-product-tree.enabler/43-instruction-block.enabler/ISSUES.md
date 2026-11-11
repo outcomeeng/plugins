@@ -56,7 +56,7 @@ The node concept is "instruction block" across this node, its decision, the gene
 - `spx/21-product-tree.enabler/76-merge.enabler/merge.md` and the merge skills — "never … editing a generated guide".
 - The build runtime-token registry name `root_guide` (`outcomeeng/distribution/build.py`) and its ~60 `{{! file('root_guide') !}}` call sites across every plugin, governed by `spx/18-plugin-build.enabler/21-source-and-templating.enabler/21-runtime-parameterization.enabler`.
 
-Renaming "the agent guide" and `root_guide` requires one product-vocabulary decision followed by a coordinated build-token migration. Revisit this issue before any change renames either term; until that decision, "guide" remains the general description of the root files and `root_guide` remains the build token.
+Renaming "the agent guide" and `root_guide` requires one product-vocabulary decision followed by one build-token migration. Revisit this issue before any change renames either term; until that decision, "guide" remains the general description of the root files and `root_guide` remains the build token.
 
 ## Generator migration awaits a published SPX CLI capability
 

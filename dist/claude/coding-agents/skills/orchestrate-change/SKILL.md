@@ -14,7 +14,7 @@ One Change held by the worktree of one Applier session this Orchestrator started
 
 - The Orchestrator is a position, never a Role of the Change: it produces no artifact of the Change and never acts as a Verifier.
 - `change-applier` is the one definition this skill starts a session with; the session's own `/apply-change` launches every other session of the Change.
-- Across the Changes this position orchestrates, blockers and questions are settled in the order the coordination overlay `spx/local/coordination.md` declares for the Change store's priority field; Changes of equal priority, and every Change when the overlay declares no priority field, are ordered by ascending issue number.
+- Across the Changes this position orchestrates, blockers and questions are settled in the order `spx/local/changes.md` declares for the Change store's priority field; Changes of equal priority, and every Change when the overlay declares no priority field, are ordered by ascending issue number.
 - This position runs **Check** for each Applier it started at the regular interval its principal sets, until **Check** returns `collected`; each run is one bounded pass, and no pass waits for the next.
 - The harness setting alone withholds the structured-question tool from the Applier session, on its start and on every relaunch; no skill detects whether its session is an Applier.
 - The host grants the verification-run write paths: every start and relaunch supplies the paths SPX reports through the harness's parent-session option and keeps the operator's approval policy, and no agent definition names a path.
@@ -24,7 +24,7 @@ One Change held by the worktree of one Applier session this Orchestrator started
 
 <workflow>
 
-`$ARGUMENTS` selects one mode. Empty arguments, or arguments matching neither mode, return result `stopped` with reason `arguments-required` and the expected shapes from `argument-hint`. Resolve a `#N` reference against the Change store `spx/local/coordination.md` declares; an absent overlay, or an `owner/repo` other than that store, returns `stopped` with the observed value.
+`$ARGUMENTS` selects one mode. Empty arguments, or arguments matching neither mode, return result `stopped` with reason `arguments-required` and the expected shapes from `argument-hint`. Resolve a `#N` reference against the Change store `spx/local/changes.md` declares; an absent overlay, or an `owner/repo` other than that store, returns `stopped` with the observed value.
 
 Every mode's last two tokens are this position's own registered agent-mail name and the principal: the agent-mail name of the position this Orchestrator reports to. Every message request to `coding-agents:message-agents` carries this position's own name as `sender` and the principal as `recipient`.
 

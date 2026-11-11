@@ -15,7 +15,7 @@ One Change record in the declared Change Store, written from a Change Draft that
 <essential_principles>
 
 - Use skill `product-tree:change-standards`. Its rules govern every Draft and publish by their slugs; read its `references/github-store.md` for every store read and write.
-- Read `spx/local/coordination.md` for the Change Store and the Product.
+- Read `spx/local/changes.md` for the Change Store and the Product.
 - Every record starts from a Change Draft in the Product's checkout. Keep conversation text, transcripts, and audit bookkeeping out of the Draft under `no-person`.
 - Ask only about a choice that changes a Declarations line and that the request, the Product Tree, and the repository leave open, one question at a time through the structured-question tool. Every answer the Operator gives reaches a Declarations line under `operator-answers`. Use skill `product-tree:interview` for an open choice of scope, failure behavior, dependency, evidence, or rollout.
 - Use skill `product-tree:manage-change`. It makes every Transition the steps below name; this skill writes no Maturity or Lifecycle after recording.
