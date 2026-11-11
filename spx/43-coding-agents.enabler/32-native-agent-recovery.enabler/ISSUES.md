@@ -1,7 +1,5 @@
 # ISSUES — native agent recovery
 
-Coordination note; not spec truth.
-
 ## DEBT [evidence]: this node's linked tests hold every predicate in their harness
 
 `test-evidence-auditor` raised fifteen blocking findings, one per `[test]`-tagged assertion on this

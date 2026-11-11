@@ -236,7 +236,7 @@ def test_terminal_kinds_map_to_correlated_handbacks() -> None:
             subject=content.subject,
             instruction=content.instruction,
             completion_text=content.completion_text,
-            coordination_reference=reference,
+            correlation=reference,
         )
         handback = cast(dict[str, object], delegation[module.HANDBACK_FIELD])
         command = cast(str, handback[module.COMMAND_FIELD])
@@ -266,7 +266,7 @@ def test_terminal_kinds_map_to_correlated_handbacks() -> None:
                 terminal_kind,
                 inline_result=f"{content.inline_result}: {terminal_kind.value}",
             )
-            assert terminal[module.COORDINATION_REFERENCE_FIELD] == reference
+            assert terminal[module.CORRELATION_FIELD] == reference
             assert terminal[module.KIND_FIELD] == terminal_kind
             assert terminal[module.SENDER_FIELD] == recipient
             assert terminal[module.RECIPIENT_FIELD] == sender

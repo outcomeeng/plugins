@@ -1,10 +1,16 @@
 # Coding-agents plugin changelog
 
-Coding-agent environments and coordination: Prowl and herdr pane operation, agent-mail message records, recipient discovery, bounded delegation, and cross-worktree coordination.
+Coding-agent environments and communication: Prowl and herdr pane operation, agent-mail message records, recipient discovery, bounded delegation, and cross-worktree messaging.
 
 What changed in **this plugin**, for a consumer repository. An entry appears when a change alters what a consumer can rely on, must do, or must know.
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
+
+## 0.21.0
+
+### Breaking
+
+- **A message envelope and a Prowl delegation carry their thread in `correlation`.** `/message-agents` reads and writes `correlation` in a Prowl message request and its envelope, and `/operate-prowl` writes `correlation` in a delegation request, its structured handback block, and its terminal handback. Before this change, the field was `coordinationReference`. A Prowl delegation request that carries `coordinationReference` is rejected as an unsupported key. `/message-agents` tells a Prowl request from a mail request by `recipient`, `body`, and `ackRequired`, never by `correlation`.
 
 ## 0.20.0
 

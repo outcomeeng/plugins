@@ -97,7 +97,7 @@ python3 "${SKILL_DIR}/scripts/prowl_environment.py" run < <request-file>
   "subject": "<bounded subject>",
   "instruction": "<complete bounded request, with no shell command or return-path fields>",
   "completionText": "<one-line completion signal for the sender>",
-  "coordinationReference": null
+  "correlation": null
 }
 ```
 
@@ -162,7 +162,7 @@ Two environment conditions silently break a handback. The generated block names 
 
 <constraints>
 
-- ALWAYS preserve complete source-supplied agent, pane, worktree, branch, repository, run, coordination, status, conclusion, exit-code, and result-reference values.
+- ALWAYS preserve complete source-supplied agent, pane, worktree, branch, repository, run, correlation, status, conclusion, exit-code, and result-reference values.
 - ALWAYS execute the bundled script through `${SKILL_DIR}`; never import it from another filesystem location or manufacture a path outside this skill directory.
 - ALWAYS generate executable handback data from semantic completion text through `delegate` or `plan-handback`.
 - NEVER accept caller-authored `handback`, `command`, `handbackCommand`, `returnPane`, or `adapterPath` fields.
@@ -177,7 +177,7 @@ Two environment conditions silently break a handback. The generated block names 
 
 <testing>
 
-Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Run the documented `run` form with an `agents` payload and require `status: "succeeded"`, `commandExitCode: 0`, and a public response; run `resolve-target` with pane-only, worktree-only, and combined caller evidence and require one inventory call, caller exclusion, and zero sends; fill one returned send template and require `response.data.input.trailing_enter_sent: true`; run `plan-handback`, `delegate`, and `handback` with the documented shapes and require the command to end exactly at `run`, the initiating coordination reference to survive, and every caller-authored executable handback field to fail. Cover every operation mapping, public JSON failure, mutation rejection before command construction, URI-bearing delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch.
+Before release, import the bundled module with controlled `CommandRunner` implementations under the interaction-protocol and failure-simulation exceptions. Run the documented `run` form with an `agents` payload and require `status: "succeeded"`, `commandExitCode: 0`, and a public response; run `resolve-target` with pane-only, worktree-only, and combined caller evidence and require one inventory call, caller exclusion, and zero sends; fill one returned send template and require `response.data.input.trailing_enter_sent: true`; run `plan-handback`, `delegate`, and `handback` with the documented shapes and require the command to end exactly at `run`, the initiating correlation to survive, and every caller-authored executable handback field to fail. Cover every operation mapping, public JSON failure, mutation rejection before command construction, URI-bearing delegation result forms, repeated terminals, conflicting terminals, malformed input, missing Prowl, and CLI stdin dispatch.
 
 Recorded exercised payload/results:
 
@@ -211,7 +211,7 @@ Recorded exercised payload/results:
 
 - A successful public operation is mechanically established only when the bundled script exits zero and emits `schemaVersion: 1`, `status: "succeeded"`, `commandExitCode: 0`, and a public `response` object without exposing Prowl command grammar.
 - Every positively identified Prowl participant retains complete public identities verbatim.
-- Every delegation preserves its initiating coordination reference through exactly one completed, failed, rejected, or unavailable terminal handback.
+- Every delegation preserves its initiating correlation through exactly one completed, failed, rejected, or unavailable terminal handback.
 - Every delegation carries one source-generated handback block whose command ends exactly at `run` and whose conditions identify checked submission, no retry after submission, the default socket, and both expected panes.
 - A durable handback writes its file before sending, and the notification reaches the sender's pane as a submitted turn rather than editor prefill.
 - One `resolve-target` invocation returns the checked inventory, complete caller and participants, non-caller path matches, and candidate-specific immediate-return send templates without sending.

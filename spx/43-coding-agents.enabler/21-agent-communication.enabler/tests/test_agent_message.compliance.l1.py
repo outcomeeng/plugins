@@ -95,7 +95,7 @@ def test_delivery_requires_complete_checked_transport_evidence() -> None:
     assert raised.value.status == module.DeliveryStatus.INVALID_SCHEMA
 
 
-def test_transport_success_establishes_no_coordination_state() -> None:
+def test_transport_success_establishes_no_agreement_state() -> None:
     module, sender, recipient, _ = public_message_context()
     prowl_result = module.delivery_result(
         fact_envelope(module, sender, recipient),

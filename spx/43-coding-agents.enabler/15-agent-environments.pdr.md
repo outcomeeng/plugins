@@ -9,7 +9,7 @@ Environment capabilities keep workflow semantics stable while local panes, nativ
 ## Product properties
 
 1. Each supported environment exposes a versioned operation surface and preserves every native participant, task, status, conclusion, and result identity unchanged.
-2. A delegation request reaches exactly one completed, failed, rejected, or unavailable terminal handback carrying the complete initiating coordination reference.
+2. A delegation request reaches exactly one completed, failed, rejected, or unavailable terminal handback carrying the complete initiating correlation.
 3. Agent-facing workflows use the environment capability directly rather than invoking raw environment commands, command help, or an external environment-control skill.
 
 ## Verification
@@ -17,7 +17,7 @@ Environment capabilities keep workflow semantics stable while local panes, nativ
 ### Testing
 
 - ALWAYS: supported and unsupported environment operations map to source-owned success or unavailable results without fallback inference ([mapping])
-- ALWAYS: delegation requests and terminal handbacks preserve complete participant and coordination identities across every supported result form ([property])
+- ALWAYS: delegation requests and terminal handbacks preserve complete participant and correlation identities across every supported result form ([property])
 
 ### Audit
 

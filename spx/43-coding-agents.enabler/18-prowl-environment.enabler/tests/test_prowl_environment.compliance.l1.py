@@ -132,9 +132,7 @@ def test_terminal_handbacks_require_one_complete_result_form() -> None:
             subject=content.subject,
             instruction=content.instruction,
             completion_text=content.completion_text,
-            coordination_reference=str(
-                uuid.uuid5(uuid.NAMESPACE_URL, sender[module.PANE_FIELD])
-            ),
+            correlation=str(uuid.uuid5(uuid.NAMESPACE_URL, sender[module.PANE_FIELD])),
         )
         overlength_projection = (
             content.projection
@@ -191,7 +189,7 @@ def test_delegation_cli_rejects_unsupported_and_accepts_supported_fields() -> No
             module.SUBJECT_FIELD: content.subject,
             module.INSTRUCTION_FIELD: content.instruction,
             module.COMPLETION_TEXT_FIELD: content.completion_text,
-            module.COORDINATION_REFERENCE_FIELD: None,
+            module.CORRELATION_FIELD: None,
         }
         unsupported_request = {
             **supported_request,
