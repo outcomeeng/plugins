@@ -135,7 +135,7 @@ Use these seam-finding heuristics:
 - Implementation layers alone are not concerns unless the user-visible or spec-visible contract can be validated independently.
 - Assertions that span multiple children stay in the parent as cross-cutting assertions.
 
-When later sibling slices are named, implied by the product vocabulary, or recorded as reserved horizon, keep the aggregate as the parent boundary and place the concrete behavior in a child. Keep cross-slice assertions on the parent and child-specific assertions on the child. Record the deferred siblings and the reserved horizon as a Proposed Change. Use skill `product-tree:author-change`.
+When later sibling slices are named, implied by the product vocabulary, or recorded as reserved horizon, keep the aggregate as the parent boundary and place the concrete behavior in a child. Keep cross-slice assertions on the parent and child-specific assertions on the child. Report the deferred siblings and the reserved horizon to the Operator; when the Operator asks for a record, record them as a Proposed Change. Use skill `product-tree:author-change`.
 
 Present concern groupings to the user before writing files.
 
@@ -235,7 +235,7 @@ Read every index from the matrix file Step 7 wrote. The horizon math below compo
 
 1. Choose the horizon:
    - Full composition of all known child concerns → use the full [10, 99] range.
-   - First slice of a larger known area → use the first half or first quarter and record the reserved horizon in the Proposed Change Step 4 records.
+   - First slice of a larger known area → use the first half or first quarter and report the reserved horizon to the Operator with the Step 4 result.
 2. Count child nodes in the chosen horizon.
 3. Distribute ordered groups with `i_k = 10 + floor(k * 89 / (N + 1))`, adjusted to the selected horizon.
 4. Assign a higher index only when the ordering-evidence matrix proves the predecessor constrains the successor — the higher index makes that predecessor constraining context for the successor in every later `/contextualize`.
@@ -303,8 +303,8 @@ Check each criterion:
 - [ ] No new child placed at a higher index than an existing sibling without a matrix row proving the edge
 - [ ] A child between an ordered predecessor and an ordered successor took the band's midpoint
 - [ ] Roadmap, chronology, theme grouping, and explanation order are not encoded as dependencies by themselves
-- [ ] Index horizon selected; partial compositions reserve remaining space in a Proposed Change
-- [ ] Full compositions collectively cover the parent or product scope; partial compositions cover the selected first-slice horizon and record the remaining horizon in a Proposed Change
+- [ ] Index horizon selected; partial compositions reserve remaining space and report it to the Operator
+- [ ] Full compositions collectively cover the parent or product scope; partial compositions cover the selected first-slice horizon and report the remaining horizon to the Operator
 - [ ] Assertions are not lost during redistribution
 - [ ] Spec files use atemporal voice
 - [ ] Each new child's kind fixed by Step 5, and its directory name and spec file in the form the tree carries
@@ -363,7 +363,7 @@ How to avoid: Run the disposition checkpoint before assigning any index. Treat a
 
 Claude created only a parent domain node when the request named an aggregate domain plus its first concrete behavior. The parent then carried behavior-specific assertions, so adding the next behavior would require splitting the parent later and moving assertions that were specific from the start.
 
-How to avoid: When the aggregate owns shared scope or cross-child policy and the concrete behavior has its own validation contract, create both parent and child immediately. Put shared assertions on the parent, behavior-specific assertions on the child, and record the deferred sibling horizon as a Proposed Change when the later slices are known.
+How to avoid: When the aggregate owns shared scope or cross-child policy and the concrete behavior has its own validation contract, create both parent and child immediately. Put shared assertions on the parent, behavior-specific assertions on the child, and report the deferred sibling horizon to the Operator when the later slices are known.
 
 **Failure 9: Left decision placement to authoring while ownership was unsettled**
 

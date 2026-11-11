@@ -118,7 +118,7 @@ handoff:
   ]
 ```
 
-`branch`, `head`, and `next` are required; `completed`, `blockers`, and `hazards` appear when they hold an entry. An applied Transition of a Leaf adds `changeset: <owner/repo>@<merge commit SHA>`. No other key, no prose outside `reason`, no delegate, and no words of the Operator appear in the block. Resolve `session` from the harness's session variable, `machine` from `id -un` and `hostname -s`, and `worktree` from `git rev-parse --show-toplevel`.
+`branch`, `head`, and `next` are required; `completed`, `blockers`, and `hazards` appear when they hold an entry. An applied Transition of a Leaf adds `changeset: <owner/repo>@<merge commit SHA>`. No other key, no prose outside `reason`, no party on whose behalf the holder acts, and no words of the Operator appear in the block. Resolve `session` from the harness's session variable, `machine` from `id -un` and `hostname -s`, and `worktree` from `git rev-parse --show-toplevel`.
 
 </transition_comment>
 

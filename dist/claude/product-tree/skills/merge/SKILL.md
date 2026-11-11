@@ -51,7 +51,7 @@ It prints the total and non-note counts over the full changed-file set (committe
 
 - The Change's Output is delivered: Use skill `product-tree:manage-change`. Make its `applied` Transition.
 - Continuation remains for another holder: use the same skill to make its `release` Transition with a Handoff.
-- The conversation holds no Change: Use skill `product-tree:author-change`. Record the remaining work as a Proposed Change.
+- The conversation holds no Change: name the remaining work in the closeout for the Operator. Only when the Operator asks for a record: Use skill `product-tree:author-change`. Record the remaining work as a Proposed Change.
 
 Do not emit an independent merge, push, or sync receipt in place of that closeout. A Change closed or released earlier in the same conversation never accounts for work merged after it: new merged work reopens the disposition.
 
