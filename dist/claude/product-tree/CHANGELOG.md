@@ -10,6 +10,16 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.113.0
+
+### Breaking
+
+- **The Change skills read the Change Store from `spx/local/changes.md`.** `/author-change`, `/manage-change`, `/audit-change`, `/apply-change`, and `/report-changes` read the overlay that names the Change Store and the Product at `spx/local/changes.md`, and the generated instruction block names that path. Before this change, the overlay was `spx/local/coordination.md`. A consumer repository renames its overlay to `spx/local/changes.md`; until it does, those skills stop with a blocked result naming the missing file.
+
+### Changed
+
+- **`/understand` names its section on Changes `<change_model>`.** The foundation marker lists `change-model`, and the section defines a Change as a mutable record of the work toward one intended Output. Before this change, the section was `<coordination_model>` and the marker listed `coordination-model`.
+
 ## 0.112.0
 
 ### Breaking

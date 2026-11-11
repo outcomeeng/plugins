@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.20.0
+
+### Breaking
+
+- **`/orchestrate-change` reads the Change Store from `spx/local/changes.md`.** Before this change, it read `spx/local/coordination.md`. A consumer repository renames that overlay to `spx/local/changes.md`; an absent overlay stops the skill with the observed value.
+
 ## 0.19.0
 
 ### Changed

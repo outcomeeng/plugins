@@ -16,7 +16,7 @@ A table of the open Changes of the declared Change store that pass the request's
 
 - NEVER write: the report runs reading `gh` commands only and posts no comment and writes no field, assignee, or blocker; this skill holds no file-write tool, and the script writes no file.
 - NEVER substitute a shorter list for a failure: a read that fails, returns unreadable output, or fills a bound yields the blocked result and no row, and a Change whose Priority the declared Priority order omits yields a blocked result naming the priority-order read and no row.
-- ALWAYS take the Change store and the Priority order from `spx/local/coordination.md` and pass them to the script as request values; the script reads no overlay and no repository content.
+- ALWAYS take the Change store and the Priority order from `spx/local/changes.md` and pass them to the script as request values; the script reads no overlay and no repository content.
 
 </constraints>
 
@@ -43,7 +43,7 @@ The script needs `gh` authenticated for the store and Python 3.13 or later, and 
 
 <workflow>
 
-1. **Read the request values.** Read `spx/local/coordination.md`. Take the `Repository` value of its Change store as the store, and the `Priority` line's order from first to last as the Priority order, joined by commas. An absent file, store, or Priority order is a blocked result naming what is missing, with nothing run.
+1. **Read the request values.** Read `spx/local/changes.md`. Take the `Repository` value of its Change store as the store, and the `Priority` line's order from first to last as the Priority order, joined by commas. An absent file, store, or Priority order is a blocked result naming what is missing, with nothing run.
 2. **Read the filters from `$ARGUMENTS`.** Each token is `key=value` with `key` one of `product`, `maturity`, `lifecycle`, `holder`, or `blocked`; every filter is optional, and an empty `$ARGUMENTS` reports every open Change. A token of any other form is a blocked result naming the accepted keys, with nothing run. `blocked=yes` keeps Changes with an open blocker and `blocked=no` keeps those without one.
 3. **Run the script once**, as its own command with each value written literally: `--store`, `--priority-order`, and one flag for each filter given. The script reads every page of the store, so the rows equal the matching open Changes whatever the number of pages.
 4. **Render the result.** For `"status": "blocked"`, report `read`, `detail`, and `bound` verbatim and no row. For `"status": "ok"`, render one table row per entry of `rows`, in the order given, with these columns and a null value as `none`:

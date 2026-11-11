@@ -5,7 +5,7 @@ malleability: spec
 
 # Worktree Occupancy
 
-PROVIDES the coordination of bare-repository pool worktree occupancy by the `SessionStart` hook and `manage-change` through the `spx worktree` CLI
+PROVIDES the claims of bare-repository pool worktree occupancy made by the `SessionStart` hook and `manage-change` through the `spx worktree` CLI
 SO THAT concurrent agents sharing one `.spx/` pool
 CAN keep each agent's work inside its own assigned, hook-claimed worktree and off any worktree a live agent holds, instead of inferring occupancy from git cleanliness
 
@@ -19,5 +19,5 @@ The `SessionStart` hook records the running session's worktree-occupancy claim b
 - no-hand-claim: NEVER: `manage-change` records a worktree-occupancy claim by hand (`spx worktree claim`), or enters or creates a pool worktree other than the assigned one — recording the claim is the `SessionStart` hook's sole job, and the agent stays in its assigned worktree and branches there ([audit])
 - release-keeps-claim: NEVER: the release Transition of `manage-change` releases the running worktree's live claim through `spx worktree release`; it frees the Git branch by stepping the checkout off it after the push, while the live process keeps its occupancy claim until a later claim replaces it or liveness marks it free ([audit])
 - cli-only-occupancy: NEVER: a plugin reads, writes, or removes a `.spx/worktrees/` claim by direct filesystem access — occupancy is reached only through the `spx` CLI (`spx worktree status` from the claim and release Transitions of `manage-change`, and the claim that `spx hook run session-start` records from the `SessionStart` hook) ([audit])
-- NEVER: an agent operates inside a worktree of a `.spx/` pool it does not participate in — a foreign pool's worktree is off-limits regardless of how free its git state looks, because the claim protocol coordinates only agents that share one pool ([audit])
+- NEVER: an agent operates inside a worktree of a `.spx/` pool it does not participate in — a foreign pool's worktree is off-limits regardless of how free its git state looks, because the claim protocol governs only agents that share one pool ([audit])
 - ALWAYS: the product-tree plugin's `SessionStart` hook records the worktree-occupancy claim by delegating to `spx hook run session-start` (`spx/21-product-tree.enabler/13-agent-environment.enabler/`); the hook embeds no claim logic of its own ([audit])

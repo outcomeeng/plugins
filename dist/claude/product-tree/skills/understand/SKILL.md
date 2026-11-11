@@ -58,7 +58,7 @@ A coherent product document, PDR, ADR, or ancestor spec stays authoritative when
 
 - ALWAYS: align every first affected lower spec in the same changeset as a higher-level truth change.
 
-Remaining evidence or implementation work is downstream work recorded in a Change (see `<coordination_model>`), never in a node-local note. A node whose declaration leads its implementation merges as Declared or Specified; that state exposes the work and never licenses a lower layer to contradict the declaration.
+Remaining evidence or implementation work is downstream work recorded in a Change (see `<change_model>`), never in a node-local note. A node whose declaration leads its implementation merges as Declared or Specified; that state exposes the work and never licenses a lower layer to contradict the declaration.
 
 </decision_to_spec_alignment>
 
@@ -347,19 +347,19 @@ The commit records verification state as `passing`, `failing`, or `not-run`; tha
 
 </verification_model>
 
-<coordination_model>
+<change_model>
 
 - ALWAYS: keep mutable work state outside the durable map — in Changes, Handoffs, and `ISSUES.md` — and never let it declare product, architecture, or methodology truth.
 
-A **Change** is the mutable coordination object for one intended Output: a decision or spec evolution, a lower-layer reconciliation, or both. Its record holds a Statement of Intent and, for a Leaf, Declarations: one subsection per Node, Decision Record, or contract file it touches, in Application order. **Maturity** advances Proposed → Framed → Sliced → Applicable; only the operator advances to Framed or Sliced, and the holder advances an audited Sliced Leaf to Applicable. **Lifecycle** is `Available`, `Submitted`, `Applied`, or `Abandoned`. A Change another Change names as its parent is a **Parent**, every other Change a **Leaf**; a Parent never reaches Applicable. Application begins only on a held, Applicable Leaf whose blockers are resolved; a merge adds the absorbed Change to the survivor's `predecessors`. A **Handoff** is the latest persisted continuation — branch or Changeset, its head commit, the completed Declarations subsections and the next one, blockers, hazards, never a secret. `/manage-change` makes every Transition.
+A **Change** is a mutable record of the work toward one intended Output: a decision or spec evolution, a lower-layer reconciliation, or both. Its record holds a Statement of Intent and, for a Leaf, Declarations: one subsection per Node, Decision Record, or contract file it touches, in Application order. **Maturity** advances Proposed → Framed → Sliced → Applicable; only the operator advances to Framed or Sliced, and the holder advances an audited Sliced Leaf to Applicable. **Lifecycle** is `Available`, `Submitted`, `Applied`, or `Abandoned`. A Change another Change names as its parent is a **Parent**, every other Change a **Leaf**; a Parent never reaches Applicable. Application begins only on a held, Applicable Leaf whose blockers are resolved; a merge adds the absorbed Change to the survivor's `predecessors`. A **Handoff** is the latest persisted continuation — branch or Changeset, its head commit, the completed Declarations subsections and the next one, blockers, hazards, never a secret. `/manage-change` makes every Transition.
 
 **Roles**, capitalized: the **Refiner** holds the Change during refinement and is the operator's conversation; the **Applier** holds it during Application, takes the Declarations subsections in order, delegates, integrates, and produces no artifact other than a mechanical repair; the **Author** produces one round's artifacts; the **Fixer** is a later round's Author; the **Verifier** produces an Agentic verdict — an Auditor for audit, a Reviewer for review. Author, Fixer, and Verifier hold no claim.
 
 The Author and the Fixer use separate agent sessions. A mechanical repair fixes a finding and changes no behavior or decision, and never covers decision-record text; the Applier makes it directly with no Fixer round, every other repair goes to a Fixer, and the Applier that makes it holds neither the Author nor the Fixer Role.
 
-`ISSUES.md` is the only node-local note: known defects, contradictions, and gaps with evidence, impact, and a settlement condition, and no work order, owner, priority, or next action. Notes inform judgment and never supply authority; reconcile every loaded note against current decisions, specs, evidence, and intent before acting. `spx/local/` holds product-specific overlays read by the skill that declares each; `spx/local/merging.md` is the lifecycle overlay `/merge` and `/contextualize` read; the coordination overlay names where the repository's Changes live.
+`ISSUES.md` is the only node-local note: known defects, contradictions, and gaps with evidence, impact, and a settlement condition, and no work order, owner, priority, or next action. Notes inform judgment and never supply authority; reconcile every loaded note against current decisions, specs, evidence, and intent before acting. `spx/local/` holds product-specific overlays read by the skill that declares each; `spx/local/merging.md` is the lifecycle overlay `/merge` and `/contextualize` read; `spx/local/changes.md` names the repository's Change Store.
 
-</coordination_model>
+</change_model>
 
 <imperfection_protocol>
 
@@ -405,7 +405,7 @@ Apply the closing test: can the operator reasonably ask “What now?” A passin
 
 <product_tree_integration>
 
-- ALWAYS: keep the live ledger conversation-local and persist unresolved items only at their correct durable or coordination tier.
+- ALWAYS: keep the live ledger conversation-local and persist unresolved items only at their correct tier.
 
 Fixed entries disappear. Unresolved entries persist only through a decision, spec, Change, or `ISSUES.md`.
 
@@ -433,7 +433,7 @@ Continue through `/merge` unless the operator explicitly limited the request to 
 
 ```text
 <PRODUCT_TREE_FOUNDATION>
-Loaded inline: truth-hierarchy, node-model, artifact-placement, assertion-model, ordering-model, verification-model, coordination-model, imperfection-protocol
+Loaded inline: truth-hierarchy, node-model, artifact-placement, assertion-model, ordering-model, verification-model, change-model, imperfection-protocol
 Operational references available: kind-decision, grammar, artifact-placement, status-claims, product-domain-shapes
 Local lifecycle route: /merge, refined by spx/local/merging.md when present
 Default-branch completion: /merge delivers to origin's default branch; local work continues unless explicitly limited or a gate blocks every remaining action
@@ -464,8 +464,8 @@ Claude treated a transport checkpoint as delivered value because a successful pu
 
 <success_criteria>
 
-- The foundation domains — truth hierarchy, node model, artifact placement, assertion model, ordering model, verification model, coordination model, imperfection protocol — are present inline and require no secondary file reads.
-- Internal foundation sections contain no contradiction in truth flow, artifact ownership, kind grammar, assertion selection, ordering, verification vocabulary, coordination, or imperfection handling.
+- The foundation domains — truth hierarchy, node model, artifact placement, assertion model, ordering model, verification model, change model, imperfection protocol — are present inline and require no secondary file reads.
+- Internal foundation sections contain no contradiction in truth flow, artifact ownership, kind grammar, assertion selection, ordering, verification vocabulary, Changes, or imperfection handling.
 - Operational references, templates, examples, overlays, and the root guide are located or read according to the workflow.
 
 </success_criteria>

@@ -37,7 +37,7 @@ whose verdict depended on that version.
 <profile_selection>
 
 Read each role's central profile selection from its configuration and governing
-requirement. Coordination, verification, and implementation are responsibilities;
+requirement. Application, verification, and implementation are responsibilities;
 none automatically selects Strong, Executor, or Fast.
 
 </profile_selection>

@@ -47,7 +47,7 @@ CONTRIBUTING TO faster product iteration at the level of malleability chosen by 
 - Outcome Engineering methodology
 - Shared Claude Code and Codex plugin surfaces from the same source tree
 - Language-specific plugins for Outcome Engineering (Python, TypeScript, Rust, Go) for architecture, tests, code, and review
-- Change coordination (claim, release with a Handoff, close) for work continuity across agent sessions
+- Change Transitions (claim, release with a Handoff, close) for work continuity across agent sessions
 - Pre-commit validation infrastructure for plugin and skill quality
 - Persistent marketplace installation and isolated end-to-end install verification
 - Interface surfaces (browser) that render the Product Tree from the SPX CLI projection and support interactive review and restructuring

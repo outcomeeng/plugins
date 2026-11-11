@@ -11,7 +11,7 @@
 
 <store_binding>
 
-Read `spx/local/coordination.md` for the Change Store (`owner/repo`) and the Product value. The store is a GitHub repository whose owner is an organization that defines the issue fields `<github_store>` of the standards names. An absent overlay, or a store of another kind, is a blocked operation naming the missing file or the declared store. Every store command names only that store; a `gh` grant admits any repository the account reaches, so this discipline is the containment. A Change reference whose `owner/repo` differs from the declared store is a blocked operation naming both.
+Read `spx/local/changes.md` for the Change Store (`owner/repo`) and the Product value. The store is a GitHub repository whose owner is an organization that defines the issue fields `<github_store>` of the standards names. An absent overlay, or a store of another kind, is a blocked operation naming the missing file or the declared store. Every store command names only that store; a `gh` grant admits any repository the account reaches, so this discipline is the containment. A Change reference whose `owner/repo` differs from the declared store is a blocked operation naming both.
 
 </store_binding>
 
