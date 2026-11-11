@@ -1,7 +1,5 @@
 # Issues: Audit Specs
 
-Coordination note; not spec truth.
-
 ## Three declared eval suites are unbuilt; their four scenarios carry interim `[audit]` tags
 
 The `voice`, `tag-validity`, and `prose-coupling` suites were declared and never authored. Their four scenarios — temporal language → `temporal-voice`; bare, missing, or multiple tags → `invalid-tag`; a universal `[test]` claim tagged `scenario` → `evidence-type-mismatch`; a `[test]` tag on a prose-content claim → `prose-coupling` — carry `[audit]` as an explicit interim so no evidence link dangles. Their real verification type is evaluate: `/audit-specs` is an LLM-driven producer emitting a structured verdict a deterministic grader scores, which [`spx/15-spec-coverage.adr.md`](spx/15-spec-coverage.adr.md) routes to the eval lane. The interim tag was an operator decision (2026-09-07) taken with the pushback recorded that it weakens declared evidence to match implementation state.

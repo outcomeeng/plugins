@@ -173,7 +173,7 @@ After applying any operation, run the product's verify command for the spec lane
 
 - [ ] No broken evidence links — every `([test](...))` in affected specs resolves to an existing file
 - [ ] No orphaned test files — every test file in affected `tests/` directories is linked from an assertion
-- [ ] Coordination-note files (ISSUES.md, and a prior-form PLAN.md) moved with their node — they are node-local, not shared (do not need evidence links)
+- [ ] Notes (ISSUES.md, and a prior-form PLAN.md) moved with their node — they are node-local, not shared (do not need evidence links)
 - [ ] No empty nodes — every node has at least one assertion
 - [ ] Any new or changed index came from the matrix file at the path `product-tree:decompose` named in its result for the target parent
 - [ ] ADR/PDR scope correct — nodes are governed by the decisions in their ancestry

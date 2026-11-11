@@ -1,6 +1,6 @@
 # Issues: Authoring
 
-Coordination note; not spec truth. Reconcile against `authoring.md`, its two children, and current intent before acting.
+Reconcile against `authoring.md`, its two children, and current intent before acting.
 
 ## `/spec` is declared and not built; `/author` is still the operator-facing entry
 

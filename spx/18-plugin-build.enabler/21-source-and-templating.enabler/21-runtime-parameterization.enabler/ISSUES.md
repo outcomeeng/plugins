@@ -1,6 +1,6 @@
 # Issues: Runtime parameterization
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## The node and its specs use the prohibited agent-concept term
 

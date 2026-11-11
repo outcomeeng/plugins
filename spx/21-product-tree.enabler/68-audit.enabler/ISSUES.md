@@ -1,6 +1,6 @@
 # Issues - Audit
 
-Known follow-ups for the audit node. Coordination note; not spec truth.
+Known follow-ups for the audit node.
 
 ## Compliance-lane tests read as `assert harness_call()`
 

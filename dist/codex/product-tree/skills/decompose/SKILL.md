@@ -7,7 +7,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Bash(spx validation markdown:*), B
 
 <objective>
 
-Product Tree structure under a target node address, composed from durable spec content and node-local coordination notes.
+Product Tree structure under a target node address, composed from durable spec content and node-local notes.
 
 </objective>
 
@@ -50,10 +50,10 @@ Read from the manifest the marker carries:
 1. The product document and every product-level ADR and PDR.
 2. `AGENTS.md` when present.
 3. `spx/ISSUES.md` when present, and a prior-form `spx/PLAN.md` a 3.x-authored tree still carries.
-4. For a node target, the target spec, its decision records, its coordination notes, and its existing children.
+4. For a node target, the target spec, its decision records, its notes, and its existing children.
 5. The existing siblings at the target level — for `spx/`, the top-level nodes — with the index each carries.
 
-Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `/understand` `references/artifact-placement.md` `<test_artifact_boundaries>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or coordination notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
+Test infrastructure is mandatory to govern when it exists, but its spec placement follows normal composition. Per `/understand` `references/artifact-placement.md` `<test_artifact_boundaries>`, harnesses, generators, and fixtures are infrastructure governed by naturally placed spec nodes. Compose an `infrastructure`, `test`, `generators`, `fixtures`, or `harnesses` node only when product/root context or notes identify that concern as a real product boundary. Never fabricate a top-level category subtree solely because test infrastructure exists, and never invent anti-term categories such as `test-support`.
 
 Note root product scope, ancestor constraints, current assertions, existing siblings and children, and any known issues before proposing structure.
 
@@ -63,7 +63,7 @@ Note root product scope, ancestor constraints, current assertions, existing sibl
 
 **Step 2: Assess whether composition is needed**
 
-For `spx/`, composition is needed when the product document or root coordination notes name product scope that has no top-level children yet.
+For `spx/`, composition is needed when the product document or root notes name product scope that has no top-level children yet.
 
 For a node target, decompose when at least one trigger applies:
 
@@ -109,7 +109,7 @@ Each area is complete when:
 - **Kind** — Step 5 can fix each candidate's kind in the form the tree carries.
 - **Ordering Evidence** — ordered candidates have a concrete reason one must precede another, or the candidates are unordered relative to each other.
 - **Index Budget** — full-vs-partial composition horizon is known.
-- **Refactor/Issue Handling** — sibling refactors, duplicate nodes, stale coordination notes, and known issues have a destination.
+- **Refactor/Issue Handling** — sibling refactors, duplicate nodes, stale notes, and known issues have a destination.
 
 If any area is incomplete or doubtful, use skill `product-tree:interview` before continuing. Use the coverage map above as the calling skill's domain-specific coverage areas. Ask one structured question at a time and continue until every area is resolved or recorded as an explicit issue.
 
@@ -119,7 +119,7 @@ If any area is incomplete or doubtful, use skill `product-tree:interview` before
 
 **Step 4: Identify concerns**
 
-Group assertions, product scope items, and coordination-note intent into coherent concerns. A concern is a set of behavior, infrastructure, or policy that:
+Group assertions, product scope items, and note intent into coherent concerns. A concern is a set of behavior, infrastructure, or policy that:
 
 - Shares a common subject
 - Would be validated together
@@ -258,7 +258,7 @@ For node targets, move assertions from the parent spec into children:
 
 Count assertions before and after redistribution. The child assertions plus remaining parent assertions must equal the original assertion count.
 
-For `spx/`, write top-level children from product scope and root coordination-note intent. Product-level assertions stay in the product document unless they specify only one child concern.
+For `spx/`, write top-level children from product scope and root note intent. Product-level assertions stay in the product document unless they specify only one child concern.
 
 </step>
 

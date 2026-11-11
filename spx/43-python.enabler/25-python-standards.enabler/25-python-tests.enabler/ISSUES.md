@@ -1,6 +1,6 @@
 # Issues: Python tests
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## The Python test-writing path does not load the product's test overlay
 

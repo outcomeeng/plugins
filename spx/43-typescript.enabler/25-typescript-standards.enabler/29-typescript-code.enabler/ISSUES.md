@@ -1,6 +1,6 @@
 # Issues: TypeScript code
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## The TypeScript implementation and remediation routing is unextracted from the preserved aggregate
 

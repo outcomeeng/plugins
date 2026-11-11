@@ -1,7 +1,6 @@
 # Issues - Runtime Token Validation
 
-Known follow-ups for runtime-token validation. Coordination note; not spec
-truth.
+Known follow-ups for runtime-token validation.
 
 ## Compound target predicates are outside the canonical scanner form
 

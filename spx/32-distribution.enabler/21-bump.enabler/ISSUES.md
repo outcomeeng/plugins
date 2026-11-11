@@ -1,6 +1,6 @@
 # Issues — Bump
 
-Known follow-ups for the bump node. Coordination note; not spec truth.
+Known follow-ups for the bump node.
 
 ## The include-directive grammar has two implementations
 

@@ -1,6 +1,6 @@
 # Issues: Direct-push transport
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## The direct-push gate bindings have no eval coverage
 

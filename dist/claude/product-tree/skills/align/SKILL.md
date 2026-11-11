@@ -66,7 +66,7 @@ Classify each `.md` file in scope by its filename extension or parent directory 
 
 - `CLAUDE.md` and `AGENTS.md` files (agent guides, not specs)
 - Files inside `tests/` directories (test code, not specs)
-- `ISSUES.md` files, and any `PLAN.md` a tree authored under a 3.x version still carries (stale-prone coordination notes, not spec artifacts)
+- `ISSUES.md` files, and any `PLAN.md` a tree authored under a 3.x version still carries (stale-prone notes, not spec artifacts)
 - Files inside `spx/local/` directory (skill overlays, not spec artifacts)
 - Files inside an `evals/` directory sitting directly under a node directory (the co-located `[eval]` evidence lane the canonical node shape in live `/understand` `<files_in_a_node>` declares, not spec artifacts); an `evals/` directory anywhere else stays in scope
 - Files inside a `knowledge/` directory sitting directly under a node directory or the product root (knowledge bundles the canonical node shape in live `/understand` `<files_in_a_node>` declares, not spec artifacts); a `knowledge/` directory anywhere else stays in scope
@@ -104,7 +104,7 @@ For each classified output-kind spec, including the prior forms, use skill `prod
 
 **Do NOT report:**
 
-- A decision cited only by `ISSUES.md` or another coordination note
+- A decision cited only by `ISSUES.md` or another note
 - A lower-layer test or implementation mismatch as a decision contradiction
 
 </ancestor_decision_conformance>

@@ -1,6 +1,6 @@
 # ISSUES — grant locality
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## DEBT [evidence]: the grant-locality compliance test rebuilds the frontmatter boundary instead of driving the validator
 

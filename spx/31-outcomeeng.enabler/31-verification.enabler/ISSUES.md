@@ -1,6 +1,6 @@
 # Issues: Verification
 
-Known defects in this node's governance. Coordination note; not spec truth.
+Known defects in this node's governance.
 
 ## The eval-prompt relation claims seven hand-authored prompts
 

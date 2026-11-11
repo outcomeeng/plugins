@@ -1,6 +1,6 @@
 # Issues: HDL
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## Two review reference files over 100 lines carry no table of contents
 

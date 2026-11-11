@@ -1,6 +1,6 @@
 # Issues: Instructions Plugin
 
-Current instructions-plugin follow-ups. Coordination note; not spec truth.
+Current instructions-plugin follow-ups.
 
 ## 1. Audit-skill skeleton sweep
 

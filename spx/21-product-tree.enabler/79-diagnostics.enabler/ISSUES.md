@@ -1,6 +1,6 @@
 # Issues: Diagnostics
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## The shipped diagnose manifest and its conformance evidence trail the aligned decision
 

@@ -1,7 +1,5 @@
 # ISSUES — execution policy enabler
 
-Coordination note; not spec truth.
-
 ## DEBT [evidence]: expected tables repeat the converter's tables (f-001, f-002)
 
 Two findings (both REJECT, oracle independence) in

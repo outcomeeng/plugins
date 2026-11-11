@@ -2,4 +2,4 @@
 
 from __future__ import annotations
 
-COORDINATION_NOTE_BASENAMES = ("PLAN.md", "ISSUES.md")
+NOTE_BASENAMES = ("PLAN.md", "ISSUES.md")

@@ -1,3 +1,3 @@
 # Issues — Gate
 
-Known follow-ups for the gate node. Coordination note; not spec truth.
+Known follow-ups for the gate node.

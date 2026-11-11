@@ -16,7 +16,7 @@ Exposes:
 - ``build_repo_without_origin``. A repository with a branch and a commit but no
   ``refs/remotes/origin/HEAD`` symbolic ref, for the base-ref fallback paths.
 - ``build_repo_with_modified_spaced_note``. A repository whose only working-tree
-  change is a committed-then-modified coordination note at a path containing a
+  change is a committed-then-modified note at a path containing a
   space, for the porcelain-quoting case.
 
 The harness owns Git lifecycle, temporary resources, process isolation, and
@@ -482,7 +482,7 @@ def build_repo_without_origin(
 class SpacedNoteRepo:
     """A repo whose only working-tree change is a modified spaced-path note.
 
-    ``note_path`` is a coordination note (``PLAN.md``) under a directory whose
+    ``note_path`` is a note (``PLAN.md``) under a directory whose
     name contains a space. It is committed first (so git lists the individual
     file rather than collapsing an untracked directory) and then modified, so it
     appears as a working-tree change. ``git status --porcelain`` without ``-z``
@@ -495,7 +495,7 @@ class SpacedNoteRepo:
 
 
 def build_repo_with_modified_spaced_note(repo: pathlib.Path) -> SpacedNoteRepo:
-    """Build a repo with a committed-then-modified coordination note at a spaced path.
+    """Build a repo with a committed-then-modified note at a spaced path.
 
     Sequence: initialise the repo with a base commit (no origin needed — the
     working-tree query does not read it); create the spaced directory; commit
@@ -556,7 +556,7 @@ def repo_without_origin(
 
 @contextmanager
 def modified_spaced_note_repo() -> Iterator[SpacedNoteRepo]:
-    """Yield a repository containing one modified spaced-path coordination note."""
+    """Yield a repository containing one modified spaced-path note."""
     with temporary_changeset_scope() as paths:
         yield build_repo_with_modified_spaced_note(paths.repo)
 

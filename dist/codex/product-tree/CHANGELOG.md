@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.113.1
+
+### Changed
+
+- **The skills call a node's `ISSUES.md` a note, and a changeset of notes alone a notes-only changeset.** `/merge` routes a notes-only changeset, every changed path an `ISSUES.md` or a `PLAN.md` a 3.x tree still carries, to the direct-push transport, and its classification line reads `non-note files`. Before this change, the skills called those files coordination notes, and the classification line read `non-coordination-note files`.
+
 ## 0.113.0
 
 ### Breaking

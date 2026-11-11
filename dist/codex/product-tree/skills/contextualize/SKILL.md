@@ -21,7 +21,7 @@ A `<PRODUCT_TREE_CONTEXT target="...">` marker carrying a structured context man
 - Read order: product root → ancestors → target (top-down)
 - All ADRs and PDRs at all levels must be read — no skipping based on title relevance
 - Lower-index siblings' specs must be read at each directory level — they constrain the target
-- Explicit full-path ADR/PDR citations in loaded specs and decision records must be read before the context marker is emitted; coordination notes never add cited decisions.
+- Explicit full-path ADR/PDR citations in loaded specs and decision records must be read before the context marker is emitted; notes never add cited decisions.
 - A context-grounded answer requires the matching `<PRODUCT_TREE_CONTEXT target="...">` marker. Loading this skill or reading a pre-compaction summary supplies no context.
 - Context loading reads the checkout as it stands. It never runs `/sync-base`, fetches, rebases, or otherwise moves the checkout, so the context it reports describes the head it found.
 - Test files are not read here. The node target spec or product-root product document already exposes inline `[test](tests/...)` links; list those links and the applicable `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
@@ -89,7 +89,7 @@ Read: AGENTS.md  (if exists)
 Glob: "spx/*-*.adr.md"
 Glob: "spx/*-*.pdr.md"
 
-# Check for product-level coordination notes
+# Check for product-level notes
 Glob: "spx/PLAN.md"
 Glob: "spx/ISSUES.md"
 
@@ -106,7 +106,7 @@ Read: spx/local/merging.md  (if exists)
 
 **Guide files**: Read `AGENTS.md` when present and record it in the manifest. A freshly bootstrapped tree may lack the guide; absence is normal.
 
-**Coordination notes**: Read product-level `ISSUES.md` when present, and any `PLAN.md` a tree authored under a 3.x version still carries — the methodology admits `ISSUES.md` as the only note and routes work ordering to a Change. Reconcile them against product truth before use, and never scan their prose for cited governance decisions.
+**Notes**: Read product-level `ISSUES.md` when present, and any `PLAN.md` a tree authored under a 3.x version still carries — the methodology admits `ISSUES.md` as the only note and routes work ordering to a Change. Reconcile them against product truth before use, and never scan their prose for cited governance decisions.
 
 **Local overlays**: Record the list of files returned by `spx/local/*.md` for the manifest. Read `spx/local/merging.md` when present because default-branch lifecycle routing governs whether local implementation, validation, and commits are terminal. Do not read the other local overlays here — they are consumed by the relevant language skill, not by the context loader.
 
@@ -141,14 +141,14 @@ Glob: "{path-to-dir}/*-*.pdr.md"
 
 **Read EVERY file returned.** Verification: glob count must equal read count.
 
-**2c. Check for coordination notes in this directory**
+**2c. Check for notes in this directory**
 
 ```bash
 Glob: "{path-to-dir}/PLAN.md"
 Glob: "{path-to-dir}/ISSUES.md"
 ```
 
-**If ISSUES.md, or a prior-form PLAN.md, exists, read it.** These are stale-prone coordination notes left by previous agents. Deferred plans or known issues in an ancestor node may bear on the target, but they are fallible inputs, not authority — reconcile each against the specs, decisions, assertions, tests, implementation, and current user intent before letting it steer work.
+**If ISSUES.md, or a prior-form PLAN.md, exists, read it.** These are stale-prone notes left by previous agents. Deferred plans or known issues in an ancestor node may bear on the target, but they are fallible inputs, not authority — reconcile each against the specs, decisions, assertions, tests, implementation, and current user intent before letting it steer work.
 
 **2d. Read all lower-index siblings' specs**
 
@@ -190,16 +190,16 @@ Glob: "$target/*-*.*/"
 # Check for tests directory
 Glob: "$target/tests/*"
 
-# Check for coordination notes
+# Check for notes
 Glob: "$target/PLAN.md"
 Glob: "$target/ISSUES.md"
 ```
 
-**If ISSUES.md, or a prior-form PLAN.md, exists, read it.** These are stale-prone coordination notes left by previous sessions. They carry deferred plans or known issues that subsequent work may account for, but verify each before acting — reconcile it against the specs, decisions, assertions, tests, implementation, and current user intent rather than treating it as settled truth.
+**If ISSUES.md, or a prior-form PLAN.md, exists, read it.** These are stale-prone notes left by previous sessions. They carry deferred plans or known issues that subsequent work may account for, but verify each before acting — reconcile it against the specs, decisions, assertions, tests, implementation, and current user intent rather than treating it as settled truth.
 
 **Do not read test file bodies.** Record the test links visible in the target spec and whether co-located test files exist. Context loading does not infer implementation state from test imports. When the next workflow needs test details, route to `/test`, `/audit-tests`, or `/apply`.
 
-For the product-root target, the product document and product-level decisions and coordination notes were already read in Step 1. Enumerate top-level child nodes with `Glob: "spx/*-*.*/"`, list test links from the product document, check `Glob: "spx/tests/*"` without reading test bodies, and skip node-spec and node-decision lookup. Report the target as `spx/ (product root)` and render the hierarchy as `{product-name} ← TARGET`.
+For the product-root target, the product document and product-level decisions and notes were already read in Step 1. Enumerate top-level child nodes with `Glob: "spx/*-*.*/"`, list test links from the product document, check `Glob: "spx/tests/*"` without reading test bodies, and skip node-spec and node-decision lookup. Report the target as `spx/ (product root)` and render the hierarchy as `{product-name} ← TARGET`.
 
 </step>
 
@@ -213,7 +213,7 @@ Scan only the spec files and ADR/PDR files read by context loading for full-path
 Grep: "spx/[^[:space:])]+\\.(adr|pdr)\\.md" in the loaded spec and decision files
 ```
 
-Read each cited `spx/.../*.adr.md` or `spx/.../*.pdr.md` file exactly once when it exists and has not already been read. Then scan each newly read cited decision for further full-path ADR/PDR citations, repeating until no unread cited decision remains. Preserve the citing file path for the manifest. Do not scan or trust citations in `PLAN.md`, `ISSUES.md`, or any coordination note; those notes are stale-prone workflow inputs, not context-loading authority.
+Read each cited `spx/.../*.adr.md` or `spx/.../*.pdr.md` file exactly once when it exists and has not already been read. Then scan each newly read cited decision for further full-path ADR/PDR citations, repeating until no unread cited decision remains. Preserve the citing file path for the manifest. Do not scan or trust citations in `PLAN.md`, `ISSUES.md`, or any note; those notes are stale-prone workflow inputs, not context-loading authority.
 
 If a loaded spec or decision cites a missing ADR/PDR path, ABORT with the missing citation path, the citing file, and remediation guidance to fix the stale citation or restore the decision file. A context marker that omits a cited governing decision is partial context.
 
@@ -254,7 +254,7 @@ Children: {count} ({list if any})
 Test links: {list from target spec, full paths resolved from target} | none
 Co-located tests: {count} listed | none
 Implementation: unknown unless already established by a prior workflow
-Coordination notes: {list of {path}/PLAN.md and {path}/ISSUES.md found at any level} | none
+Notes: {list of {path}/PLAN.md and {path}/ISSUES.md found at any level} | none
 Local skill overlays: {comma-separated list from spx/local/} | none
 Lifecycle overlays read: spx/local/merging.md | none
 Default-branch completion boundary: delivered value is value merged to the default branch on origin through /merge; local verification, review, audit, and commits are progress, not completion, while the branch carries changes ahead of its resolved base
@@ -328,9 +328,9 @@ Claude ran a base sync before reading the tree, and the rebase replaced the head
 
 Claude loaded the structural ancestor context for a plugin-shipping node and saw full-path citations to methodology-governance decisions under an independent sibling subtree, but did not read the cited PDRs because they were outside the structural ancestor path. The answer used an incomplete methodology model. Scan loaded specs and decision records for full-path ADR/PDR citations, including citations from newly read cited decisions, before emitting `<PRODUCT_TREE_CONTEXT>`.
 
-**Failure 10: Omitted product-level coordination notes**
+**Failure 10: Omitted product-level notes**
 
-Claude checked `PLAN.md` and `ISSUES.md` only inside node directories, so product-level coordination disappeared from every target context even though it applied tree-wide. Check and read product-level coordination notes before walking the node path, then list them with the ancestor and target notes in the context manifest.
+Claude checked `PLAN.md` and `ISSUES.md` only inside node directories, so product-level notes disappeared from every target context even though it applied tree-wide. Check and read product-level notes before walking the node path, then list them with the ancestor and target notes in the context manifest.
 
 **Failure 11: Rejected the canonical product-root target**
 
@@ -346,11 +346,11 @@ The emitted `<PRODUCT_TREE_CONTEXT target="...">` marker is sound when:
 - [ ] Its target is exact `spx/` or a canonical full `spx/...` node path, accepted before any filesystem lookup
 - [ ] At every level it names, the ADR and PDR read counts equal their glob counts
 - [ ] It lists the product document, every ancestor spec, and every lower-index sibling spec as read, and no higher-index sibling spec as read
-- [ ] Every full-path ADR/PDR cited by a loaded spec or decision appears with its citing file, and no cited decision comes from a coordination note
-- [ ] Every guide file and coordination note present at the product root, on the path, and at the target is listed
+- [ ] Every full-path ADR/PDR cited by a loaded spec or decision appears with its citing file, and no cited decision comes from a note
+- [ ] Every guide file and note present at the product root, on the path, and at the target is listed
 - [ ] Test links and co-located test files are listed, implementation state reads `unknown` unless a prior workflow established it, and no test body was read
 - [ ] Local overlays are listed, and when `spx/local/merging.md` exists the lifecycle continuation fields carry its routing
-- [ ] Every node, ADR, PDR, test, and coordination-note reference is a full path from `spx/`
+- [ ] Every node, ADR, PDR, test, and note reference is a full path from `spx/`
 - [ ] Bootstrap is `true` only for exact `spx/` with a product document and no nodes, and `false` for every node target
 - [ ] The checkout's head is the same before and after context loading
 - [ ] An ABORT emits no marker and names the missing path with its remediation

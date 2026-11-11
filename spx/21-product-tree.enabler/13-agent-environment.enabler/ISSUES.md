@@ -1,6 +1,6 @@
 # Issues: Agent environment
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## The identity and project-directory assertions describe exports the spx hook runner still writes
 
