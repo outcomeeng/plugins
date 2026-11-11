@@ -140,7 +140,7 @@ The Declarations section holds one subsection per artifact, each a level-three h
 - `slug-rename`: a move that changes a Node's slug also renames its spec and its Outcome record to the new slug.
 - `move-reads`: under a move, a `-` line and each context line read the old path at the Base, and a `+` line holds the row as the new path holds it after the Change.
 - `path-naming`: the form check names each file at the Base that names, in a link or in any other text, the path of a file or Node the Change deletes or moves, or of a file inside such a Node, and skips every Knowledge root and every file the Product declares as dated history.
-- `path-repair`: a file that names such a path takes its own subsection when it is of a kind a subsection holds; the Applier repairs any other such file as a mechanical repair, or a delegate repairs it; a generated file is repaired at its declared source and regenerated; Validate reads every surviving link.
+- `path-repair`: a file that names such a path takes its own subsection when it is of a kind a subsection holds; the Applier repairs any other such file as a mechanical repair, or a round session repairs it; a generated file is repaired at its declared source and regenerated; Validate reads every surviving link.
 - `format-at-close`: the Product's format command at the Base leaves a replacement unchanged; at close the command at the merge commit leaves the approved result, the approved replacement with its plain slugs linked, unchanged, and the file on the default branch reads the same as that result; after any difference the Change stays open and the Refiner rewrites the replacement under the merge-commit formatter.
 
 `diff-lines`: each line of a `diff` block takes one of these forms:
@@ -230,7 +230,7 @@ Transition log:
 - `log-position`: the block can also hold `position`, the Position the holder holds, as its one optional key.
 - `log-extras`: a lower adds `reason`; a release adds `handoff` with at least the branch, the head commit, and the next subsection; an applied Transition of a Leaf adds `changeset` with its merge commit.
 - `log-closed`: the block holds no other key and no prose outside `reason`.
-- `log-no-authority`: nobody reads authority from a Transition comment, and no delegate, no party on whose behalf the holder acts, and no words of the Operator appear in it.
+- `log-no-authority`: nobody reads authority from a Transition comment, and no party on whose behalf the holder acts and no words of the Operator appear in it.
 
 A Handoff is the latest continuation a holder persists: the active branch or Changeset, its head commit, the completed Declarations subsections, the next subsection, blockers, and hazards, each subsection by its path. It holds only what the next holder cannot derive quickly from the Change, the Product Tree, the repository, and the Changeset history.
 

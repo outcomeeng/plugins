@@ -37,7 +37,7 @@ Take `$transition` as one of `claim`, `release`, `submit`, `advance`, `lower`, `
 3. **Check the actor.** Refuse the Transition, naming the actor `transition-actor` names, unless that actor makes it:
    - `claim`: any session.
    - `release` and `submit`: this session as holder.
-   - `advance` to Framed or Sliced, `lower` for a reopened judgment, `abandoned` of a Change no merge absorbs, and `applied` of a Parent: the Operator's explicit direction, given in this conversation or in an order from the Operator's delegate.
+   - `advance` to Framed or Sliced, `lower` for a reopened judgment, `abandoned` of a Change no merge absorbs, and `applied` of a Parent: the Operator's explicit direction, given in this conversation or in an order from the Operator.
    - `advance` of a Sliced Leaf to Applicable: this session as holder, once the Applicable condition holds as step 4 states.
    - `lower` to Sliced by the Applier, for a decision line that differs from the reviewed line or a failed Application check, and by any session whose publish wrote the body of an Applicable record: this session, naming that cause in the reason.
    - `lower` to Proposed for a reframe: this session as Refiner.

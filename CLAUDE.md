@@ -256,7 +256,7 @@ Test level is encoded in the filename. The `{evidence}` segment is chosen by `/t
 
 ## Change Lifecycle
 
-The Changes of this Product live in the Change Store `spx/local/changes.md` names. Hold a Change through the `claim` Transition of `/manage-change` before refining or applying it. When the work stops with continuation remaining, its `release` Transition writes the Handoff, removes the holder, and returns the Change to Available for any agent to claim; when the Change meets the close condition of its type, its `applied` Transition closes it; when the work ends before it produces its Output, or a merge absorbs the Change into another, its `abandoned` Transition closes it. A follow-up is a Proposed Change recorded through `/author-change`, which also writes every record body.
+The Changes of this Product live in the Change Store `spx/local/changes.md` names. A session works only on a Change the Operator selects, by naming it for implementation or by advancing it to Framed, and holds it through the `claim` Transition of `/manage-change` before refining or applying it. When the work stops with continuation remaining, its `release` Transition writes the Handoff, removes the holder, and returns the Change to Available for any agent to claim; when the Change meets the close condition of its type, its `applied` Transition closes it; when the work ends before it produces its Output, or a merge absorbs the Change into another, its `abandoned` Transition closes it. A session reports remaining work to the Operator and records it as a Proposed Change through `/author-change` only when the Operator asks for one; `/author-change` writes every record body.
 
 <!-- /PRODUCT-TREE -->
 
