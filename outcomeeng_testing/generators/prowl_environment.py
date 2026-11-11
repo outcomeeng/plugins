@@ -45,7 +45,7 @@ def public_prowl_operation_names(module: ModuleType) -> tuple[str, ...]:
     return tuple(operation.value for operation in module.PUBLIC_PROWL_COMMAND_PREFIXES)
 
 
-def coordination_references() -> st.SearchStrategy[str]:
+def correlations() -> st.SearchStrategy[str]:
     return st.uuids(version=4).map(str)
 
 

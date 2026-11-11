@@ -5,7 +5,7 @@ malleability: spec
 
 # Coding Agents
 
-PROVIDES shared environment, identity, authority, communication, coordination, and supervision contracts for coding agents
+PROVIDES shared environment, identity, authority, communication, and supervision contracts for coding agents
 SO THAT agent-facing workflows operating across panes, sessions, worktrees, native supervisors, and remote-managed tasks
 CAN use environment capabilities without centralizing workflow ownership or reconstructing environment state
 
@@ -15,7 +15,7 @@ CAN use environment capabilities without centralizing workflow ownership or reco
 
 ### Compliance
 
-- ALWAYS: coordination identifies every participating environment, agent, pane or task, worktree, branch, run, and repository with the complete identity value supplied by its authoritative source ([audit])
+- ALWAYS: every delegation, message, and handback identifies every participating environment, agent, pane or task, worktree, branch, run, and repository with the complete identity value supplied by its authoritative source ([audit])
 - ALWAYS: explicit SPX facts, public environment projections, checked command results, and operator-confirmed external changes are authoritative for the facts they directly establish; prose inference remains advisory ([audit])
 - NEVER: an environment workflow-status label alone establishes that a native agent session has completed its operator-authorized work ([audit])
 - ALWAYS: a supported coding environment exposes source-owned operations and explicit unavailable results rather than requiring workflows to discover command syntax or infer unsupported behavior ([audit])

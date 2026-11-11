@@ -3,7 +3,7 @@ id: 01a0ebba-5f6d-71d9-a3a7-23652995cea1
 malleability: spec
 ---
 
-# Same-Worktree Coordination
+# Same-Worktree Delegation
 
 PROVIDES bounded authority and context exchange for coding agents operating in one worktree
 SO THAT advisory collaborators

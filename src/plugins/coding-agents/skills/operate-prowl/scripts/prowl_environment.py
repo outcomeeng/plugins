@@ -100,7 +100,7 @@ RECIPIENT_FIELD = "recipient"
 SUBJECT_FIELD = "subject"
 INSTRUCTION_FIELD = "instruction"
 COMPLETION_TEXT_FIELD = "completionText"
-COORDINATION_REFERENCE_FIELD = "coordinationReference"
+CORRELATION_FIELD = "correlation"
 INLINE_RESULT_FIELD = "inlineResult"
 RESULT_REFERENCE_FIELD = "resultReference"
 PROJECTION_FIELD = "projection"
@@ -161,14 +161,14 @@ DELEGATION_CLI_FIELDS = frozenset(
         SUBJECT_FIELD,
         INSTRUCTION_FIELD,
         COMPLETION_TEXT_FIELD,
-        COORDINATION_REFERENCE_FIELD,
+        CORRELATION_FIELD,
     }
 )
 DELEGATION_REQUEST_FIELDS = frozenset(
     {
         SCHEMA_VERSION_FIELD,
         KIND_FIELD,
-        COORDINATION_REFERENCE_FIELD,
+        CORRELATION_FIELD,
         SENDER_FIELD,
         RECIPIENT_FIELD,
         SUBJECT_FIELD,
@@ -198,7 +198,7 @@ TERMINAL_HANDBACK_FIELDS = frozenset(
     {
         SCHEMA_VERSION_FIELD,
         KIND_FIELD,
-        COORDINATION_REFERENCE_FIELD,
+        CORRELATION_FIELD,
         SENDER_FIELD,
         RECIPIENT_FIELD,
         INLINE_RESULT_FIELD,
@@ -1170,13 +1170,13 @@ def resolve_target(
 
 
 def _canonical_reference(value: object) -> str:
-    reference = _text(value, COORDINATION_REFERENCE_FIELD)
+    reference = _text(value, CORRELATION_FIELD)
     try:
         return str(uuid.UUID(reference))
     except ValueError as error:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            f"Coordination reference is not a UUID: {reference}",
+            f"Correlation is not a UUID: {reference}",
         ) from error
 
 
@@ -1329,7 +1329,7 @@ def delegation_request(
     subject: str,
     instruction: str,
     completion_text: str,
-    coordination_reference: str | None = None,
+    correlation: str | None = None,
 ) -> dict[str, object]:
     validated_sender = validate_identity(sender, SENDER_FIELD)
     validated_recipient = validate_identity(recipient, RECIPIENT_FIELD)
@@ -1339,14 +1339,12 @@ def delegation_request(
             "A delegation recipient must be a different positively identified Prowl agent.",
         )
     reference = (
-        str(uuid.uuid4())
-        if coordination_reference is None
-        else _canonical_reference(coordination_reference)
+        str(uuid.uuid4()) if correlation is None else _canonical_reference(correlation)
     )
     return {
         SCHEMA_VERSION_FIELD: DELEGATION_SCHEMA_VERSION,
         KIND_FIELD: EnvelopeKind.DELEGATION_REQUEST,
-        COORDINATION_REFERENCE_FIELD: reference,
+        CORRELATION_FIELD: reference,
         SENDER_FIELD: validated_sender,
         RECIPIENT_FIELD: validated_recipient,
         SUBJECT_FIELD: _text(subject, SUBJECT_FIELD),
@@ -1388,9 +1386,7 @@ def _validated_delegation(value: object) -> dict[str, object]:
     return {
         SCHEMA_VERSION_FIELD: DELEGATION_SCHEMA_VERSION,
         KIND_FIELD: EnvelopeKind.DELEGATION_REQUEST,
-        COORDINATION_REFERENCE_FIELD: _canonical_reference(
-            request.get(COORDINATION_REFERENCE_FIELD)
-        ),
+        CORRELATION_FIELD: _canonical_reference(request.get(CORRELATION_FIELD)),
         SENDER_FIELD: sender,
         RECIPIENT_FIELD: recipient,
         SUBJECT_FIELD: _text(request.get(SUBJECT_FIELD), SUBJECT_FIELD),
@@ -1455,7 +1451,7 @@ def terminal_handback(
     return {
         SCHEMA_VERSION_FIELD: DELEGATION_SCHEMA_VERSION,
         KIND_FIELD: kind,
-        COORDINATION_REFERENCE_FIELD: request[COORDINATION_REFERENCE_FIELD],
+        CORRELATION_FIELD: request[CORRELATION_FIELD],
         SENDER_FIELD: request[RECIPIENT_FIELD],
         RECIPIENT_FIELD: request[SENDER_FIELD],
         INLINE_RESULT_FIELD: inline,
@@ -1507,9 +1503,7 @@ def _validated_terminal(value: object) -> dict[str, object]:
     return {
         SCHEMA_VERSION_FIELD: DELEGATION_SCHEMA_VERSION,
         KIND_FIELD: kind,
-        COORDINATION_REFERENCE_FIELD: _canonical_reference(
-            terminal.get(COORDINATION_REFERENCE_FIELD)
-        ),
+        CORRELATION_FIELD: _canonical_reference(terminal.get(CORRELATION_FIELD)),
         SENDER_FIELD: validate_identity(terminal.get(SENDER_FIELD), SENDER_FIELD),
         RECIPIENT_FIELD: validate_identity(
             terminal.get(RECIPIENT_FIELD), RECIPIENT_FIELD
@@ -1528,7 +1522,7 @@ def reduce_terminal(current: object | None, incoming: object) -> dict[str, objec
     if validated_current != validated_incoming:
         raise ProwlEnvironmentError(
             ExecutionStatus.INVALID_SCHEMA,
-            "A conflicting terminal handback already exists for the coordination reference.",
+            "A conflicting terminal handback already exists for the correlation.",
         )
     return validated_current
 
@@ -1600,9 +1594,7 @@ def _delegation_from_cli(value: dict[str, object]) -> dict[str, object]:
         subject=_text(value.get(SUBJECT_FIELD), SUBJECT_FIELD),
         instruction=_text(value.get(INSTRUCTION_FIELD), INSTRUCTION_FIELD),
         completion_text=_text(value.get(COMPLETION_TEXT_FIELD), COMPLETION_TEXT_FIELD),
-        coordination_reference=cast(
-            str | None, value.get(COORDINATION_REFERENCE_FIELD)
-        ),
+        correlation=cast(str | None, value.get(CORRELATION_FIELD)),
     )
 
 

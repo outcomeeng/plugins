@@ -1,6 +1,6 @@
 # Issues: Prowl environment
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## The Prowl generator raises AssertionError for a generated value of the wrong shape
 

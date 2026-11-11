@@ -51,7 +51,7 @@ def mail_record_input(
     suffix = str(ordinal)
     return {
         module.KIND_FIELD: kind,
-        module.RECORD_CORRELATION_FIELD: f"thread-{suffix}",
+        module.CORRELATION_FIELD: f"thread-{suffix}",
         module.SENDER_FIELD: f"Sender{suffix}",
         module.RECIPIENT_FIELD: f"Recipient{suffix}",
         module.SUBJECT_FIELD: f"generated subject {suffix}",

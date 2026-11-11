@@ -743,7 +743,7 @@ def terminal_handback(
     subject: str,
     body: str,
 ) -> dict[str, object]:
-    """Build the one terminal handback record for a delegation's coordination reference."""
+    """Build the one terminal handback record for a delegation's correlation."""
     record = message_record(
         kind=kind,
         correlation=correlation,
@@ -781,7 +781,7 @@ def reduce_terminal(current: object | None, incoming: object) -> dict[str, objec
         raise AgentMailError(
             ExecutionStatus.INVALID_SCHEMA,
             "Reducing a terminal handback",
-            f"it names coordination reference {terminal[CORRELATION_FIELD]!r}, "
+            f"it names correlation {terminal[CORRELATION_FIELD]!r}, "
             f"not the current {existing[CORRELATION_FIELD]!r}",
             "Reduce only handbacks that share one reference.",
         )

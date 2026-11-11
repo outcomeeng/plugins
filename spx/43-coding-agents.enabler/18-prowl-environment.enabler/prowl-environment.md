@@ -6,7 +6,7 @@ malleability: spec
 # Prowl Environment
 
 PROVIDES a source-owned, versioned abstraction over the complete public Prowl command surface and correlated delegation handbacks
-SO THAT agent communication, coordination, and recovery workflows
+SO THAT agent communication, delegation, and recovery workflows
 CAN operate between any positively identified Prowl agents without constructing raw Prowl commands or discovering command syntax at runtime
 
 ## Assertions
@@ -22,7 +22,7 @@ CAN operate between any positively identified Prowl agents without constructing 
 ### Properties
 
 - Default subprocess input maps an absent payload to null-device stdin, and every explicit text payload reaches captured input unchanged ([test](tests/test_prowl_subprocess_input.property.l1.py))
-- Matching repeated terminal handbacks for one coordination reference preserve one terminal outcome, while conflicting terminal states for that reference are rejected ([test](tests/test_prowl_environment.property.l1.py))
+- Matching repeated terminal handbacks for one correlation preserve one terminal outcome, while conflicting terminal states for that reference are rejected ([test](tests/test_prowl_environment.property.l1.py))
 
 ### Compliance
 

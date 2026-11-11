@@ -22,7 +22,7 @@ def test_prowl_environment_properties() -> None:
             subject=property_text.subject,
             instruction=property_text.instruction,
             completion_text=property_text.completion_text,
-            coordination_reference=reference,
+            correlation=reference,
         )
         terminal = module.terminal_handback(
             delegation,
@@ -68,6 +68,6 @@ def test_prowl_environment_properties() -> None:
             else:
                 raise AssertionError("conflicting terminal handback was accepted")
 
-        assert cast(str, first[module.COORDINATION_REFERENCE_FIELD]) == reference
+        assert cast(str, first[module.CORRELATION_FIELD]) == reference
 
     run_terminal_property(assert_terminal)

@@ -6,14 +6,14 @@ malleability: spec
 # Agent Communication
 
 PROVIDES a source-owned message record, message vocabulary, and deterministic delivery requests for supported coding-agent environments
-SO THAT coding-agent workflows that coordinate agent sessions across worktrees
+SO THAT coding-agent workflows that delegate between agent sessions across worktrees
 CAN exchange facts, orders, questions, answers, and authority messages through complete participant identities without embedding environment transport mechanics in prompt prose
 
 ## Message record
 
 A message between agent sessions is a message record with exactly these fields: `schema`, the record schema version; `id`, assigned by the store on delivery; `correlation`, the thread every reply to one exchange shares; `kind`; `sender` and `recipient`, each one agent-mail name; `subject`; `body`; and `ackRequired`. The kinds a sender writes are `order`, `fact`, `question`, `answer`, `delegation-request`, and the four terminal handbacks `delegation-completed`, `delegation-failed`, `delegation-rejected`, and `delegation-unavailable`; a read-back record whose subject carries no kind reads as `unclassified`. The agent-mail capability `spx/43-coding-agents.enabler/18-agent-mail.enabler` maps this record onto the store's fields and back without loss; a store limit never shapes the record.
 
-A same-worktree delegation request carries the authority `spx/43-coding-agents.enabler/32-same-worktree-coordination.enabler` declares, as exactly two fields: the sender as the tracked-file and Git owner, and Git mutation forbidden to the recipient; the recipient's result is the handback record's body. The record renders that authority in its body. An authority of any other shape — a missing owner, another owner, Git mutation admitted, or any extra field — reaches no record; supplying the authority on a same-worktree delegation is the sender's obligation that node declares, and a request without it is not the script's to reject.
+A same-worktree delegation request carries the authority `spx/43-coding-agents.enabler/32-same-worktree-delegation.enabler` declares, as exactly two fields: the sender as the tracked-file and Git owner, and Git mutation forbidden to the recipient; the recipient's result is the handback record's body. The record renders that authority in its body. An authority of any other shape — a missing owner, another owner, Git mutation admitted, or any extra field — reaches no record; supplying the authority on a same-worktree delegation is the sender's obligation that node declares, and a request without it is not the script's to reject.
 
 ## Delivery routes
 
@@ -29,7 +29,7 @@ On the Prowl submission route, the envelope of ownership proposals, one-way fact
 - A checked succeeded `send` result of the agent-mail capability maps to the delivered mail result carrying the record's store-assigned id verbatim and the doorbell line `[<Label> <<StableName>>] mail <id>` when the result carries a renderable sender label and `[<StableName>] mail <id>` when it carries no label or a label from the source-owned finite set of unrenderable labels, the full label staying in the store metadata the delivery result carries; a failed or unavailable capability result maps to `delivery-failed` with its status and detail preserved ([test](tests/test_mail_record.mapping.l1.py))
 - A mail request carrying an optional `repository` maps to the agent-mail capability's send request carrying the same `repository`, and a mail request without one maps to a send request carrying none; the repository enters no message record ([test](tests/test_mail_record.mapping.l1.py))
 - Ownership proposals, one-way facts, acknowledgements, mutation-state reports, mutation authorizations, and delivery failures map to distinct source-owned message and result states ([test](tests/test_agent_message.mapping.l1.py))
-- Every acknowledgement, mutation-state report, and mutation authorization preserves the complete active proposal reference, while every message that initiates a coordination reference receives a new UUID ([test](tests/test_agent_message.mapping.l1.py))
+- Every acknowledgement, mutation-state report, and mutation authorization preserves the complete active proposal reference, while every message that initiates a correlation receives a new UUID ([test](tests/test_agent_message.mapping.l1.py))
 
 ### Properties
 

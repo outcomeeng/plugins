@@ -52,7 +52,7 @@ The adapter binds to one store's command surface, and that surface changes betwe
 - Captured usage and public-response fixtures are the committed observations of the probe that drives every operation against the installed store, and each fixture names the tool and the build that produced it. A change to the build pin, or a probe run that reports grammar or response drift, invalidates the affected fixtures and requires recapture from a probe run before they serve as oracles. The project key has no captured oracle, because the checkout shapes a real repository takes are the oracle the resolver is read against.
 - The build pin is what the attested installed-store probe run records about the native `am` binary it drove: the path of the executable, and the version and capabilities the CLI reports, with a source commit or a SHA-256 added only when the run reads one. `am --version` reports one string for builds with and without the label fields, so a run on a build whose responses differ from the captured oracles reports drift, and the probe record is the pin's one home.
 - A registration result never carries the store's registration token.
-- A second terminal handback for one coordination reference that carries the same terminal kind with different content is a conflicting handback, rejected with a detail naming the content difference, never reported as a kind conflict.
+- A second terminal handback for one correlation that carries the same terminal kind with different content is a conflicting handback, rejected with a detail naming the content difference, never reported as a kind conflict.
 - An absent `am` executable yields the store-unavailable result; a working directory or named path that resolves to no repository, an absent Git executable, and a Git invocation that reports no absolute common directory each yield the repository-unresolved result. Neither result triggers a fallback.
 - The adapter's external programs are the store CLI and Git; no operation's execution path reaches another program.
 - The raw-command scanner recognizes an `am` command in argument-vector form and in shell-string form.
@@ -92,7 +92,7 @@ The adapter binds to one store's command surface, and that surface changes betwe
 - NEVER: a text argument carrying a NUL byte reaches a store command; the request is rejected as an invalid schema first ([compliance])
 - NEVER: an operation derives liveness, staleness, or session state from the store's per-agent activity timestamp ([compliance])
 - ALWAYS: each captured usage and public-response fixture names the tool and the build that produced it, and the build it names is the build the installed-store probe run records ([conformance])
-- ALWAYS: a second terminal handback for one coordination reference that carries the same terminal kind with different content is rejected as a conflicting handback whose detail names the content difference ([property])
+- ALWAYS: a second terminal handback for one correlation that carries the same terminal kind with different content is rejected as a conflicting handback whose detail names the content difference ([property])
 - NEVER: a shipped coding-agents Python script outside `/operate-agent-mail` constructs an `am` argument vector or a shell-string `am` command, or derives a project key from Git state ([compliance])
 
 ### Audit

@@ -22,11 +22,11 @@ def test_agent_message_mappings() -> None:
     active_reference = str(uuid.uuid5(uuid.NAMESPACE_URL, sender[module.PANE_FIELD]))
     initiating_kinds = set(module.MessageKind) - module.RESPONSE_KINDS
     assert {
-        module.coordination_reference(kind, active_reference)
+        module.envelope_correlation(kind, active_reference)
         for kind in module.RESPONSE_KINDS
     } == {active_reference}
     minted_references = {
-        module.coordination_reference(
+        module.envelope_correlation(
             kind,
             None,
             lambda kind=kind: uuid.uuid5(uuid.NAMESPACE_URL, str(kind)),
@@ -68,11 +68,9 @@ def test_agent_message_mappings() -> None:
         assert envelope[module.KIND_FIELD] == kind
         assert envelope[module.ACCEPTED_FIELD] is fields.get("accepted")
         if kind in module.RESPONSE_KINDS:
-            assert envelope[module.COORDINATION_REFERENCE_FIELD] == active_reference
+            assert envelope[module.CORRELATION_FIELD] == active_reference
         else:
-            envelope_reference = cast(
-                str, envelope[module.COORDINATION_REFERENCE_FIELD]
-            )
+            envelope_reference = cast(str, envelope[module.CORRELATION_FIELD])
             assert str(uuid.UUID(envelope_reference)) == envelope_reference
             assert envelope_reference not in initiating_references
             initiating_references.add(envelope_reference)

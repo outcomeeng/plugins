@@ -17,7 +17,7 @@ from hypothesis import strategies as st
 from outcomeeng_testing.generators.prowl_environment import (
     DelegationTextCase,
     agent_identity,
-    coordination_references,
+    correlations,
     delegation_text_cases,
     message_texts,
     result_forms,
@@ -238,7 +238,7 @@ def run_terminal_property(
     @settings(max_examples=PROPERTY_EXAMPLES, deadline=None, print_blob=True)
     @given(
         property_text=delegation_text_cases(),
-        reference=coordination_references(),
+        reference=correlations(),
         terminal_kind=st.sampled_from(tuple(module.TerminalKind)),
         result_form=result_forms(),
     )

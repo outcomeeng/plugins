@@ -92,7 +92,7 @@ def distinct_stable_names(
     )
 
 
-def coordination_references() -> st.SearchStrategy[str]:
+def correlations() -> st.SearchStrategy[str]:
     return st.uuids(version=4).map(str)
 
 
@@ -163,7 +163,7 @@ def message_records(module: ModuleType) -> st.SearchStrategy[dict[str, object]]:
             module.ACK_REQUIRED_FIELD: ack_required,
         },
         kind=sent_record_kinds(module),
-        correlation=st.one_of(coordination_references(), agent_names()),
+        correlation=st.one_of(correlations(), agent_names()),
         sender=agent_names(),
         recipient=agent_names(),
         subject=message_texts(),

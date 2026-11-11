@@ -1,6 +1,6 @@
 # Issues: Agent communication
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## `/message-agents` description claims a trigger the `operate-agent-mail` description may also claim
 

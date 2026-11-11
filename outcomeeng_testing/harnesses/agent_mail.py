@@ -32,7 +32,7 @@ from outcomeeng_testing.generators.agent_mail import (
     fitting_correlations,
     thread_alphabet_thread_ids,
     position_labels,
-    coordination_references,
+    correlations,
     expected_project_key,
     message_records,
     message_texts,
@@ -556,7 +556,7 @@ def run_correlation_encoding_property(
         correlation=st.one_of(
             fitting_correlations(),
             escape_prefixed_correlations(module.CORRELATION_ESCAPE_PREFIX),
-            coordination_references(),
+            correlations(),
         ),
         foreign_thread_id=st.one_of(
             thread_alphabet_thread_ids(module.THREAD_ID_MAXIMUM_LENGTH),
@@ -590,7 +590,7 @@ def run_delegation_chain_property(
     @seed(DELEGATION_CHAIN_SEED)
     @settings(max_examples=DELEGATION_CHAIN_EXAMPLES, deadline=None, print_blob=True)
     @given(
-        reference=coordination_references(),
+        reference=correlations(),
         terminal_kind=terminal_record_kinds(module),
         sender=agent_names(),
         recipient=agent_names(),
@@ -653,7 +653,7 @@ def run_terminal_property(
     @seed(TERMINAL_PROPERTY_SEED)
     @settings(max_examples=TERMINAL_PROPERTY_EXAMPLES, deadline=None, print_blob=True)
     @given(
-        reference=coordination_references(),
+        reference=correlations(),
         first_kind=terminal_record_kinds(module),
         second_kind=terminal_record_kinds(module),
         sender=agent_names(),
@@ -1089,7 +1089,7 @@ def run_recipient_boundary(
         first=agent_names(),
         second=agent_names(),
         sender=agent_names(),
-        correlation=coordination_references(),
+        correlation=correlations(),
         subject=message_texts(),
         body=message_texts(),
         project_key=project_key_paths(),

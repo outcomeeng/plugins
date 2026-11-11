@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate source-owned coordination envelopes and environment deliveries."""
+"""Validate source-owned message envelopes and environment deliveries."""
 
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ SUCCESS_CRITERIA_FIELD = "successCriteria"
 RETRY_POLICY_FIELD = "retryPolicy"
 SOCKET_FIELD = "socket"
 EXPECTED_PANES_FIELD = "expectedPanes"
-COORDINATION_REFERENCE_FIELD = "coordinationReference"
+CORRELATION_FIELD = "correlation"
 MUTATION_TARGET_FIELD = "mutationTarget"
 OBSERVED_STATE_FIELD = "observedState"
 ACCEPTED_FIELD = "accepted"
@@ -84,7 +84,7 @@ TRANSPORT_SUCCESS_FIELDS = frozenset(
 ENVELOPE_FIELDS = frozenset(
     {
         SCHEMA_VERSION_FIELD,
-        COORDINATION_REFERENCE_FIELD,
+        CORRELATION_FIELD,
         KIND_FIELD,
         MESSAGE_STATE_FIELD,
         SENDER_FIELD,
@@ -106,7 +106,7 @@ REQUEST_INPUT_FIELDS = frozenset(
         FACTS_FIELD,
         REQUEST_FIELD,
         HANDBACK_FIELD,
-        COORDINATION_REFERENCE_FIELD,
+        CORRELATION_FIELD,
         MUTATION_TARGET_FIELD,
         OBSERVED_STATE_FIELD,
         ACCEPTED_FIELD,
@@ -154,13 +154,12 @@ IDENTITY_INPUT_FIELDS = frozenset((*IDENTITY_FIELDS, RUN_FIELD))
 RECORD_SCHEMA_VERSION = 1
 RECORD_SCHEMA_FIELD = "schema"
 RECORD_ID_FIELD = "id"
-RECORD_CORRELATION_FIELD = "correlation"
 BODY_FIELD = "body"
 ACK_REQUIRED_FIELD = "ackRequired"
 RECORD_FIELDS = frozenset(
     {
         RECORD_SCHEMA_FIELD,
-        RECORD_CORRELATION_FIELD,
+        CORRELATION_FIELD,
         KIND_FIELD,
         SENDER_FIELD,
         RECIPIENT_FIELD,
@@ -171,7 +170,7 @@ RECORD_FIELDS = frozenset(
 )
 DELIVERED_RECORD_FIELDS = RECORD_FIELDS | {RECORD_ID_FIELD}
 RECORD_TEXT_FIELDS = (
-    RECORD_CORRELATION_FIELD,
+    CORRELATION_FIELD,
     SENDER_FIELD,
     RECIPIENT_FIELD,
     SUBJECT_FIELD,
@@ -505,7 +504,7 @@ def _validated_handback_plan(
     return requested
 
 
-def coordination_reference(
+def envelope_correlation(
     kind: MessageKind,
     active_reference: str | None,
     uuid_factory: Callable[[], uuid.UUID] = uuid.uuid4,
@@ -514,19 +513,19 @@ def coordination_reference(
         if active_reference is None:
             raise MessageError(
                 DeliveryStatus.INVALID_SCHEMA,
-                f"{kind.value} requires the active coordination reference.",
+                f"{kind.value} requires the active correlation.",
             )
         try:
             return str(uuid.UUID(active_reference))
         except ValueError as error:
             raise MessageError(
                 DeliveryStatus.INVALID_SCHEMA,
-                f"Response coordination reference is not a UUID: {active_reference}",
+                f"Response correlation is not a UUID: {active_reference}",
             ) from error
     if active_reference is not None:
         raise MessageError(
             DeliveryStatus.INVALID_SCHEMA,
-            "Only response messages may reuse an active coordination reference.",
+            "Only response messages may reuse an active correlation.",
         )
     return str(uuid_factory())
 
@@ -539,7 +538,7 @@ def build_request(
     facts: list[str],
     request: str | None,
     handback: object = None,
-    coordination_reference: str | None = None,
+    correlation: str | None = None,
     mutation_target: object = None,
     observed_state: object = None,
     accepted: bool | None = None,
@@ -551,9 +550,7 @@ def build_request(
         FACTS_FIELD: facts,
         REQUEST_FIELD: _optional_text(request, f"request.{REQUEST_FIELD}"),
         HANDBACK_FIELD: handback,
-        COORDINATION_REFERENCE_FIELD: _optional_text(
-            coordination_reference, f"request.{COORDINATION_REFERENCE_FIELD}"
-        ),
+        CORRELATION_FIELD: _optional_text(correlation, f"request.{CORRELATION_FIELD}"),
         MUTATION_TARGET_FIELD: mutation_target,
         OBSERVED_STATE_FIELD: observed_state,
         ACCEPTED_FIELD: accepted,
@@ -703,9 +700,7 @@ def build_envelope(
         )
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
-        COORDINATION_REFERENCE_FIELD: coordination_reference(
-            kind, active_reference, uuid_factory
-        ),
+        CORRELATION_FIELD: envelope_correlation(kind, active_reference, uuid_factory),
         KIND_FIELD: kind,
         MESSAGE_STATE_FIELD: MESSAGE_STATE_BY_KIND[kind],
         SENDER_FIELD: validated_sender,
@@ -755,13 +750,9 @@ def validate_envelope(envelope: object) -> dict[str, object]:
             f"Envelope message state must be {expected_state} for kind {kind}.",
         )
     reference = (
-        coordination_reference(
-            kind, cast(str | None, value.get(COORDINATION_REFERENCE_FIELD))
-        )
+        envelope_correlation(kind, cast(str | None, value.get(CORRELATION_FIELD)))
         if kind in RESPONSE_KINDS
-        else _text(
-            value.get(COORDINATION_REFERENCE_FIELD), COORDINATION_REFERENCE_FIELD
-        )
+        else _text(value.get(CORRELATION_FIELD), CORRELATION_FIELD)
     )
     if kind not in RESPONSE_KINDS:
         try:
@@ -769,7 +760,7 @@ def validate_envelope(envelope: object) -> dict[str, object]:
         except ValueError as error:
             raise MessageError(
                 DeliveryStatus.INVALID_SCHEMA,
-                f"Envelope coordination reference is not a UUID: {reference}",
+                f"Envelope correlation is not a UUID: {reference}",
             ) from error
     sender = validate_identity(value.get(SENDER_FIELD), SENDER_FIELD)
     recipient = validate_identity(value.get(RECIPIENT_FIELD), RECIPIENT_FIELD)
@@ -802,7 +793,7 @@ def validate_envelope(envelope: object) -> dict[str, object]:
         )
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
-        COORDINATION_REFERENCE_FIELD: reference,
+        CORRELATION_FIELD: reference,
         KIND_FIELD: kind,
         MESSAGE_STATE_FIELD: expected_state,
         SENDER_FIELD: sender,
@@ -841,7 +832,7 @@ def delivery_request(envelope: object) -> dict[str, object]:
     return {
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
         STATUS_FIELD: DeliveryStatus.READY,
-        COORDINATION_REFERENCE_FIELD: value[COORDINATION_REFERENCE_FIELD],
+        CORRELATION_FIELD: value[CORRELATION_FIELD],
         TO_PANE_FIELD: recipient[PANE_FIELD],
         TEXT_FIELD: json.dumps(value, sort_keys=True),
     }
@@ -913,8 +904,8 @@ def send_request(
         request=_optional_text(value.get(REQUEST_FIELD), f"request.{REQUEST_FIELD}"),
         handback=handback,
         active_reference=_optional_text(
-            value.get(COORDINATION_REFERENCE_FIELD),
-            f"request.{COORDINATION_REFERENCE_FIELD}",
+            value.get(CORRELATION_FIELD),
+            f"request.{CORRELATION_FIELD}",
         ),
         mutation_target=value.get(MUTATION_TARGET_FIELD),
         observed_state=value.get(OBSERVED_STATE_FIELD),
@@ -998,7 +989,7 @@ def delivery_result(
         STATUS_FIELD: (
             DeliveryStatus.DELIVERED if delivered else DeliveryStatus.DELIVERY_FAILED
         ),
-        COORDINATION_REFERENCE_FIELD: value[COORDINATION_REFERENCE_FIELD],
+        CORRELATION_FIELD: value[CORRELATION_FIELD],
         COMMAND_EXIT_CODE_FIELD: command_exit_code,
         TRANSPORT_FIELD: checked_transport,
         ACKNOWLEDGED_FIELD: False,
@@ -1093,9 +1084,7 @@ def mail_record(
         )
     return {
         RECORD_SCHEMA_FIELD: RECORD_SCHEMA_VERSION,
-        RECORD_CORRELATION_FIELD: _text(
-            correlation, f"request.{RECORD_CORRELATION_FIELD}"
-        ),
+        CORRELATION_FIELD: _text(correlation, f"request.{CORRELATION_FIELD}"),
         KIND_FIELD: record_kind,
         SENDER_FIELD: validated_sender,
         RECIPIENT_FIELD: _text(recipient, f"request.{RECIPIENT_FIELD}"),
@@ -1143,7 +1132,7 @@ def mail_request(request: object) -> dict[str, object]:
         )
     record = mail_record(
         kind=value.get(KIND_FIELD),
-        correlation=value.get(RECORD_CORRELATION_FIELD),
+        correlation=value.get(CORRELATION_FIELD),
         sender=value.get(SENDER_FIELD),
         recipient=value.get(RECIPIENT_FIELD),
         subject=value.get(SUBJECT_FIELD),
@@ -1326,7 +1315,7 @@ def mail_delivery_result(
         SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
         STATUS_FIELD: DeliveryStatus.DELIVERED,
         RECORD_ID_FIELD: message_id,
-        RECORD_CORRELATION_FIELD: record[RECORD_CORRELATION_FIELD],
+        CORRELATION_FIELD: record[CORRELATION_FIELD],
         KIND_FIELD: record[KIND_FIELD],
         SENDER_FIELD: sender,
         RECIPIENT_FIELD: record[RECIPIENT_FIELD],
