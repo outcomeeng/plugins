@@ -1,6 +1,6 @@
 {
   "name": "product-tree",
-  "version": "0.112.0",
+  "version": "0.113.0",
   "description": "Product Tree: git-native product structure for Outcome Engineering, with commit workflow, Change Transitions, and TDD flows driven by specs",
   "author": {
     "name": "Simon Heimlicher",
