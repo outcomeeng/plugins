@@ -556,3 +556,14 @@ When the host dprint updates:
 🛑 **STOP TRIGGER — about to read another `outcomeeng` repository through `gh`, the GitHub API, or the web.** Read its local main checkout instead, `../<repo>/<repo>` from the directory that holds `plugins.git`, after `git fetch`.
 
 <!-- /PRODUCT-TREE:shared sibling-repositories -->
+
+<!-- PRODUCT-TREE:shared change-selection -->
+
+## Change selection
+
+The Change store holds about a thousand records, and most of them will never be implemented. The Change Lifecycle section admits work only on a Change the Operator selects and a new record only when the Operator asks for one; in this store:
+
+- ALWAYS treat a Maturity or Lifecycle value a record carries from an earlier version as selecting nothing.
+- NEVER edit, comment on, claim, release, close, refine, audit, or re-check a Change the Operator has not selected, including to bring it up to date. When one bears on the work, name its number and leave it as it is.
+
+<!-- /PRODUCT-TREE:shared change-selection -->
