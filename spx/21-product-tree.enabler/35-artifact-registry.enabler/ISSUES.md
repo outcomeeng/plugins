@@ -1,6 +1,6 @@
 # Issues: Artifact Registry
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## The registry reader exceeds the shipped-script size threshold
 

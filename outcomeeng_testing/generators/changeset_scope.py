@@ -29,8 +29,8 @@ class ClassificationPathCase:
 
 
 @dataclass(frozen=True)
-class CoordinationNoteRecognitionCase:
-    """One source-derived path and its coordination-note recognition result."""
+class NoteRecognitionCase:
+    """One source-derived path and its note recognition result."""
 
     path: str
     expected: bool
@@ -51,7 +51,7 @@ def changeset_scope_cases() -> Iterator[ChangesetScopeCase]:
 
 
 def classification_path_cases(
-    coordination_note_basenames: Sequence[str],
+    note_basenames: Sequence[str],
 ) -> tuple[ClassificationPathCase, ...]:
     """Compose the empty, note-only, mixed, and duplicate mapping cases."""
     generated_cases = changeset_scope_cases()
@@ -59,7 +59,7 @@ def classification_path_cases(
     ordinary_path = next(generated_cases).feature_file
     note_path = pathlib.PurePosixPath(
         note_parent,
-        coordination_note_basenames[0],
+        note_basenames[0],
     ).as_posix()
     return (
         ClassificationPathCase(paths=()),
@@ -69,13 +69,13 @@ def classification_path_cases(
     )
 
 
-def coordination_note_recognition_cases(
-    coordination_note_basenames: Sequence[str],
-) -> tuple[CoordinationNoteRecognitionCase, ...]:
+def note_recognition_cases(
+    note_basenames: Sequence[str],
+) -> tuple[NoteRecognitionCase, ...]:
     """Derive positive paths and near misses from every source-owned basename."""
     generated_parent = next(changeset_scope_cases()).feature_branch
-    cases: list[CoordinationNoteRecognitionCase] = []
-    for basename in coordination_note_basenames:
+    cases: list[NoteRecognitionCase] = []
+    for basename in note_basenames:
         suffix = pathlib.PurePosixPath(basename).suffix
         stem = basename.removesuffix(suffix)
         near_misses = (
@@ -87,11 +87,9 @@ def coordination_note_recognition_cases(
             basename,
             pathlib.PurePosixPath(generated_parent, basename).as_posix(),
         )
+        cases.extend(NoteRecognitionCase(path=path, expected=True) for path in paths)
         cases.extend(
-            CoordinationNoteRecognitionCase(path=path, expected=True) for path in paths
-        )
-        cases.extend(
-            CoordinationNoteRecognitionCase(path=path, expected=False)
+            NoteRecognitionCase(path=path, expected=False)
             for near_miss in near_misses
             for path in (
                 near_miss,

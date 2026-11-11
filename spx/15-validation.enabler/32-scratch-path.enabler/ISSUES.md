@@ -1,7 +1,5 @@
 # ISSUES — scratch-path enabler
 
-Coordination note; not spec truth.
-
 ## DEBT [evidence]: expected diagnostic values come from the production scanner (f-001)
 
 Finding f-001 (REJECT, oracle independence) at

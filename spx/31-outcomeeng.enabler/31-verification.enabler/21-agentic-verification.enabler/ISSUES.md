@@ -1,6 +1,6 @@
 # Issues: Agentic verification
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## The prompt-caching decision's gate condition is stale
 

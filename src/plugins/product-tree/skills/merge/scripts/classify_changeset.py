@@ -1,6 +1,6 @@
 """Classify the current changeset for /merge transport selection.
 
-Reports whether the changeset is coordination-note-only — every changed path a
+Reports whether the changeset is notes-only — every changed path a
 `PLAN.md` or `ISSUES.md` — over the full changed-file set (committed branch
 scope plus uncommitted working-tree changes), with counts computed over the
 whole set so a large changeset is never misclassified from a truncated sample.
@@ -18,7 +18,7 @@ library is available.
 Tested inputs and error cases: the co-located classifier scenario and mapping
 evidence exercises importlib loading of `changeset_scope.py`, end-to-end
 changed-path delegation through `detect_base_ref` and `branch_scope`, finite
-coordination-note classification, git porcelain records for paths containing
+note classification, git porcelain records for paths containing
 spaces, unconfigured remote-default diagnostics, and the environment failures
 (absent sibling module, git absent from PATH, a directory outside any git
 working tree) that each exit 1 behind the error prefix before this script is
@@ -43,7 +43,7 @@ BASE_REF_ERROR_PREFIX = "error: merge changeset classification failed"
 _DIFF_FIX = "Fetch origin so the remote-tracking base ref exists, then rerun."
 _GIT_ABSENT_FIX = "Install git or add it to PATH, then rerun."
 _NOT_A_WORKING_TREE_FIX = "Run the classifier from inside a git working tree."
-_coordination_note_pattern: re.Pattern[str] | None = None
+_note_pattern: re.Pattern[str] | None = None
 
 
 class ChangesetClassificationError(RuntimeError):
@@ -71,15 +71,15 @@ def _git_failure_error(
     )
 
 
-def _load_coordination_note_pattern() -> re.Pattern[str]:
-    """Compile the coordination-note matcher from the sibling `merge_contract.py`.
+def _load_note_pattern() -> re.Pattern[str]:
+    """Compile the note matcher from the sibling `merge_contract.py`.
 
     The sibling path is checked before it is executed, so an incomplete install
     reports the missing path instead of raising a raw traceback.
     """
-    global _coordination_note_pattern  # noqa: PLW0603  # one-time lazy cache
-    if _coordination_note_pattern is not None:
-        return _coordination_note_pattern
+    global _note_pattern  # noqa: PLW0603  # one-time lazy cache
+    if _note_pattern is not None:
+        return _note_pattern
     path = pathlib.Path(__file__).resolve().with_name(_CONTRACT_FILENAME)
     if not path.is_file():
         raise ChangesetClassificationError(
@@ -89,16 +89,16 @@ def _load_coordination_note_pattern() -> re.Pattern[str]:
         )
     try:
         contract = runpy.run_path(str(path))
-        basenames = cast(tuple[str, ...], contract["COORDINATION_NOTE_BASENAMES"])
+        basenames = cast(tuple[str, ...], contract["NOTE_BASENAMES"])
     except (OSError, SyntaxError, KeyError) as exc:
         raise ChangesetClassificationError(
-            f"cannot read COORDINATION_NOTE_BASENAMES from {path}: "
+            f"cannot read NOTE_BASENAMES from {path}: "
             f"{type(exc).__name__}: {exc}. Reinstall the product-tree plugin."
         ) from exc
-    _coordination_note_pattern = re.compile(
+    _note_pattern = re.compile(
         r"(^|/)(" + "|".join(re.escape(name) for name in basenames) + r")$"
     )
-    return _coordination_note_pattern
+    return _note_pattern
 
 
 def _load_changeset_scope() -> ModuleType:
@@ -152,7 +152,7 @@ def _working_tree_paths(repo: pathlib.Path) -> list[str]:
     path spelling `git diff --name-only` (and therefore `changeset_scope`)
     produces, so working-tree and committed paths de-duplicate. Without `-z`,
     git C-quotes any path containing a space or non-ASCII character (`"a b.md"`
-    with literal quotes), which both breaks the coordination-note match and
+    with literal quotes), which both breaks the note match and
     defeats de-duplication against the committed scope.
 
     Each record is `XY <path>`; a rename or copy record (`R`/`C` in the status)
@@ -188,21 +188,21 @@ def _working_tree_paths(repo: pathlib.Path) -> list[str]:
     return paths
 
 
-def is_coordination_note(path: str) -> bool:
-    """True when `path`'s basename is a coordination note (`PLAN.md`/`ISSUES.md`)."""
-    return _load_coordination_note_pattern().search(path) is not None
+def is_note(path: str) -> bool:
+    """True when `path`'s basename is a note (`PLAN.md`/`ISSUES.md`)."""
+    return _load_note_pattern().search(path) is not None
 
 
 def classify(paths: list[str]) -> tuple[int, int]:
-    """Return `(total, non_coordination_note_count)` over the unique path set.
+    """Return `(total, non_note_count)` over the unique path set.
 
-    The changeset is coordination-note-only exactly when `total > 0` and the
-    non-coordination-note count is `0`.
+    The changeset is notes-only exactly when `total > 0` and the
+    non-note count is `0`.
     """
     unique = sorted(set(paths))
     total = len(unique)
-    noncoord = sum(1 for path in unique if not is_coordination_note(path))
-    return total, noncoord
+    non_note = sum(1 for path in unique if not is_note(path))
+    return total, non_note
 
 
 def changed_paths(repo: pathlib.Path) -> list[str]:
@@ -231,10 +231,10 @@ def main() -> int:
     except ChangesetClassificationError as exc:
         print(f"{BASE_REF_ERROR_PREFIX}: {exc}", file=sys.stderr)
         return 1
-    total, noncoord = classify(paths)
+    total, non_note = classify(paths)
     print(
-        f"total changed files: {total}; non-coordination-note files: {noncoord} "
-        "— coordination-note-only iff total>0 and non-coordination-note=0"
+        f"total changed files: {total}; non-note files: {non_note} "
+        "— notes-only iff total>0 and non-note=0"
     )
     for path in sorted(set(paths))[:_PREVIEW_LIMIT]:
         print(path)

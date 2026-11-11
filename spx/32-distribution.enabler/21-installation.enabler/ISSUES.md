@@ -1,6 +1,6 @@
 # Issues: Installation
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## Agent-specific behavior is enumerated inside product-level decisions
 

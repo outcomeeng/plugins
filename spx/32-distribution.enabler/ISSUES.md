@@ -1,7 +1,5 @@
 # ISSUES -- distribution enabler
 
-Coordination note; not spec truth.
-
 ## DEBT [structure]: split distribution workflow boundaries
 
 Implementation audit `019f2777-97ab-7a03-89d3-30e61c4c820e` raised a decomposition finding: `spx/32-distribution.enabler/distribution.md` carries more than roughly seven assertions and mixes independently validated concerns:

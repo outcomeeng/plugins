@@ -6,7 +6,7 @@ malleability: spec
 # Direct-push Transport
 
 PROVIDES the direct-push merge transport — publishing a verified changeset straight to the default branch on origin without a pull request
-SO THAT a project that selects it in `spx/local/merging.md`, and any coordination-note-only changeset
+SO THAT a project that selects it in `spx/local/merging.md`, and any notes-only changeset
 CAN integrate under the same lifecycle with the verification predicates bound locally and absent preview, deploy, or release declarations skipped, per [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md)
 
 ## Assertions

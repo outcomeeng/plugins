@@ -1,6 +1,6 @@
 # Issues: Codex invocation
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## The node is a declared placeholder without assertions
 

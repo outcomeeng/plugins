@@ -141,7 +141,7 @@ The remaining tasks below harden the current `review-changes` implementation. Th
    - Reject a finding on a changed file whose `file:line` is outside the changed coordinates visible to the review input, and reject a finding on an unchanged consumer whose `file:line` does not exist — the consumer case is admitted by design, since review scope reaches unchanged consumers of a changed governing declaration.
    - Wire the check into the per-finding path before journal emission, or into the SPX finding validation entry 3 routes there.
 
-### Coordination
+### Context
 
 Run `/understand`, then `/contextualize spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler` before acting. Verify each item against the current review prompt, policy module, journal adapter, and tests before implementation.
 
@@ -239,11 +239,11 @@ that supplies a non-default scope and shows the skill reviewed that exact scope.
 against `src/plugins/product-tree/agents/changes-reviewer.md` on Change #76 head
 `843ddd709b058970d414ec755cc10121ff6bb5ff`.
 
-## The reviewer reads a conforming absent `<failure_modes>` section as a coordination-note gap
+## The reviewer reads a conforming absent `<failure_modes>` section as a note gap
 
 `/agent-prompt-standards` `<failure_mode_writing>` prescribes omitting `<failure_modes>` from a skill that has not failed yet, so a new skill conforms by carrying no such section. `product-tree:changes-reviewer` nonetheless raised the absence as a debt finding on the contribute-plugin consolidation, in review runs `2026-08-17_00-39-40-323-2100d0f7fbde` and `2026-08-17_00-58-42-318-56d83c759ed7`, and each answer cost a full re-review cycle with the same reasoning. The skill auditor's side of the same defect is in `spx/43-instructions.enabler/21-skills.enabler/ISSUES.md`.
 
-**Settlement condition.** The review prompt's coordination-note rule carries the matching case: a note that tracks work a standard declares complete-as-absent represents no future work, so its removal closes the item.
+**Settlement condition.** The review prompt's note rule carries the matching case: a note that tracks work a standard declares complete-as-absent represents no future work, so its removal closes the item.
 
 ## Two Verifier rules collide on pinning a spec-declared tuning value
 

@@ -1,6 +1,6 @@
 # Issues: Pull requests
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## The non-interactive git guard sits on the command that cannot prompt
 

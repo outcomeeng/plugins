@@ -346,7 +346,7 @@ Scope: this failure fires only on minting a new record for a guarantee that woul
 
 **Failure 8: Authoring pre-decided decomposition structure**
 
-Claude received a broad request, drafted several child nodes with indices, and then treated `/decompose` as confirmation. The child list encoded unexamined dependencies and left no room for the decomposition workflow to build its own model from the durable node spec and coordination notes.
+Claude received a broad request, drafted several child nodes with indices, and then treated `/decompose` as confirmation. The child list encoded unexamined dependencies and left no room for the decomposition workflow to build its own model from the durable node spec and notes.
 
 How to avoid: when a request needs multiple sibling nodes, capture the user's intent and constraints in the Change that carries the work, then use skill `product-tree:decompose` with `<node-address>`. The decomposition workflow owns child boundaries, kinds, dependency edges, and index assignment.
 

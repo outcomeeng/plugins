@@ -1,6 +1,6 @@
 # Issues: Bootstrapping
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## The authoring flows still instruct creating PLAN.md notes
 

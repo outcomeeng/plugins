@@ -10,7 +10,7 @@ A changeset warrants a plugin bump when it changes authored content under
 `dist/codex/<name>/`, or a `src/_shared/` fragment attributed to the plugin
 through its authored include directives.
 
-Changes confined to marketplace catalogs, `spx/`, coordination notes, root
+Changes confined to marketplace catalogs, `spx/`, `ISSUES.md` files, root
 `AGENTS.md` or `CLAUDE.md`, local overlays, tests, validation configuration,
 or generated repository docs
 warrant no plugin bump. The marketplace sync wrapper uses the same distribution

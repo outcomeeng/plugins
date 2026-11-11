@@ -85,7 +85,7 @@ Deferred from `feat/rebase-merge-default` (2026-05-24) because the change widens
 
 ## 22. PR #329 surfaced instruction gaps in product-tree operations
 
-PR #329 exposed avoidable workflow failures where clearer local instructions or skill guidance would have forced the right action earlier. The incidents below are coordination notes; each item needs a follow-up change in the named surface.
+PR #329 exposed avoidable workflow failures where clearer local instructions or skill guidance would have forced the right action earlier. The incidents below are known defects; each item needs a follow-up change in the named surface.
 
 - **Verification-kind vocabulary.** Treated `reviewing` as a skill-naming violation when it was the verification-kind vocabulary, predating the gerund-to-imperative skill rename.
   Preventing instruction: when a term can belong to both a skill-name grammar and the verification taxonomy, inspect the governing vocabulary source and file history before classifying it as a naming defect.

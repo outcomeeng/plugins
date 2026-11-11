@@ -16,7 +16,7 @@ no evidence-audit approval. Settlement requires observation-returning harnesses
 and test-owned predicates across this file, followed by a passing evidence audit.
 Revisit before relying on this node's evidence-audit approval or changing these tests.
 
-Known issues left by the `src/plugins/` → `dist/` build restructure. Coordination note; not spec truth.
+Known issues left by the `src/plugins/` → `dist/` build restructure.
 
 ## 1. `spx/` spec references still cite the pre-restructure `plugins/` path
 

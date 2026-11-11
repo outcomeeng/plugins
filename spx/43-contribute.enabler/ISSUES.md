@@ -1,6 +1,6 @@
 # Issues: Contribute
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## `open-upstream-issue` carries two blocking and four debt skill-audit findings
 

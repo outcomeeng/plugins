@@ -18,7 +18,7 @@ CAN reorganize the Product Tree without losing context, breaking references, or 
 
 - ALWAYS: update all cross-references when moving a node — stale paths break deterministic context loading ([audit])
 - ALWAYS: delegate shared enabler extraction, consolidation boundaries, and new index assignment to `/decompose` before applying tree surgery ([audit])
-- ALWAYS: preserve node-local `PLAN.md` and `ISSUES.md` when moving nodes — coordination notes belong to the node they describe ([audit])
+- ALWAYS: preserve node-local `PLAN.md` and `ISSUES.md` when moving nodes — notes belong to the node they describe ([audit])
 - ALWAYS: reference nodes, ADRs, and PDRs by full path from `spx/` in refactor plans and reports — bare names and bare decision filenames are ambiguous because numeric prefixes are sibling-local ([audit])
 - NEVER: change assertion semantics during a refactoring operation — refactoring moves structure, not meaning ([audit])
 - NEVER: choose lower-index survivors, create lower-index enablers, or move a node to a new parent or index by default — an index change is read from the matrix file at the path `/decompose` names in its result for the target parent, and a move with no such file does not run ([audit])

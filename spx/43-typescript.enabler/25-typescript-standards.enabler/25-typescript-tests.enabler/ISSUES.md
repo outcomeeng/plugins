@@ -1,6 +1,6 @@
 # Issues: TypeScript tests
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## The TypeScript delta of the source-laundering rule is unauthored
 

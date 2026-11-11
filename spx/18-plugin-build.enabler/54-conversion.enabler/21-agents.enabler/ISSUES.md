@@ -1,7 +1,5 @@
 # ISSUES — agents conversion enabler
 
-Coordination note; not spec truth.
-
 ## DEBT [consistency]: reassess `permissionMode` mapping for plugin-shipped agents
 
 `changes-reviewer` run `2026-07-03_15-20-18-970-ba8ba57733e4` and CI review comment `2026-07-03T15:40:38Z` raised that Claude Code plugin-shipped agents do not support `permissionMode` frontmatter, while this node still specifies and tests `permissionMode` to Codex `sandbox_mode` mapping.

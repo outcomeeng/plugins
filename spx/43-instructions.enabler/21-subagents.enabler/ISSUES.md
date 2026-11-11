@@ -1,6 +1,6 @@
 # Issues: Subagent Authoring
 
-Known defects in the subagent cluster. Coordination note; not spec truth.
+Known defects in the subagent cluster.
 
 ## The auditor skeleton's worked example states its categories in a second sentence
 

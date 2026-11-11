@@ -1,6 +1,6 @@
 # Issues: Templates
 
-Known defects, contradictions and gaps in this node. Coordination note; not spec truth.
+Known defects, contradictions and gaps in this node.
 
 ## The lean PDR template describes no extension for normative-heavy decisions
 
