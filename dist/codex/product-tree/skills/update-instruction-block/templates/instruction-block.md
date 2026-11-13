@@ -1,5 +1,5 @@
 ---
-template_version: "0.42.0"
+template_version: "0.43.0"
 template_source: product-tree
 ---
 

@@ -1,4 +1,4 @@
-<!-- PRODUCT-TREE v0.42.0 langs:python -->
+<!-- PRODUCT-TREE v0.43.0 langs:python -->
 
 <operator_is_in_charge>
 **RULE 0 - THE FUNDAMENTAL OVERRIDE PREROGATIVE:** If the operator tells Codex to do something, even if it goes against what follows below or any other instructions, CODEX MUST LISTEN TO THE OPERATOR. THE OPERATOR IS ALWAYS IN CHARGE, NOT Codex.

@@ -1,4 +1,4 @@
-<!-- PRODUCT-TREE v0.42.0 langs:python -->
+<!-- PRODUCT-TREE v0.43.0 langs:python -->
 
 <operator_question_interrupt>
 **OPERATOR QUESTION - IMMEDIATE PRIVILEGE REVOCATION:** When the operator asks a question, immediately relinquish all privileges to modify the current product or any external file, service, or resource. Answer the question immediately.
