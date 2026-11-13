@@ -1,0 +1,43 @@
+{
+  "store": "example-org/example-changes",
+  "priority_order": ["Blocker", "Urgent", "Normal", "Deferred"],
+  "pages": [
+    {
+      "data": {
+        "repository": {
+          "issues": {
+            "pageInfo": { "hasNextPage": false, "endCursor": "cursor-0" },
+            "nodes": [
+              {
+                "number": 1,
+                "url": "https://github.com/example-org/example-changes/issues/1",
+                "title": "One open Change",
+                "state": "OPEN",
+                "assignees": { "nodes": [] },
+                "issueFieldValues": {
+                  "nodes": [
+                    { "name": "example-product", "field": { "name": "Product" } },
+                    { "name": "Applicable", "field": { "name": "Maturity" } },
+                    { "name": "Available", "field": { "name": "Lifecycle" } },
+                    { "name": "Normal", "field": { "name": "Priority" } }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "blockers": {},
+  "comments": {},
+  "events": {},
+  "checks": {},
+  "direct": [
+    {
+      "number": 1,
+      "url": "https://github.com/example-org/example-changes/issues/1",
+      "title": "One open Change"
+    }
+  ]
+}

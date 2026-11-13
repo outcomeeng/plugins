@@ -17,9 +17,9 @@ The record each row reads is the one [`spx/31-outcomeeng.enabler/32-changes.enab
 
 - pdr-rules: ALWAYS: report-changes reads each part of a record it reports from the home the github-store mapping of the Change record decision names.
 
-### Property: report rows
+### Test.Property: report rows
 
-- report-rows: report-changes lists each open Change of the declared store that passes its filters, one row each with the Change's number, URL, title, Product, Maturity, Lifecycle, Priority, holder, and Parent as the store holds them, in the Priority order `spx/local/changes.md` declares, a Change with no Priority last, then by ascending issue number, over every page of the store.
+- report-rows: report-changes lists each open Change of the declared store that passes its filters, one row each with the Change's number, URL, title, Product, Maturity, Lifecycle, Priority, holder, and Parent as the store holds them, in the Priority order `spx/local/changes.md` declares, a Change with no Priority last, then by ascending issue number, over every page of the store. ([test](tests/test_report_changes.property.l1.py))
 
 ### Mapping: report-columns
 
@@ -41,14 +41,14 @@ Each row derives these columns from the Change and its Transition comments.
 | blockers-two-merges-abandoned | waiting     | refinement, for an unheld Available Change whose one blocker A merged into B, B merged into C, and C closed Abandoned without a merge                                                                                                                                                                                                      |
 | waiting-claim                 | waiting     | claim, for any other unheld Available Change                                                                                                                                                                                                                                                                                               |
 
-### Compliance: report-changes
+### Test.Compliance: report-changes
 
-- report-no-shorter-list: NEVER: report-changes returns a shorter list in place of a failure; a read that fails, returns unreadable output, or fills a bound yields a blocked result naming the read or the bound and no row, and a Change whose Priority the declared order omits yields a blocked result naming the priority-order read and no row.
-- report-no-write: NEVER: report-changes writes; it runs reading gh commands only, posts no comment, writes no field, assignee, or blocker, and its script writes no file and reads no overlay and no repository content.
+- report-no-shorter-list: NEVER: report-changes returns a shorter list in place of a failure; a read that fails, returns unreadable output, or fills a bound yields a blocked result naming the read or the bound and no row, and a Change whose Priority the declared order omits yields a blocked result naming the priority-order read and no row. ([test](tests/test_report_changes.compliance.l1.py))
+- report-no-write: NEVER: report-changes writes; it runs reading gh commands only, posts no comment, writes no field, assignee, or blocker, and its script writes no file and reads no overlay and no repository content. ([test](tests/test_report_changes.compliance.l1.py))
 
-### Scenario: reachability
+### Test.Scenario: reachability
 
-- reachability: Given a store page that holds one open Change, when the report-changes script lists the store, then it returns one row for that Change under the request and result names the script exports.
+- reachability: Given a store page that holds one open Change, when the report-changes script lists the store, then it returns one row for that Change under the request and result names the script exports. ([test](tests/test_report_changes.scenario.l1.py))
 
 ### Audit: report-changes
 
