@@ -16,10 +16,10 @@
 
 **Settlement condition:** A Leaf whose Product has no repository yet records, passes the form check, and passes the audit with no base, and its Declarations can create the repository.
 
-## The change auditor writes its request files where no harness provides room
+## The change auditor has no request-file location on a harness that names no scratch directory
 
-**Evidence:** `audit-change` and the `change-auditor` definition have the auditor write every runner request and payload file in the scratch directory the harness names, with `$RUNNER_TEMP` on a hosted runner as the only fallback. On 2026-11-09 an at-close run on outcomeeng/changes#915, run `2026-11-09_15-24-36-636-2336a5438633`, ended `BLOCKED` after the session's scratch directory was withdrawn, and the next run, `2026-11-09_15-40-15-927-e89660553ded`, wrote 18 files to the fixed path `/private/tmp/change-auditor-915/`. An earlier run ended `BLOCKED` with `retained-input-mismatch` because the user's formatter hook rewrote its payload Draft after the write.
+**Evidence:** `audit-change` and the `change-auditor` definition have the auditor write every runner request file in the scratch directory the harness names, with `$RUNNER_TEMP` on a hosted runner as the only fallback. On 2026-11-09 an at-close run on outcomeeng/changes#915, run `2026-11-09_15-24-36-636-2336a5438633`, ended `BLOCKED` after the session's scratch directory was withdrawn, and the next run, `2026-11-09_15-40-15-927-e89660553ded`, wrote 18 files to the fixed path `/private/tmp/change-auditor-915/`. The runner's `retain-record` operation retains the record's Change Draft, so the audit writes no payload file and no file whose bytes a formatter hook can invalidate; the request files remain.
 
-**Impact:** The change audit depends on a location the harness may not provide and on the payload file staying byte-identical after the write, so an audit stops or writes outside every location its rules allow.
+**Impact:** On a harness that names no scratch directory and is no hosted runner, the change audit has no location for its request files, so it stops or writes outside every location its rules allow.
 
-**Settlement condition:** The change audit writes and reads its request and payload files in a location it owns on every harness, and passes with the formatter hook in place.
+**Settlement condition:** [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) names the location a session without a harness-named scratch directory writes its request files to, and `audit-change` names that location.

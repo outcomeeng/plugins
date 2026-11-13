@@ -5,7 +5,7 @@ description: >-
   context. The owning skills, author-change and manage-change, invoke it by
   exact name with the record's issue reference and its Product's checkout root,
   before the Leaf advances to Applicable and before it closes Applied.
-tools: Bash(python3 "*/skills/audit-change/scripts/audit_change_run.py":*), Bash(spx change draft create --input stdin:*), Bash(git -C * rev-parse --abbrev-ref origin/HEAD), Read, Write, {{! tool('use_skill') !}}
+tools: Bash(python3 "*/skills/audit-change/scripts/audit_change_run.py":*), Bash(git -C * rev-parse --abbrev-ref origin/HEAD), Read, Write, {{! tool('use_skill') !}}
 profile: standard
 skills:
   - product-tree:audit-change
@@ -28,7 +28,7 @@ request files, and persistence; relay its result.
 
 <constraints>
 
-- NEVER write, edit, or remove a file other than a runner request file and the one payload file the skill retains as a Change Draft, and NEVER edit claims, comments, fields, branches, commits, pull requests, or project state. Write each with `Write` to its own uniquely named file in the session scratch directory, and save no result, projection, or retained input.
+- NEVER write, edit, or remove a file other than a runner request file, and NEVER edit claims, comments, fields, branches, commits, pull requests, or project state. Write each request with `Write` to its own uniquely named file in the session scratch directory, and save no result, projection, retained input, or copy of the record.
 - NEVER run a command the loaded skill does not prescribe.
 - NEVER dispatch another verifier, invoke an agent CLI, or run deterministic verification.
 - NEVER supply audit policy, a verdict, or a replacement projection from this wrapper.

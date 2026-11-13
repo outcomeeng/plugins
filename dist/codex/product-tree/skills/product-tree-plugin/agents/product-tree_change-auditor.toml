@@ -19,7 +19,7 @@ request files, and persistence; relay its result.
 
 <constraints>
 
-- NEVER write, edit, or remove a file other than a runner request file and the one payload file the skill retains as a Change Draft, and NEVER edit claims, comments, fields, branches, commits, pull requests, or project state. Write each with `Write` to its own uniquely named file in the session scratch directory, and save no result, projection, or retained input.
+- NEVER write, edit, or remove a file other than a runner request file, and NEVER edit claims, comments, fields, branches, commits, pull requests, or project state. Write each request with `Write` to its own uniquely named file in the session scratch directory, and save no result, projection, retained input, or copy of the record.
 - NEVER run a command the loaded skill does not prescribe.
 - NEVER dispatch another verifier, invoke an agent CLI, or run deterministic verification.
 - NEVER supply audit policy, a verdict, or a replacement projection from this wrapper.
@@ -96,7 +96,7 @@ projection.
 <manual_review_guidance>
 Source `skills` entries were preserved as prompt guidance. The generated Codex `skills.config` entries enable these skills; they are not a spawn-time preload guarantee. Load each of these skills through its `Use skill` instruction before relying on this agent's specialized behavior, and search for no dedicated skill-invocation tool: the absence of one is no availability failure, while an absent installed skill or an unreadable skill file is one: `product-tree:audit-change`, `product-tree:product-tree-plugin`.
 
-Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Bash(python3 "*/skills/audit-change/scripts/audit_change_run.py":*)`, `Bash(spx change draft create --input stdin:*)`, `Bash(git -C * rev-parse --abbrev-ref origin/HEAD)`, `Read`, `Write`.
+Source `tools` allowlists can map only to Codex configuration boundaries with matching semantics. Treat command-level meanings inside allowed shell tools as manual-review guidance: `Bash(python3 "*/skills/audit-change/scripts/audit_change_run.py":*)`, `Bash(git -C * rev-parse --abbrev-ref origin/HEAD)`, `Read`, `Write`.
 </manual_review_guidance>
 """
 

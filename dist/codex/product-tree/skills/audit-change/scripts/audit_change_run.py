@@ -2,10 +2,11 @@
 
 The runner reads one JSON request object on stdin, performs the requested file
 or ``spx verification run`` operation from the Product's checkout root, and writes one
-JSON result object on stdout. It writes no file: the SPX run journal is the only
-state that persists between requests, and every request names the candidate
-path and run token it acts on, so audits of different candidates started from
-one worktree share nothing but the journal store SPX keys by run.
+JSON result object on stdout. It writes no file: the SPX run journal and the
+Change Draft ``retain-record`` retains through ``spx`` are the only state that
+persists between requests, and every request names the candidate path and run
+token it acts on, so audits of different candidates started from one worktree
+share nothing but the stores SPX keys by run and by draft.
 
 Every invocation writes exactly one result, and every result carries
 ``operation`` and ``status``. ``operation`` is the listed operation the request
@@ -58,13 +59,24 @@ the bound with ``page-bound-reached`` naming it.
 
 Every operation that names a candidate or a record path takes the Product's
 checkout root as ``root``, an absolute path: ``read-candidate``, ``start``,
-``add-scope``, ``add-finding``, ``reconcile``, ``finish``, and ``count-limits``
-resolve the candidate path under that root and run their ``git`` and ``spx``
-commands with that root as the working directory, and ``resolve-reference``
-resolves the path a record names under it, whatever checkout holds the draft
-or runs the audit. A request without ``root``, or one whose ``root`` is no
-repository checkout root, blocks naming it, and the containment check of the
-path stays against that root.
+``add-scope``, ``add-finding``, ``reconcile``, and ``finish`` resolve the
+candidate path under that root and run their ``git`` and ``spx`` commands with
+that root as the working directory, and ``resolve-reference`` resolves the path
+a record names under it, whatever checkout holds the draft or runs the audit.
+A request without ``root``, or one whose ``root`` is no repository checkout
+root, blocks naming it, and the containment check of the path stays against
+that root.
+
+``retain-record`` starts ``gh`` twice, for the record and for its blockers,
+composes the Change Draft from each part's home in the store, and pipes that
+Draft to one ``spx change draft create`` command run from ``root``. It returns
+the path SPX retained the Draft at, under ``root``, and the Draft's digest, so
+no session copies the record. A retained Draft that differs from the composed
+one blocks with ``retained-input-mismatch``. It is tested in this process over
+replayed store answers and a draft store in a temporary directory: the Draft
+SPX receives carries the stored title, body, and field values, a store that
+retains other content blocks, and a failed or unrunnable ``gh`` or ``spx``
+command blocks with ``command-failed``.
 
 ``read-published`` starts ``gh`` once and returns the issue's published body,
 the empty string when the store holds none.
@@ -73,11 +85,6 @@ the empty string when the store holds none.
 the named issue's Product and Parent, its Parent's Product, and the issues whose
 Parent is the named issue, and the issues whose Predecessors value names it,
 within the same page bound as ``read-authority``.
-
-``count-limits`` reads the candidate under ``root`` and starts no process beyond
-the repository-root lookup of that root; it returns the title's word count and the Intent
-section's word count, labels included, with the limit of each, and lists those
-over their limit.
 """
 
 from __future__ import annotations
@@ -110,7 +117,7 @@ class Operation(StrEnum):
     READ_AUTHORITY = "read-authority"
     READ_PUBLISHED = "read-published"
     READ_RELATIONS = "read-relations"
-    READ_RECORD = "read-record"
+    RETAIN_RECORD = "retain-record"
     READ_AT = "read-at"
     GOVERNING_DECISIONS = "governing-decisions"
 
@@ -171,7 +178,6 @@ class ResultField(StrEnum):
     CHILDREN = "children"
     ABSORBERS = "absorbers"
     NUMBER = "number"
-    DRAFT = "draft"
     MATURITY = "maturity"
     LIFECYCLE = "lifecycle"
     BASE = "base"
@@ -251,6 +257,7 @@ class SpxField(StrEnum):
     COVERAGE_STATUS = "coverageStatus"
     RULE = "rule"
     SEVERITY = "severity"
+    RELATIVE_PATH = "relativePath"
 
 
 class StoreField(StrEnum):
@@ -270,7 +277,9 @@ class StoreField(StrEnum):
     PREVIOUS_VALUE = "previousValue"
     NEW_VALUE = "newValue"
     ISSUE_FIELD = "issueField"
+    FIELD = "field"
     NAME = "name"
+    TITLE = "title"
     BODY = "body"
     ISSUES = "issues"
     NUMBER = "number"
@@ -303,6 +312,15 @@ GIT_EXECUTABLE: Final = "git"
 _GIT_TOPLEVEL: Final = (GIT_EXECUTABLE, "rev-parse", "--show-toplevel")
 _SPX_VERSION: Final = (SPX_EXECUTABLE, "--version")
 _RUN_COMMAND: Final = (SPX_EXECUTABLE, "verification", "run")
+#: The command that retains the Draft it reads on stdin in the SPX draft store.
+DRAFT_CREATE_COMMAND: Final = (
+    SPX_EXECUTABLE,
+    "change",
+    "draft",
+    "create",
+    "--input",
+    PAYLOAD_FROM_STDIN,
+)
 GH_EXECUTABLE: Final = "gh"
 _GRAPHQL: Final = (GH_EXECUTABLE, "api", "graphql")
 
@@ -389,7 +407,7 @@ REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
     Operation.READ_AUTHORITY: frozenset({RequestField.ISSUE}),
     Operation.READ_PUBLISHED: frozenset({RequestField.ISSUE}),
     Operation.READ_RELATIONS: frozenset({RequestField.ISSUE}),
-    Operation.READ_RECORD: frozenset({RequestField.ISSUE, RequestField.ROOT}),
+    Operation.RETAIN_RECORD: frozenset({RequestField.ISSUE, RequestField.ROOT}),
     Operation.READ_AT: frozenset(
         {RequestField.PATH, RequestField.ROOT, RequestField.REF}
     ),
@@ -800,7 +818,7 @@ _REQUEST_CHECKS: Final[
     Operation.READ_AUTHORITY: (_issue_identity,),
     Operation.READ_PUBLISHED: (_issue_identity,),
     Operation.READ_RELATIONS: (_issue_identity,),
-    Operation.READ_RECORD: (_issue_identity, _checkout_root),
+    Operation.RETAIN_RECORD: (_issue_identity, _checkout_root),
     Operation.READ_AT: (_candidate_path, _checkout_root, lambda request: _ref(request)),
     Operation.GOVERNING_DECISIONS: (
         _candidate_path,
@@ -1364,7 +1382,7 @@ def _field_values(node: Mapping[str, object]) -> dict[str, object]:
             evidence={ResultField.BOUND: bound},
         )
     for entry in entries if isinstance(entries, list) else []:
-        field = entry.get("field") if isinstance(entry, dict) else None
+        field = entry.get(StoreField.FIELD) if isinstance(entry, dict) else None
         name = field.get(StoreField.NAME) if isinstance(field, dict) else None
         if name == PRODUCT_FIELD:
             values[PRODUCT_FIELD] = entry.get(StoreField.NAME)
@@ -1534,7 +1552,7 @@ def _single_values(node: Mapping[str, object]) -> dict[str, object]:
         )
     entries = container.get(StoreField.NODES) if isinstance(container, dict) else None
     for entry in entries if isinstance(entries, list) else []:
-        field = entry.get("field") if isinstance(entry, dict) else None
+        field = entry.get(StoreField.FIELD) if isinstance(entry, dict) else None
         name = field.get(StoreField.NAME) if isinstance(field, dict) else None
         if not isinstance(name, str):
             continue
@@ -1594,10 +1612,44 @@ def _blocker_references(
     return references
 
 
-def _read_record(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
-    """Compose the Change Draft of the named issue from each part's home."""
+def _retained_draft_path(context: _Context, root: pathlib.Path, draft: str) -> str:
+    """Retain ``draft`` through SPX and return its path under ``root``, or block."""
+    reported = _json_lines(
+        _command(context, DRAFT_CREATE_COMMAND, cwd=root, stdin=draft),
+        argv=DRAFT_CREATE_COMMAND,
+    )[-1].get(SpxField.RELATIVE_PATH)
+    if not isinstance(reported, str) or not reported:
+        raise Blocked(
+            BlockReason.UNREADABLE_OUTPUT,
+            f"`{' '.join(DRAFT_CREATE_COMMAND)}` printed no {SpxField.RELATIVE_PATH} "
+            "string; run it by hand and confirm the installed spx version "
+            "reports the retained draft's path",
+        )
+    relative = _normalized_path(reported)
+    retained = _live_content(root, relative)
+    if retained != draft:
+        raise Blocked(
+            BlockReason.RETAINED_INPUT_MISMATCH,
+            f"the Draft SPX retained at {relative} differs from the Draft the runner composed; repeat retain-record, and report this block when it repeats",
+            evidence={
+                ResultField.RETAINED_SHA256: _sha256(retained),
+                ResultField.SHA256: _sha256(draft),
+            },
+        )
+    return relative
+
+
+def _retain_record(
+    context: _Context, request: Mapping[str, object]
+) -> dict[str, object]:
+    """Compose the Change Draft of the named issue and retain it through SPX.
+
+    The Draft is composed from each part's home in the store and piped to
+    ``spx change draft create``, so the record reaches the SPX draft store
+    without a copy any session writes.
+    """
     owner, repository, number = _issue_identity(request)
-    _product_root(context, _checkout_root(request))
+    root = _product_root(context, _checkout_root(request))
     argv = [
         *_GRAPHQL,
         "-f",
@@ -1614,7 +1666,7 @@ def _read_record(context: _Context, request: Mapping[str, object]) -> dict[str, 
         node = node.get(key) if isinstance(node, dict) else None
     if (
         not isinstance(node, dict)
-        or not isinstance(node.get("title"), str)
+        or not isinstance(node.get(StoreField.TITLE), str)
         or not isinstance(node.get(StoreField.BODY), str)
     ):
         raise Blocked(
@@ -1631,7 +1683,7 @@ def _read_record(context: _Context, request: Mapping[str, object]) -> dict[str, 
         if entry
     ]
     record: dict[str, object] = {
-        "title": node["title"],
+        "title": node[StoreField.TITLE],
         "parent": f"{owner}/{repository}#{parent}" if isinstance(parent, int) else None,
         "predecessors": predecessors,
         "blockers": _blocker_references(context, owner, repository, number),
@@ -1651,7 +1703,7 @@ def _read_record(context: _Context, request: Mapping[str, object]) -> dict[str, 
     draft = "\n".join([*lines, "---", "", body.rstrip("\n"), ""])
     return {
         ResultField.ISSUE: request[RequestField.ISSUE],
-        ResultField.DRAFT: draft,
+        ResultField.PATH: _retained_draft_path(context, root, draft),
         ResultField.SHA256: _sha256(draft),
         ResultField.MATURITY: record["maturity"],
         ResultField.LIFECYCLE: record["lifecycle"],
@@ -1744,7 +1796,7 @@ _HANDLERS: Final[
     Operation.READ_AUTHORITY: _read_authority,
     Operation.READ_PUBLISHED: _read_published,
     Operation.READ_RELATIONS: _read_relations,
-    Operation.READ_RECORD: _read_record,
+    Operation.RETAIN_RECORD: _retain_record,
     Operation.READ_AT: _read_at,
     Operation.GOVERNING_DECISIONS: _governing_decisions,
 }

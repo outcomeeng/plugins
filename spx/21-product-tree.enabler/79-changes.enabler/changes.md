@@ -43,6 +43,7 @@ CAN write, check, and audit every Change record in one form
 - audit-record: audit-change audits one Sliced Leaf, each Declarations line against every Decision Record that governs its Node at the Base, read as the Declarations change it, and every finding blocks, as audit-before-applicable of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states it.
 - audit-close: audit-change audits the default branch against the record of a Leaf before the Leaf closes Applied, as audit-at-close of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states it.
 - audit-auditor: The change-auditor definition fronts audit-change, takes the issue reference of the record and the checkout root as its task message, and returns a blocked result for any other task message.
+- audit-retention: NEVER: the session that runs audit-change writes a copy of the record it audits; the runner of audit-change retains the record's Change Draft, and the session writes only runner request files.
 
 ### Audit: manage-change
 
