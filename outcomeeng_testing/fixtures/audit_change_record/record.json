@@ -1,0 +1,49 @@
+{
+  "data": {
+    "repository": {
+      "issue": {
+        "title": "The widget cache evicts entries the eviction rule names",
+        "body": "## Statement of Intent\n\n- Output: The widget cache evicts each entry its eviction rule names.\n- Why: The cache spec states the eviction rule, and the cache keeps entries the rule names.\n- Verification: A test finds no named entry in the cache after eviction.\n\n## Declarations\n\nnone: the Leaf declares nothing, because its Parent carries the Declarations.\n",
+        "createdAt": "2026-01-05T08:00:00Z",
+        "lastEditedAt": "2026-01-06T09:30:00Z",
+        "issueFieldValues": {
+          "pageInfo": {
+            "hasNextPage": false
+          },
+          "nodes": [
+            {
+              "name": "widgets",
+              "field": {
+                "name": "Product"
+              }
+            },
+            {
+              "name": "Sliced",
+              "field": {
+                "name": "Maturity"
+              }
+            },
+            {
+              "name": "Available",
+              "field": {
+                "name": "Lifecycle"
+              }
+            },
+            {
+              "value": "0123456789abcdef0123456789abcdef01234567",
+              "field": {
+                "name": "Base"
+              }
+            },
+            {
+              "name": "Normal",
+              "field": {
+                "name": "Priority"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
