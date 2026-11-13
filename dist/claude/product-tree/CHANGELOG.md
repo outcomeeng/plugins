@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.114.1
+
+### Fixed
+
+- **The managed instruction-block template takes version 0.43.0.** `/update-instruction-block` reads a router block rendered at 0.42.0 as `stale` and re-renders it. Reaching consumer routers only through this bump are the template changes that shipped at 0.42.0 without a template version change: the Change Lifecycle section that routes every Transition to `/manage-change` and names the Change Store overlay `spx/local/changes.md`, the note as the name of an `ISSUES.md` file, the rule that a session records a Proposed Change only when the Operator asks for one, and the one-line form of the `/wait-for-load` lock rule. Before this change, the check printed `current` for a router rendered at 0.42.0, so the skill stopped without writing and those routers kept the retired `/claim-change`, `/release-change`, and `/close-change` routing and the `spx/local/coordination.md` path.
+
 ## 0.114.0
 
 ### Changed
