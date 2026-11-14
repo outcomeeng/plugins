@@ -85,6 +85,14 @@ Impact: a session cannot learn from the REST endpoint whether its next GraphQL c
 
 Revisit and settlement condition: GitHub reports the GraphQL budget consistently across its REST and GraphQL interfaces, or a read that establishes GraphQL availability without spending the budget is documented and the Change skills cite it in their blocked results.
 
+## The Change record decision gives a submit a reason that its transition log cannot hold
+
+**Evidence:** In [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md), the `submit` row of the `transitions` Mapping takes a Change whose settled judgment the holder finds reopened "with its reason". Its `log-extras` rule adds `reason` to a lower alone, and `log-closed` lets the block hold no other key. `change-standards` repeats the three rules at lines 211, 231 and 232 of `src/plugins/product-tree/skills/change-standards/SKILL.md`. Step 6.6 of `src/plugins/product-tree/skills/apply-change/SKILL.md`, at line 117, has the holder submit "with the question as its reason". The audit of outcomeeng/changes#897, run `2026-11-14_09-47-16-986-dafd52b6e11d`, rejected a report row that read that reason from the newest submit comment, under `log-extras`.
+
+**Impact:** No record can show why a Submitted Change at Framed, Sliced or Applicable waits for the Operator to lower it, so report-changes reports every Submitted Change above Proposed as waiting for its next Maturity. A holder that follows apply-change's step 6.6 writes a key `log-closed` forbids.
+
+**Settlement condition:** The decision states one home for a submit's reason, and change-standards, manage-change and apply-change follow it. A report row then shows a Submitted Change that waits for a lower.
+
 ## DEBT [record-form]: report-changes reads the replaced record form
 
 Defect class: `record-form`.
