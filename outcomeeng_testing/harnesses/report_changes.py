@@ -23,8 +23,7 @@ page whose ``endCursor`` the call passes as ``after``; once the pages run out
 it answers with the final page again, which is what a store that never ends
 its connection does.
 
-The bounds a blocked result names come from the spec assertion text, read here
-by path. The harness decides nothing: every predicate belongs to the linked
+The bounds a blocked result names come from the script's own exports. The harness decides nothing: every predicate belongs to the linked
 test.
 """
 
@@ -67,13 +66,12 @@ SCRIPT: Final = (
     / "scripts"
     / "report_changes.py"
 )
-CHANGES_SPEC: Final = (
-    REPO_ROOT / "spx" / "31-outcomeeng.enabler" / "32-changes.enabler" / "changes.md"
-)
 _FIXTURES_DIR: Final = REPO_ROOT / "outcomeeng_testing" / "fixtures" / "report_changes"
 #: A multi-page store holding a Change in each waiting state, a Parent cycle,
 #: and an absent Parent, with the rows read by hand from its answers.
 RECORDED_STORE: Final = _FIXTURES_DIR / "store.json"
+#: A store of one page holding one open Change, with that Change's row read by hand.
+ONE_OPEN_CHANGE_STORE: Final = _FIXTURES_DIR / "one-open-change.json"
 
 #: The invented store every generated store claims to be.
 GENERATED_STORE_IDENTITY: Final = "example-org/example-changes"
@@ -98,13 +96,9 @@ _BLOCKERS_PATH: Final = re.compile(r"issues/(\d+)/dependencies/blocked_by$")
 GENERATED_STORE_PROPERTY_SEED: Final = 20261021
 GENERATED_STORE_PROPERTY_EXAMPLES: Final = settings().max_examples
 GENERATED_STORE_PROPERTY_REPLAY: Final = (
-    "just test spx/31-outcomeeng.enabler/32-changes.enabler/tests/"
-    "test_report_changes.property.l1.py"
+    "just test spx/31-outcomeeng.enabler/32-changes.enabler/60-report-changes.enabler/"
+    "tests/test_report_changes.property.l1.py"
 )
-
-_BOUND_LINE: Final = "returns a shorter list in place of a failure"
-_BOUND_PHRASE: Final = re.compile(r"`(\d+ [^`]+)`")
-_FIRST_INTEGER: Final = re.compile(r"\d+")
 
 _SIMULATED_FAILURE: Final = "simulated failure"
 _SIMULATED_UNREADABLE: Final = "this is not JSON"
@@ -241,50 +235,39 @@ class ReportObservation:
 
 
 @dataclass(frozen=True)
-class SpecBounds:
-    """The bounds the spec assertion says a blocked result names."""
+class ReadBounds:
+    """The bounds the script exports for the reads it makes.
+
+    The bounds are the script's own contract: the spec assertion says a read
+    that fills a bound blocks, and the script owns each bound's name and size.
+    """
 
     issues: str
     field_values: str
     blockers: str
     assignees: str
     events: str
-
-    @property
-    def page_count(self) -> int:
-        return int(_FIRST_INTEGER.findall(self.issues)[-1])
-
-    @property
-    def field_value_count(self) -> int:
-        return int(_FIRST_INTEGER.findall(self.field_values)[0])
-
-    @property
-    def blocker_count(self) -> int:
-        return int(_FIRST_INTEGER.findall(self.blockers)[0])
-
-    @property
-    def assignee_count(self) -> int:
-        return int(_FIRST_INTEGER.findall(self.assignees)[0])
-
-    @property
-    def event_page_count(self) -> int:
-        return int(_FIRST_INTEGER.findall(self.events)[-1])
+    page_count: int
+    field_value_count: int
+    blocker_count: int
+    assignee_count: int
+    event_page_count: int
 
 
-def spec_bounds() -> SpecBounds:
-    """The five bounds named in the spec assertion that forbids a shorter list."""
-    line = next(
-        text
-        for text in CHANGES_SPEC.read_text(encoding="utf-8").splitlines()
-        if _BOUND_LINE in text
-    )
-    issues, field_values, blockers, assignees, events = _BOUND_PHRASE.findall(line)
-    return SpecBounds(
-        issues=issues,
-        field_values=field_values,
-        blockers=blockers,
-        assignees=assignees,
-        events=events,
+def script_bounds() -> ReadBounds:
+    """The five bounds the script exports, each with the count that fills it."""
+    script = load_script()
+    return ReadBounds(
+        issues=script.Bound.ISSUES,
+        field_values=script.Bound.FIELD_VALUES,
+        blockers=script.Bound.BLOCKERS,
+        assignees=script.Bound.ASSIGNEES,
+        events=script.Bound.EVENTS,
+        page_count=script.MAX_PAGES,
+        field_value_count=script.FIELD_VALUE_LIMIT,
+        blocker_count=script.BLOCKER_LIMIT,
+        assignee_count=script.ASSIGNEE_LIMIT,
+        event_page_count=script.MAX_PAGES,
     )
 
 

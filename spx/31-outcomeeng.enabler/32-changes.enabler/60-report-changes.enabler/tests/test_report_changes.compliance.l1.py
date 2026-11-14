@@ -8,7 +8,7 @@ way a read fails (a nonzero exit, output that is not JSON, a `gh` that cannot
 start), and one store per bound: an issue connection that never ends, an issue
 whose field-value connection is full, a blocker list that is full, an assignee
 connection that is full, and an event timeline that never ends. The
-bounds come from the spec assertion text, and the counts that fill them come
+bounds come from the script's exports, and the counts that fill them come
 from the bounds. A script that skips a failed read, or returns the rows it has,
 returns rows where the rule demands none.
 
@@ -36,7 +36,7 @@ from outcomeeng_testing.harnesses.report_changes import (
     load_script,
     omitting_a_held_priority,
     report,
-    spec_bounds,
+    script_bounds,
     unending_events,
     unending_issues,
 )
@@ -70,7 +70,7 @@ def test_a_failed_read_of_any_kind_blocks_naming_the_read_and_returns_no_row() -
 
 
 def test_an_issue_connection_that_never_ends_blocks_naming_the_page_bound() -> None:
-    bounds = spec_bounds()
+    bounds = script_bounds()
 
     observed = report(unending_issues(load_recorded_store()))
 
@@ -82,7 +82,7 @@ def test_an_issue_connection_that_never_ends_blocks_naming_the_page_bound() -> N
 
 
 def test_a_full_field_value_connection_blocks_naming_its_bound() -> None:
-    bounds = spec_bounds()
+    bounds = script_bounds()
 
     observed = report(
         filled_field_values(load_recorded_store(), bounds.field_value_count)
@@ -95,7 +95,7 @@ def test_a_full_field_value_connection_blocks_naming_its_bound() -> None:
 
 
 def test_a_full_blocker_list_blocks_naming_its_bound() -> None:
-    bounds = spec_bounds()
+    bounds = script_bounds()
 
     observed = report(filled_blockers(load_recorded_store(), bounds.blocker_count))
 
@@ -112,14 +112,15 @@ def test_a_full_assignee_connection_blocks_naming_its_bound() -> None:
     `100 assignees` bound.
     Production subject: the script's entry point reading a store whose first
     issue returns as many assignees as the bound.
-    Case provenance: the count comes from the bound in the spec assertion text.
-    Oracle owner: the spec assertion text names the bound and demands no row.
+    Case provenance: the count comes from the bound the script exports.
+    Oracle owner: the spec assertion demands a blocked result and no row; the
+    script exports the name of the bound it names.
     Rejected mutation: the script drops its assignee-limit check and returns
     rows.
     Failure observation: the exit code is not blocked, the bound is absent, and
     rows are present.
     """
-    bounds = spec_bounds()
+    bounds = script_bounds()
 
     observed = report(filled_assignees(load_recorded_store(), bounds.assignee_count))
 
@@ -136,15 +137,15 @@ def test_an_event_timeline_that_never_ends_blocks_naming_the_event_bound() -> No
     `100 events per page, 10 pages` bound.
     Production subject: the script's entry point reading a Claimed Change whose
     field-change event timeline reports a further page on every page.
-    Case provenance: the page count comes from the bound in the spec assertion
-    text; the Claimed Change is in the recorded store.
-    Oracle owner: the spec assertion text names the bound and demands no row.
+    Case provenance: the page count comes from the bound the script exports; the Claimed Change is in the recorded store.
+    Oracle owner: the spec assertion demands a blocked result and no row; the
+    script exports the name of the bound it names.
     Rejected mutation: the script returns the moves it has after the last page
     instead of blocking.
     Failure observation: the exit code is not blocked, the bound is absent, rows
     are present, or the event pages read differ from the bound's page count.
     """
-    bounds = spec_bounds()
+    bounds = script_bounds()
 
     observed = report(unending_events(load_recorded_store()))
 
@@ -169,7 +170,7 @@ def test_a_priority_the_order_omits_blocks_naming_the_priority_order_and_returns
     Priority an open Change holds in reading order, dropped from the recorded
     Priority order.
     Oracle owner: the script's priority-order read name, exported by the script,
-    and the spec assertion text, which demands a blocked result and no row.
+    and the spec assertion, which demands a blocked result and no row.
     Rejected mutation: the script drops or misplaces the Change whose Priority
     the order omits and returns the rows it has.
     Failure observation: the exit code is not blocked, the read name differs
