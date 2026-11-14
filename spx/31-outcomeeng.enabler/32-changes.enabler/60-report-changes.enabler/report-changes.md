@@ -13,7 +13,7 @@ The record each row reads is the one [`spx/31-outcomeeng.enabler/32-changes.enab
 
 ## Assertions
 
-### Compliance: store homes
+### Test.Compliance: store homes
 
 - pdr-rules: ALWAYS: report-changes reads each part of a record it reports from the home the github-store mapping of the Change record decision names.
 
@@ -21,7 +21,7 @@ The record each row reads is the one [`spx/31-outcomeeng.enabler/32-changes.enab
 
 - report-rows: report-changes lists each open Change of the declared store that passes its filters, one row each with the Change's number, URL, title, Product, Maturity, Lifecycle, Priority, holder, and Parent as the store holds them, in the Priority order `spx/local/changes.md` declares, a Change with no Priority last, then by ascending issue number, over every page of the store. ([test](tests/test_report_changes.property.l1.py))
 
-### Mapping: report-columns
+### Test.Mapping: report-columns
 
 Each row derives these columns from the Change and its Transition comments.
 
