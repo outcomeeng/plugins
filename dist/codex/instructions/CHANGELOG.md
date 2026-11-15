@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.22.8
+
+### Changed
+
+- **`/author-subagent` and `/subagent-standards` name the Thorough profile where they named Executor.** The central profiles are Standard, Strong, Thorough, and Fast. Strong, Thorough, and Fast require an explicit governing selection, and an authored marketplace source selects the Thorough profile as `profile: thorough`. Thorough carries the native configuration Executor carried on each harness, unchanged. A source that still declares `profile: executor` fails the build as an unsupported profile.
+
 ## 0.22.6
 
 ### Fixed

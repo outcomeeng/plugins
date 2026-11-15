@@ -2,7 +2,7 @@
 name: change-applier
 description: >-
   ALWAYS select at session start when an agent session applies one claimed Applicable Change as its Applier through `/apply-change`.
-profile: executor
+profile: thorough
 targets:
   - claude
 disallowedTools: "{{! tool('ask_user') !}}"

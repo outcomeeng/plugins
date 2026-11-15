@@ -51,7 +51,7 @@ model: "opus"
 effort: "high"
 ```
 
-Executor:
+Thorough:
 
 ```yaml
 model: "sonnet"
