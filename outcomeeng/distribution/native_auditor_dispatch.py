@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import shutil
+import subprocess
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -57,7 +59,6 @@ NATIVE_LAUNCH_COMMANDS: Final[Mapping[Target, tuple[str, ...]]] = {
         "stream-json",
         "--verbose",
         "--include-partial-messages",
-        "--forward-subagent-text",
     ),
     Target.CODEX: (
         CODEX_EXECUTABLE,
@@ -103,6 +104,17 @@ AUDITOR_FIXTURES: Final[Mapping[str, tuple[str, str]]] = {
     ),
 }
 """Each auditor's inert whole-payload dispatch target: file name and exact content."""
+
+GIT_EXECUTABLE: Final = "git"
+FIXTURE_BRANCH: Final = "main"
+FIXTURE_REMOTE: Final = "origin"
+FIXTURE_IGNORE: Final = (".gitignore", ".spx/\n")
+"""The base commit's one file: it keeps the run store the auditor writes out of the fixture's status."""
+FIXTURE_IDENTITY: Final = "Native auditor dispatch fixture"
+FIXTURE_EMAIL: Final = "fixture@native-auditor-dispatch.invalid"
+FIXTURE_GIT_TIMEOUT_SECONDS: Final = 30
+FIXTURE_BASE_MESSAGE: Final = "base"
+FIXTURE_HEAD_MESSAGE: Final = "add the dispatch fixture"
 
 
 @dataclass(frozen=True)
@@ -217,9 +229,7 @@ def materialize_native_auditor(row: NativeAuditorRow) -> None:
     """Place the shipped definition and the inert fixture in the row's disposable state."""
     row.native_definition_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(row.shipped_definition_path, row.native_definition_path)
-    _, fixture_text = AUDITOR_FIXTURES[row.auditor]
-    row.fixture_path.parent.mkdir(parents=True, exist_ok=True)
-    row.fixture_path.write_text(fixture_text, encoding="utf-8")
+    _materialize_fixture_repository(row)
     _write_json(
         row.configuration_path,
         {
@@ -245,6 +255,61 @@ def materialize_native_auditor(row: NativeAuditorRow) -> None:
             "discovered": None,
         },
     )
+
+
+def _materialize_fixture_repository(row: NativeAuditorRow) -> None:
+    """Commit the inert fixture as the one change of a git repository the auditor can measure.
+
+    The shipped auditors resolve the fixture's repository root and judge the
+    changeset from `origin/HEAD` to `HEAD`, so the fixture's directory is a
+    repository whose base commit `origin/HEAD` names and whose head commit adds
+    the fixture, with a clean status. Git runs with no global or system
+    configuration, so the host's settings change nothing in the fixture.
+    """
+    repository = row.fixture_path.parent
+    repository.mkdir(parents=True, exist_ok=True)
+    ignore_name, ignore_text = FIXTURE_IGNORE
+    (repository / ignore_name).write_text(ignore_text, encoding="utf-8")
+    _fixture_git(repository, "init", "--quiet", f"--initial-branch={FIXTURE_BRANCH}")
+    _fixture_git(repository, "add", "--", ignore_name)
+    _fixture_git(repository, "commit", "--quiet", "--message", FIXTURE_BASE_MESSAGE)
+    remote_branch = f"refs/remotes/{FIXTURE_REMOTE}/{FIXTURE_BRANCH}"
+    _fixture_git(repository, "update-ref", remote_branch, "HEAD")
+    _fixture_git(
+        repository, "symbolic-ref", f"refs/remotes/{FIXTURE_REMOTE}/HEAD", remote_branch
+    )
+    _, fixture_text = AUDITOR_FIXTURES[row.auditor]
+    row.fixture_path.write_text(fixture_text, encoding="utf-8")
+    _fixture_git(repository, "add", "--", row.fixture_path.name)
+    _fixture_git(repository, "commit", "--quiet", "--message", FIXTURE_HEAD_MESSAGE)
+
+
+def _fixture_git(repository: Path, *arguments: str) -> None:
+    """Run one git command in the fixture repository; a failure is the row's terminal condition."""
+    command = (GIT_EXECUTABLE, *arguments)
+    result = subprocess.run(
+        command,
+        cwd=repository,
+        env={
+            "PATH": os.environ.get("PATH", os.defpath),
+            "HOME": str(repository),
+            "GIT_CONFIG_NOSYSTEM": "1",
+            "GIT_CONFIG_GLOBAL": os.devnull,
+            "GIT_AUTHOR_NAME": FIXTURE_IDENTITY,
+            "GIT_AUTHOR_EMAIL": FIXTURE_EMAIL,
+            "GIT_COMMITTER_NAME": FIXTURE_IDENTITY,
+            "GIT_COMMITTER_EMAIL": FIXTURE_EMAIL,
+        },
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=FIXTURE_GIT_TIMEOUT_SECONDS,
+    )
+    if result.returncode != 0:
+        raise OSError(
+            f"fixture repository command {' '.join(command)} exited "
+            f"{result.returncode}: {result.stderr.strip()}"
+        )
 
 
 def _dispatch_prompt(row: NativeAuditorRow) -> str:
@@ -286,8 +351,10 @@ def run_native_auditor_row(
     terminal_condition: str | None = None
     if result.returncode != 0:
         terminal_condition = f"native parent session exited {result.returncode}"
-    elif projection is None and not blocked:
-        terminal_condition = "auditor dispatch returned neither a rendered projection nor a blocked diagnostic"
+    elif blocked:
+        terminal_condition = "auditor dispatch returned a blocked diagnostic"
+    elif run_token is None:
+        terminal_condition = "auditor dispatch returned no run token"
     _write_json(
         row.loading_path,
         {

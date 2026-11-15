@@ -173,25 +173,6 @@ def test_a_reply_without_a_rendered_projection_or_blocked_diagnostic_records_a_t
             assert result[RESULT_PROJECTION_KEY] is None, row.identifier
 
 
-def test_a_blocked_dispatch_diagnostic_is_a_returned_result_without_a_terminal_condition() -> (
-    None
-):
-    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
-    with native_auditor_launch(
-        {selected}, returned=LaunchReturn.BLOCKED
-    ) as observation:
-        assert observation.rows
-        for item in observation.rows:
-            row = item.observation.row
-            assert item.observation.launch_exit_code == 0, row.identifier
-            assert item.observation.terminal_condition is None, row.identifier
-            result = json.loads(row.result_path.read_text("utf-8"))
-            assert result[RESULT_BLOCKED_KEY] is True, row.identifier
-            assert result[RESULT_RUN_TOKEN_KEY] is None, row.identifier
-            assert result[RESULT_RUN_FILE_KEY] is None, row.identifier
-            assert result[RESULT_TERMINAL_CONDITION_KEY] is None, row.identifier
-
-
 def test_a_failure_recorded_after_a_dispatch_retains_every_field_the_dispatch_captured() -> (
     None
 ):
