@@ -13,7 +13,7 @@ The record each row reads is the one [`spx/31-outcomeeng.enabler/32-changes.enab
 
 ## Assertions
 
-### Test.Compliance: store homes
+### Audit: store homes
 
 - pdr-rules: ALWAYS: report-changes reads each part of a record it reports from the home the github-store mapping of the Change record decision names.
 
