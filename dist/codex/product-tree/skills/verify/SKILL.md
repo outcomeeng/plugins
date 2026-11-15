@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill when selecting or establishing evidence for spec
   assertions, decision verification rules, or a product-tree scope.
 argument-hint: <full-spx-node-or-decision-path|spx/> [repair-block]
-allowed-tools: Read, Glob, Grep, Edit
+allowed-tools: Read, Glob, Grep, Edit, Write, Bash(spx validation markdown), Bash(trash:*), Bash(python3 "${SKILL_DIR}/scripts/render_report.py":*)
 ---
 
 <objective>
@@ -18,12 +18,15 @@ Validated spec assertions and decision verification rules routed to test, evalua
 - Validate any existing tag shape before reading the subject. An absent tag proceeds to classification; unsupported tagged input returns `blocked` with no selected verification type, specialist, or evidence shape.
 - For every validated assertion, select exactly one current verification type before any specialist chooses assertion type, level, language expression, producer specialization, or verifier.
 - Choose test when behavior has a deterministic verdict, evaluate when an LLM-driven producer emits structured output a deterministic grader can score, probe when only an executed observation of the running node settles the claim, and audit when no deterministic, attested, or structural verdict exists.
+- Deterministic CLI state takes test even when an LLM only reads that state out for an independent comparison, and model-generated behavior takes evaluate even when a CLI exposes it.
 - For spec assertions, recognize only an absent tag, `[test](path)`, `[eval](path)`, `[probe](path)`, `[audit:{rule-slug}]`, and the pathless `[audit]` a repository whose toolchain has not adopted the slug form still carries. For ADR/PDR rules, recognize an absent tag awaiting classification or the decision grammar: one assertion-type tag under `### Testing`, `[eval]` under `### Eval`, and `[audit:{rule-slug}]` with a slug unique within the record, or the pathless `[audit]` a toolchain without slug support still carries, under `### Audit`. Treat every other tag shape as invalid input without naming, aliasing, or translating it.
 - Derive evidence shape from the target artifact and selected verification type regardless of specialist availability: spec test, eval, and probe assertions are path-bearing; spec audit assertions carry a rule slug and no path, or the pathless form while the toolchain admits only that; decision rules carry requirements whose implementing specs own executable evidence links. A capability gap never changes the selected route's evidence shape.
 - Check the runtime skill catalog before invoking a selected path-bearing specialist — `/test`, `/eval`, or `/probe`. An absent specialist produces `capability-required`, never `routed`, and the result still names the selected specialist and evidence shape; `null` values belong only to the blocked shape.
 - Keep routing acyclic: this skill composes specialists and never composes itself through them.
 - Use skill `product-tree:wait-for-load` for every resource-intensive command: run each one under that skill's guard line in the foreground, and report a result only after every such line has exited.
 - Keep judgment isolated: selecting audit records the audit requirement and leaves the verdict to the applicable auditor context; selecting probe records the protocol link and leaves the attested run to the Author.
+- Emit one structured result per spec assertion or decision rule, and render the report table from those results alone.
+- Leave every edit made before the invocation as it stands. Before the invocation first writes a file, Read its content as that file's snapshot; a rollback restores a file the invocation wrote to its snapshot, edits made before the run included, and returns a file the invocation created to absent.
 
 </essential_principles>
 
@@ -43,7 +46,7 @@ Accept only `spx/`, one canonical full `spx/...` node path, or one canonical ful
 
 Inspect only the existing tag shape before reading the subject or its verdict. For spec assertions, an absent tag or one current verification tag proceeds to classification. For decision rules, an absent tag proceeds to classification regardless of its current subsection; a present tag proceeds only when the enclosing subsection and tag match the decision grammar: `### Testing` carries exactly one of `[scenario]`, `[mapping]`, `[conformance]`, `[property]`, or `[compliance]`; `### Eval` carries `[eval]`; `### Audit` carries `[audit:{rule-slug}]` with a slug unique within the record, or the pathless `[audit]` where the toolchain has no slug support.
 
-Any other tag shape triggers an immediate terminal return for that assertion. Return before reading the `subject` field or applying any rule from `classify-subject`, `route-specialist`, or `record-result`. Do not inspect or classify the subject, repeat the tag text, select a specialist, or derive an evidence shape. The assertion has no selected verification type. Report `blocked` with the generic reason `unsupported-tag-shape`, in the blocked row shape `record-result` defines.
+Any other tag shape triggers an immediate terminal return for that assertion. Return before reading the `subject` field or applying any rule from `classify-subject`, `route-specialist`, or `record-result`. Do not inspect or classify the subject, repeat the tag text, select a specialist, or derive an evidence shape. The assertion has no selected verification type. Report `blocked` with the generic reason `unsupported-tag-shape`, in the blocked result shape `record-result` defines.
 
 </step>
 
@@ -60,9 +63,13 @@ For each assertion, identify the real subject and the verdict it can produce:
 
 Classify the real subject's execution, not the determinism of a downstream grader. Ask whether rerunning the real subject with the same input produces the same behavior without model variance. When producing the asserted output requires an LLM, select evaluate even though fixed expectations and a deterministic grader later convert that output into pass or fail. Select test only when the behavior under assertion is itself deterministic.
 
+The same boundary decides an assertion that names a CLI. When the CLI computes the asserted state deterministically and an LLM only reads that state out for an independent comparison, select test: the state the CLI prints is the subject. When the asserted output is generated by a model and a CLI only exposes it, select evaluate: the model's output is the subject.
+
+An assertion about the design or intent of the product — its architecture, its structure, or the direction of its dependencies — names no behavior an executable subject produces, so select audit, even when a script could inspect the artifacts that express the design.
+
 Prefer the strongest reachable evidence in that order after applying this boundary. A prose-content existence check is never deterministic behavior evidence; reading authored text and asserting its wording proves only that the text was authored.
 
-Ignore an existing current tag or decision subsection as classification authority. Input validation has already stopped every unsupported tag shape. Classify the remaining subject from its real verdict. A spec assertion whose current tag already names the selected verification type keeps that tag, is not passed to a specialist again, and reports `routed` with its existing evidence path or rule slug. A spec assertion whose current tag names another verification type has that tag removed before routing, so it reaches the selected specialist as an untagged assertion, and its row names the removed tag. For a decision rule, move it to the subsection matching the selected verification type before its specialist supplies the subsection's tag shape. The decision grammar has no probe subsection, so a decision rule whose claim only an executed observation settles stays unchanged and reports `blocked: probe-on-decision-rule` with its verification type `probe` and a `null` specialist; the spec that implements the rule carries its probe assertion.
+Ignore an existing current tag or decision subsection as classification authority. Input validation has already stopped every unsupported tag shape. Classify the remaining subject from its real verdict. A spec assertion whose current tag already names the selected verification type keeps that tag, is not passed to a specialist again, and reports `routed` with its existing evidence path or rule slug. A spec assertion whose current tag names another verification type has that tag removed before routing, so it reaches the selected specialist as an untagged assertion, and its row names the removed tag. For a decision rule, move it to the subsection matching the selected verification type before its specialist supplies the subsection's tag shape; that move is the rule's provisional placement. When the rule's route ends other than `routed`, restore the record to its snapshot so the rule stands where it stood before the move. The decision grammar has no probe subsection, so a decision rule whose claim only an executed observation settles stays unchanged and reports `blocked` with reason `probe-on-decision-rule`, its verification type `probe`, its exact rule text as subject text, and a `null` specialist and evidence shape; the spec that implements the rule carries its probe assertion.
 
 </step>
 
@@ -83,33 +90,60 @@ Validate the specialist result before updating the subject. A path-bearing spec 
 
 <step name="record-result">
 
-Update each successfully routed spec assertion with exactly one current tag. Update each decision rule with the selected verification subsection and that subsection's canonical tag shape. Leave blocked unsupported input unchanged and return the blocked result.
+Update each successfully routed spec assertion with exactly one current tag. Update each decision rule with the selected verification subsection and that subsection's canonical tag shape. Leave blocked unsupported input unchanged.
 
-Report one row per subject in this shape, with `null` written as `null`:
+Record one structured result per spec assertion or decision rule, with exactly these fields:
 
-```text
-| Subject | Verification type | Specialist | Evidence shape | Evidence path or requirement | Removed tag | Status |
+```json
+{
+  "subject": { "path": "<source path>", "line": 14, "text": "<the subject's exact text>" },
+  "verification_type": "test",
+  "specialist": "/test",
+  "status": "routed",
+  "evidence_shape": "path-bearing",
+  "reason": "<why the subject ends in this status>"
+}
 ```
 
-- `Status` is `routed`, `capability-required`, or `blocked`.
-- `Evidence shape` is `path-bearing` for spec test, eval, and probe assertions, `pathless` for spec audit assertions, and `requirement` for decision rules. A `capability-required` row keeps the selected route intact: the specialist is the absent path-bearing specialist (`/test`, `/eval`, or `/probe`) and the evidence shape is `path-bearing`.
-- `Removed tag` names the tag `classify-subject` removed from a reclassified assertion, and is `null` otherwise.
-- A `blocked` row from `validate-input` carries `null` as its verification type, specialist, evidence shape, and evidence path, and its reason `unsupported-tag-shape` in the status cell as `blocked: unsupported-tag-shape`.
+- `subject.path` is the subject's source path, and `subject.line` is the line the subject holds in that file after the run. `subject.text` is the subject's exact text, and `null` exactly when `reason` is `unsupported-tag-shape`.
+- `status` is `routed`, `capability-required`, or `blocked`.
+- `verification_type` is `test`, `evaluate`, `probe`, `audit`, or `null`; `specialist` is `/test`, `/eval`, `/probe`, `isolated-verifier`, or `null`.
+- A set `evidence_shape` is `path-bearing` for a spec test, eval, or probe assertion, `pathless` for a spec audit assertion, and `requirement` for a decision rule. A `capability-required` result keeps its selected route: it names the selected verification type, the absent specialist, and the evidence shape that route has, `requirement` for a decision rule included.
+- A `routed` or `capability-required` result names its verification type, specialist, and evidence shape.
+- `reason` names, for a `routed` result, its evidence path or requirement and any tag `classify-subject` removed; for a `capability-required` result, the absent specialist or the failed validation; and for a `blocked` result, `unsupported-tag-shape` or `probe-on-decision-rule`.
+- A `blocked` result from `validate-input` carries `null` as its subject text, verification type, specialist, and evidence shape. Classification output never accompanies it.
 
 Never report an assertion verified merely because classification completed; path-bearing evidence must exist and pass its deterministic command, and audit requires its isolated verifier.
+
+</step>
+
+<step name="close">
+
+When the invocation made a durable edit, run `spx validation markdown` once after every route has ended. When it exits non-zero, roll back: restore every file the invocation wrote to its snapshot with Write, and return every file the invocation created to absent through the host's `trash` command. Then turn every `routed` result to `capability-required`, keeping its verification type, specialist, and evidence shape, with a `reason` that names the failed validation and its exit code. A file the host supplies no `trash` command for stays in place, and the `reason` of each affected result names it. Edits made before the invocation stay as they were in every rollback.
+
+</step>
+
+<step name="report">
+
+Write the structured results as one JSON array, with the file-write tool, to a file in the scratch directory the harness names for the session, and render the human report from them alone:
+
+```bash
+python3 "${SKILL_DIR}/scripts/render_report.py" <results-file>
+```
+
+On exit 0 the script prints the table, one row per result: `Subject` holds `<path>:<line>`, then the subject's text when it is not `null`; every `null` value shows as an em dash, `—`; and each row agrees with its result field by field. On exit 2 it prints one line per defect of a result, such as a missing field or a value outside its set; correct the named results and run it again. Return the structured results, then the table the script printed.
 
 When the invocation carried a repair block, add one line per repair item after the table: the item as the block names it, and its disposition — `forwarded to /<specialist>` with that specialist's reported outcome, `repaired` for a classification or tag defect this workflow fixed, or `not-owned` with the reason when no step of this workflow or its specialists owns the fix.
 
 Example:
 
 ```text
-| Subject | Verification type | Specialist | Evidence shape | Evidence path or requirement | Removed tag | Status |
-| Node A deterministic rule | test | /test | path-bearing | tests/<the language's compliance test file> | null | routed |
-| Node B producer rule | evaluate | /eval | path-bearing | eval capability required for the structured producer | [audit:producer-voice] | capability-required |
-| Node C unsupported input | null | null | null | null | null | blocked: unsupported-tag-shape |
+| Subject | Verification type | Specialist | Evidence shape | Status | Reason |
+| --- | --- | --- | --- | --- | --- |
+| <spec path>:12 - parse-record: ALWAYS: ... | test | /test | path-bearing | routed | tests/<the language's compliance test file> |
+| <decision record path>:9 - atomic-save: ALWAYS: ... | test | /test | requirement | capability-required | /test is not installed |
+| <spec path>:14 | — | — | — | blocked | unsupported-tag-shape |
 ```
-
-For the terminal unsupported-input guard, record no verification type, specialist, or evidence shape. Classification output must never accompany that blocked result.
 
 </step>
 
@@ -122,6 +156,8 @@ For the terminal unsupported-input guard, record no verification type, specialis
 - Every path-bearing spec evidence link is canonical and co-located with its governing node; decision rules carry no executable evidence links.
 - Unsupported tags block the subject and receive no compatibility behavior or vocabulary in the workflow output.
 - Specialist dependency direction is acyclic and no agentic verdict is produced in the authoring context.
+- Every subject has one structured result with all six fields, and the report table renders from those results alone.
+- After a failed route or a failed closing validation, every file holds what it held before the run.
 
 </success_criteria>
 
