@@ -130,16 +130,56 @@ FIXTURE_SKILL_RULE_CITATION = (
 )
 FIXTURE_MALFORMED_RULE_CITATION = "record this in ISSUES.md"
 
+# A root agent guide whose one rule section declares the slug the root-rule
+# citation names. The repository's own root guides carry no rule section, so
+# the root-rule exemplar resolves against a fixture checkout holding this file.
+FIXTURE_AGENTS_GUIDE = (
+    "# Agent guide\n\n## Critical rules\n\n- ALWAYS: cite a declared rule slug.\n"
+)
+
 # One real citation per accepted family, keyed by the family name the
 # ``review_result`` module declares in ``RULE_CITATION_FAMILIES``. Each value
-# resolves against this checkout, so acceptance exercises the parser's file and
-# slug verification, not only its grammar.
+# resolves against a checkout, so acceptance exercises the parser's file and
+# slug verification, not only its grammar: the root-rule value against the
+# fixture checkout ``root_rule_checkout`` writes, every other value against
+# this checkout.
 RULE_CITATION_EXEMPLARS: dict[str, str] = {
     "spec-assertion": FIXTURE_RULE_CITATION,
     "decision": FIXTURE_ADR_RULE_CITATION,
     "plugin-skill": FIXTURE_SKILL_RULE_CITATION,
     "root-rule": FIXTURE_AGENTS_RULE_CITATION,
 }
+
+
+def root_rule_checkout(directory: pathlib.Path) -> pathlib.Path:
+    """Write a fixture checkout whose root ``AGENTS.md`` declares one rule slug.
+
+    The parser finds the repository root as the nearest directory holding
+    ``.git``, so the fixture holds an empty ``.git`` directory beside the guide.
+    Returns the checkout root.
+    """
+    (directory / ".git").mkdir()
+    (directory / "AGENTS.md").write_text(FIXTURE_AGENTS_GUIDE, encoding="utf-8")
+    return directory
+
+
+def citation_checkout(directory: pathlib.Path) -> pathlib.Path:
+    """Write a fixture checkout that resolves every citation family's exemplar.
+
+    The root-rule exemplar resolves against the fixture guide
+    ``root_rule_checkout`` writes, and the spec-assertion and decision
+    exemplars against copies of the files they cite, at the paths they cite.
+    The plugin-skill exemplar resolves through the parser's own installed skill
+    tree, whatever the working directory. No file of the live root guides
+    enters the checkout. Returns the checkout root.
+    """
+    checkout = root_rule_checkout(directory)
+    for citation in (FIXTURE_RULE_CITATION, FIXTURE_ADR_RULE_CITATION):
+        relative = pathlib.PurePosixPath(citation.split(":", 1)[0])
+        target = checkout / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(REPO_ROOT / relative, target)
+    return checkout
 
 
 def load_review_result_module() -> ModuleType:

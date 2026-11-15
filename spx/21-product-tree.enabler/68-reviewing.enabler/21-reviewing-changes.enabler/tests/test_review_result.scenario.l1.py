@@ -27,9 +27,9 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     FIXTURE_AGENTS_RULE_CITATION,
     FIXTURE_RULE_CITATION,
     FIXTURE_SKILL_RULE_CITATION,
-    REPO_ROOT,
     load_review_result_module,
     make_review_result_dict,
+    root_rule_checkout,
 )
 
 
@@ -218,16 +218,12 @@ class TestRuleCitationResolution:
         )
 
     def test_root_rule_resolves_from_git_root_when_cwd_is_subdirectory(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
     ) -> None:
         review_result = load_review_result_module()
-        monkeypatch.chdir(
-            REPO_ROOT
-            / "spx"
-            / "21-product-tree.enabler"
-            / "68-reviewing.enabler"
-            / "21-reviewing-changes.enabler"
-        )
+        subdirectory = root_rule_checkout(tmp_path) / "spx" / "21-node.enabler"
+        subdirectory.mkdir(parents=True)
+        monkeypatch.chdir(subdirectory)
         finding = {
             "id": "F-001",
             "concern": "consistency",

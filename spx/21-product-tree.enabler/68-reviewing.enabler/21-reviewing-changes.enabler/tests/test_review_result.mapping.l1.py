@@ -18,6 +18,7 @@ is the relationship the spec declares, independent of the parser's own tables.
 from __future__ import annotations
 
 import json
+import pathlib
 
 import pytest
 
@@ -26,6 +27,7 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     load_review_result_module,
     make_finding_dict,
     make_review_result_dict,
+    root_rule_checkout,
 )
 
 review_result = load_review_result_module()
@@ -67,7 +69,11 @@ class TestRuleCitationFamilies:
         )
 
     @pytest.mark.parametrize("family", review_result.RULE_CITATION_FAMILIES)
-    def test_family_exemplar_is_accepted_by_the_parser(self, family: str) -> None:
+    def test_family_exemplar_is_accepted_by_the_parser(
+        self, family: str, tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        if family == "root-rule":
+            monkeypatch.chdir(root_rule_checkout(tmp_path))
         rule = RULE_CITATION_EXEMPLARS[family]
         payload = json.dumps(
             make_review_result_dict(findings=[make_finding_dict(rule=rule)])

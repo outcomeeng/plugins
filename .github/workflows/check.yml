@@ -28,6 +28,8 @@ jobs:
       CODEX_CLI_VERSION: "0.162.1"
       DPRINT_VERSION: "0.60.1" # renovate: datasource=npm depName=dprint
       SPX_COMMIT: "dfba7ca375232e30d3aefe3af2614f8ad74569e9"
+      # The repository variable turns the root instruction blocks off with `off`.
+      OUTCOMEENG_INSTRUCTION_BLOCKS: ${{ vars.OUTCOMEENG_INSTRUCTION_BLOCKS }}
       ACTIONLINT_VERSION: "1.7.12" # renovate: datasource=github-releases depName=rhysd/actionlint
       SHELLCHECK_VERSION: "0.11.0" # renovate: datasource=github-releases depName=koalaman/shellcheck
     steps:

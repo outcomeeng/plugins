@@ -14,9 +14,12 @@ generated document with conforming findings parses and round-trips.
 
 from __future__ import annotations
 
+import contextlib
 import json
+import pathlib
 from typing import Any
 
+import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -25,8 +28,15 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     FIXTURE_AGENTS_RULE_CITATION,
     FIXTURE_RULE_CITATION,
     FIXTURE_SKILL_RULE_CITATION,
+    citation_checkout,
     load_review_result_module,
 )
+
+
+@pytest.fixture(scope="module")
+def checkout(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
+    """A fixture checkout that resolves every generated citation family."""
+    return citation_checkout(tmp_path_factory.mktemp("citations"))
 
 
 def _concern_values() -> list[str]:
@@ -97,8 +107,13 @@ class TestRoundTripProperty:
 
     @given(document=_conforming_review_result_dicts())
     @settings(max_examples=100, deadline=None)
-    def test_round_trip_preserves_equality(self, document: dict[str, Any]) -> None:
+    def test_round_trip_preserves_equality(
+        self, checkout: pathlib.Path, document: dict[str, Any]
+    ) -> None:
         review_result = load_review_result_module()
-        result = review_result.parse_json(json.dumps(document))
-        round_tripped = review_result.from_json_dict(review_result.to_json_dict(result))
+        with contextlib.chdir(checkout):
+            result = review_result.parse_json(json.dumps(document))
+            round_tripped = review_result.from_json_dict(
+                review_result.to_json_dict(result)
+            )
         assert round_tripped == result
