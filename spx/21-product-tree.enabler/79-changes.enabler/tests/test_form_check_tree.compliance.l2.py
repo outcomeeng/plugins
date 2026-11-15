@@ -15,20 +15,17 @@ repositories under ``tmp_path``.
 
 from __future__ import annotations
 
-import importlib.util
-import json
-import os
 import pathlib
-import subprocess
-import sys
-from types import ModuleType
 
 import pytest
 
-SCRIPT = (
-    pathlib.Path(__file__).resolve().parents[4]
-    / "src/plugins/product-tree/skills/change-standards/scripts/form_check.py"
+from outcomeeng_testing.harnesses.form_check import (
+    Intent,
+    commit_base,
+    findings,
+    write_draft,
 )
+
 HEADING = "docs/guide.md"
 SPX_HEADING_DETAIL = "the heading is a path from spx/"
 
@@ -37,100 +34,32 @@ PRODUCT_SPEC = (
 )
 PLAIN_SPEC = "---\nid: 01a1e000-0000-7000-8000-000000000002\n---\n\n# Example\n"
 DECISION = "# Loose decision\n"
+INTENT = Intent(
+    title="The guide names its intro",
+    output="The guide opens with its intro.",
+    why="Readers find the intro first.",
+    verification="The audit at close finds the intro line.",
+)
+PAYLOAD = ["```diff", "  # Guide", "+ Read this first.", "```"]
 
 
-def load_form_check() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("form_check", SCRIPT)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["form_check"] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-FORM_CHECK = load_form_check()
-
-
-def git(repo: pathlib.Path, *argv: str) -> str:
-    env = {
-        **os.environ,
-        "GIT_CONFIG_GLOBAL": "/dev/null",
-        "GIT_CONFIG_SYSTEM": "/dev/null",
-        "GIT_AUTHOR_NAME": "Test",
-        "GIT_AUTHOR_EMAIL": "test@example.invalid",
-        "GIT_COMMITTER_NAME": "Test",
-        "GIT_COMMITTER_EMAIL": "test@example.invalid",
-    }
-    completed = subprocess.run(
-        ["git", *argv], cwd=repo, env=env, check=True, capture_output=True, text=True
-    )
-    return completed.stdout.strip()
-
-
-def commit_base(repo: pathlib.Path, files: dict[str, str]) -> str:
+def commit_guide_base(repo: pathlib.Path, files: dict[str, str]) -> str:
     """Commit ``docs/guide.md`` and ``files`` as the Base; return its commit."""
-    git(repo.parent, "init", "-q", "-b", "main", str(repo))
-    git(repo, "config", "commit.gpgsign", "false")
-    for path, text in {"docs/guide.md": "# Guide\n\nIntro.\n", **files}.items():
-        target = repo / path
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(text, encoding="utf-8")
-    git(repo, "add", "-A")
-    git(repo, "commit", "-q", "-m", "base")
-    return git(repo, "rev-parse", "HEAD")
+    return commit_base(repo, {HEADING: "# Guide\n\nIntro.\n", **files})
 
 
-def write_draft(directory: pathlib.Path, base: str) -> pathlib.Path:
-    draft = directory / "draft.md"
-    draft.write_text(
-        "\n".join(
-            [
-                "---",
-                "title: The guide names its intro",
-                "product: plugins",
-                "maturity: Proposed",
-                "lifecycle: Submitted",
-                "parent: null",
-                "predecessors: []",
-                "blockers: []",
-                f"base: {base}",
-                "priority: null",
-                "primary_value: null",
-                "investment: null",
-                "---",
-                "",
-                "## Statement of Intent",
-                "",
-                "- Output: The guide opens with its intro.",
-                "- Why: Readers find the intro first.",
-                "- Verification: The audit at close finds the intro line.",
-                "",
-                "## Declarations",
-                "",
-                f"### {HEADING}",
-                "",
-                "```diff",
-                "  # Guide",
-                "+ Read this first.",
-                "```",
-                "",
-            ]
-        ),
-        encoding="utf-8",
-    )
-    return draft
+def write_guide_draft(directory: pathlib.Path, base: str) -> pathlib.Path:
+    return write_draft(directory, base, INTENT, HEADING, PAYLOAD)
 
 
 def spx_heading_finding(
     repo: pathlib.Path, draft: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> bool:
-    FORM_CHECK.main(["--root", str(repo), "--draft", str(draft)])
-    result = json.loads(capsys.readouterr().out)
     return any(
         finding["rule"] == "subsection-headings"
         and finding["location"] == HEADING
         and finding["detail"] == SPX_HEADING_DETAIL
-        for finding in result.get("findings", [])
+        for finding in findings(repo, draft, capsys)
     )
 
 
@@ -160,8 +89,8 @@ def test_base_without_product_tree_judges_root_paths(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str], files: dict[str, str]
 ) -> None:
     repo = tmp_path / "repo"
-    base = commit_base(repo, files)
-    draft = write_draft(tmp_path, base)
+    base = commit_guide_base(repo, files)
+    draft = write_guide_draft(tmp_path, base)
     assert not spx_heading_finding(repo, draft, capsys)
 
 
@@ -170,8 +99,8 @@ def test_base_with_product_tree_requires_spx_paths(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str], files: dict[str, str]
 ) -> None:
     repo = tmp_path / "repo"
-    base = commit_base(repo, files)
-    draft = write_draft(tmp_path, base)
+    base = commit_guide_base(repo, files)
+    draft = write_guide_draft(tmp_path, base)
     assert spx_heading_finding(repo, draft, capsys)
 
 
@@ -179,12 +108,12 @@ def test_checkout_tree_does_not_create_a_product_tree(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     repo = tmp_path / "repo"
-    base = commit_base(repo, NO_TREE_BASES["loose-decision-and-local"])
+    base = commit_guide_base(repo, NO_TREE_BASES["loose-decision-and-local"])
     node = repo / "spx/21-thing.capability"
     node.mkdir(parents=True)
     (node / "thing.spec.md").write_text(PLAIN_SPEC, encoding="utf-8")
     (repo / "spx/example.spec.md").write_text(PRODUCT_SPEC, encoding="utf-8")
-    draft = write_draft(tmp_path, base)
+    draft = write_guide_draft(tmp_path, base)
     assert not spx_heading_finding(repo, draft, capsys)
 
 
@@ -192,8 +121,8 @@ def test_checkout_without_spx_keeps_the_base_product_tree(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     repo = tmp_path / "repo"
-    base = commit_base(repo, TREE_BASES["root-product-spec-only"])
+    base = commit_guide_base(repo, TREE_BASES["root-product-spec-only"])
     (repo / "spx/example.spec.md").unlink()
     (repo / "spx").rmdir()
-    draft = write_draft(tmp_path, base)
+    draft = write_guide_draft(tmp_path, base)
     assert spx_heading_finding(repo, draft, capsys)
