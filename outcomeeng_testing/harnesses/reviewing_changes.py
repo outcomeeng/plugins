@@ -163,6 +163,25 @@ def root_rule_checkout(directory: pathlib.Path) -> pathlib.Path:
     return directory
 
 
+def citation_checkout(directory: pathlib.Path) -> pathlib.Path:
+    """Write a fixture checkout that resolves every citation family's exemplar.
+
+    The root-rule exemplar resolves against the fixture guide
+    ``root_rule_checkout`` writes, and the spec-assertion and decision
+    exemplars against copies of the files they cite, at the paths they cite.
+    The plugin-skill exemplar resolves through the parser's own installed skill
+    tree, whatever the working directory. No file of the live root guides
+    enters the checkout. Returns the checkout root.
+    """
+    checkout = root_rule_checkout(directory)
+    for citation in (FIXTURE_RULE_CITATION, FIXTURE_ADR_RULE_CITATION):
+        relative = pathlib.PurePosixPath(citation.split(":", 1)[0])
+        target = checkout / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(REPO_ROOT / relative, target)
+    return checkout
+
+
 def load_review_result_module() -> ModuleType:
     """Load the ``review_result`` policy module via importlib.
 
