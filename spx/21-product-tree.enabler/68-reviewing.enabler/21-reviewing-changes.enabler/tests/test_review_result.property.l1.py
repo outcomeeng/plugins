@@ -22,7 +22,6 @@ from hypothesis import strategies as st
 
 from outcomeeng_testing.harnesses.reviewing_changes import (
     FIXTURE_ADR_RULE_CITATION,
-    FIXTURE_AGENTS_RULE_CITATION,
     FIXTURE_RULE_CITATION,
     FIXTURE_SKILL_RULE_CITATION,
     load_review_result_module,
@@ -62,7 +61,6 @@ def _finding_strategy() -> st.SearchStrategy[dict[str, Any]]:
                 FIXTURE_RULE_CITATION,
                 FIXTURE_ADR_RULE_CITATION,
                 FIXTURE_SKILL_RULE_CITATION,
-                FIXTURE_AGENTS_RULE_CITATION,
             ]
         ),
         message=st.text(
