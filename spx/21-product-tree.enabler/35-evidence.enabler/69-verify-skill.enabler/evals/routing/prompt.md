@@ -24,7 +24,7 @@ description: >-
   ALWAYS invoke this skill when selecting or establishing evidence for spec
   assertions, decision verification rules, or a product-tree scope.
 argument-hint: <full-spx-node-or-decision-path|spx/> [repair-block]
-allowed-tools: Read, Glob, Grep, Edit, Write, Skill, Bash(spx validation markdown), Bash(trash:*)
+allowed-tools: Read, Glob, Grep, Edit, Write, Skill, Bash(spx validation markdown), Bash(trash:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/render_report.py":*)
 ---
 
 <objective>
@@ -145,15 +145,13 @@ When the invocation made a durable edit, run `spx validation markdown` once afte
 
 <step name="report">
 
-Return the structured results, then render the human report from them alone, one row per result:
+Write the structured results as one JSON array, with the file-write tool, to a file in the scratch directory the harness names for the session, and render the human report from them alone:
 
-```text
-| Subject | Verification type | Specialist | Evidence shape | Status | Reason |
+```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/render_report.py" <results-file>
 ```
 
-- `Subject` holds the subject's path and line, as `<path>:<line>`, then its text when the text is not `null`.
-- Every `null` value shows as an em dash, `—`.
-- Each row agrees with its result field by field.
+On exit 0 the script prints the table, one row per result: `Subject` holds `<path>:<line>`, then the subject's text when it is not `null`; every `null` value shows as an em dash, `—`; and each row agrees with its result field by field. On exit 2 it prints one line per defect of a result, such as a missing field or a value outside its set; correct the named results and run it again. Return the structured results, then the table the script printed.
 
 When the invocation carried a repair block, add one line per repair item after the table: the item as the block names it, and its disposition — `forwarded to /<specialist>` with that specialist's reported outcome, `repaired` for a classification or tag defect this workflow fixed, or `not-owned` with the reason when no step of this workflow or its specialists owns the fix.
 
@@ -161,8 +159,9 @@ Example:
 
 ```text
 | Subject | Verification type | Specialist | Evidence shape | Status | Reason |
-| spx/10-a.capability/a.spec.md:12 `- parse-record: ALWAYS: ...` | test | /test | path-bearing | routed | tests/<the language's compliance test file> |
-| spx/20-b.capability/15-b.adr.md:9 `- atomic-save: ALWAYS: ...` | test | /test | requirement | capability-required | /test is not installed |
+| --- | --- | --- | --- | --- | --- |
+| spx/10-a.capability/a.spec.md:12 - parse-record: ALWAYS: ... | test | /test | path-bearing | routed | tests/<the language's compliance test file> |
+| spx/20-b.capability/15-b.adr.md:9 - atomic-save: ALWAYS: ... | test | /test | requirement | capability-required | /test is not installed |
 | spx/30-c.capability/c.spec.md:14 | — | — | — | blocked | unsupported-tag-shape |
 ```
 
@@ -207,7 +206,7 @@ description: >-
   ALWAYS invoke this skill when selecting or establishing evidence for spec
   assertions, decision verification rules, or a product-tree scope.
 argument-hint: <full-spx-node-or-decision-path|spx/> [repair-block]
-allowed-tools: Read, Glob, Grep, Edit, Write, Bash(spx validation markdown), Bash(trash:*)
+allowed-tools: Read, Glob, Grep, Edit, Write, Bash(spx validation markdown), Bash(trash:*), Bash(python3 "${SKILL_DIR}/scripts/render_report.py":*)
 ---
 
 <objective>
@@ -328,15 +327,13 @@ When the invocation made a durable edit, run `spx validation markdown` once afte
 
 <step name="report">
 
-Return the structured results, then render the human report from them alone, one row per result:
+Write the structured results as one JSON array, with the file-write tool, to a file in the scratch directory the harness names for the session, and render the human report from them alone:
 
-```text
-| Subject | Verification type | Specialist | Evidence shape | Status | Reason |
+```bash
+python3 "${SKILL_DIR}/scripts/render_report.py" <results-file>
 ```
 
-- `Subject` holds the subject's path and line, as `<path>:<line>`, then its text when the text is not `null`.
-- Every `null` value shows as an em dash, `—`.
-- Each row agrees with its result field by field.
+On exit 0 the script prints the table, one row per result: `Subject` holds `<path>:<line>`, then the subject's text when it is not `null`; every `null` value shows as an em dash, `—`; and each row agrees with its result field by field. On exit 2 it prints one line per defect of a result, such as a missing field or a value outside its set; correct the named results and run it again. Return the structured results, then the table the script printed.
 
 When the invocation carried a repair block, add one line per repair item after the table: the item as the block names it, and its disposition — `forwarded to /<specialist>` with that specialist's reported outcome, `repaired` for a classification or tag defect this workflow fixed, or `not-owned` with the reason when no step of this workflow or its specialists owns the fix.
 
@@ -344,8 +341,9 @@ Example:
 
 ```text
 | Subject | Verification type | Specialist | Evidence shape | Status | Reason |
-| spx/10-a.capability/a.spec.md:12 `- parse-record: ALWAYS: ...` | test | /test | path-bearing | routed | tests/<the language's compliance test file> |
-| spx/20-b.capability/15-b.adr.md:9 `- atomic-save: ALWAYS: ...` | test | /test | requirement | capability-required | /test is not installed |
+| --- | --- | --- | --- | --- | --- |
+| spx/10-a.capability/a.spec.md:12 - parse-record: ALWAYS: ... | test | /test | path-bearing | routed | tests/<the language's compliance test file> |
+| spx/20-b.capability/15-b.adr.md:9 - atomic-save: ALWAYS: ... | test | /test | requirement | capability-required | /test is not installed |
 | spx/30-c.capability/c.spec.md:14 | — | — | — | blocked | unsupported-tag-shape |
 ```
 
