@@ -140,9 +140,9 @@ Example:
 ```text
 | Subject | Verification type | Specialist | Evidence shape | Status | Reason |
 | --- | --- | --- | --- | --- | --- |
-| spx/10-a.capability/a.spec.md:12 - parse-record: ALWAYS: ... | test | /test | path-bearing | routed | tests/<the language's compliance test file> |
-| spx/20-b.capability/15-b.adr.md:9 - atomic-save: ALWAYS: ... | test | /test | requirement | capability-required | /test is not installed |
-| spx/30-c.capability/c.spec.md:14 | — | — | — | blocked | unsupported-tag-shape |
+| <spec path>:12 - parse-record: ALWAYS: ... | test | /test | path-bearing | routed | tests/<the language's compliance test file> |
+| <decision record path>:9 - atomic-save: ALWAYS: ... | test | /test | requirement | capability-required | /test is not installed |
+| <spec path>:14 | — | — | — | blocked | unsupported-tag-shape |
 ```
 
 </step>
