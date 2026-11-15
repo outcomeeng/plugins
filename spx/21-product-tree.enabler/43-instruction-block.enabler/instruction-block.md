@@ -13,6 +13,7 @@ CAN retain the Product Tree routing instructions and reach the product's own pha
 
 - ALWAYS: the instruction-block generator reads the agent tokens from the data file the build renders beside it and maps to a root instruction file only the tokens that have one: `claude` to `CLAUDE.md` and `codex` to `AGENTS.md`
 - NEVER: the toolchain's instruction-block writer or a test of this node declares an agent token; each takes it from the module that owns it
+- ALWAYS: when the environment variable `OUTCOMEENG_INSTRUCTION_BLOCKS` holds exactly `off`, the toolchain's instruction-block command line writes no root instruction file, checks no drift, names the variable on stderr, and exits 0; under every other value or none it regenerates and checks as before ([test](tests/test_instruction_block_switch.compliance.l1.py), [test](tests/test_instruction_block_switch.compliance.l2.py))
 
 ### Scenarios
 

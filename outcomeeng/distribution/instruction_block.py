@@ -17,6 +17,7 @@ leaving the freshly written files uncommitted.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -46,6 +47,12 @@ DIST_TEMPLATE_RELATIVE_PATH: Final = Path(
     "product-tree/skills/update-instruction-block/templates/instruction-block.md"
 )
 HEADER: Final = "root instruction blocks differ from a fresh render."
+SWITCH_VARIABLE: Final = "OUTCOMEENG_INSTRUCTION_BLOCKS"
+SWITCH_OFF: Final = "off"
+SWITCH_OFF_NOTICE: Final = (
+    f"root instruction blocks disabled by {SWITCH_VARIABLE}={SWITCH_OFF}; "
+    "nothing written or checked."
+)
 REMEDIATION: Final = "Run `just build-instructions` and commit the regenerated root CLAUDE.md and AGENTS.md."
 SHARED_DRIFT_HEADER: Final = "root instruction blocks carry a shared region that diverges or is present in only one file."
 SHARED_DRIFT_REMEDIATION: Final = (
@@ -1510,5 +1517,18 @@ def main(
     return 1
 
 
+def entry(
+    argv: Sequence[str] | None = None,
+    *,
+    environ: Mapping[str, str] = os.environ,
+    run: Callable[[Sequence[str] | None], int] = main,
+) -> int:
+    """Run ``main`` unless the switch variable turns the root blocks off."""
+    if environ.get(SWITCH_VARIABLE) == SWITCH_OFF:
+        print(SWITCH_OFF_NOTICE, file=sys.stderr)
+        return 0
+    return run(argv)
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(entry())
