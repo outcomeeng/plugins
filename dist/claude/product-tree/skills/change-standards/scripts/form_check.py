@@ -149,6 +149,10 @@ CASE_RE: Final = re.compile(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")
 NODE_SEGMENT_RE: Final = re.compile(
     r"^(?P<index>NN|\d{2}(?:\.\d{2})*)-(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)\.(?P<kind>[a-z]+)$"
 )
+STEP_LINE_RE: Final = re.compile(r"^- (?:Given|When|Then|And) ")
+HEADING_LINK_RE: Final = re.compile(
+    r"^\[(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)\]\([^)]+\)$"
+)
 DECISION_SEGMENT_RE: Final = re.compile(
     r"^(?P<index>NN|\d{2}(?:\.\d{2})*)-(?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*)\.(?P<kind>adr|pdr)\.md$"
 )
@@ -159,8 +163,10 @@ INFRA_RE: Final = re.compile(
     r"^Infrastructure: (?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]+)*)?) "
     r"(?P<paths>none|`[^`\s]+`(?:, `[^`\s]+`)*)$"
 )
-ROW_SLUG_RE: Final = re.compile(r"^- (?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*): ")
-LINKED_SLUG_RE: Final = re.compile(r"^- \[(?P<slug>[a-z0-9-]+)\]\((?P<path>[^)]+)\): ")
+ROW_SLUG_RE: Final = re.compile(r"^- (?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*):(?: |$)")
+LINKED_SLUG_RE: Final = re.compile(
+    r"^- \[(?P<slug>[a-z0-9-]+)\]\((?P<path>[^)]+)\):(?: |$)"
+)
 TAG_RE: Final = re.compile(
     r"\((?:\[(?:test|eval|probe)\]\([^)]*\)|\[audit(?::[a-z0-9-]+)?\])\)"
 )
@@ -634,6 +640,69 @@ def exists_at_base(context: Context, base: str | None, path: str) -> bool:
     )
 
 
+def declares_product_kind(text: str) -> bool:
+    """Whether a spec's front matter holds ``kind: product``."""
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return False
+    for line in lines[1:]:
+        if line.strip() == "---":
+            return False
+        key, _, value = line.partition(":")
+        if key.strip() == "kind" and value.strip() == "product":
+            return True
+    return False
+
+
+def is_indexed_node(segment: str) -> bool:
+    """Whether a directory name is an indexed Node directory, ``NN`` excluded."""
+    match = NODE_SEGMENT_RE.match(segment)
+    return (
+        match is not None
+        and match.group("index") != "NN"
+        and match.group("kind") in NODE_KINDS
+    )
+
+
+def base_holds_product_tree(context: Context, base: str | None) -> bool:
+    """Whether the Base holds a root Product spec or an indexed Node directory under ``spx/``.
+
+    The check reads the tree of the Base alone, never the checkout's directories.
+    """
+    if base is None:
+        return False
+    result = context.git("ls-tree", "-z", base, "spx/")
+    if result.exit_code != 0:
+        return False
+    return any(
+        entry_marks_product_tree(context, base, entry)
+        for entry in result.stdout.split("\0")
+    )
+
+
+def entry_marks_product_tree(context: Context, base: str, entry: str) -> bool:
+    """Whether one ``ls-tree -z`` entry of the Base's ``spx/`` marks a Product Tree.
+
+    An indexed Node directory, a 3.x ``.product.md`` root, or a spec whose front
+    matter declares ``kind: product`` marks it; every other entry does not.
+    """
+    meta, _, path = entry.partition("\t")
+    fields = meta.split(" ")
+    if len(fields) < 2 or not path:
+        return False
+    name = path_segments(path)[-1]
+    if fields[1] == "tree":
+        return is_indexed_node(name)
+    if fields[1] != "blob":
+        return False
+    if name.endswith(".product.md"):
+        return True
+    if not name.endswith(".spec.md"):
+        return False
+    text = at_base(context, base, path)
+    return text is not None and declares_product_kind(text)
+
+
 def tree_mode(context: Context, base: str | None, path: str) -> str | None:
     if base is None:
         return None
@@ -745,7 +814,7 @@ def diff_body(operation: Operation) -> list[str]:
     return lines[skip:]
 
 
-def target_file(context: Context, base: str | None, path: str) -> str | None:
+def target_file(context: Context, base: str | None, path: str) -> str:
     """Return the path whose body a subsection's line edits address."""
     if is_node(path):
         for candidate in spec_candidates(path):
@@ -793,7 +862,7 @@ def check_diff_lines(
                     f"slug {linked.group('slug')} links {linked.group('path')}, absent at the Base; the slug stands plain",
                 )
             if not file_kind:
-                check_body_line(context, sub, text)
+                check_body_line(context, sub, text, is_step_line(line))
             if text.startswith("|") and not re.match(r"^\|[\s:|-]+\|$", text):
                 following = next(
                     (
@@ -821,10 +890,20 @@ def check_diff_lines(
             )
 
 
-def check_body_line(context: Context, sub: Subsection, text: str) -> None:
+def is_step_line(line: str) -> bool:
+    """Whether a diff line is an indented Given, When, Then or And step of a Scenario row."""
+    body = line[1:]
+    indent = len(body) - len(body.lstrip(" "))
+    return indent > 1 and STEP_LINE_RE.match(body.lstrip(" ")) is not None
+
+
+def check_body_line(
+    context: Context, sub: Subsection, text: str, step: bool = False
+) -> None:
     """Judge one `+` line of a Node or Decision Record body."""
     if (
-        not text
+        step
+        or not text
         or text.startswith(("#", "|", ">"))
         or text.startswith(OPENING_KEYWORDS)
     ):
@@ -838,6 +917,12 @@ def check_body_line(context: Context, sub: Subsection, text: str) -> None:
             )
 
 
+def heading_slug(subject: str) -> str:
+    """The slug a group heading's subject names: the link text when the subject is a slug link."""
+    match = HEADING_LINK_RE.match(subject.strip())
+    return match.group("slug") if match else subject
+
+
 def assertion_slugs(lines: list[str], marks: str) -> set[str]:
     """Slugs of the rows and Mapping subsections the marked lines declare."""
     slugs: set[str] = set()
@@ -848,7 +933,7 @@ def assertion_slugs(lines: list[str], marks: str) -> set[str]:
         mark, text = line[0], line[1:].strip()
         group = GROUP_HEADING_RE.match(text)
         if group:
-            subject = group.group("subject") or ""
+            subject = heading_slug(group.group("subject") or "")
             heading = (
                 subject
                 if group.group("type").endswith(("Mapping", "Evaluate", "Eval"))
@@ -1199,7 +1284,7 @@ def check_declarations(
     subsections = split_subsections(context, lines)
     if subsections is None:
         return []
-    tree = (context.root / "spx").is_dir()
+    tree = base_holds_product_tree(context, base)
     declared_new: set[str] = set()
     siblings: dict[tuple[str, str, str], str] = {}
     moved: dict[str, str] = {}

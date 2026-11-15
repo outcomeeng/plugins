@@ -11,6 +11,15 @@ CAN write, check, and audit every Change record in one form
 
 ## Assertions
 
+### Test.Compliance: form check tree
+
+- [form-check-tree](tests/test_form_check_tree.compliance.l2.py): ALWAYS: the form check treats a repository as having a Product Tree exactly when the tree of the record's Base holds, directly under `spx/`, a root Product spec, which is a `{slug}.spec.md` whose front matter holds `kind: product` or a `{slug}.product.md` of the 3.x grammar, or an indexed Node directory, which is an index, a hyphen, a slug and a Node kind suffix, `.enabler` or `.outcome` of the 3.x grammar or `.product`, `.substrate`, `.capability`, `.domain`, `.interface`, `.surface` or `.variant` of the 4.0 grammar; it judges every Declarations heading as a path from the repository root when the Base holds neither, and reads no directory of the checkout for this.
+
+### Test.Compliance: form check rows
+
+- [form-check-linked-heading](tests/test_form_check_rows.compliance.l2.py): ALWAYS: the form check takes the slug of a Mapping or Evaluate subsection whose heading carries a slug link as that link's text, and accepts the infrastructure line keyed by that slug.
+- [form-check-scenario-steps](tests/test_form_check_rows.compliance.l2.py): ALWAYS: the form check reads every indented line opening with Given, When, Then or And that follows a `+` Scenario row as part of that row, and requires no slug of it.
+
 ### Audit: change-standards
 
 - standards-keys: change-standards states the twelve metadata keys of a record, the value of each key, and the operations that change it, as record-keys of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states them.
