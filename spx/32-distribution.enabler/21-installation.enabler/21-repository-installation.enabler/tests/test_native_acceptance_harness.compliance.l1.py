@@ -57,7 +57,9 @@ def test_every_codex_probe_definition_is_named_in_the_codex_alphabet_and_launche
 ):
     with native_profile_launch({SELECTED}) as observation:
         codex_rows = [
-            item for item in observation.rows if item.observation.row.target is Target.CODEX
+            item
+            for item in observation.rows
+            if item.observation.row.target is Target.CODEX
         ]
         assert codex_rows
         for item in codex_rows:
@@ -122,9 +124,7 @@ def test_every_auditor_row_launches_with_its_fixture_committed_as_the_one_change
             )
 
 
-def test_a_profile_row_whose_parent_stream_shows_no_child_execution_is_failed() -> (
-    None
-):
+def test_a_profile_row_whose_parent_stream_shows_no_child_execution_is_failed() -> None:
     with native_profile_launch({SELECTED}, ParentStream.SILENT) as observation:
         assert {item.observation.row.target for item in observation.rows} == set(Target)
         for item in observation.rows:
@@ -156,8 +156,7 @@ def test_a_claude_profile_row_whose_parent_forwards_one_child_execution_is_not_f
             ]
             assert len(launch) == 1, row.identifier
             requests = [
-                json.loads(line)
-                for line in (launch[0].input_text or "").splitlines()
+                json.loads(line) for line in (launch[0].input_text or "").splitlines()
             ]
             assert requests[0]["request"] == {
                 "subtype": "initialize",
@@ -170,10 +169,10 @@ def test_a_claude_profile_row_whose_parent_forwards_one_child_execution_is_not_f
             }, row.identifier
 
 
-def test_an_auditor_row_whose_dispatch_returns_a_blocked_diagnostic_is_failed() -> (
-    None
-):
-    with native_auditor_launch({SELECTED}, returned=LaunchReturn.BLOCKED) as observation:
+def test_an_auditor_row_whose_dispatch_returns_a_blocked_diagnostic_is_failed() -> None:
+    with native_auditor_launch(
+        {SELECTED}, returned=LaunchReturn.BLOCKED
+    ) as observation:
         assert observation.rows
         for item in observation.rows:
             row = item.observation.row

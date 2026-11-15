@@ -1,16 +1,16 @@
 # Pinned command-line options
 
-The protocol lives at `probes/pinned-cli-options/probe.md`, which the `pinned-cli-options` slug in `repository-installation.md` links. It reads the hosted run the [native-profile-acceptance](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md#native-profile-acceptance) protocol dispatches and retains, and dispatches no run of its own. Every attested run retains at least one inspectable artifact beside this file.
+The protocol lives at `probes/pinned-cli-options/probe.md`, which the `pinned-cli-options` slug in `repository-installation.md` links. It reads the hosted run the [native-profile-acceptance](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md) protocol dispatches and retains, and dispatches no run of its own. Every attested run retains at least one inspectable artifact beside this file.
 
 ## Intent
 
 The native acceptance harness launches each parent session with command-line options, a stdin, and a probe definition name. A release the quality gate pins can reject an option a newer release accepts, and a harness can reject a definition name another harness accepts. Tests run against recorded commands, so they cannot show that the pinned releases accept what the harness passes. This probe shows, from one hosted run on the pinned releases, that every one of the twelve rows launches its parent session once, that no parent rejects an option, that every profile row retains one child execution, and that every auditor-dispatch row retains a completed run with a run token.
 
-It observes [codex-probe-names](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md#codex-probe-names), [auditor-fixture-repository](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md#auditor-fixture-repository), and [unusable-row-fails](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md#unusable-row-fails). It leaves out every other assertion of the node.
+It observes [codex-probe-names](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md), [auditor-fixture-repository](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md), and [unusable-row-fails](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md). It leaves out every other assertion of the node.
 
 ## Environment and preconditions
 
-- The native profile acceptance workflow ran once at the subject commit on a hosted runner, under the [native-profile-acceptance](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md#native-profile-acceptance) protocol, and that protocol's directory retains the twelve rows of the run.
+- The native profile acceptance workflow ran once at the subject commit on a hosted runner, under the [native-profile-acceptance](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/repository-installation.md) protocol, and that protocol's directory retains the twelve rows of the run.
 - The run installed the Claude Code and Codex releases `.github/workflows/check.yml` pins at the subject commit.
 - The Author holds an authenticated `gh` command-line tool with read access to the run.
 
