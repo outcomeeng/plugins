@@ -674,23 +674,33 @@ def base_holds_product_tree(context: Context, base: str | None) -> bool:
     result = context.git("ls-tree", "-z", base, "spx/")
     if result.exit_code != 0:
         return False
-    for entry in result.stdout.split("\0"):
-        meta, _, path = entry.partition("\t")
-        fields = meta.split(" ")
-        if len(fields) < 2 or not path:
-            continue
-        name = path_segments(path)[-1]
-        if fields[1] == "tree" and is_indexed_node(name):
-            return True
-        if fields[1] != "blob":
-            continue
-        if name.endswith(".product.md"):
-            return True
-        if name.endswith(".spec.md"):
-            text = at_base(context, base, path)
-            if text is not None and declares_product_kind(text):
-                return True
-    return False
+    return any(
+        entry_marks_product_tree(context, base, entry)
+        for entry in result.stdout.split("\0")
+    )
+
+
+def entry_marks_product_tree(context: Context, base: str, entry: str) -> bool:
+    """Whether one ``ls-tree -z`` entry of the Base's ``spx/`` marks a Product Tree.
+
+    An indexed Node directory, a 3.x ``.product.md`` root, or a spec whose front
+    matter declares ``kind: product`` marks it; every other entry does not.
+    """
+    meta, _, path = entry.partition("\t")
+    fields = meta.split(" ")
+    if len(fields) < 2 or not path:
+        return False
+    name = path_segments(path)[-1]
+    if fields[1] == "tree":
+        return is_indexed_node(name)
+    if fields[1] != "blob":
+        return False
+    if name.endswith(".product.md"):
+        return True
+    if not name.endswith(".spec.md"):
+        return False
+    text = at_base(context, base, path)
+    return text is not None and declares_product_kind(text)
 
 
 def tree_mode(context: Context, base: str | None, path: str) -> str | None:
@@ -804,7 +814,7 @@ def diff_body(operation: Operation) -> list[str]:
     return lines[skip:]
 
 
-def target_file(context: Context, base: str | None, path: str) -> str | None:
+def target_file(context: Context, base: str | None, path: str) -> str:
     """Return the path whose body a subsection's line edits address."""
     if is_node(path):
         for candidate in spec_candidates(path):
