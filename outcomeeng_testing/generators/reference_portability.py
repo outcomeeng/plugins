@@ -19,7 +19,7 @@ from outcomeeng.validation.reference_portability import (
     MARKETPLACE_TOOLCHAIN_ROOTS,
     PLUGIN_LOCAL_ROOT_TOKENS,
     PORTABLE_SPX_DIRECTORIES,
-    PORTABLE_SPX_FILES,
+    RETIRED_SPX_FILES,
     RETIRED_SPX_GUIDE_NAMES,
     SPX_REFERENCE_ROOT,
 )
@@ -40,6 +40,7 @@ def nonportable_references() -> tuple[str, ...]:
     retired_guides = tuple(
         f"{SPX_REFERENCE_ROOT}/{guide}" for guide in RETIRED_SPX_GUIDE_NAMES
     )
+    retired_files = tuple(f"{SPX_REFERENCE_ROOT}/{name}" for name in RETIRED_SPX_FILES)
     source_reference = (
         f"{MARKETPLACE_PLUGIN_SOURCE_ROOT}/{scenario.plugin}/"
         f"{SKILLS_SUBDIR_NAME}/{scenario.skill}/{SKILL_FILENAME}"
@@ -62,6 +63,7 @@ def nonportable_references() -> tuple[str, ...]:
         numbered,
         placeholder,
         *retired_guides,
+        *retired_files,
         source_reference,
         *runtime_references,
         *toolchain_references,
@@ -80,9 +82,6 @@ def portable_references() -> tuple[str, ...]:
     illustrative = (
         f"{SPX_REFERENCE_ROOT}/{ILLUSTRATIVE_SPX_ROOT}.enabler/{scenario.skill}.outcome"
     )
-    universal_spx_files = tuple(
-        f"{SPX_REFERENCE_ROOT}/{name}" for name in PORTABLE_SPX_FILES
-    )
     universal_spx_directories = tuple(
         f"{SPX_REFERENCE_ROOT}/{root}/{scenario.skill}"
         for root in PORTABLE_SPX_DIRECTORIES
@@ -99,7 +98,6 @@ def portable_references() -> tuple[str, ...]:
     return (
         *placeholders,
         illustrative,
-        *universal_spx_files,
         *universal_spx_directories,
         *universal_source,
         *MARKETPLACE_REPOSITORY_SLUGS,

@@ -11,12 +11,14 @@ A reference is non-portable when it is either:
 * a product-tree node or decision named by its sibling-local numeric prefix --
   ``spx/`` immediately followed by real digits and a hyphen (``spx/13-...``,
   ``spx/15-infra.enabler/65-startup.enabler``).  A non-numbered ``spx/`` path
-  (``spx/EXCLUDE``, ``spx/local/...``, ``spx/sessions/``), a
-  placeholder (``spx/{...}``, ``spx/<...>``), and the ``55-example`` illustrative
-  root sentinel (``spx/55-example.enabler/...``) are portable; retired generated
-  guide paths (``spx/CLAUDE.md`` and ``spx/AGENTS.md``) are non-portable because
-  the root managed guide surface replaces them. Other numeric prefixes are
-  product-specific because a consumer numbers its own nodes.
+  (``spx/local/...``, ``spx/sessions/``), a placeholder (``spx/{...}``,
+  ``spx/<...>``), and the ``55-example`` illustrative root sentinel
+  (``spx/55-example.enabler/...``) are portable; retired generated guide paths
+  (``spx/CLAUDE.md`` and ``spx/AGENTS.md``) are non-portable because the root
+  managed guide surface replaces them, and the retired exclusion file
+  ``spx/EXCLUDE`` is non-portable because a 4.0 consumer tree never holds it.
+  Other numeric prefixes are product-specific because a consumer numbers its own
+  nodes.
 * a path under one of this marketplace's own roots -- ``src/plugins/`` (authored
   source), ``dist/claude/`` or ``dist/codex/`` (generated runtime), or an
   ``outcomeeng`` toolchain package (``outcomeeng/validation/...``,
@@ -54,7 +56,7 @@ SPX_REFERENCE_ROOT: Final = "spx"
 ILLUSTRATIVE_SPX_ROOT: Final = "55-example"
 INVALID_INDEX_PLACEHOLDER: Final = "NN-"
 RETIRED_SPX_GUIDE_NAMES: Final = ("CLAUDE.md", "AGENTS.md")
-PORTABLE_SPX_FILES: Final = ("EXCLUDE",)
+RETIRED_SPX_FILES: Final = ("EXCLUDE",)
 PORTABLE_SPX_DIRECTORIES: Final = ("local", "sessions")
 MARKETPLACE_PLUGIN_SOURCE_ROOT: Final = f"{SOURCE_ROOT_NAME}/plugins"
 MARKETPLACE_RUNTIME_ROOTS: Final = tuple(
@@ -71,10 +73,17 @@ PLUGIN_LOCAL_ROOT_TOKENS: Final = ("${CLAUDE_SKILL_DIR}", "${CLAUDE_PLUGIN_ROOT}
 # (``/home/dev/dist/claude/...``) does.  Each alternative names a marketplace
 # root, never a universal convention (bare ``src/``/``dist/``) or the bare GitHub
 # org/repo slug (``outcomeeng/plugins``, ``outcomeeng/spx`` with no trailing path).
+# A retired file name ends at a path-segment boundary, so a longer name that only
+# starts with it stays portable.
+_RETIRED_SPX_GUIDES: Final = "|".join(map(re.escape, RETIRED_SPX_GUIDE_NAMES))
+_RETIRED_SPX_FILES: Final = "|".join(
+    rf"{re.escape(name)}(?![\w-])" for name in RETIRED_SPX_FILES
+)
 _NONPORTABLE_REFERENCE: Final[re.Pattern[str]] = re.compile(
     r"(?<![\w.-])"
     r"(?:"
-    r"spx/(?:NN-|(?:CLAUDE|AGENTS)\.md|(?!(?:55-example)(?:[./]|$))\d+-)[\w./-]*"
+    rf"spx/(?:NN-|{_RETIRED_SPX_GUIDES}|{_RETIRED_SPX_FILES}"
+    r"|(?!(?:55-example)(?:[./]|$))\d+-)[\w./-]*"
     r"|src/plugins/[\w./-]*"  # marketplace authored-source tree
     r"|dist/(?:claude|codex)/[\w./-]*"  # marketplace generated runtime trees
     # marketplace toolchain package or repo path -- an 'outcomeeng_*' package, an
