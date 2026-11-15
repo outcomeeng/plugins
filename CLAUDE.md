@@ -6,6 +6,8 @@ Run `/hold-position resume` when a session starts, and `/hold-position hand-off`
 
 When a Position needs an answer from the Operator and the orchestration file sets `operator_available = true`, it asks through AskUserQuestion. This holds however many earlier questions the Operator dismissed.
 
+A Position stops working only to hand off, or for an answer it cannot settle itself. Before it stops, it asks the Operator through AskUserQuestion when the orchestration file sets `operator_available = true`, and otherwise mails its overseer.
+
 Work is done only when it is merged into `main` on origin.
 
 ## Product commands
