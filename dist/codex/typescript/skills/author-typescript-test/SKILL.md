@@ -114,9 +114,7 @@ Tests should FAIL with import errors or assertion errors (implementation does no
 
 **Step 6: Handle Specified Nodes**
 
-If the implementation module does not exist yet, tests fail on import -- breaking the quality gate. Add the portion of `$node_path` relative to `spx/` to `spx/EXCLUDE` using the repository's file-editing tool.
-
-The `spx` CLI reads this file and skips excluded nodes when running `spx test passing`. Remove the entry from `spx/EXCLUDE` when implementation begins.
+Apply the Specified-nodes rule of `/test`: a test that fails because the implementation module does not exist yet leaves the Node Specified. Report the failing result, and add nothing that keeps the test from the runner.
 
 </write_mode_workflow>
 

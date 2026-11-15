@@ -406,7 +406,7 @@ For each assertion needing a new test:
 
 In decision-rule mode, update each `### Testing` rule with exactly one selected assertion-type tag and create no test scaffold. Continue directly to the report step.
 
-**Specified nodes:** If the implementation module doesn't exist yet, test files will fail on import. This is expected — the test is a declaration of what the implementation must satisfy. Add the node to `spx/EXCLUDE` as one entry per line, each the canonical node path with its leading `spx/` stripped; blank lines and `#` comment lines carry no entry. The `spx` CLI skips excluded nodes when running `spx test passing`. Remove the exact line when implementation begins.
+**Specified nodes:** When the implementation module does not exist yet, the tests fail on import. That failure is the expected result: the test declares what the implementation must satisfy, and the Node stays Specified until its implementation passes the test. Report the failing result. Never add a skip marker, a conditional import, or any file that keeps the tests from a runner.
 
 </step>
 
