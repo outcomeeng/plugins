@@ -1,6 +1,6 @@
 <overview>
 
-The status claim `spx.status.json` every output node carries, the results and pins it records, how the projector derives state from it, and how a passing-scope list a toolchain that has not adopted the claim still reads relates to it. Read it when interpreting a node's state, when a claim conflicts, or when a gate reads verification results.
+The status claim `spx.status.json` every output node carries, the results and pins it records, and how the projector derives state from it. Read it when interpreting a node's state, when a claim conflicts, or when a gate reads verification results.
 
 </overview>
 
@@ -49,12 +49,6 @@ Every entry carries `passed`, `failed`, or `not-run`. A `passed` or `failed` ent
 An initial failed or unrun result leaves Specified; Failing records a regression. Deleting the artifact behind a passing result makes the node Failing, never Declared. A changed decision or spec invalidates every affected pin and derives the state anew. Validate produces no node-local result; its failure blocks projection and merge. A `.product` carries no claim; a variant's claim carries its parent's results under its own selection, and the parent is Passing only when every variant passes.
 
 </state_derivation>
-
-<passing_scope_list>
-
-A toolchain that has not adopted the claim may read a passing-scope list — a committed file naming nodes whose evidence exists while their implementation is absent, so the deterministic gate skips them. The list is operational configuration the skill that declares it reads without the foundation marker; it declares no state, and the claim supersedes it: a reference without an open-lifetime pass is already unscheduled, so the claim needs no exclusion list. Never present the list as the current design, and never infer from its presence that the claim is unsupported.
-
-</passing_scope_list>
 
 <gate_composition>
 

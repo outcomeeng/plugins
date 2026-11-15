@@ -171,7 +171,7 @@ This invokes the `/apply` skill, which orchestrates 8 steps:
 7. Implement — via `/author-python-code` or `/author-typescript-code`
 8. Review code — loop until APPROVED
 
-Without arguments, `/apply` determines work from conversation context or falls back to `spx/EXCLUDE`.
+Without arguments, `/apply` determines work from conversation context and reports "Nothing to apply" when the conversation names none.
 
 <!-- TODO: Add screenshot of /apply in action -->
 

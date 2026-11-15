@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.28.3
+
+### Removed
+
+- **`/author-typescript-test` no longer writes the `EXCLUDE` file under `spx/`.** A test that fails because the implementation module is missing leaves the Node Specified. The skill applies the Specified-nodes rule of `/test`: it reports the failing result and adds nothing that keeps the test from the runner.
+
 ## 0.28.2
 
 ### Changed

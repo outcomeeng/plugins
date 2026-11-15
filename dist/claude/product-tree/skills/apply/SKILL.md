@@ -17,18 +17,17 @@ A product-tree work item implemented, verified, and delivered to the boundary th
 The raw invocation string `$ARGUMENTS` controls what runs before the per-node flow below. Parse it exactly once before Step 0:
 
 - `$ARGUMENTS` containing a canonical full `spx/...` node path → the work queue is that single node.
-- Empty `$ARGUMENTS` → determine the work from the conversation. If nothing is clear, complete Step 1 first — use skill `product-tree:understand` when the live `PRODUCT_TREE_FOUNDATION` marker is absent — then read `spx/EXCLUDE`, whose entries are relative to `spx/`, and prefix each non-comment, non-blank entry with `spx/` before adding it to the work queue. Never access `spx/EXCLUDE` before the foundation is live, and never pass a bare entry to `/contextualize`. If no work is found, report "Nothing to apply" and stop.
+- Empty `$ARGUMENTS` → determine the work from the conversation, as canonical full `spx/...` node paths. When the conversation names no work, report "Nothing to apply" and stop.
 
-When the work is described as a plan or proposal rather than a specific node or queue, use skill `product-tree:slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or an `spx/EXCLUDE` list.
+When the work is described as a plan or proposal rather than a specific node or queue, use skill `product-tree:slice` first: it selects the next executable observable slice and produces the node set that becomes this flow's work queue. Skip the preflight when the queue is already a specific node or node list.
 
-Complete Step 1 before the queue loop in every mode, so the foundation is live before the loop reads or edits `spx/EXCLUDE`. When the queue holds more than one node, order by numeric index prefix (lower first) — lower-indexed nodes constrain higher-indexed ones. For each node in order:
+Complete Step 1 before the queue loop in every mode. When the queue holds more than one node, order by numeric index prefix (lower first) — lower-indexed nodes constrain higher-indexed ones. For each node in order:
 
-1. Strip the canonical node path's leading `spx/` to derive its `spx/EXCLUDE` entry. If that relative entry is listed, remove its exact line first — the `spx` CLI then includes its tests in `spx test passing`.
-2. Run Steps 2–9 on the node, and Step 1 again first when a compaction has made the foundation marker absent.
-3. Confirm the final gate subject is committed and the worktree is clean.
-4. Proceed to the next node without stopping or asking, subject to the gate cap of two counted rejections in `<review_gates>`.
+1. Run Steps 2–9 on the node, and Step 1 again first when a compaction has made the foundation marker absent.
+2. Confirm the final gate subject is committed and the worktree is clean.
+3. Proceed to the next node without stopping or asking, subject to the gate cap of two counted rejections in `<review_gates>`.
 
-If a node's flow cannot reach its gate-specific passing state or a passing review within the gate cap of two counted rejections, stop the queue, report the failed node and step, and leave the remaining nodes in `spx/EXCLUDE`. Step 10 (`/merge`) runs once over the whole changeset after the queue completes.
+If a node's flow cannot reach its gate-specific passing state or a passing review within the gate cap of two counted rejections, stop the queue and report the failed node, the failed step, and every node remaining in the queue. Step 10 (`/merge`) runs once over the whole changeset after the queue completes.
 
 </invocation_modes>
 
@@ -155,7 +154,7 @@ Invoke the exact skill or agent surface shown. Never substitute, skip, or reorde
 
 <step number="0" name="Select the slice" frequency="only for a plan or proposal">
 
-Use skill `product-tree:slice` when the work is described as a plan or proposal rather than a specific node or queue, per `<invocation_modes>`; its node set becomes the work queue. Skip this step for a specific node or an `spx/EXCLUDE` list.
+Use skill `product-tree:slice` when the work is described as a plan or proposal rather than a specific node or queue, per `<invocation_modes>`; its node set becomes the work queue. Skip this step for a specific node or node list.
 
 </step>
 

@@ -42,7 +42,7 @@ When layers disagree, the lower layer is in violation and changes. Learning retu
 
 Product content is every artifact of the product a spec node governs or must govern: source, tests, evals, probes, generated output, specs, decisions, outcome records, status claims, notes, and configuration a spec declares; implementation is its code layer. Governance is derived, never assumed: a path under `spx/<node>/` is governed by that node; any other path by the node whose linked test, eval, or probe reaches it, or whose spec or decision names that path in an `[audit]` assertion; several matching nodes resolve to their lowest common ancestor. That lookup is a search under the live foundation marker and opens no file body. Product content with no governing node is a coverage gap: it is not read or modified, and the gap is recorded.
 
-Not product content: operational configuration — the `spx/local/` overlays, and a passing-scope list a toolchain that has not adopted the status claim still reads, which the skill that declares them reads without the marker — and the agent harness's own instruction and settings files, tool and command output, the session store, and scratch space. Work that touches no product content — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof — is an operational continuation and triggers neither this skill nor `/contextualize`.
+Not product content: operational configuration — the `spx/local/` overlays, which the skill that declares each reads without the marker — and the agent harness's own instruction and settings files, tool and command output, the session store, and scratch space. Work that touches no product content — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof — is an operational continuation and triggers neither this skill nor `/contextualize`.
 
 </product_content>
 
@@ -172,7 +172,7 @@ NN-{slug}.{kind}/
 
 - ALWAYS: classify content by the artifact purpose that owns it.
 
-The taxonomy is closed: `spx/` admits no artifact outside this table, the canonical node shape, and the optional knowledge root. Operational files under `spx/local/`, and a passing-scope list a toolchain that has not adopted the status claim still reads, are configuration. The note raises no placement question. Placement decides only between the governing layer (ADR or PDR) and the declaring layer (spec). Verification and implementation artifacts are never placed by classification: assertion tags derive evidence locations, and verification reachability with the language's declared infrastructure home derives implementation locations.
+The taxonomy is closed: `spx/` admits no artifact outside this table, the canonical node shape, and the optional knowledge root. Operational files under `spx/local/` are configuration. The note raises no placement question. Placement decides only between the governing layer (ADR or PDR) and the declaring layer (spec). Verification and implementation artifacts are never placed by classification: assertion tags derive evidence locations, and verification reachability with the language's declared infrastructure home derives implementation locations.
 
 | Artifact            | Purpose                                            | Verified by                                  |
 | ------------------- | -------------------------------------------------- | -------------------------------------------- |
