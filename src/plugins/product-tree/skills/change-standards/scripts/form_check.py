@@ -164,7 +164,9 @@ INFRA_RE: Final = re.compile(
     r"(?P<paths>none|`[^`\s]+`(?:, `[^`\s]+`)*)$"
 )
 ROW_SLUG_RE: Final = re.compile(r"^- (?P<slug>[a-z0-9]+(?:-[a-z0-9]+)*):(?: |$)")
-LINKED_SLUG_RE: Final = re.compile(r"^- \[(?P<slug>[a-z0-9-]+)\]\((?P<path>[^)]+)\):(?: |$)")
+LINKED_SLUG_RE: Final = re.compile(
+    r"^- \[(?P<slug>[a-z0-9-]+)\]\((?P<path>[^)]+)\):(?: |$)"
+)
 TAG_RE: Final = re.compile(
     r"\((?:\[(?:test|eval|probe)\]\([^)]*\)|\[audit(?::[a-z0-9-]+)?\])\)"
 )
