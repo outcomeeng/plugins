@@ -18,6 +18,8 @@
     "**/semgrep_*.yaml",
     "outcomeeng/vendor/**",
     "outcomeeng_testing/fixtures/link_conversion/**",
+    // A probe's retained artifacts stand beside its probe.md exactly as the attested run produced them.
+    "spx/**/probes/*/*/**",
     "pyproject.toml",
     // The authored registry data file carries one build token and renders into JSON under dist/.
     "src/plugins/*/skills/*/scripts/artifact-registry.json",

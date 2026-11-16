@@ -27,15 +27,42 @@ It observes [codex-probe-names](spx/32-distribution.enabler/21-installation.enab
 
 ## Attested run
 
-- Date:
-- Subject commit:
-- Workflow run:
-- Pinned versions:
-- Installed versions:
+- Date: 2026-11-16 (dispatched 01:46:13Z, completed 01:53:42Z)
+- Subject commit: `241956eb3404bf5b5a84964add38eb15d3aadc14`
+- Workflow run: [43788185270](https://github.com/outcomeeng/plugins/actions/runs/43788185270), the run the native-profile-acceptance protocol dispatched and retains.
+- Pinned versions: Claude Code `2.1.168` and Codex `0.162.1`, as `.github/workflows/check.yml` pins them at the subject commit.
+- Installed versions: `2.1.168 (Claude Code)` and `codex-cli 0.162.1`, as the run's install step prints them.
 - Observations:
+  - `claude-standard`: `claude -p ...` launched once, exit 0, empty stderr, no rejected option; one child execution; terminal condition none.
+  - `claude-strong`: `claude -p ...` launched once, exit 0, empty stderr, no rejected option; one child execution; terminal condition none.
+  - `claude-thorough`: `claude -p ...` launched once, exit 0, empty stderr, no rejected option; one child execution; terminal condition none.
+  - `claude-fast`: `claude -p ...` launched once, exit 0, empty stderr, no rejected option; one child execution; terminal condition none.
+  - `codex-standard`: `codex exec` launched once, exit 0; stderr holds only the PATH-alias warning, no rejected option or name; one child execution; terminal condition none; retained definition `name` is `profile_probe_codex_standard`, lowercase letters and underscores only.
+  - `codex-strong`: `codex exec` launched once, exit 0; stderr holds only the PATH-alias warning, no rejected option or name; one child execution; terminal condition none; retained definition `name` is `profile_probe_codex_strong`, lowercase letters and underscores only.
+  - `codex-thorough`: `codex exec` launched once, exit 0; stderr holds only the PATH-alias warning, no rejected option or name; one child execution; terminal condition none; retained definition `name` is `profile_probe_codex_thorough`, lowercase letters and underscores only.
+  - `codex-fast`: `codex exec` launched once, exit 0; stderr holds only the PATH-alias warning, no rejected option or name; one child execution; terminal condition none; retained definition `name` is `profile_probe_codex_fast`, lowercase letters and underscores only.
+  - `claude-skill-auditor`: parent launched once, exit 0; no rejected option or name in stderr; run token none, blocked diagnostic recorded, terminal condition `auditor dispatch returned a blocked diagnostic`.
+  - `claude-subagent-auditor`: parent launched once, exit 0; no rejected option or name in stderr; run token none, blocked diagnostic recorded, terminal condition `auditor dispatch returned a blocked diagnostic`.
+  - `codex-skill-auditor`: parent launched once, exit 0; no rejected option or name in stderr; run token none, blocked diagnostic recorded, terminal condition `auditor dispatch returned a blocked diagnostic`.
+  - `codex-subagent-auditor`: parent launched once, exit 0; no rejected option or name in stderr; run token none, blocked diagnostic recorded, terminal condition `auditor dispatch returned a blocked diagnostic`.
 - Artifacts:
+  - [installed-versions.log](installed-versions.log)
+  - `claude-standard`: [result.json](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/probes/native-profile-acceptance/profiles/claude-standard/result.json)
+  - `claude-strong`: [result.json](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/probes/native-profile-acceptance/profiles/claude-strong/result.json)
+  - `claude-thorough`: [result.json](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/probes/native-profile-acceptance/profiles/claude-thorough/result.json)
+  - `claude-fast`: [result.json](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/probes/native-profile-acceptance/profiles/claude-fast/result.json)
+  - `codex-standard`: [result.json](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/probes/native-profile-acceptance/profiles/codex-standard/result.json)
+  - `codex-strong`: [result.json](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/probes/native-profile-acceptance/profiles/codex-strong/result.json)
+  - `codex-thorough`: [result.json](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/probes/native-profile-acceptance/profiles/codex-thorough/result.json)
+  - `codex-fast`: [result.json](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/probes/native-profile-acceptance/profiles/codex-fast/result.json)
+  - `claude-skill-auditor`: [result.json](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/probes/native-profile-acceptance/auditors/claude-skill-auditor/result.json)
+  - `claude-subagent-auditor`: [result.json](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/probes/native-profile-acceptance/auditors/claude-subagent-auditor/result.json)
+  - `codex-skill-auditor`: [result.json](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/probes/native-profile-acceptance/auditors/codex-skill-auditor/result.json)
+  - `codex-subagent-auditor`: [result.json](spx/32-distribution.enabler/21-installation.enabler/21-repository-installation.enabler/probes/native-profile-acceptance/auditors/codex-subagent-auditor/result.json)
 
 ## Verdict
+
+`failed`. The installed versions equal the pinned versions. Every row's parent session launched once, no row's standard error names a rejected option or a rejected name, and every profile row records exactly one child execution and no terminal condition. Each of the four auditor-dispatch rows fails: `claude-skill-auditor`, `claude-subagent-auditor`, `codex-skill-auditor` and `codex-subagent-auditor` each record a blocked diagnostic and no run token.
 
 ## Limitations
 

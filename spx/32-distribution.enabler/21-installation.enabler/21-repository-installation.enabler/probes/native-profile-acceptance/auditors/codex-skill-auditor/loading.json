@@ -1,0 +1,6 @@
+{
+  "discovered": false,
+  "identifier": "codex-skill-auditor",
+  "materialized": true,
+  "native_definition_path": "/tmp/tmphpx0g_dg/codex-skill-auditor/codex/agents/instructions_skill-auditor.toml"
+}

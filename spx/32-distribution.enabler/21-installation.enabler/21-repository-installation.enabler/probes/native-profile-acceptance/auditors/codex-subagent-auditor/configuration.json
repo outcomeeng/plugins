@@ -1,0 +1,17 @@
+{
+  "auditor": "subagent-auditor",
+  "fixture_path": "/tmp/tmpvmvl0p29/codex-subagent-auditor/fixture/dispatch-fixture.md",
+  "harness": "codex",
+  "identifier": "codex-subagent-auditor",
+  "launch_command": [
+    "codex",
+    "exec",
+    "--json",
+    "--strict-config",
+    "--skip-git-repo-check"
+  ],
+  "native_definition_path": "/tmp/tmpvmvl0p29/codex-subagent-auditor/codex/agents/instructions_subagent-auditor.toml",
+  "native_name": "instructions_subagent-auditor",
+  "shipped_definition_path": "/home/runner/work/plugins/plugins/dist/codex/instructions/skills/instructions-plugin/agents/instructions_subagent-auditor.toml",
+  "shipped_definition_sha256": "22adc1011edf478b753347139a6ea8ddce264c15833fbf700400aab0609253fd"
+}

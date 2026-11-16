@@ -1,0 +1,6 @@
+{
+  "discovered": true,
+  "identifier": "claude-subagent-auditor",
+  "materialized": true,
+  "native_definition_path": "/tmp/tmphlqkm4vr/claude-subagent-auditor/claude/agents/subagent-auditor.md"
+}

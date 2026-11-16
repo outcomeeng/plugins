@@ -1,0 +1,17 @@
+{
+  "auditor": "skill-auditor",
+  "fixture_path": "/tmp/tmphpx0g_dg/codex-skill-auditor/fixture/SKILL.md",
+  "harness": "codex",
+  "identifier": "codex-skill-auditor",
+  "launch_command": [
+    "codex",
+    "exec",
+    "--json",
+    "--strict-config",
+    "--skip-git-repo-check"
+  ],
+  "native_definition_path": "/tmp/tmphpx0g_dg/codex-skill-auditor/codex/agents/instructions_skill-auditor.toml",
+  "native_name": "instructions_skill-auditor",
+  "shipped_definition_path": "/home/runner/work/plugins/plugins/dist/codex/instructions/skills/instructions-plugin/agents/instructions_skill-auditor.toml",
+  "shipped_definition_sha256": "ceab6a731f0d8d16e86128df6c85f81015994e4a762c0ba367cb7fa53405c47e"
+}

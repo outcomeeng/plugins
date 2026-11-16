@@ -1,0 +1,18 @@
+{
+  "auditor": "subagent-auditor",
+  "fixture_path": "/tmp/tmphlqkm4vr/claude-subagent-auditor/fixture/dispatch-fixture.md",
+  "harness": "claude",
+  "identifier": "claude-subagent-auditor",
+  "launch_command": [
+    "claude",
+    "-p",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--include-partial-messages"
+  ],
+  "native_definition_path": "/tmp/tmphlqkm4vr/claude-subagent-auditor/claude/agents/subagent-auditor.md",
+  "native_name": "instructions:subagent-auditor",
+  "shipped_definition_path": "/home/runner/work/plugins/plugins/dist/claude/instructions/agents/subagent-auditor.md",
+  "shipped_definition_sha256": "b26ace7101a4b3d5fb550919881b8bb7a3255ffe5a0d36f5849a9a024d33169c"
+}

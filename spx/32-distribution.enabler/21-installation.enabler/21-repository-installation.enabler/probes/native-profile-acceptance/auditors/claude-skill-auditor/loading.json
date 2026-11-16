@@ -1,0 +1,6 @@
+{
+  "discovered": true,
+  "identifier": "claude-skill-auditor",
+  "materialized": true,
+  "native_definition_path": "/tmp/tmpomz7snno/claude-skill-auditor/claude/agents/skill-auditor.md"
+}

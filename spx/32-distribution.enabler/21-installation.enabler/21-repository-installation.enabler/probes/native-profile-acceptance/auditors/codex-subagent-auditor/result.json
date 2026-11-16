@@ -1,0 +1,24 @@
+{
+  "blocked": true,
+  "exit_code": 0,
+  "identifier": "codex-subagent-auditor",
+  "parent_command": [
+    "codex",
+    "-c",
+    "cli_auth_credentials_store=\"file\"",
+    "exec",
+    "--json",
+    "--strict-config",
+    "--skip-git-repo-check",
+    "-C",
+    "/tmp/tmpxick00_h/checkout",
+    "Use the native subagent tool exactly once to launch `instructions_subagent-auditor` with the prompt `/tmp/tmpvmvl0p29/codex-subagent-auditor/fixture/dispatch-fixture.md`. Explicitly set fork_turns to \"none\". Wait for its result and reply with that result verbatim. Do not launch another child."
+  ],
+  "projection": null,
+  "returned_message": "BLOCKED\nrunToken: not-started\ncommand: apply_patch Add File /home/runner/work/_temp/audit-subagent-cba4b087e3b8-start.json\npayloadKey: none\nexitCode: none\nstderr: patch rejected: writing is blocked by read-only sandbox; rejected by user approval settings\ndiagnostic: configuration error: payload write refused at /home/runner/work/_temp/audit-subagent-cba4b087e3b8-start.json\njudgmentStatus: incomplete\njudgedFindings: []",
+  "run_file": null,
+  "run_token": null,
+  "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/tmpvmvl0p29/codex-subagent-auditor/codex\"))\nReading additional input from stdin...\n2026-11-16T01:53:32.980485Z ERROR codex_core::tools::router: error=patch rejected: writing is blocked by read-only sandbox; rejected by user approval settings\n",
+  "stdout": "{\"type\":\"thread.started\",\"thread_id\":\"01a1e20e-e4d3-7f72-8675-a3bc04bca324\"}\n{\"type\":\"turn.started\"}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_0\",\"type\":\"agent_message\",\"text\":\"I\u2019ll launch the requested auditor once and wait for its result.\"}}\n{\"type\":\"item.started\",\"item\":{\"id\":\"item_1\",\"type\":\"collab_tool_call\",\"tool\":\"wait\",\"sender_thread_id\":\"01a1e20e-e4d3-7f72-8675-a3bc04bca324\",\"receiver_thread_ids\":[],\"prompt\":null,\"agents_states\":{},\"status\":\"in_progress\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_1\",\"type\":\"collab_tool_call\",\"tool\":\"wait\",\"sender_thread_id\":\"01a1e20e-e4d3-7f72-8675-a3bc04bca324\",\"receiver_thread_ids\":[],\"prompt\":null,\"agents_states\":{},\"status\":\"completed\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_2\",\"type\":\"agent_message\",\"text\":\"BLOCKED\\nrunToken: not-started\\ncommand: apply_patch Add File /home/runner/work/_temp/audit-subagent-cba4b087e3b8-start.json\\npayloadKey: none\\nexitCode: none\\nstderr: patch rejected: writing is blocked by read-only sandbox; rejected by user approval settings\\ndiagnostic: configuration error: payload write refused at /home/runner/work/_temp/audit-subagent-cba4b087e3b8-start.json\\njudgmentStatus: incomplete\\njudgedFindings: []\"}}\n{\"type\":\"turn.completed\",\"usage\":{\"input_tokens\":69129,\"cached_input_tokens\":45917,\"cache_write_input_tokens\":23055,\"output_tokens\":220,\"reasoning_output_tokens\":0}}\n",
+  "terminal_condition": "auditor dispatch returned a blocked diagnostic"
+}

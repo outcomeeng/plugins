@@ -1,0 +1,7 @@
+{
+  "discovered": true,
+  "evidence": "/home/runner/work/plugins/plugins/native-acceptance/profiles/codex-standard/result.json",
+  "identifier": "codex-standard",
+  "materialized": true,
+  "native_definition_path": "/tmp/tmpmrkuefq6/codex-standard/codex/agents/profile-probe.toml"
+}
