@@ -1,7 +1,7 @@
 """Scenario tests for the committed-scope resolver's stale-base refusal.
 
-Covers the Scenario assertions in ``../changeset-scope.md`` on a head behind
-the fetched base, a lagging local remote-tracking ref, a current head, a
+Covers the Scenario assertions in ``../changeset-scope.md`` on a head named by
+``FETCH_HEAD``, a head behind the fetched base, a lagging local remote-tracking ref, a current head, a
 symbolic ``origin/HEAD`` base, and an explicit local-ref base that is compared
 as given.
 
@@ -16,7 +16,9 @@ import json
 from outcomeeng_testing.harnesses.changeset_scope import (
     CHANGESET_SCOPE,
     CHANGESET_SCOPE_CONTRACT,
+    FETCH_HEAD_REF,
     base_advanced_after_branch_repo,
+    fetch_head_feature_repo,
     generated_changeset_scope_cases,
     git_commit_oid,
     git_commits_between,
@@ -140,4 +142,23 @@ def test_an_explicit_local_ref_base_the_head_is_behind_is_not_refused() -> None:
             assert resolved[CHANGESET_SCOPE.ScopeField.BASE] == local_base
             assert resolved[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS] == [
                 advanced.feature_file
+            ]
+
+
+def test_a_fetch_head_head_keeps_the_commit_it_named_before_the_fetch() -> None:
+    for scenario in generated_changeset_scope_cases():
+        with fetch_head_feature_repo(scenario) as fetched:
+            assert git_commit_oid(fetched.repo, FETCH_HEAD_REF) == fetched.feature_oid
+            selector = (
+                f"{CHANGESET_SCOPE.remote_tracking_ref(fetched.base_ref)}"
+                f"{CHANGESET_SCOPE.RANGE_SEPARATOR}{FETCH_HEAD_REF}"
+            )
+
+            result = run_changeset_scope(fetched.repo, selector)
+
+            assert result.returncode == 0
+            resolved = json.loads(result.stdout)
+            assert resolved[CHANGESET_SCOPE.ScopeField.HEAD] == fetched.feature_oid
+            assert resolved[CHANGESET_SCOPE.ScopeField.CHANGED_PATHS] == [
+                fetched.feature_file
             ]

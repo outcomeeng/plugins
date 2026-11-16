@@ -68,7 +68,7 @@ CAN derive every changeset's branch, slug, base ref, head/base commit IDs, and c
   - Given an explicit range whose base names a local ref the head does not descend from
   - When the committed-scope command resolves the range
   - Then it returns the scope whose base identity is that local ref's commit and applies no stale-base refusal, because the refusal reads only a git-derived or `origin/` base
-- head-before-fetch:
+- [head-before-fetch](tests/test_stale_base.scenario.l1.py):
   - Given `FETCH_HEAD` names a feature commit one commit past `origin/<base>`, and the base fetch rewrites `FETCH_HEAD` to the base tip
   - When the committed-scope command resolves `origin/<base>...FETCH_HEAD`
   - Then its head identity is the feature commit, and its changed-file set holds exactly the paths that commit changes
@@ -89,4 +89,4 @@ Each failure the primitives report maps to the error and the message its case na
 
 - [classifier-unrefused](tests/test_stale_base.compliance.l1.py): ALWAYS: the merge classifier resolves a branch behind the fetched `origin/<base>` tip to its changed paths without the stale-base refusal, because classification partitions paths rather than verifying them
 - [sync-unrefused](tests/test_stale_base.compliance.l1.py): ALWAYS: base synchronization resolves a branch behind the fetched `origin/<base>` tip through the primitives without the stale-base refusal and rebases it, because it is the refusal's remedy
-- head-resolved-first: ALWAYS: resolving a committed selector resolves its head to a full commit id before any fetch, and the stale-base comparison and the changed-file set read only that id, so a fetch that rewrites `FETCH_HEAD` or a remote-tracking ref moves no head
+- [head-resolved-first](tests/test_stale_base.compliance.l1.py): ALWAYS: resolving a committed selector resolves its head to a full commit id before any fetch, and the stale-base comparison and the changed-file set read only that id, so a fetch that rewrites `FETCH_HEAD` or a remote-tracking ref moves no head
