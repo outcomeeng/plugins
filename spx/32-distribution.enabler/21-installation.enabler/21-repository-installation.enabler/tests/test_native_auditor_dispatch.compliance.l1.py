@@ -7,15 +7,23 @@ from collections.abc import Sequence
 from pathlib import Path
 from uuid import uuid4
 
+from outcomeeng.distribution.agents import AGENT_TOOLS_FIELD
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.native_auditor_dispatch import (
     AUDITOR_FIXTURES,
+    CLAUDE_ADD_DIRECTORY_OPTION,
+    CLAUDE_ALLOWED_TOOLS_OPTION,
+    CLAUDE_ALLOWED_TOOLS_SEPARATOR,
+    CODEX_SANDBOX_WORKSPACE_WRITE_TABLE,
+    CODEX_WORKSPACE_WRITE_OPTIONS,
+    CODEX_WRITABLE_ROOTS_KEY,
     CONFIGURATION_SHIPPED_SHA256_KEY,
     RESULT_BLOCKED_KEY,
     RESULT_PROJECTION_KEY,
     RESULT_RUN_FILE_KEY,
     RESULT_RUN_TOKEN_KEY,
     RESULT_TERMINAL_CONDITION_KEY,
+    SCRATCH_ENVIRONMENT_VARIABLES,
     native_auditor_rows,
     record_native_auditor_failure,
 )
@@ -46,8 +54,14 @@ STRIPPABLE = (
     | CLAUDE_CREDENTIAL_VARIABLES
     | CREDENTIAL_ENVIRONMENTS
 )
-SCRATCH_VARIABLES = ("RUNNER_TEMP", "TMPDIR")
-"""The scratch locations a hosted session's payload guidance falls back to."""
+CODEX_WORKSPACE_WRITE_PAIRS = tuple(
+    zip(
+        CODEX_WORKSPACE_WRITE_OPTIONS[::2],
+        CODEX_WORKSPACE_WRITE_OPTIONS[1::2],
+        strict=True,
+    )
+)
+"""The Codex parent's sandbox and approval options, each paired with its value."""
 
 
 def option_values(argv: Sequence[str], option: str) -> list[str]:
@@ -57,7 +71,7 @@ def option_values(argv: Sequence[str], option: str) -> list[str]:
 
 def definition_tool_grants(definition: Path) -> tuple[str, ...]:
     """The `tools` grants a Markdown agent definition declares, read through PyYAML."""
-    tools = agent_document_oracle(definition).frontmatter["tools"]
+    tools = agent_document_oracle(definition).frontmatter[AGENT_TOOLS_FIELD]
     assert isinstance(tools, str), definition
     return tuple(grant.strip() for grant in tools.split(","))
 
@@ -308,10 +322,10 @@ def test_each_auditor_parent_reaches_the_fixture_repository_and_scratch_director
             assert len(launches) == 1, row.identifier
             launch = launches[0]
             repository = row.fixture_path.parent
-            scratch = launch.environment[SCRATCH_VARIABLES[0]]
-            assert {launch.environment[name] for name in SCRATCH_VARIABLES} == {
-                scratch
-            }, row.identifier
+            scratch = launch.environment[SCRATCH_ENVIRONMENT_VARIABLES[0]]
+            assert {
+                launch.environment[name] for name in SCRATCH_ENVIRONMENT_VARIABLES
+            } == {scratch}, row.identifier
             scratch_path = Path(scratch)
             assert scratch_path.relative_to(row.state_root) in launch.directories, (
                 row.identifier
@@ -319,27 +333,23 @@ def test_each_auditor_parent_reaches_the_fixture_repository_and_scratch_director
             assert not scratch_path.is_relative_to(repository), row.identifier
             access_roots = [str(repository), scratch]
             if row.target is Target.CLAUDE:
-                assert option_values(launch.argv, "--add-dir") == access_roots, (
-                    row.identifier,
-                    launch.argv,
-                )
-                allowed = option_values(launch.argv, "--allowedTools")
+                assert (
+                    option_values(launch.argv, CLAUDE_ADD_DIRECTORY_OPTION)
+                    == access_roots
+                ), (row.identifier, launch.argv)
+                allowed = option_values(launch.argv, CLAUDE_ALLOWED_TOOLS_OPTION)
                 assert len(allowed) == 1, (row.identifier, launch.argv)
-                assert tuple(allowed[0].split(",")) == definition_tool_grants(
-                    row.shipped_definition_path
-                ), row.identifier
+                assert tuple(
+                    allowed[0].split(CLAUDE_ALLOWED_TOOLS_SEPARATOR)
+                ) == definition_tool_grants(row.shipped_definition_path), row.identifier
             else:
-                assert option_values(launch.argv, "--sandbox") == ["workspace-write"], (
-                    row.identifier,
-                    launch.argv,
-                )
-                assert 'approval_policy="never"' in option_values(launch.argv, "-c"), (
-                    row.identifier,
-                    launch.argv,
-                )
-                assert "--strict-config" in launch.argv, row.identifier
+                for option, value in CODEX_WORKSPACE_WRITE_PAIRS:
+                    assert value in option_values(launch.argv, option), (
+                        row.identifier,
+                        launch.argv,
+                    )
                 assert launch.codex_config is not None, row.identifier
                 configuration = tomllib.loads(launch.codex_config.decode("utf-8"))
-                assert configuration["sandbox_workspace_write"] == {
-                    "writable_roots": access_roots
+                assert configuration[CODEX_SANDBOX_WORKSPACE_WRITE_TABLE] == {
+                    CODEX_WRITABLE_ROOTS_KEY: access_roots
                 }, row.identifier
