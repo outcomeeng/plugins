@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from outcomeeng.distribution.agents import agent_tool_grants
+from outcomeeng.distribution.agents import AGENT_TOOLS_FIELD, agent_tool_grants
 from outcomeeng.distribution.build import agent_capability, agent_dispatch_name
 from outcomeeng.distribution.contracts import CLAUDE_DIST_RELATIVE, Target
 from outcomeeng.distribution.installation import (
@@ -58,6 +58,8 @@ RESULT_FILENAME: Final = "result.json"
 BLOCKED_MARKER: Final = "BLOCKED"
 RUN_FILE_WORD_PATTERN: Final = re.compile(r"[^\s\"'`<>(){}\[\],]+")
 SENTENCE_PUNCTUATION: Final = ".;:!?"
+CODEX_STRICT_CONFIG_OPTION: Final = "--strict-config"
+"""The Codex option that refuses a configuration key the CLI does not recognize."""
 
 NATIVE_LAUNCH_COMMANDS: Final[Mapping[Target, tuple[str, ...]]] = {
     Target.CLAUDE: (
@@ -72,7 +74,7 @@ NATIVE_LAUNCH_COMMANDS: Final[Mapping[Target, tuple[str, ...]]] = {
         CODEX_EXECUTABLE,
         CODEX_EXEC_SUBCOMMAND,
         "--json",
-        "--strict-config",
+        CODEX_STRICT_CONFIG_OPTION,
         "--skip-git-repo-check",
     ),
 }
@@ -376,9 +378,7 @@ def _launch_command(row: NativeAuditorRow, checkout: Path) -> tuple[str, ...]:
             *row.launch_command[2:],
             *directories,
             CLAUDE_ALLOWED_TOOLS_OPTION,
-            CLAUDE_ALLOWED_TOOLS_SEPARATOR.join(
-                agent_tool_grants(row.native_definition_path)
-            ),
+            CLAUDE_ALLOWED_TOOLS_SEPARATOR.join(_claude_tool_grants(row)),
         )
     return (
         *row.launch_command,
@@ -387,6 +387,22 @@ def _launch_command(row: NativeAuditorRow, checkout: Path) -> tuple[str, ...]:
         str(checkout),
         prompt,
     )
+
+
+def _claude_tool_grants(row: NativeAuditorRow) -> tuple[str, ...]:
+    """The `tools` grants the row's Claude Code definition declares; a definition with none launches nothing.
+
+    An empty `--allowedTools` value approves no call, so the dispatched auditor
+    could only stall on its first approval; the row refuses before the parent
+    session starts instead.
+    """
+    grants = agent_tool_grants(row.native_definition_path)
+    if not grants:
+        raise ValueError(
+            f"Claude Code auditor definition {row.native_definition_path} for "
+            f"{row.native_name} declares no `{AGENT_TOOLS_FIELD}` grant"
+        )
+    return grants
 
 
 def _session_environment(
@@ -411,7 +427,7 @@ def _declare_codex_writable_roots(
     """
     home = environment.get(CODEX_HOME_ENV)
     if not home:
-        raise ValueError("Codex auditor dispatch requires a selected CODEX_HOME")
+        raise ValueError(f"Codex auditor dispatch requires a selected {CODEX_HOME_ENV}")
     config = Path(home) / CODEX_HOME_CONFIG_PATH
     text = config.read_text(encoding="utf-8") if config.exists() else ""
     try:
@@ -442,14 +458,16 @@ def run_native_auditor_row(
     parent: NativeCommandRunner,
     sanitize: EvidenceSanitizer,
 ) -> NativeAuditorDispatchObservation:
-    """Make the one native dispatch of an auditor from already installed disposable state."""
+    """Make the one native dispatch of an auditor from already installed disposable state.
+
+    Every refusal — a Codex home whose writable roots cannot be declared, a
+    Claude Code definition that declares no tool grant — raises `ValueError`
+    before the parent runner is called, so a refused row launches nothing.
+    """
     if row.target is Target.CODEX:
         _declare_codex_writable_roots(row, environment)
-    result = parent(
-        _launch_command(row, checkout),
-        checkout,
-        _session_environment(row, environment),
-    )
+    command = _launch_command(row, checkout)
+    result = parent(command, checkout, _session_environment(row, environment))
     stdout = sanitize(result.stdout)
     stderr = sanitize(result.stderr)
     message = _returned_message(row.target, stdout)
