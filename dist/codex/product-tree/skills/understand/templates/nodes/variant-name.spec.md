@@ -11,24 +11,27 @@ CAN {the parent's consumer capability}
 
 ## Assertions
 
-- {slug}: {One sentence stating only what the parent's contract does not say. The parent's assertions are this variant's evidence too: the toolchain runs them once with the selection source set to this variant and records the results in this variant's status claim. A variant carries no outcome record. Include only the groups below that apply to this node.}
+### Test.Mapping: {slug}
 
-### Mapping: {slug}
+{One sentence mapping a finite set of inputs to their outputs, stating every condition the outcomes depend on.}
 
-{One sentence mapping a finite set of inputs to their outputs.}
+| Case        | {Output column}   |
+| ----------- | ----------------- |
+| {case-slug} | {expected result} |
 
-| Case              | {Output column}   |
-| ----------------- | ----------------- |
-| {short case name} | {expected result} |
+### Test.Scenario: {subject specific to this implementation}
 
-### Scenario: {subject specific to this implementation}
+- {slug}:
+  - Given {context specific to this implementation}
+  - When {action}
+  - Then {result}
+  - And {further result}
 
-- {slug}: Given {context specific to this implementation}, when {action}, then {result}.
+### Test.Compliance: {subject}
 
-### Compliance: {subject}
+- {slug}: ALWAYS {behavior this implementation guarantees beyond the contract} — {why}.
+- {slug}: NEVER {prohibited behavior} — {why}.
 
-- {slug}: ALWAYS: {behavior this implementation guarantees beyond the contract} — {why}.
+### Probe: {subject}
 
-### Probe
-
-- {slug}: ALWAYS: {claim only observing this variant running settles}.
+- {slug}: {Claim only observing this variant running settles.}

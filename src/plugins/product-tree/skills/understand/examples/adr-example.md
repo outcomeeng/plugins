@@ -8,17 +8,17 @@ SO THAT the same declarations and results always yield the same state, and no ma
 
 ## Verification
 
-### Property: derivation
+### Test.Property: derivation
 
 - state-deterministic: Identical declarations, artifacts, attributed results, and pins produce identical state.
 - current-results-only: Only current results satisfy a node's verification requirements.
 - pin-invalidates: An attributed result is invalid when a path named by its pin changes.
 
-### Compliance: validity
+### Test.Compliance: validity
 
-- no-invalid-satisfaction: NEVER: an invalidated result satisfies a required verification result.
+- no-invalid-satisfaction: NEVER an invalidated result satisfies a required verification result.
 
-### Audit
+### Audit: state writer
 
-- projector-sole-writer: ALWAYS: the projector alone writes the committed `spx.status.json` claim.
-- no-manual-state: NEVER: a manually assigned label overrides evidence-derived state.
+- projector-sole-writer: The projector alone writes the committed `spx.status.json` claim.
+- no-manual-state: A manually assigned label never overrides evidence-derived state.

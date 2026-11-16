@@ -11,7 +11,7 @@ CAN record a task without leaving what they were doing
 
 ## Assertions
 
-### Mapping: relative-dates
+### Test.Mapping: relative-dates
 
 Relative date words map to dates: "today", "tomorrow", and weekday names resolve against the capture time.
 
@@ -21,23 +21,30 @@ Relative date words map to dates: "today", "tomorrow", and weekday names resolve
 | tomorrow | the day after the capture |
 | weekday  | the next such weekday     |
 
-### Scenario: capture
+### Test.Scenario: capture
 
-- dated-capture: Given the text "buy milk tomorrow", when it is captured, then a task titled "buy milk" exists with tomorrow's date.
-- undated-capture: Given text with no date, when it is captured, then the task has no due date and no error.
+- dated-capture:
+  - Given the text "buy milk tomorrow"
+  - When it is captured
+  - Then a task titled "buy milk" exists with tomorrow's date
+- undated-capture:
+  - Given text with no date
+  - When it is captured
+  - Then the task has no due date
+  - And no error is raised
 
-### Property: capture
+### Test.Property: capture
 
 - capture-idempotent: Capture is idempotent on its parsed form: capturing the parsed title and date again produces an equal task.
 
-### Compliance: capture
+### Test.Compliance: capture
 
-- capture-event: ALWAYS: every capture emits the `task_captured` event the capture-rate source reads — the outcome record's condition is unreadable without it.
+- capture-event: ALWAYS every capture emits the `task_captured` event the capture-rate source reads — the outcome record's condition is unreadable without it.
 
-### Probe
+### Probe: quick-add field
 
-- capture-basic: ALWAYS: a person captures a task from the quick-add field within two seconds of focusing it.
+- capture-basic: A person captures a task from the quick-add field within two seconds of focusing it.
 
-### Audit
+### Audit: capture storage
 
-- raw-text-retention: NEVER: the parser stores the raw text beyond the capture — the task is the record.
+- raw-text-retention: NEVER the parser stores the raw text beyond the capture — the task is the record.

@@ -12,45 +12,48 @@ CAN {what they can do through its resources, verbs, selectors, payload shapes, l
 
 ## Assertions
 
-- {slug}: {One sentence stating an assertion awaiting verification selection. An interface owns no rendering. Include only the groups below that apply to this node.}
+### Test.Mapping: {slug}
 
-### Mapping: {slug}
+{One sentence mapping a finite set of inputs to their outputs, stating every condition the outcomes depend on.}
 
-{One sentence mapping a finite set of inputs to their outputs.}
+| Case        | {Output column}   |
+| ----------- | ----------------- |
+| {case-slug} | {expected result} |
 
-| Case              | {Output column}   |
-| ----------------- | ----------------- |
-| {short case name} | {expected result} |
+### Test.Scenario: {subject}
 
-### Conformance: {subject}
+- {slug}:
+  - Given {context}
+  - When {action}
+  - Then {result}
+  - And {further result}
+
+### Test.Conformance: {subject}
 
 - {slug}: {Output} conforms to {standard or schema}.
 
-### Scenario: {subject}
-
-- {slug}: Given {context}, when {action}, then {result}.
-
-### Property: {subject}
+### Test.Property: {subject}
 
 - {slug}: {Invariant} holds for all {domain}.
 
-### Compliance: {subject}
+### Test.Compliance: {subject}
 
-- {slug}: ALWAYS: {observable behavior that holds} — {why}.
-- {slug}: NEVER: {prohibited behavior} — {why}.
+- {slug}: ALWAYS {observable behavior that holds} — {why}.
+- {slug}: NEVER {prohibited behavior} — {why}.
 
-### Eval: {slug}
+### Evaluate: {slug}
 
-{One sentence stating LLM-driven behavior with a parseable verdict, graded over curated cases.}
+{One sentence naming the producer, the context it receives, and how the eval compares an output with its expectation.}
 
-| Given                 | Then                             |
-| --------------------- | -------------------------------- |
-| {the input of a case} | {the verdict the producer emits} |
+| Case        | Input                 | Expected output                  |
+| ----------- | --------------------- | -------------------------------- |
+| {case-slug} | {the input of a case} | {the verdict the producer emits} |
 
-### Probe
+### Probe: {subject}
 
-- {slug}: ALWAYS: {claim only observing the running node settles}.
+- {slug}: {Claim only observing the running node settles.}
 
-### Audit
+### Audit: {subject}
 
-- {slug}: ALWAYS: {semantic constraint requiring judgment} — {why}.
+- {slug}: {Semantic constraint requiring judgment} — {why}.
+- {slug}: {A constraint stating that the interface owns no rendering.}
