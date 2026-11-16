@@ -292,7 +292,7 @@ def claude_definition_plant(absence: GrantAbsence) -> StatePlant:
     def plant(home: Path) -> None:
         row = _row_for_state(home.parent)
         if row.target is Target.CLAUDE and row.native_definition_path.is_file():
-            row.native_definition_path.write_text(
+            row.native_definition_path.write_text(  # NOSONAR S2083 - the row's own disposable state root
                 definition_without_grants(
                     row.shipped_definition_path.read_text(encoding="utf-8"), absence
                 ),
