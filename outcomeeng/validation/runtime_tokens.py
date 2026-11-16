@@ -7,7 +7,7 @@ per runtime — Claude Code's ``AskUserQuestion`` versus Codex's
 branch. The build renders either form only into a target that provides the name;
 a raw literal outside matching target scope ships into an incompatible runtime.
 
-The forbidden-name set is derived from the build's runtime-token registry
+The forbidden-name set is derived from the build's agent-specific token registry
 (``outcomeeng.distribution.build.RUNTIME_TOKEN_REGISTRY``) — the single source of
 truth for which names diverge per runtime — so this validator never restates a
 copied literal list.  A correctly-authored reference carries the capability key

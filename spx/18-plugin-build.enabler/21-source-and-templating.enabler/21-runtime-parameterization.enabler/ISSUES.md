@@ -34,7 +34,7 @@ The audit is a `product-tree:test-evidence-auditor` verdict on this node at head
 
 **Out-of-change evidence**: the text lies outside the Change. `git diff -U0 origin/main...HEAD` reports no hunk in the cited test file or harness, against merge base `149a55f71befdf61e88be9bda2aae725db1f2381`.
 
-**Invalidation check.** The cited text neither cites, restates, nor depends on anything this changeset changed. The changeset adds symbols to `outcomeeng/distribution/profiles.py`, narrows the guard in `outcomeeng/validation/profile_configuration.py`, and adds model-price and profile-binding generators, harnesses, and tests. The cited harness drives `render_text` and the runtime-token registry in `outcomeeng/distribution/build.py`, which the changeset does not change.
+**Invalidation check.** The cited text neither cites, restates, nor depends on anything this changeset changed. The changeset adds symbols to `outcomeeng/distribution/profiles.py`, narrows the guard in `outcomeeng/validation/profile_configuration.py`, and adds model-price and profile-binding generators, harnesses, and tests. The cited harness drives `render_text` and the agent-specific token registry in `outcomeeng/distribution/build.py`, which the changeset does not change.
 
 **Settlement condition**: the harness returns observations only, and each linked test holds its own predicate, so inverting an assertion in a test changes the verdict.
 
