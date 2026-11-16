@@ -26,11 +26,13 @@ remediation judgment for every non-healthy verdict.
    recomputing the overall verdict.
 4. When the report's overall verdict is non-healthy, add remediation judgment
    grounded only in the report's per-check verdicts, readings, and remediation
-   fields.
+   fields: one remediation item per non-healthy check, naming that check, its
+   verdict, and its bucket as the item's severity.
 5. When the command cannot start, the `diagnose` subcommand is missing, the
    manifest is rejected, or the exit code is nonzero before a report is emitted,
    report stdout, stderr, and the exit code verbatim, then direct the user to
-   install or update `@outcomeeng/spx` to the floor declared in the manifest.
+   install or update `@outcomeeng/spx` to the floor declared in the manifest, as
+   one remediation item of severity `broken`.
 
 </workflow>
 

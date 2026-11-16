@@ -26,5 +26,6 @@ The unit of a finding is the repository-relative path of the changed artifact th
 | `missing-dependency-evidence`       | blocking | Two or more clusters carry an explicit dependency array; an absent or `null` set is unresolved.                                                                               | `verdict_rules`         |
 | `missing-generated-source-evidence` | blocking | Every generated artifact resolves to its producer through a declared relationship or `generated_from`.                                                                        | `audit_workflow` Step 4 |
 | `missing-calibration-evidence`      | blocking | A repository-specific signal that requires calibration to judge the semantic evidence has the calibration it requires; a baseline absent without such a signal is no finding. | `verdict_rules`         |
+| `split-required`                    | blocking | Two or more semantic clusters are independently mergeable; the finding keys to `scope` and the verdict carries the dependency-ordered review-unit sequence.                   | `verdict_rules`         |
 
 </evidence_rules>
