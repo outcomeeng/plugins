@@ -1,0 +1,7 @@
+{
+  "discovered": true,
+  "evidence": "/home/runner/work/plugins/plugins/native-acceptance/profiles/codex-thorough/result.json",
+  "identifier": "codex-thorough",
+  "materialized": true,
+  "native_definition_path": "/tmp/tmpj9639jo5/codex-thorough/codex/agents/profile-probe.toml"
+}

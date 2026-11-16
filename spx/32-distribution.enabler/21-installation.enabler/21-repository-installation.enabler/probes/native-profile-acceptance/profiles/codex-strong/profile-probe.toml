@@ -1,0 +1,5 @@
+name = "profile_probe_codex_strong"
+description = "One native profile-execution evidence child."
+model = "gpt-6-astra"
+model_reasoning_effort = "high"
+developer_instructions = "This is native profile-execution evidence for codex-strong. Return one concise completion message."

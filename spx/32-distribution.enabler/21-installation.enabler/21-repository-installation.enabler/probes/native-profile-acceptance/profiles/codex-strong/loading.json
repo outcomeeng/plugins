@@ -1,0 +1,7 @@
+{
+  "discovered": true,
+  "evidence": "/home/runner/work/plugins/plugins/native-acceptance/profiles/codex-strong/result.json",
+  "identifier": "codex-strong",
+  "materialized": true,
+  "native_definition_path": "/tmp/tmpapgj57cq/codex-strong/codex/agents/profile-probe.toml"
+}

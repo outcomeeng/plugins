@@ -1,0 +1,18 @@
+{
+  "auditor": "skill-auditor",
+  "fixture_path": "/tmp/tmpomz7snno/claude-skill-auditor/fixture/SKILL.md",
+  "harness": "claude",
+  "identifier": "claude-skill-auditor",
+  "launch_command": [
+    "claude",
+    "-p",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--include-partial-messages"
+  ],
+  "native_definition_path": "/tmp/tmpomz7snno/claude-skill-auditor/claude/agents/skill-auditor.md",
+  "native_name": "instructions:skill-auditor",
+  "shipped_definition_path": "/home/runner/work/plugins/plugins/dist/claude/instructions/agents/skill-auditor.md",
+  "shipped_definition_sha256": "9a63bc607e6c97067c8a3c2c39ec675fab5f25a34f3b863e6e5b000cfbd5cbb7"
+}

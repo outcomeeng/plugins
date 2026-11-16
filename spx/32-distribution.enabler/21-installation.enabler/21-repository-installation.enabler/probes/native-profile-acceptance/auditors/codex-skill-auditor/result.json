@@ -1,0 +1,24 @@
+{
+  "blocked": true,
+  "exit_code": 0,
+  "identifier": "codex-skill-auditor",
+  "parent_command": [
+    "codex",
+    "-c",
+    "cli_auth_credentials_store=\"file\"",
+    "exec",
+    "--json",
+    "--strict-config",
+    "--skip-git-repo-check",
+    "-C",
+    "/tmp/tmpxick00_h/checkout",
+    "Use the native subagent tool exactly once to launch `instructions_skill-auditor` with the prompt `/tmp/tmphpx0g_dg/codex-skill-auditor/fixture/SKILL.md`. Explicitly set fork_turns to \"none\". Wait for its result and reply with that result verbatim. Do not launch another child."
+  ],
+  "projection": null,
+  "returned_message": "BLOCKED\nrunToken: not-started\ncommand: apply_patch Add File /home/runner/work/_temp/audit-skill-eff83d482f39dc14384571b04472d90a869133b7-start.json\npayloadKey: none\nexitCode: none\nstderr: patch rejected: writing is blocked by read-only sandbox; rejected by user approval settings\ndiagnostic: configuration error: refused payload path /home/runner/work/_temp/audit-skill-eff83d482f39dc14384571b04472d90a869133b7-start.json\njudgmentStatus: incomplete\njudgedFindings: []",
+  "run_file": null,
+  "run_token": null,
+  "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/tmphpx0g_dg/codex-skill-auditor/codex\"))\nReading additional input from stdin...\n2026-11-16T01:52:47.550732Z ERROR codex_core::tools::router: error=patch rejected: writing is blocked by read-only sandbox; rejected by user approval settings\n",
+  "stdout": "{\"type\":\"thread.started\",\"thread_id\":\"01a1e20e-1249-78b1-8133-894764b43b74\"}\n{\"type\":\"turn.started\"}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_0\",\"type\":\"agent_message\",\"text\":\"I\u2019ll launch the requested auditor once and wait for its result.\"}}\n{\"type\":\"item.started\",\"item\":{\"id\":\"item_1\",\"type\":\"collab_tool_call\",\"tool\":\"wait\",\"sender_thread_id\":\"01a1e20e-1249-78b1-8133-894764b43b74\",\"receiver_thread_ids\":[],\"prompt\":null,\"agents_states\":{},\"status\":\"in_progress\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_1\",\"type\":\"collab_tool_call\",\"tool\":\"wait\",\"sender_thread_id\":\"01a1e20e-1249-78b1-8133-894764b43b74\",\"receiver_thread_ids\":[],\"prompt\":null,\"agents_states\":{},\"status\":\"completed\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_2\",\"type\":\"agent_message\",\"text\":\"BLOCKED\\nrunToken: not-started\\ncommand: apply_patch Add File /home/runner/work/_temp/audit-skill-eff83d482f39dc14384571b04472d90a869133b7-start.json\\npayloadKey: none\\nexitCode: none\\nstderr: patch rejected: writing is blocked by read-only sandbox; rejected by user approval settings\\ndiagnostic: configuration error: refused payload path /home/runner/work/_temp/audit-skill-eff83d482f39dc14384571b04472d90a869133b7-start.json\\njudgmentStatus: incomplete\\njudgedFindings: []\"}}\n{\"type\":\"turn.completed\",\"usage\":{\"input_tokens\":69240,\"cached_input_tokens\":45973,\"cache_write_input_tokens\":23085,\"output_tokens\":243,\"reasoning_output_tokens\":0}}\n",
+  "terminal_condition": "auditor dispatch returned a blocked diagnostic"
+}

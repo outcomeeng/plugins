@@ -32,13 +32,40 @@ The retained rows are the release acceptance of the profiles. A changed profile 
 
 ## Attested run
 
-- Date:
-- Subject commit:
-- Workflow run:
+- Date: 2026-11-16 (dispatched 01:46:13Z, completed 01:53:42Z)
+- Subject commit: `241956eb3404bf5b5a84964add38eb15d3aadc14`
+- Workflow run: [43788185270](https://github.com/outcomeeng/plugins/actions/runs/43788185270), `.github/workflows/native-profile-acceptance.yml` dispatched once on `main`, against `outcomeeng.distribution.profiles.AGENT_PROFILES` at the subject commit. The run concluded `failure`: its "Verify native profile execution" step passed, its "Verify native auditor dispatch" step failed, and it uploaded the `native-profile-acceptance` artifact.
 - Observations:
+  - `claude-standard`: definition materialized, discovery not recorded (`discovered` null); definition configures model: "sonnet", effort: "medium"; parent exit 0, empty stderr, terminal condition none; 1 native child invocation, evidenced by the forwarded stream (definition-and-forwarded-stream).
+  - `claude-strong`: definition materialized, discovery not recorded (`discovered` null); definition configures model: "opus", effort: "high"; parent exit 0, empty stderr, terminal condition none; 1 native child invocation, evidenced by the forwarded stream (definition-and-forwarded-stream).
+  - `claude-thorough`: definition materialized, discovery not recorded (`discovered` null); definition configures model: "sonnet", effort: "high"; parent exit 0, empty stderr, terminal condition none; 1 native child invocation, evidenced by the forwarded stream (definition-and-forwarded-stream).
+  - `claude-fast`: definition materialized, discovery not recorded (`discovered` null); definition configures model: "haiku"; parent exit 0, empty stderr, terminal condition none; 1 native child invocation, evidenced by the forwarded stream (definition-and-forwarded-stream).
+  - `codex-standard`: definition materialized and discovered; definition configures model gpt-6.1-sol, model_reasoning_effort high as its `profile-probe.toml` records; parent exit 0, terminal condition none; one sole child with role `profile_probe_codex_standard`, model `gpt-6.1-sol`, effort `high`, its one turn `completed` with no error; stderr holds only the PATH-alias warning for the temporary directory.
+  - `codex-strong`: definition materialized and discovered; definition configures model gpt-6-astra, model_reasoning_effort high as its `profile-probe.toml` records; parent exit 0, terminal condition none; one sole child with role `profile_probe_codex_strong`, model `gpt-6-astra`, effort `high`, its one turn `completed` with no error; stderr holds only the PATH-alias warning for the temporary directory.
+  - `codex-thorough`: definition materialized and discovered; definition configures model gpt-6.1-sol, model_reasoning_effort high as its `profile-probe.toml` records; parent exit 0, terminal condition none; one sole child with role `profile_probe_codex_thorough`, model `gpt-6.1-sol`, effort `high`, its one turn `completed` with no error; stderr holds only the PATH-alias warning for the temporary directory.
+  - `codex-fast`: definition materialized and discovered; definition configures model gpt-6-luna, model_reasoning_effort high as its `profile-probe.toml` records; parent exit 0, terminal condition none; one sole child with role `profile_probe_codex_fast`, model `gpt-6-luna`, effort `high`, its one turn `completed` with no error; stderr holds only the PATH-alias warning for the temporary directory.
+  - `claude-skill-auditor`: definition materialized, discovered; parent exit 0; the dispatched auditor returned `BLOCKED`, `runToken: not-started`, at `realpath + git -C '/tmp/tmpomz7snno/claude-skill-auditor/fixture' rev-parse --show-toplevel`: The path /tmp/tmpomz7snno/claude-skill-auditor/fixture/SKILL.md resolves outside the session's allowed working directory /tmp/tmpxick00_h/checkout; run token none, run file none, projection none; terminal condition `auditor dispatch returned a blocked diagnostic`.
+  - `claude-subagent-auditor`: definition materialized, discovered; parent exit 0; the dispatched auditor returned `BLOCKED`, `runToken: not-started`, at `read target file at /tmp/tmphlqkm4vr/claude-subagent-auditor/fixture/dispatch-fixture.md`: The file /tmp/tmphlqkm4vr/claude-subagent-auditor/fixture/dispatch-fixture.md is outside the allowed working directory /tmp/tmpxick00_h/checkout and cannot be read; run token none, run file none, projection none; terminal condition `auditor dispatch returned a blocked diagnostic`.
+  - `codex-skill-auditor`: definition materialized, not discovered (`discovered` false); parent exit 0; the dispatched auditor returned `BLOCKED`, `runToken: not-started`, at `apply_patch Add File /home/runner/work/_temp/audit-skill-eff83d482f39dc14384571b04472d90a869133b7-start.json`: patch rejected: writing is blocked by read-only sandbox; rejected by user approval settings; run token none, run file none, projection none; terminal condition `auditor dispatch returned a blocked diagnostic`.
+  - `codex-subagent-auditor`: definition materialized, not discovered (`discovered` false); parent exit 0; the dispatched auditor returned `BLOCKED`, `runToken: not-started`, at `apply_patch Add File /home/runner/work/_temp/audit-subagent-cba4b087e3b8-start.json`: patch rejected: writing is blocked by read-only sandbox; rejected by user approval settings; run token none, run file none, projection none; terminal condition `auditor dispatch returned a blocked diagnostic`.
 - Artifacts:
+  - `claude-standard`: [profile-probe.md](profiles/claude-standard/profile-probe.md), [loading.json](profiles/claude-standard/loading.json), [result.json](profiles/claude-standard/result.json)
+  - `claude-strong`: [profile-probe.md](profiles/claude-strong/profile-probe.md), [loading.json](profiles/claude-strong/loading.json), [result.json](profiles/claude-strong/result.json)
+  - `claude-thorough`: [profile-probe.md](profiles/claude-thorough/profile-probe.md), [loading.json](profiles/claude-thorough/loading.json), [result.json](profiles/claude-thorough/result.json)
+  - `claude-fast`: [profile-probe.md](profiles/claude-fast/profile-probe.md), [loading.json](profiles/claude-fast/loading.json), [result.json](profiles/claude-fast/result.json)
+  - `codex-standard`: [profile-probe.toml](profiles/codex-standard/profile-probe.toml), [loading.json](profiles/codex-standard/loading.json), [result.json](profiles/codex-standard/result.json)
+  - `codex-strong`: [profile-probe.toml](profiles/codex-strong/profile-probe.toml), [loading.json](profiles/codex-strong/loading.json), [result.json](profiles/codex-strong/result.json)
+  - `codex-thorough`: [profile-probe.toml](profiles/codex-thorough/profile-probe.toml), [loading.json](profiles/codex-thorough/loading.json), [result.json](profiles/codex-thorough/result.json)
+  - `codex-fast`: [profile-probe.toml](profiles/codex-fast/profile-probe.toml), [loading.json](profiles/codex-fast/loading.json), [result.json](profiles/codex-fast/result.json)
+  - `claude-skill-auditor`: [configuration.json](auditors/claude-skill-auditor/configuration.json), [loading.json](auditors/claude-skill-auditor/loading.json), [result.json](auditors/claude-skill-auditor/result.json)
+  - `claude-subagent-auditor`: [configuration.json](auditors/claude-subagent-auditor/configuration.json), [loading.json](auditors/claude-subagent-auditor/loading.json), [result.json](auditors/claude-subagent-auditor/result.json)
+  - `codex-skill-auditor`: [configuration.json](auditors/codex-skill-auditor/configuration.json), [loading.json](auditors/codex-skill-auditor/loading.json), [result.json](auditors/codex-skill-auditor/result.json)
+  - `codex-subagent-auditor`: [configuration.json](auditors/codex-subagent-auditor/configuration.json), [loading.json](auditors/codex-subagent-auditor/loading.json), [result.json](auditors/codex-subagent-auditor/result.json)
 
 ## Verdict
+
+- Passed: `claude-standard`, `claude-strong`, `claude-thorough`, `claude-fast`, `codex-standard`, `codex-strong`, `codex-thorough`, `codex-fast`. Each records one completed native child invocation under the configuration its configuration artifact records, and no terminal condition.
+- Failed: `claude-skill-auditor`, `claude-subagent-auditor`, `codex-skill-auditor`, `codex-subagent-auditor`. Each result records a blocked diagnostic and no completed dispatch. The two Claude Code auditors could not read the fixture outside the session's allowed working directory. The two Codex auditors could not write their start payload under the read-only sandbox.
 
 ## Limitations
 

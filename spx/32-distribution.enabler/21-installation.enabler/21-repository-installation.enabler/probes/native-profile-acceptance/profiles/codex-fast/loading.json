@@ -1,0 +1,7 @@
+{
+  "discovered": true,
+  "evidence": "/home/runner/work/plugins/plugins/native-acceptance/profiles/codex-fast/result.json",
+  "identifier": "codex-fast",
+  "materialized": true,
+  "native_definition_path": "/tmp/tmpk3wp0m38/codex-fast/codex/agents/profile-probe.toml"
+}

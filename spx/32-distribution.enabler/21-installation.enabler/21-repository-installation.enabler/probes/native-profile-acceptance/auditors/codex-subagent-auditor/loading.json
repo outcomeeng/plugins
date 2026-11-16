@@ -1,0 +1,6 @@
+{
+  "discovered": false,
+  "identifier": "codex-subagent-auditor",
+  "materialized": true,
+  "native_definition_path": "/tmp/tmpvmvl0p29/codex-subagent-auditor/codex/agents/instructions_subagent-auditor.toml"
+}
