@@ -243,3 +243,11 @@ Evidence: at head 1e709fbcdcf3d6f793730e4f394d2b48e91e4bbe, `outcomeeng_testing/
 Impact: one observation has two homes, so a change to how the header is derived edits two harnesses.
 
 Settlement condition: one harness module both nodes import, such as `outcomeeng_testing/harnesses/agent_tokens.py`, owns the traceback header, and neither node's harness defines its own copy.
+
+## The one-spec-per-node Conformance Assertion names no contract file
+
+Evidence: at `f83f39569`, `product-tree.md` (lines 33 to 35) declares `one-spec-per-node` under `### Conformance` and links `tests/test_product_tree.conformance.l1.py`. That test checks that every node directory holds its slug spec file, through `outcomeeng.product_tree_structure.node_spec_file`, and reads no contract file. The Node holds no `contracts/` directory. A Conformance Assertion checks one Node's output against a contract a file defines, and the Node that owns that contract keeps the file in its `contracts/` directory, where the Assertion links it.
+
+Impact: the row's type promises validation against a contract that no file states, so no reader or Verifier can check the test against a contract, and the Assertion's type does not match its Evidence.
+
+Settlement condition: the Node keeps the contract file in its `contracts/` directory and the row links it, or the row is retyped and its test carries the type of its new heading.
