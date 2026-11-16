@@ -42,7 +42,7 @@ CAN project the sealed journal into the surface they own without duplicating rev
   - Given `compute_diff.py --bundle-dir <dir>`
   - When it runs
   - Then it writes a caller-owned scratch review-input bundle outside the git worktree containing `diff.md` and `manifest.json`, and stdout reports the two paths plus the diff byte count and section count, so the reviewer can read the diff with random access while durable review state remains journal-only
-- start-pins-head:
+- [start-pins-head](tests/test_review_run_pinned_head.scenario.l1.py):
   - Given `SPX_VERIFY_HEAD_REF=FETCH_HEAD`, where `FETCH_HEAD` names a pull-request head one commit past `origin/<base>`, and a base fetch that rewrites `FETCH_HEAD` to the base tip
   - When `review_run.py start` runs
   - Then the run state's head identity is the pull-request head commit, and `changedFiles` lists exactly the paths that commit changes
@@ -203,7 +203,7 @@ Each review severity maps to one severity of the shared run-journal projection, 
 
 - [stale-base-relayed](tests/test_stale_base_relay.compliance.l1.py): ALWAYS: `review_run.py start` relays the shared resolver's stale-base refusal for a head behind the fetched `origin/<base>` tip — the dedicated exit code and the diagnostic, with no run state — before it opens a journal, so no review run records a tree that cannot merge
 - [unfetchable-base](tests/test_stale_base_relay.compliance.l1.py): ALWAYS: `review_run.py start` reports a base it cannot fetch or resolve as one stderr diagnostic line carrying git's own message and a nonzero exit, with no run state and no traceback
-- empty-scope-stops: NEVER: `review_run.py start` opens a review journal for a scope whose committed, staged, unstaged and untracked sections hold no changed path; it exits nonzero with one stderr diagnostic naming the base and head commit ids and returns no run state, so no review seals a verdict over an empty diff
+- [empty-scope-stops](tests/test_review_run_empty_scope.compliance.l1.py): NEVER: `review_run.py start` opens a review journal for a scope whose committed, staged, unstaged and untracked sections hold no changed path; it exits nonzero with one stderr diagnostic naming the base and head commit ids and returns no run state, so no review seals a verdict over an empty diff
 - [region-output-ordinary](tests/test_review_run_generated_extents.compliance.l2.py): NEVER: `review_run.py start` treats a region-bounded output of a relation — a `file` with `begin` and `end` markers — as a declared generated extent; the file stays an ordinary changed file that requires a scope-advanced event or an unread mark
 - [scratch-only-writes](tests/test_reviewing_changes.compliance.l1.py): ALWAYS: scripts under `plugins/product-tree/skills/review-changes/scripts/` write no durable review state directly; `compute_diff.py` writes only the caller-owned scratch review-input bundle files, and `review_run.py` writes and removes only runner-owned scratch state
 - [stdlib-only](tests/test_reviewing_changes.compliance.l1.py): NEVER: any script under `plugins/product-tree/skills/review-changes/scripts/` imports a third-party package, depends on `uv` at runtime, or imports any `outcomeeng_*` module — stdlib only per the Plugin Portability Constraints in `AGENTS.md`
