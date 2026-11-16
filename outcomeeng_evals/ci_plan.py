@@ -84,13 +84,18 @@ def build_ci_plan(
     return items
 
 
+PLAN_EVAL_TOML_FIELD = "eval_toml"
+PLAN_PLUGIN_DIR_FIELD = "plugin_dir"
+PLAN_CASE_IDS_FIELD = "case_ids"
+
+
 def plan_to_jsonable(items: list[EvalPlanItem]) -> list[dict[str, object]]:
     """Convert a plan to a JSON-serializable structure."""
     return [
         {
-            "eval_toml": str(item.eval_toml),
-            "plugin_dir": str(item.plugin_dir),
-            "case_ids": list(item.case_ids),
+            PLAN_EVAL_TOML_FIELD: str(item.eval_toml),
+            PLAN_PLUGIN_DIR_FIELD: str(item.plugin_dir),
+            PLAN_CASE_IDS_FIELD: list(item.case_ids),
         }
         for item in items
     ]

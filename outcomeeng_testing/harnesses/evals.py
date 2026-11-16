@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import tomllib
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -19,7 +20,12 @@ from outcomeeng_evals.ci_execution import (
     command_for_plan_item,
 )
 from outcomeeng_evals.ci_plan import EvalPlanItem
-from outcomeeng_evals.definition import load_definition
+from outcomeeng_evals.definition import (
+    OWNED_PATHS_FIELD,
+    EvalDefinition,
+    load_definition,
+)
+from outcomeeng_testing.harnesses.eval_setup import EvalHarnessSetupError
 from outcomeeng_testing.generators.evals import (
     ci_run_settings,
     eval_plan_items,
@@ -122,59 +128,71 @@ def write_eval_definition_with_owned_paths(
         'title = "probe"\n'
         'cases = "cases.jsonl"\n'
         'prompt = "prompt.md"\n'
-        f"owned_paths = [{entries}]\n",
+        f"{OWNED_PATHS_FIELD} = [{entries}]\n",
         encoding="utf-8",
     )
     return eval_toml
 
 
-def assert_owned_path_outside_the_alphabet_is_rejected() -> None:
-    """Assert the loader refuses any owned path outside the source alphabet.
+@dataclass(frozen=True)
+class OwnedPathLoad:
+    """What the real loader did with an eval definition declaring one owned path."""
 
-    The alphabet's complement is open, so the domain is searched rather than
-    enumerated: a hand-picked bag of globs proves nothing about the character
-    nobody thought to name.
+    definition: EvalDefinition | None
+    error: ValueError | None
+
+
+def observe_owned_path_load(owned_path: str) -> OwnedPathLoad:
+    """Load a real eval definition declaring ``owned_path`` and report the outcome.
+
+    A document the TOML parser rejects never reached the loader, so it raises a
+    setup error instead of reporting a loader outcome.
     """
 
-    configured = seed(OWNED_PATH_PROPERTY_SEED)(
-        settings(max_examples=OWNED_PATH_PROPERTY_EXAMPLES, deadline=None)(
-            given(owned_path=owned_paths_violating_alphabet())(
-                _assert_owned_path_rejected
-            )
-        )
-    )
-
-    try:
-        configured()
-    except AssertionError as error:
-        error.add_note(f"Hypothesis seed: {OWNED_PATH_PROPERTY_SEED}")
-        error.add_note(
-            f"Replay path: {DEFINITION_PROPERTY_TEST_PATH}"
-            "test_owned_path_outside_the_alphabet_is_rejected"
-        )
-        raise
-
-
-def _assert_owned_path_rejected(owned_path: str) -> None:
     with TemporaryDirectory() as tmp:
         eval_toml = write_eval_definition_with_owned_paths(Path(tmp), (owned_path,))
-
         try:
-            load_definition(eval_toml)
+            return OwnedPathLoad(definition=load_definition(eval_toml), error=None)
         except tomllib.TOMLDecodeError as error:
-            # A transport failure, not a verdict: the path never reached the
-            # loader, so this run proves nothing about the assertion.
-            raise AssertionError(
-                f"owned path {owned_path!r} never reached the loader — the "
+            raise EvalHarnessSetupError(
+                f"owned path {owned_path!r} never reached the loader; the "
                 f"probe document is malformed: {error}"
             ) from error
         except ValueError as error:
-            assert "owned_paths" in str(error)
-        else:
-            raise AssertionError(
-                f"owned path {owned_path!r} carries a character outside the "
-                f"alphabet and was accepted"
+            return OwnedPathLoad(definition=None, error=error)
+
+
+def owned_path_property(
+    *,
+    replay_test_name: str,
+) -> Callable[[Callable[[str], None]], Callable[[], None]]:
+    """Run the owned-path invariant over the alphabet's open complement.
+
+    The alphabet's complement is open, so the domain is searched rather than
+    enumerated. Failure output carries the seed and the replay path.
+    """
+
+    replay_path = f"{DEFINITION_PROPERTY_TEST_PATH}{replay_test_name}"
+
+    def decorator(test_func: Callable[[str], None]) -> Callable[[], None]:
+        configured = seed(OWNED_PATH_PROPERTY_SEED)(
+            settings(max_examples=OWNED_PATH_PROPERTY_EXAMPLES, deadline=None)(
+                given(owned_path=owned_paths_violating_alphabet())(test_func)
             )
+        )
+
+        def wrapper() -> None:
+            try:
+                configured()
+            except AssertionError as error:
+                error.add_note(f"Hypothesis seed: {OWNED_PATH_PROPERTY_SEED}")
+                error.add_note(f"Replay path: {replay_path}")
+                raise
+
+        wrapper.__name__ = replay_test_name
+        return wrapper
+
+    return decorator
 
 
 def assert_plan_items_map_to_run_commands_with_settings_and_case_selectors() -> None:

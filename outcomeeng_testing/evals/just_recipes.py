@@ -9,162 +9,20 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from outcomeeng_evals.settings import (
-    DEFAULT_MAX_BUDGET_USD_TEXT,
-    DEFAULT_TIMEOUT_SECONDS_TEXT,
-)
-from outcomeeng_testing.harnesses.eval_workspaces import (
-    temporary_workspace,
-    with_temp_workspace,
-    with_temp_workspace_under,
-)
+from outcomeeng_testing.harnesses.eval_workspaces import temporary_workspace
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PRODUCER_FIXTURE_SECTION = "pr_wait_and_reentry_policy"
+RECIPE_COMMAND_BANNER = "Running:"
+SUITE_PASS_LINE = "suite pass_rate=100.00%"
 
 
-@with_temp_workspace
-def assert_eval_recipe_runs_suite_with_toml_plugin_dir(tmp_path: Path) -> None:
-    eval_toml, plugin_dir, fake_claude = write_eval_fixture(tmp_path)
+@dataclass(frozen=True)
+class CheckRecipeObservation:
+    """Observed outcome of the drift-check recipe over a materialized prompt."""
 
-    completed = run_just_eval(
-        tmp_path,
-        fake_claude,
-        "eval",
-        str(eval_toml),
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert "uv run outcomeeng-evals run" in completed.stdout
-    assert f"--plugin-dir {plugin_dir}" in completed.stdout
-    assert "--workers 1" in completed.stdout
-    assert f"--max-budget-usd {DEFAULT_MAX_BUDGET_USD_TEXT}" in completed.stdout
-    assert "--model sonnet" in completed.stdout
-    assert f"--timeout-seconds {DEFAULT_TIMEOUT_SECONDS_TEXT}" in completed.stdout
-    assert "--case-id" not in completed.stdout
-    assert "suite pass_rate=100.00%" in completed.stdout
-    assert_printed_command_precedes_suite_result(completed)
-
-
-@with_temp_workspace
-def assert_eval_case_recipe_runs_selected_case_with_toml_plugin_dir(
-    tmp_path: Path,
-) -> None:
-    eval_toml, plugin_dir, fake_claude = write_eval_fixture(tmp_path)
-
-    completed = run_just_eval(
-        tmp_path,
-        fake_claude,
-        "eval-case",
-        str(eval_toml),
-        "case-pass",
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert "uv run outcomeeng-evals run" in completed.stdout
-    assert f"--plugin-dir {plugin_dir}" in completed.stdout
-    assert "--workers 1" in completed.stdout
-    assert f"--max-budget-usd {DEFAULT_MAX_BUDGET_USD_TEXT}" in completed.stdout
-    assert "--model sonnet" in completed.stdout
-    assert f"--timeout-seconds {DEFAULT_TIMEOUT_SECONDS_TEXT}" in completed.stdout
-    assert "--case-id case-pass" in completed.stdout
-    assert "suite pass_rate=100.00%" in completed.stdout
-    assert_printed_command_precedes_suite_result(completed)
-
-
-@with_temp_workspace
-def assert_eval_recipe_uses_plugin_dir_env_override(tmp_path: Path) -> None:
-    eval_toml, plugin_dir, fake_claude = write_eval_fixture(tmp_path)
-    override_plugin_dir = tmp_path / "override-plugin"
-    override_plugin_dir.mkdir()
-
-    completed = run_just_eval(
-        tmp_path,
-        fake_claude,
-        "eval",
-        str(eval_toml),
-        env_overrides={"PLUGIN_DIR": str(override_plugin_dir)},
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert f"--plugin-dir {override_plugin_dir}" in completed.stdout
-    assert f"--plugin-dir {plugin_dir}" not in completed.stdout
-    assert "suite pass_rate=100.00%" in completed.stdout
-    assert_printed_command_precedes_suite_result(completed)
-
-
-@with_temp_workspace
-def assert_eval_recipe_uses_model_env_override(tmp_path: Path) -> None:
-    eval_toml, _plugin_dir, fake_claude = write_eval_fixture(tmp_path)
-
-    completed = run_just_eval(
-        tmp_path,
-        fake_claude,
-        "eval",
-        str(eval_toml),
-        env_overrides={"EVAL_MODEL": "claude-sonnet-4-5"},
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert "--model claude-sonnet-4-5" in completed.stdout
-    assert "suite pass_rate=100.00%" in completed.stdout
-    assert_printed_command_precedes_suite_result(completed)
-
-
-@with_temp_workspace
-def assert_eval_case_recipe_uses_model_env_override(tmp_path: Path) -> None:
-    eval_toml, _plugin_dir, fake_claude = write_eval_fixture(tmp_path)
-
-    completed = run_just_eval(
-        tmp_path,
-        fake_claude,
-        "eval-case",
-        str(eval_toml),
-        "case-pass",
-        env_overrides={"EVAL_MODEL": "claude-sonnet-4-5"},
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert "--model claude-sonnet-4-5" in completed.stdout
-    assert "--case-id case-pass" in completed.stdout
-    assert "suite pass_rate=100.00%" in completed.stdout
-    assert_printed_command_precedes_suite_result(completed)
-
-
-@with_temp_workspace
-def assert_eval_node_recipe_runs_all_node_evals_serially(tmp_path: Path) -> None:
-    plugin_dir = tmp_path / "plugin"
-    plugin_dir.mkdir()
-    node_dir = tmp_path / "node"
-    alpha_eval_toml = write_eval_suite(
-        node_dir,
-        plugin_dir,
-        suite_name="alpha",
-        case_id="case-alpha",
-    )
-    beta_eval_toml = write_eval_suite(
-        node_dir,
-        plugin_dir,
-        suite_name="beta",
-        case_id="case-beta",
-    )
-    fake_claude = write_fake_claude(tmp_path)
-    eval_tomls = (alpha_eval_toml, beta_eval_toml)
-
-    completed = run_just_eval(
-        tmp_path,
-        fake_claude,
-        "eval-node",
-        str(node_dir),
-    )
-
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert "uv run outcomeeng-evals run" in completed.stdout
-    assert completed.stdout.count("suite pass_rate=100.00%") == len(eval_tomls)
-    assert completed.stdout.index(str(alpha_eval_toml)) < completed.stdout.index(
-        str(beta_eval_toml)
-    )
-    assert_printed_command_precedes_suite_result(completed)
+    completed: subprocess.CompletedProcess[str]
+    prompt_path: Path
 
 
 @dataclass(frozen=True)
@@ -196,27 +54,26 @@ def observe_eval_materialize_prompts_recipe() -> MaterializePromptsObservation:
         )
 
 
-@with_temp_workspace_under(REPO_ROOT)
-def assert_eval_materialize_prompts_check_recipe_accepts_current_prompt(
-    tmp_path: Path,
-) -> None:
-    eval_root, prompt_path = write_producer_prompt_fixture(tmp_path)
-    run_just_eval(
-        tmp_path,
-        write_fake_claude(tmp_path),
-        "eval-materialize-prompts",
-        str(eval_root),
-    )
+def materialize_prompts_then_check() -> CheckRecipeObservation:
+    """Materialize a producer prompt, then run the drift-check recipe over it."""
 
-    completed = run_just_eval(
-        tmp_path,
-        write_fake_claude(tmp_path),
-        "eval-materialize-prompts-check",
-        str(eval_root),
-    )
+    with temporary_workspace(REPO_ROOT) as tmp_path:
+        eval_root, prompt_path = write_producer_prompt_fixture(tmp_path)
+        run_just_eval(
+            tmp_path,
+            write_fake_claude(tmp_path),
+            "eval-materialize-prompts",
+            str(eval_root),
+        )
 
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert f"checked: {prompt_path.resolve()}" in completed.stdout
+        completed = run_just_eval(
+            tmp_path,
+            write_fake_claude(tmp_path),
+            "eval-materialize-prompts-check",
+            str(eval_root),
+        )
+
+        return CheckRecipeObservation(completed=completed, prompt_path=prompt_path)
 
 
 def run_just_eval(
@@ -238,14 +95,6 @@ def run_just_eval(
         text=True,
         check=False,
         timeout=90,
-    )
-
-
-def assert_printed_command_precedes_suite_result(
-    completed: subprocess.CompletedProcess[str],
-) -> None:
-    assert completed.stdout.index("Running:") < completed.stdout.index(
-        "suite pass_rate=100.00%"
     )
 
 

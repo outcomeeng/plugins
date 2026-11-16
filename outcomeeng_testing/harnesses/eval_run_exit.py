@@ -23,6 +23,7 @@ from outcomeeng_evals.cli.commands.run import (
 from outcomeeng_evals.runner import ModelRunner
 from outcomeeng_evals.settings import DEFAULT_MAX_BUDGET_USD, DEFAULT_TIMEOUT_SECONDS
 from outcomeeng_testing.evals.fakes import StubModelRunner
+from outcomeeng_testing.harnesses.eval_setup import EvalHarnessSetupError
 
 _FIXTURE_ROOT = Path(__file__).parents[1] / "fixtures/evals/run_exit"
 NON_DEFAULT_MAX_BUDGET_USD = DEFAULT_MAX_BUDGET_USD * 2
@@ -38,7 +39,17 @@ class ConfiguredRunArtifacts:
     timeout_seconds: int
 
 
-def assert_run_command_exit_follows_definition_threshold() -> None:
+@dataclass(frozen=True)
+class ThresholdExitObservations:
+    """Exit codes the real run command returned for each fixture run."""
+
+    passing: int
+    failing: int
+    default_rejects_configured_boundary: int
+    default_passing: int
+
+
+def observe_run_command_exits() -> ThresholdExitObservations:
     """Drive the real command against passing and below-threshold fixture runs."""
 
     responses = _load_responses()
@@ -49,27 +60,24 @@ def assert_run_command_exit_follows_definition_threshold() -> None:
         plugin_dir = workspace / "plugin"
         plugin_dir.mkdir()
 
-        passing = _invoke(
-            eval_dir / "eval.toml", plugin_dir, iter(responses["passing"])
+        return ThresholdExitObservations(
+            passing=_invoke(
+                eval_dir / "eval.toml", plugin_dir, iter(responses["passing"])
+            ),
+            failing=_invoke(
+                eval_dir / "eval.toml", plugin_dir, iter(responses["failing"])
+            ),
+            default_rejects_configured_boundary=_invoke(
+                eval_dir / "eval_default.toml",
+                plugin_dir,
+                iter(responses["passing"]),
+            ),
+            default_passing=_invoke(
+                eval_dir / "eval_default.toml",
+                plugin_dir,
+                iter(responses["all_passing"]),
+            ),
         )
-        failing = _invoke(
-            eval_dir / "eval.toml", plugin_dir, iter(responses["failing"])
-        )
-        default_rejects_configured_boundary = _invoke(
-            eval_dir / "eval_default.toml",
-            plugin_dir,
-            iter(responses["passing"]),
-        )
-        default_passing = _invoke(
-            eval_dir / "eval_default.toml",
-            plugin_dir,
-            iter(responses["all_passing"]),
-        )
-
-    assert passing == EXIT_SUCCESS
-    assert failing != EXIT_SUCCESS
-    assert default_rejects_configured_boundary != EXIT_SUCCESS
-    assert default_passing == EXIT_SUCCESS
 
 
 @contextmanager
@@ -87,7 +95,10 @@ def configured_threshold_run() -> Iterator[Path]:
         exit_code = _invoke(
             eval_dir / "eval.toml", plugin_dir, iter(responses["passing"])
         )
-        assert exit_code == EXIT_SUCCESS
+        if exit_code != EXIT_SUCCESS:
+            raise EvalHarnessSetupError(
+                f"configured run exited {exit_code}, expected {EXIT_SUCCESS}"
+            )
         yield eval_dir
 
 
@@ -110,7 +121,10 @@ def configured_ceiling_run() -> Iterator[ConfiguredRunArtifacts]:
             max_budget_usd=NON_DEFAULT_MAX_BUDGET_USD,
             timeout_seconds=NON_DEFAULT_TIMEOUT_SECONDS,
         )
-        assert exit_code == EXIT_SUCCESS
+        if exit_code != EXIT_SUCCESS:
+            raise EvalHarnessSetupError(
+                f"configured run exited {exit_code}, expected {EXIT_SUCCESS}"
+            )
         yield ConfiguredRunArtifacts(
             eval_dir=eval_dir,
             max_budget_usd=NON_DEFAULT_MAX_BUDGET_USD,

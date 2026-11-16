@@ -44,7 +44,7 @@ _OPTIONAL_THRESHOLD = "threshold"
 _OPTIONAL_TRIALS = "trials"
 _OPTIONAL_PLUGIN_DIR = "plugin_dir"
 _OPTIONAL_MODEL = "model"
-_OPTIONAL_OWNED_PATHS = "owned_paths"
+OWNED_PATHS_FIELD = "owned_paths"
 _OPTIONAL_SMOKE_CASES = "smoke_cases"
 _OPTIONAL_CI_POLICY = "ci_policy"
 _INHERIT_MODEL = "inherit"
@@ -112,7 +112,7 @@ def load_definition(toml_path: Path) -> EvalDefinition:
     )
     plugin_dir = _optional_path(raw, _OPTIONAL_PLUGIN_DIR)
     model = _optional_model(raw, _OPTIONAL_MODEL)
-    owned_paths = _optional_owned_paths(raw, _OPTIONAL_OWNED_PATHS)
+    owned_paths = _optional_owned_paths(raw, OWNED_PATHS_FIELD)
     smoke_case_ids = _optional_str_tuple(raw, _OPTIONAL_SMOKE_CASES)
     ci_policy = _optional_ci_policy(raw, _OPTIONAL_CI_POLICY)
 

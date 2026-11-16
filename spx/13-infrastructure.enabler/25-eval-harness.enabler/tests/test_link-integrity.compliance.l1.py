@@ -1,4 +1,4 @@
-"""Conformance tests for the evidence-link-integrity walker."""
+"""Compliance evidence for the evidence-link-integrity walker."""
 
 from __future__ import annotations
 
