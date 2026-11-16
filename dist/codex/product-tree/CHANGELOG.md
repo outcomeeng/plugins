@@ -12,6 +12,12 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ## 0.115.1
 
+### Changed
+
+- **`/test` reads a spec's test work from its `Test.` headings and writes each row in the 4.0 form.** It takes the rows under a `Test.Scenario`, `Test.Conformance`, `Test.Property`, or `Test.Compliance` heading, the rows in a `Test.Mapping:` subsection, and the rows whose slugs its invocation supplies, and reads no `[test]` tag. The optional second argument is now a JSON array of assertion slugs rather than assertion texts. It writes each Assertion it types under the group heading that names its assertion type, or as its own `Test.Mapping:` subsection, opening the row with its slug and carrying no tag. Once it writes a test file, the row's slug links that file, and the assertion type in the file's name matches the type the heading names. For a decision target, it places each test rule under the heading or `Test.Mapping:` subsection that names its assertion type and writes no assertion-type tag and no evidence link. Before this change, `/test` selected work by `[test]` tag or by assertion text, appended `([test](path))` to a row, and tagged each decision `### Testing` rule with its assertion type.
+
+## 0.115.1
+
 ### Fixed
 
 - **A review of a pull request reviews that pull request's head.** `review_run.py start` and the committed-scope resolver of `/scope-changeset` resolve the head to a full commit id before they fetch the base, and every later read uses that id. Before this change, the base fetch rewrote `FETCH_HEAD`, so the `changes-reviewer` agent's pull request form, which names the head as `FETCH_HEAD`, reviewed the base tip instead of the pull request head.
