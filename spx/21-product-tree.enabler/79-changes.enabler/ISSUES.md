@@ -39,3 +39,11 @@
 **Impact.** A replacement that drops a Base rule can reach Applicable through an audit that finds nothing. The rule then leaves the spec without the Operator's review, and only a later review of the Changeset can catch it.
 
 **Settlement condition.** Before Applicable, the audit compares every Base row of a replaced spec with the replacement and reports each row the replacement drops without the Statement of Intent naming it.
+
+## The form check admits a stale Base on a publish that writes the body
+
+**Evidence.** `check_base` in `src/plugins/product-tree/skills/change-standards/scripts/form_check.py`, from line 386 at commit `add4b16d6d1b93de125b60e66fafe1a3e5459eca`, requires only that `base` be a 40-hex commit that is an ancestor of the default branch, through `git merge-base --is-ancestor`. It never compares `base` with the default branch's head. `draft-base` in [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) makes the base of a Draft of a Leaf name the head of the default branch against which the Refiner wrote its Declarations. Methodology 4.0, `change-graph/record.md`, makes `base` name the head of the default branch at the latest publish that writes the body of a Leaf. On 2026-11-16 the form check of product-tree 0.115.3, at `add4b16d6`, passed a Draft of a Leaf with `base: 53cb23366a1f740aaeb78c07bd698b6641369759`, run with `--read-edited-at 2026-11-16T01:57:37Z` against that Leaf's stored record, while the default branch's head was `add4b16d6d1b93de125b60e66fafe1a3e5459eca`.
+
+**Impact.** A publish that writes the body can record a Base older than the default branch's head. Every later review and audit then judges the Declarations against a commit that is no longer the head they were written against.
+
+**Settlement condition.** The form check reports `draft-base` on a publish that writes the body when its `base` differs from the head of the fetched default branch, and admits it when the two agree.
