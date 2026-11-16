@@ -10,6 +10,13 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.3
+
+### Changed
+
+- **`/verify` reads a decision rule's verification type from the heading it stands under and writes no tag.** A decision rule's current verification type comes from its group heading, `Test.Scenario`, `Test.Conformance`, `Test.Property`, `Test.Compliance`, or `Audit`, or from its own `Test.Mapping:` or `Evaluate:` subsection. A decision rule that carries a tag returns `blocked` with reason `unsupported-tag-shape`, with no selected verification type, specialist, or evidence shape. A routed decision rule moves under the group heading of its selected verification type, or into its own `Test.Mapping:` or `Evaluate:` subsection, and carries no tag; that move is the rule's provisional placement, restored when the route ends other than `routed`. Before this change, `/verify` read the type from a `### Testing`, `### Eval`, or `### Audit` subsection and its tag, accepted a tagged rule that matched that grammar, and wrote the subsection's tag on each routed rule.
+- **`/verify` preserves a decision rule's eval requirement in its `Evaluate:` subsection.** Before this change, it preserved the requirement under `### Eval`.
+
 ## 0.115.2
 
 ### Changed

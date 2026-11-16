@@ -41,6 +41,8 @@ CAN route every assertion to test, evaluate, probe, or audit before a specialist
 
 ### Audit: routing workflow
 
+- decision-rule-headings: `/verify` takes a decision rule's current verification type from the group heading it stands under, `Test.Scenario`, `Test.Conformance`, `Test.Property`, `Test.Compliance` or `Audit`, or from its own `Test.Mapping:` or `Evaluate:` subsection, reads no tag on the rule, and blocks a decision rule that carries a tag with reason `unsupported-tag-shape`.
+- decision-rule-placement: `/verify` moves a decision rule it routes under the group heading of the selected verification type, or into its own `Test.Mapping:` or `Evaluate:` subsection, and writes no tag on it; that move is the rule's provisional placement.
 - keeps-change-heading: `/verify` routes an Assertion under the group heading its Change states and writes no tag; the Assertion's slug gains its evidence link only once that evidence exists.
 - typing-after-selection: Test assertion typing occurs only after test is selected; a test assertion type chosen before the verification type fails the audit.
 - invoked-for-selection: Every workflow that delegates verification-type selection invokes `/verify` rather than a type-specific specialist.
