@@ -124,7 +124,9 @@ def test_every_auditor_row_launches_with_its_fixture_committed_as_the_one_change
             )
 
 
-def test_a_profile_row_whose_parent_stream_shows_no_child_execution_is_failed() -> None:
+def test_a_profile_row_whose_parent_stream_shows_no_child_execution_records_its_terminal_condition() -> (
+    None
+):
     with native_profile_launch({SELECTED}, ParentStream.SILENT) as observation:
         assert {item.observation.row.target for item in observation.rows} == set(Target)
         for item in observation.rows:
@@ -137,7 +139,7 @@ def test_a_profile_row_whose_parent_stream_shows_no_child_execution_is_failed() 
             ), row.identifier
 
 
-def test_a_claude_profile_row_whose_parent_forwards_one_child_execution_is_not_failed() -> (
+def test_a_claude_profile_row_whose_parent_forwards_one_child_execution_records_no_terminal_condition() -> (
     None
 ):
     with native_profile_launch({SELECTED}, ParentStream.FORWARDED_CHILD) as observation:
@@ -169,7 +171,9 @@ def test_a_claude_profile_row_whose_parent_forwards_one_child_execution_is_not_f
             }, row.identifier
 
 
-def test_an_auditor_row_whose_dispatch_returns_a_blocked_diagnostic_is_failed() -> None:
+def test_an_auditor_row_whose_dispatch_returns_a_blocked_diagnostic_records_its_terminal_condition() -> (
+    None
+):
     with native_auditor_launch(
         {SELECTED}, returned=LaunchReturn.BLOCKED
     ) as observation:
@@ -186,7 +190,9 @@ def test_an_auditor_row_whose_dispatch_returns_a_blocked_diagnostic_is_failed() 
             ), row.identifier
 
 
-def test_an_auditor_row_whose_dispatch_returns_no_run_token_is_failed() -> None:
+def test_an_auditor_row_whose_dispatch_returns_no_run_token_records_its_terminal_condition() -> (
+    None
+):
     with native_auditor_launch(
         {SELECTED}, returned=LaunchReturn.UNSTRUCTURED
     ) as observation:
@@ -199,7 +205,9 @@ def test_an_auditor_row_whose_dispatch_returns_no_run_token_is_failed() -> None:
             assert result[RESULT_BLOCKED_KEY] is False, row.identifier
 
 
-def test_an_auditor_row_whose_dispatch_returns_a_run_token_is_not_failed() -> None:
+def test_an_auditor_row_whose_dispatch_returns_a_run_token_records_no_terminal_condition() -> (
+    None
+):
     with native_auditor_launch(
         {SELECTED}, returned=LaunchReturn.RUN_TOKEN
     ) as observation:

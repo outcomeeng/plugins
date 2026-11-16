@@ -298,7 +298,7 @@ Every pair of an auditor the marketplace ships for dispatch and a supported harn
 - [auditor-row-producer](tests/test_native_auditor_dispatch.compliance.l1.py): ALWAYS: for every auditor-dispatch row, the producer materializes the shipped auditor definition in a disposable state root, retains configuration, loading, and result artifacts, passes only the selected harness credential, and invokes its native dispatch exactly once; a failed row records its terminal condition without a retry, credential fallback, definition substitution, or alternate launch.
 - [codex-probe-names](tests/test_native_acceptance_harness.compliance.l1.py): ALWAYS: every native-profile probe definition the native acceptance harness launches on Codex is named with only lowercase letters, digits, and underscores, and every auditor-dispatch row launches its shipped auditor by its unchanged native selector.
 - [auditor-fixture-repository](tests/test_native_acceptance_harness.compliance.l1.py): ALWAYS: the auditor-dispatch harness supplies each row's fixture inside a git repository, so the dispatched auditor resolves the fixture's checkout.
-- [unusable-row-fails](tests/test_native_acceptance_harness.compliance.l1.py): ALWAYS: the native acceptance harness records a profile row as failed when its result shows no child execution, and an auditor-dispatch row as failed when its result is a blocked diagnostic or carries no run token.
+- [unusable-row-fails](tests/test_native_acceptance_harness.compliance.l1.py): ALWAYS: the native acceptance harness records a row's terminal condition as the row's result, without a verdict: no child execution for a profile row, and a blocked diagnostic or a result without a run token for an auditor-dispatch row.
 
 ### Probe: release acceptance
 
