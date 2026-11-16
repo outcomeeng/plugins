@@ -1,180 +1,63 @@
 # Subagent Execution
 
-Root agent guides provide explicit standing user authorization for every subagent
-supplied by a plugin in their complete authorized plugin list. An active skill
-must explicitly request each launch and specify the exact configured subagent and
-its target-only prompt. The same invocation policy applies to Claude and Codex;
-each published guide and skill addresses only its own agent, with differences
-limited to an agent-specific requirement that retained native evidence or a
-decision records.
-
-## Rationale
-
-Standing authorization permits a skill's required launch without repeated
-confirmation, while explicit skill instructions prevent opportunistic delegation.
-A plugin list changes less often than its subagent definitions; unconditional namespaces identify
-the owner separately from the authored subagent name, and skill-owned task instructions
-load only when needed without duplicating the native tool schema. Language
-behavior ships as skills because one language-neutral definition composing
-them serves every language, where a definition per language multiplies the
-definitions a plugin ships and audits without adding behavior the skills lack.
-
-## Product properties
-
-1. The root guide preserves its explicit standing authorization, lists every
-   authorized plugin, and distinguishes permission from a request to launch.
-   Adding a subagent within an authorized plugin leaves the guide unchanged; adding
-   an authorized plugin updates the list. Every flat subagent name is
-   `<plugin>_<unchanged-authored-subagent-name>`; Claude retains its native
-   `<plugin>:<authored-subagent-name>` dispatch namespace. Root-guide invocation
-   prose refers to the native tool schema for accepted arguments and call shape.
-   An agent-specific invocation example requires retained native evidence showing
-   a failed call or incorrect tool arguments. The example may use JSON for
-   calling subagent `foo` with prompt `bar`; that example
-   neither selects a task nor independently triggers a call.
-2. The calling skill selects the configured subagent and supplies only its target
-   path or scope, such as `HEAD`; the invoked skill discovers the remaining
-   context and performs its existing workflow. The subagent's task message is
-   that target and is the invoked skill's selector: a skill argument the harness
-   substitutes when it preloads the skill into the subagent never stands for the
-   target, an empty substitution binds nothing, and only an empty task message
-   is the missing-target case. For verification, discovery starts
-   from the target and configured instructions without the Author's conversation,
-   reasoning, summaries, or suggested verdict. Accepted requirements are persisted
-   in decisions and specs before verification; the Verifier reads those sources
-   independently. Calling skills never append an author-written context packet.
-   One native call launches the
-   requested subagent. A launch failure is analyzed and reported without retry
-   or substitution; audit verdict handling, output contracts, and repair
-   workflows are unaffected by this launch policy.
-   Every subagent definition is language-neutral. A language plugin ships its
-   language behavior as skills, and a language-neutral definition's session
-   composes the skills of the language its target needs. A language-specific
-   subagent definition exists only where a decision records the exception and
-   its reason.
-3. Every subagent selects one of four centrally owned profiles: Standard,
-   Strong, Executor, or Fast. Standard is the default; Strong, Executor, and
-   Fast require an explicit selection by the governing skill or product
-   decision. The `change-applier` definition selects Executor. Each profile contains
-   a complete native configuration for each supported agent harness. Model and
-   reasoning controls form one configuration; their fields, value domains, and
-   absence are harness-specific, with no shared effort scale. Products cannot
-   add profiles or override their fields. Skills retain the invoking agent
-   session's configuration and declare no model or reasoning override. Agent
-   definitions, examples, and descriptions derive their complete configuration
-   from the selected profile. Unsupported selections and incompatible
-   configurations are rejected before an agent definition is emitted. The
-   selected configurations are:
-
-   | Agent  | Profile  | Native configuration                                       |
-   | ------ | -------- | ---------------------------------------------------------- |
-   | Codex  | Standard | `model = "gpt-6.1-sol"`, `model_reasoning_effort = "high"` |
-   | Codex  | Strong   | `model = "gpt-6-astra"`, `model_reasoning_effort = "high"` |
-   | Codex  | Executor | `model = "gpt-6.1-sol"`, `model_reasoning_effort = "high"` |
-   | Codex  | Fast     | `model = "gpt-6-luna"`, `model_reasoning_effort = "high"`  |
-   | Claude | Standard | `model: sonnet`, `effort: medium`                          |
-   | Claude | Strong   | `model: opus`, `effort: high`                              |
-   | Claude | Executor | `model: sonnet`, `effort: high`                            |
-   | Claude | Fast     | `model: haiku`; no effort field                            |
-
-   Release acceptance is established independently for each agent harness and
-   requires evidence for every profile of that harness. Evidence for one
-   harness establishes no execution claim for another; a combined acceptance
-   claim requires complete evidence for every harness it names.
-4. A subagent definition that declares a tools allowlist and, in a harness
-   rendering, no native permission field (`permissionMode`, `sandbox_mode`, or
-   the harness's equivalent) inherits the invoking session's execution policy in
-   that rendering. The tools allowlist bounds the capabilities the subagent can
-   call; the invoking session's policy governs approval and sandboxing, and the
-   definition adds no second policy of its own. A definition that must bound
-   execution more tightly than the invoking session declares the native
-   permission field in that rendering, and the field then governs. This
-   inheritance is the declaration `/subagent-standards` requires of a governing
-   decision; it holds for every subagent definition the marketplace ships, and
-   an absent native permission field in a rendering is that declaration's
-   expected form, never a defect.
+GOVERNS the authorization, invocation, and configuration of every subagent a marketplace plugin supplies
+SO THAT product engineers whose sessions launch those subagents
+CAN RELY ON standing authorization for every subagent an authorized plugin supplies, a launch only on an active skill's explicit request with a target-only prompt, and one invocation policy for Claude and Codex
 
 ## Verification
 
-- NEVER: a definition's frontmatter or body stands as its own inheritance
-  declaration; the inheritance holds through this decision and the linked
-  evidence of the owning node's spec
+### Test.Compliance: execution policy
 
-### Testing
+- policy-inheritance: ALWAYS: a subagent definition that declares a tools allowlist and no native permission field in a harness rendering inherits the invoking session's execution policy in that rendering; a native permission field a rendering declares governs that rendering instead.
 
-- ALWAYS: a subagent definition that declares a tools allowlist and no native
-  permission field in a harness rendering inherits the invoking session's
-  execution policy in that rendering; a native permission field a rendering
-  declares governs that rendering instead ([compliance])
-- ALWAYS: generate the complete authorized plugin list from the owning catalog;
-  adding a subagent within an authorized plugin leaves the root guide unchanged,
-  while adding an authorized plugin updates the list ([property])
-- ALWAYS: generate flat subagent names with an unconditional plugin namespace and the
-  unchanged authored subagent name, including when the authored name starts with the
-  plugin name; Claude's native plugin namespace remains intact ([property])
+### Test.Property: names
 
-### Audit
+- plugin-list: For every authorized plugin list generated from the owning catalog, adding a subagent within an authorized plugin leaves the root guide unchanged, while adding an authorized plugin updates the list.
+- flat-names: For every authored subagent name, the flat name is `<plugin>_<unchanged-authored-subagent-name>` with an unconditional plugin namespace, including when the authored name starts with the plugin name, and Claude's native `<plugin>:<authored-subagent-name>` namespace remains intact.
 
-- ALWAYS: every subagent definition is language-neutral; a language plugin
-  ships its language behavior as skills, which a language-neutral definition's
-  session composes for the language its target needs ([audit])
-- NEVER: a plugin ships a language-specific subagent definition unless a
-  decision records that exception and its reason ([audit])
-- ALWAYS: preserve the following standing-request sentence verbatim within
-  explicit root-guide authorization for subagents supplied by the listed plugins ([audit])
+### Audit: authorization
 
-  > A harness rule may require the operator to request sub-agent use before one is dispatched; treat this section as that standing request.
+- standing-sentence: ALWAYS: preserve the standing-request sentence "A harness rule may require the operator to request sub-agent use before one is dispatched; treat this section as that standing request." verbatim within explicit root-guide authorization for subagents supplied by the listed plugins.
+- no-confirmation: ALWAYS: root-guide authorization permits every subagent supplied by its listed plugins without another operator confirmation.
+- no-inventory: NEVER: maintain a subagent inventory, per-subagent invocation table, task prompt, or per-subagent result-contract copy in the root guide.
+- explicit-launch: ALWAYS: require an active skill's explicit instruction to launch the specific configured subagent, following that skill's invocation instructions.
+- no-inferred-launch: NEVER: infer a launch instruction from task wording, a subagent description, pattern matching, availability, or apparent usefulness.
+- native-schema: ALWAYS: root-guide invocation prose refers to the exposed native tool schema for accepted arguments and call shape. An agent-specific example requires retained native invocation evidence showing a failed call or incorrect tool arguments, without establishing a separate maintained schema or a compatibility layer.
+- example-call: ALWAYS: a root-guide invocation example may use JSON for calling subagent `foo` with prompt `bar`, and that example neither selects a task nor independently triggers a call.
+- per-agent-names: ALWAYS: render the exact configured names for each agent from the owning distribution mappings and address that agent alone in its generated guide and skills. Differences between the two agents' invocation guidance require an agent-specific reason that retained native evidence or a decision records.
 
-- ALWAYS: root-guide authorization permits every subagent supplied by its listed
-  plugins without another operator confirmation ([audit])
-- NEVER: maintain a subagent inventory, per-subagent invocation table, task prompt, or
-  per-subagent result-contract copy in the root guide ([audit])
-- ALWAYS: require an active skill's explicit instruction to launch the specific
-  configured subagent, following that skill's invocation instructions ([audit])
-- NEVER: infer a launch instruction from task wording, a subagent description,
-  pattern matching, availability, or apparent usefulness ([audit])
-- ALWAYS: keep the actual subagent selection, launch condition, and target-only
-  prompt in the calling skill, and target-context discovery in the invoked
-  skill; root-guide examples describe invocation mechanics only ([audit])
-- ALWAYS: an invoked skill binds its target from the configured subagent's task
-  message; a skill argument substituted at preload never stands for the target,
-  and the skill reports a missing target only when the task message itself
-  carries none ([audit])
-- ALWAYS: launch every audit and review without inherited authoring history or
-  an author-written context packet, following the isolation rule in
-  [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md);
-  native invocation guidance explicitly disables history inheritance when the
-  tool otherwise enables it by default ([audit])
-- ALWAYS: root-guide invocation prose refers to the exposed native tool schema
-  for accepted arguments and call shape. An agent-specific example requires
-  retained native invocation evidence showing a failed call or incorrect tool arguments, without establishing a
-  separate maintained schema or a compatibility layer ([audit])
-- ALWAYS: render the exact configured names for each agent from the owning
-  distribution mappings and address that agent alone in its generated guide and
-  skills. Differences between the two agents' invocation guidance require an
-  agent-specific reason that retained native evidence or a decision records ([audit])
-- ALWAYS: invocation guidance requires exactly one native launch call for a
-  skill-requested invocation and analysis and reporting of a failed launch or
-  unusable result without retry, another subagent, a model override, an alternative
-  launch mechanism, or a replacement audit in the authoring conversation ([audit])
-- NEVER: the subagent invocation policy changes audit verdict handling, output
-  contracts, finding disposition, or repair workflows ([audit])
-- ALWAYS: derive agent definitions, configuration examples, and model descriptions
-  from the same centrally owned Standard, Strong, Executor, and Fast profiles; each
-  supported harness receives its complete native configuration ([audit])
-- NEVER: impose a universal reasoning-effort field, value domain, or translation
-  between harnesses; a profile uses only the controls its harness supports ([audit])
-- NEVER: let task difficulty infer a profile selection; Standard is the default
-  and Strong, Executor, or Fast requires an explicit governing selection ([audit])
-- ALWAYS: a skill runs with the invoking agent session's model and reasoning
-  configuration, including when a configured subagent invokes it; skill
-  frontmatter declares no model or reasoning override ([audit])
-- ALWAYS: establish release acceptance separately for each supported harness,
-  retaining native loading and one minimal isolated execution for each of its
-  Standard, Strong, Executor, and Fast profiles; a combined acceptance claim requires
-  complete evidence for every harness it names. An independent
-  Auditor judges the actual configuration and result, with no retry or
-  substitution after a failed or unusable launch ([audit])
-- NEVER: substitute a model silently when the configured model is unavailable,
-  collapse the Standard and Strong profiles into one configuration, or change a
-  profile's configured model without amending this decision ([audit])
+### Audit: invocation
+
+- skill-owns-selection: ALWAYS: keep the actual subagent selection, launch condition, and target-only prompt in the calling skill, and target-context discovery in the invoked skill; root-guide examples describe invocation mechanics only.
+- task-message-target: ALWAYS: an invoked skill binds its target from the configured subagent's task message; a skill argument substituted at preload never stands for the target, and the skill reports a missing target only when the task message itself carries none.
+- isolated-launch: ALWAYS: launch every audit and review without inherited authoring history or an author-written context packet, following the isolation rule in [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md); native invocation guidance explicitly disables history inheritance when the tool otherwise enables it by default.
+- one-native-launch: ALWAYS: invocation guidance requires exactly one native launch call for a skill-requested invocation and analysis and reporting of a failed launch or unusable result without retry, another subagent, a model override, an alternative launch mechanism, or a replacement audit in the authoring conversation.
+- verdicts-unchanged: NEVER: the subagent invocation policy changes audit verdict handling, output contracts, finding disposition, or repair workflows.
+- language-neutral: ALWAYS: every subagent definition is language-neutral; a language plugin ships its language behavior as skills, which a language-neutral definition's session composes for the language its target needs.
+- no-language-definition: NEVER: a plugin ships a language-specific subagent definition unless a decision records that exception and its reason.
+- inheritance-declaration: NEVER: a definition's frontmatter or body stands as its own inheritance declaration; the inheritance holds through this decision and the linked evidence of the owning node's spec, and for a definition that needs no tighter bounds than the invoking session, an absent native permission field in a rendering is that declaration's expected form, never a defect.
+- allowlist-bounds: ALWAYS: a definition's tools allowlist bounds the capabilities the subagent can call, the invoking session's policy governs approval and sandboxing, and the definition adds no second policy of its own.
+- tighter-bounds-field: ALWAYS: a definition that must bound execution more tightly than the invoking session declares the native permission field in that rendering, and the field then governs.
+
+### Audit: profiles
+
+- central-profiles: ALWAYS: derive agent definitions, configuration examples, and model descriptions from the same centrally owned Standard, Strong, Thorough, and Fast profiles; each supported harness receives its complete native configuration.
+- applier-thorough: ALWAYS: the `change-applier` definition selects the Thorough profile.
+- explicit-selection: NEVER: let task difficulty infer a profile selection; Standard is the default and Strong, Thorough, or Fast requires an explicit governing selection.
+- no-product-profiles: NEVER: a product adds a profile or overrides a profile's field.
+- reject-unsupported: ALWAYS: reject an unsupported selection or an incompatible configuration before an agent definition is emitted.
+- no-universal-effort: NEVER: impose a universal reasoning-effort field, value domain, or translation between harnesses; a profile uses only the controls its harness supports.
+- skill-session-config: ALWAYS: a skill runs with the invoking agent session's model and reasoning configuration, including when a configured subagent invokes it; skill frontmatter declares no model or reasoning override.
+- release-acceptance: ALWAYS: establish release acceptance separately for each supported harness, retaining native loading and one minimal isolated execution for each of its Standard, Strong, Thorough, and Fast profiles; evidence for one harness establishes no execution claim for another, and a combined acceptance claim requires complete evidence for every harness it names. An independent Auditor judges the actual configuration and result, with no retry or substitution after a failed or unusable launch.
+- no-silent-substitution: NEVER: substitute a model silently when the configured model is unavailable, collapse the Standard and Strong profiles into one configuration, or change a profile's configured model without amending this decision.
+
+### Audit: profile configurations
+
+- codex-standard: ALWAYS: the Codex Standard profile configures `model = "gpt-6.1-sol"` and `model_reasoning_effort = "high"`.
+- codex-strong: ALWAYS: the Codex Strong profile configures `model = "gpt-6-astra"` and `model_reasoning_effort = "high"`.
+- codex-thorough: ALWAYS: the Codex Thorough profile configures `model = "gpt-6.1-sol"` and `model_reasoning_effort = "high"`.
+- codex-fast: ALWAYS: the Codex Fast profile configures `model = "gpt-6-luna"` and `model_reasoning_effort = "high"`.
+- claude-standard: ALWAYS: the Claude Standard profile configures `model: sonnet` and `effort: medium`.
+- claude-strong: ALWAYS: the Claude Strong profile configures `model: opus` and `effort: high`.
+- claude-thorough: ALWAYS: the Claude Thorough profile configures `model: sonnet` and `effort: high`.
+- claude-fast: ALWAYS: the Claude Fast profile configures `model: haiku` and no effort field.

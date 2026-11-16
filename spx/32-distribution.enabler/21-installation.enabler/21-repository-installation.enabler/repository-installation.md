@@ -169,11 +169,11 @@ Every target/profile pair in `outcomeeng.distribution.profiles.AGENT_PROFILES` m
 | --------------- | ----------- | -------- | ---------------------------------------------- |
 | claude-standard | Claude Code | Standard | one row derived from the pair's registry entry |
 | claude-strong   | Claude Code | Strong   | one row derived from the pair's registry entry |
-| claude-executor | Claude Code | Executor | one row derived from the pair's registry entry |
+| claude-thorough | Claude Code | Thorough | one row derived from the pair's registry entry |
 | claude-fast     | Claude Code | Fast     | one row derived from the pair's registry entry |
 | codex-standard  | Codex       | Standard | one row derived from the pair's registry entry |
 | codex-strong    | Codex       | Strong   | one row derived from the pair's registry entry |
-| codex-executor  | Codex       | Executor | one row derived from the pair's registry entry |
+| codex-thorough  | Codex       | Thorough | one row derived from the pair's registry entry |
 | codex-fast      | Codex       | Fast     | one row derived from the pair's registry entry |
 
 ### Test.Mapping: [isolated-selection](tests/test_repository_installation.mapping.l3.py)
@@ -302,7 +302,7 @@ Every pair of an auditor the marketplace ships for dispatch and a supported harn
 
 ### Probe: release acceptance
 
-- [native-profile-acceptance](probes/native-profile-acceptance/probe.md): The native profile acceptance workflow, dispatched once on a hosted runner, runs the twelve rows: the eight `<harness>-<profile>` rows, Claude Code and Codex each with the Standard, Strong, Executor, and Fast profiles, and the four auditor-dispatch rows, `skill-auditor` and `subagent-auditor` each on Claude Code and Codex. The protocol directory holds each row's configuration, loading, and result artifacts, the protocol links every artifact, and the Author's verdict names a row failed when its result artifact is unusable.
+- [native-profile-acceptance](probes/native-profile-acceptance/probe.md): The native profile acceptance workflow, dispatched once on a hosted runner, runs the twelve rows: the eight `<harness>-<profile>` rows, Claude Code and Codex each with the Standard, Strong, Thorough, and Fast profiles, and the four auditor-dispatch rows, `skill-auditor` and `subagent-auditor` each on Claude Code and Codex. The protocol directory holds each row's configuration, loading, and result artifacts, the protocol links every artifact, and the Author's verdict names a row failed when its result artifact is unusable.
 - [pinned-cli-options](probes/pinned-cli-options/probe.md): A hosted runner with the Claude Code and Codex releases `.github/workflows/check.yml` pins, and the native profile acceptance workflow dispatched once. Each of the twelve rows launches its parent session once. No parent session rejects a command-line option the harness passes, each of the eight profile rows retains one child execution, and each of the four auditor-dispatch rows retains a completed run with a run token. Covers `codex-probe-names`, `auditor-fixture-repository`, and `unusable-row-fails`.
 
 ### Audit: acceptance and record store

@@ -4,7 +4,7 @@ The protocol lives at `probes/native-profile-acceptance/probe.md`, which the `na
 
 ## Intent
 
-Each subagent profile the marketplace ships — Standard, Strong, Executor and Fast — resolves to a native model and effort on Claude Code and on Codex. Reading the profile registry and the generated definitions does not show that each harness loads the definition natively and executes one isolated child under the configuration the registry names. This probe shows, for each of the eight `<harness>-<profile>` rows, a retained configuration artifact, a retained loading artifact, and a result artifact that records one native child invocation or the terminal condition that stopped the row.
+Each subagent profile the marketplace ships — Standard, Strong, Thorough and Fast — resolves to a native model and effort on Claude Code and on Codex. Reading the profile registry and the generated definitions does not show that each harness loads the definition natively and executes one isolated child under the configuration the registry names. This probe shows, for each of the eight `<harness>-<profile>` rows, a retained configuration artifact, a retained loading artifact, and a result artifact that records one native child invocation or the terminal condition that stopped the row.
 
 The retained rows are the release acceptance of the profiles. A changed profile registry or a changed shipped subagent definition makes the rows stale until the protocol runs again.
 
@@ -22,7 +22,7 @@ The retained rows are the release acceptance of the profiles. A changed profile 
 2. Dispatch the native profile acceptance workflow at the subject commit on a hosted runner, and record the run identifier and the run URL.
 3. Wait for the run to finish. A run that stops before it uploads its artifact is a failed attempt: record its terminal condition and repeat from step 2 only when the operator approves another run.
 4. Download the workflow's uploaded artifact into a new, empty directory outside the repository.
-5. Confirm that the `profiles` directory of the artifact holds one directory for each of the eight rows, named by the row's identifier — Claude Code and Codex, each with the Standard, Strong, Executor and Fast profiles — and that each holds a configuration artifact, a `loading.json` and a `result.json`.
+5. Confirm that the `profiles` directory of the artifact holds one directory for each of the eight rows, named by the row's identifier — Claude Code and Codex, each with the Standard, Strong, Thorough and Fast profiles — and that each holds a configuration artifact, a `loading.json` and a `result.json`.
 6. Copy each row's directory from the artifact's `profiles` directory into this probe directory under `profiles/<row identifier>/`, unchanged.
 7. Copy each of the four auditor-dispatch rows from the artifact's `auditors` directory — `skill-auditor` and `subagent-auditor` on each of Claude Code and Codex — unchanged into this probe directory under `auditors/<row identifier>/`, beside the profile rows.
 8. Read each of the eight profile rows' artifacts: from the loading artifact, whether the native definition was materialized and discovered; from the result artifact, the terminal condition, the child invocation, and, for Codex, the recorded role, model, effort and completion of the sole child. Judge each row against the configuration its configuration artifact records.

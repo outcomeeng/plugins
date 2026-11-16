@@ -76,7 +76,7 @@ Strong:
 {{! profile_config('strong') !}}
 ````
 
-Executor:
+Thorough:
 
 {!% if target == 'codex' %!}
 
@@ -84,7 +84,7 @@ Executor:
 {!% else %!}
 ```yaml
 {!% endif %!}
-{{! profile_config('executor') !}}
+{{! profile_config('thorough') !}}
 ````
 
 Fast:

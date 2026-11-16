@@ -1,105 +1,54 @@
 # Build Architecture
 
-The build is a Python module invoked via `just build-skills` and registered as a `lefthook` pre-commit hook, using Jinja2 with custom delimiters (`{!% %!}` and `{{! !}}`) to expand a single runtime-neutral source tree under `src/` into committed outputs at `dist/claude/` and `dist/codex/`. Plugin sources live under `src/plugins/<plugin>/`; canonical shared content lives under `src/_shared/<scope>/<topic>/`. No coding agent is the privileged canon: every runtime-divergent element is authored once and rendered into each target's native surface, in three kinds. **Name-level** divergence — the same concept named differently per runtime (the skill-directory variable rendered as `${CLAUDE_SKILL_DIR}` for Claude and `${SKILL_DIR}` for Codex, tool names such as `AskUserQuestion`/`request_user_input`, frontmatter field names, concept terms, and per-runtime filenames such as the agent guide read as `CLAUDE.md` for Claude and `AGENTS.md` for Codex) — renders from a source-owned per-runtime registry via a build template token. The registry is keyed by token kind — `tool`, `field`, `term`, and `file` — each kind rendered by its own template global (`tool(…)`, `field(…)`, `term(…)`, `file(…)`) and each declaring whether the source-layer guard enforces its names: `tool`, `field`, and `file` names are unique runtime-divergent tokens the guard forbids raw in authored source, while `term` concept terms are common words the guard excludes and review covers. **Existence-level** divergence — a field a target's schema lacks (`disable-model-invocation` for Codex) — is stripped per the target's frontmatter schema, applied symmetrically in whichever direction the asymmetry runs; portable skill capability fields such as `argument-hint` and `allowed-tools` survive in both generated runtime trees. **Fact-level** divergence — a claim whose truth differs by runtime — is authored as a per-runtime conditional block. `{!% include %!}` and `{!% require_skill %!}` directives expand to identical bodies in both targets. A source-layer guard forbids a raw name of a guard-enforced kind (`tool`, `field`, `file`) — such as `AskUserQuestion`, `ScheduleWakeup`, `CLAUDE.md`, or `AGENTS.md` — in authored `src/plugins/` or `src/_shared/` content unless the file is on the explicit ignore-list, so a divergent reference is always a registry token, a conditional, or a tracked exemption, never an untracked one-runtime literal; the review-only `term` kind's common-word concept terms are covered by review instead. Agent definitions render into each target's native agent surface like every other divergent element: a target's generated tree carries its agent artifact in the format that target reads, and never an artifact that target cannot read. An agent source may list the targets it is emitted for in a `targets` front-matter field; the build emits it only into those targets' generated trees and strips the field from every output, and a source without the field emits into every registered target. A target whose agent namespace is flat receives the plugin name as a slug prefix — `<plugin>_<agent>`, rendering the namespaced identity `<plugin>:<agent>` — while a target that namespaces plugin agents carries the bare agent name. Each target's agent format, filename shape, and namespace behavior come from a source-owned per-target agent-capability registry — a sibling of the runtime-token registry rather than an entry in it, because these values parameterize emission rather than render a name into authored text — so a new target is a registry entry rather than an amendment here. `outcomeeng/distribution/build.py` is the sole writer of `dist/`, and the lefthook hook fails any commit that leaves `dist/` out of sync with `src/`.
-
-Agent configuration has one Python owner for model identifiers and the Standard,
-Strong, Executor, and Fast profiles selected in [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md). Each
-harness has its own typed native configuration, including its model and supported
-reasoning controls. A profile resolves directly for the destination harness;
-neither another harness's model alias nor a universal effort field mediates that
-resolution. The owner also holds the prices of the model identities it prices,
-for every usage token class, so the profiles stay the one model inventory.
-Authored agents select a profile, defaulting to Standard, and the
-renderer emits the complete native configuration as one unit. Template requests
-for examples and descriptions select that same unit. Native configuration fields
-are forbidden in authored agent inputs and skill frontmatter; unknown profiles,
-independent overrides, and incompatible configurations fail before output writes.
-A source guard covers all of `src/`, including conditional blocks and otherwise
-ignored files, rejecting literal model identifiers and authored assignments of
-native model or reasoning controls. Its vocabulary comes from the configuration
-owner. Ordinary prose words are not configuration assignments. A field bound to
-an expression that reads a value, and a field bound to an interpolation
-placeholder, are no configuration assignment; every other binding, an unquoted
-value included, is an authored assignment.
-
-The agent tokens `claude`, `codex`, and `pi` have one owner, a module in the
-coding-agents plugin; the toolchain loads that module by path, and no toolchain
-module declares an agent token. The build's target registry takes every target's
-value from that owner: it selects the owner's tokens that are generated-output
-targets, `claude` and `codex`, and spells no token itself. The build renders the
-owner's agent tokens into a data file beside each product-tree script that reads
-them, because a shipped product-tree script imports nothing from another plugin's
-files, as [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md)
-states.
-
-## Rationale
-
-A single source plus committed `dist/` beats execution-time injection: Codex resolves bundled files through `${SKILL_DIR}` rather than `${CLAUDE_SKILL_DIR}`, so cross-skill sharing must either duplicate at the source, bake at build time, or be replaced by an "invoke this skill" instruction — build-time bake-out keeps one authored source while emitting deterministic outputs both coding agents consume natively. Jinja2 over a custom regex preprocessor because the build does fan-out, conditional frontmatter, path rewriting, and reference-tree copying that custom tooling grows into "Jinja2 but worse". Custom delimiters because standard `{% %}` collides with skill content that teaches templating. Committed `dist/` over CI-only generation because consumers install directly from HEAD and neither coding agent runs a build at install time. Build-time fan-out over execution-time `!`cat`` injection because injection inlines a multi-hundred-line file per invocation and multiplies token cost. A target list on an agent source keeps a definition off a target where its native loading and result are unobserved: shipping it there installs a launchable role no evidence stands behind, while the source stays single and the other targets keep their artifact.
-
-No runtime is the source language. Authoring in one agent's tool and field names and translating only for the others privileges that agent, leaks its names into every other target as live instructions, and silently corrupts content when a name is swapped without regard to whether it was an instruction or a fact. A source-owned per-runtime registry plus a source-layer guard makes every divergent reference explicit and rendered for the reader's runtime, so a forgotten reference fails the guard — a visible, catchable error — rather than shipping a foreign tool or guide filename. Symmetric frontmatter stripping generalizes the same principle to schema differences: a field absent from a target's schema is dropped for that target, in whichever direction the asymmetry runs. Per-runtime conditional blocks carry claims whose truth differs by runtime, which name substitution alone cannot express. The guard binds only to runtime-divergent unique tokens — the `tool`, `field`, and `file` kinds; common-English-word tool names (`Read`, `Edit`, `Write`, `Glob`, `Grep`) and the `term` kind's concept terms cannot be substring-matched in prose without false positives, so the frontmatter schema and review cover them instead.
-
-Complete native configurations keep each harness's vocabulary and valid field
-combinations together. Separately translating model aliases and effort values
-permits combinations that no profile selected, while individual template fields
-permit examples to omit required controls. One profile selection makes both
-failures rejectable at authoring boundaries and keeps a model change local to its
-owner. The supported harness schemas bound the design; no standalone skill mode,
-product-local profile extension, unknown-value pass-through, or compatibility
-fallback participates in resolution.
-
-An agent token has one declaration because a second one drifts from the first:
-a recovery script, an instruction-block writer, and a build target table that
-each spell `claude` and `codex` disagree the moment one agent is added or
-renamed. The coding-agents plugin owns the tokens because it owns the agents the
-tokens name. The build already takes every plugin's authored source under
-`src/plugins/` as its input, so loading one module of that source by path adds
-no relation between the build and the coding-agents plugin that the build does
-not already have. A product-tree script cannot import that module, because a
-plugin's runtime relies only on its own installed tree; the build, which reads
-the owner, renders its tokens into a data file beside the script, so the
-script's copy is a rendering of the declaration and never a second declaration.
+CONSTRAINS the build that turns authored plugin sources into the plugin trees each coding agent installs
+TO one Python module that expands a single agent-neutral source tree under `src/` through Jinja2 into committed generated agent trees at `dist/claude/` and `dist/codex/`
+SO THAT every coding agent reads native plugin content rendered from one authored source, with no coding agent privileged as the canon
 
 ## Verification
 
-### Testing
+### Test.Compliance: agent emission
 
-- ALWAYS: the build renders each plugin's agent definitions into the native agent format of every target the definition's `targets` field lists — every registered target when the field is absent — and no generated target tree carries an agent artifact that target cannot read ([compliance])
-- ALWAYS: a target whose agent namespace is flat receives agent filenames and names carrying the plugin as slug prefix, `<plugin>_<agent>`, rendering the namespaced `<plugin>:<agent>` identity; a target that namespaces plugin agents carries the bare agent name ([compliance])
-- ALWAYS: each target's agent format, filename shape, and namespace behavior resolve from a source-owned per-target agent-capability registry, distinct from the runtime-token registry because it parameterizes emission rather than rendering a name into authored text — adding a target adds a registry entry rather than amending this decision ([compliance])
+- agent-native-format: ALWAYS: the build renders each plugin's agent definitions into the native agent format of every target the definition's `targets` field lists — every registered target when the field is absent — and no generated target tree carries an agent artifact that target cannot read.
+- flat-namespace: ALWAYS: a target whose agent namespace is flat receives agent filenames and names carrying the plugin as slug prefix, `<plugin>_<agent>`, rendering the namespaced `<plugin>:<agent>` identity; a target that namespaces plugin agents carries the bare agent name.
+- capability-registry: ALWAYS: each target's agent format, filename shape, and namespace behavior resolve from a source-owned per-target agent-capability registry, distinct from the agent-specific token registry because it parameterizes emission rather than rendering a name into authored text — adding a target adds a registry entry rather than amending this decision.
+- dist-traces-src: ALWAYS: every committed `dist/` file traces to a `src/` ancestor through the build — no orphan dist content.
 
-- ALWAYS: every committed `dist/` file traces to a `src/` ancestor through the build — no orphan dist content ([compliance])
+### Audit: tokens and profiles
 
-### Audit
+- agent-token-owner: ALWAYS: the build derives its targets, `claude` and `codex`, from the coding-agents agent-token module, which owns the tokens `claude`, `codex`, and `pi` and which the toolchain loads by path, and renders its tokens beside each product-tree script that reads them; no toolchain module and no authored product-tree script declares an agent token.
+- model-identifier-once: ALWAYS: define each model identifier once in the Python configuration owner, which also owns the Standard, Strong, Thorough, and Fast profiles selected in [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md); profiles reference that identity and keep each harness's complete native settings together, with distinct harness-specific types for reasoning controls rather than a shared effort scale.
+- profile-prices: ALWAYS: the configuration owner holds the prices of the model identities it prices, for every usage token class, so the profiles stay the one model inventory.
+- one-profile-unit: ALWAYS: render native agent definitions, examples, and descriptions from one selected complete profile; template callers cannot independently request or override individual model or reasoning values.
+- no-translated-profile: NEVER: resolve a destination profile by translating another harness's model or effort, passing through an unknown value, or selecting a fallback.
+- no-native-fields: NEVER: an authored agent input or skill frontmatter carries a native configuration field; an unknown profile, an independent override, or an incompatible configuration fails before any output write.
+- explicit-boundary: ALWAYS: accept profile definitions explicitly at the pure resolution boundary so propagation and rejection evidence can exercise real resolution with typed inputs without replacing process globals.
+- guard-vocabulary: ALWAYS: derive the source guard's model vocabulary and native configuration fields from the configuration owner; reject configuration assignments while leaving ordinary prose words unrestricted.
+- guard-scope: ALWAYS: the source guard rejects literal model identifiers and authored assignments of native model and reasoning controls throughout `src/`, including conditional blocks and otherwise ignored files; a field bound to an expression that reads a value, and a field bound to an interpolation placeholder, are no configuration assignment, and every other binding, an unquoted value included, is an authored assignment.
 
-- ALWAYS: the build derives its targets from the coding-agents agent-token module and renders its tokens beside each product-tree script that reads them; no toolchain module and no authored product-tree script declares an agent token ([audit])
-- ALWAYS: define each model identifier once in the Python configuration owner;
-  profiles reference that identity and keep each harness's complete native
-  settings together, with distinct harness-specific types for reasoning controls
-  rather than a shared effort scale ([audit])
-- ALWAYS: render native agent definitions, examples, and descriptions from one
-  selected complete profile; template callers cannot independently request or
-  override individual model or reasoning values ([audit])
-- NEVER: resolve a destination profile by translating another harness's model or
-  effort, passing through an unknown value, or selecting a fallback ([audit])
-- ALWAYS: accept profile definitions explicitly at the pure resolution boundary
-  so propagation and rejection evidence can exercise real resolution with typed
-  inputs without replacing process globals ([audit])
-- ALWAYS: derive the source guard's model vocabulary and native configuration
-  fields from the configuration owner; reject configuration assignments while
-  leaving ordinary prose words unrestricted ([audit])
-- ALWAYS: use Jinja2 with custom delimiters (`{!% %!}` and `{{! !}}`) for template processing — collision-free syntax in the presence of meta-skill content ([audit])
-- ALWAYS: place all canonical shared content under `src/_shared/<scope>/<topic>/` — a single home for each shared fragment ([audit])
-- ALWAYS: emit committed outputs into every registered target's generated tree for every plugin published to that target's marketplace catalog — a new target is covered by this rule rather than by rewriting it ([audit])
-- ALWAYS: run `just build-skills` from a lefthook pre-commit hook that fails the commit when `dist/` would change — stale dist is the failure mode this decision prevents ([audit])
-- ALWAYS: external formatter discovery and execution in the build accept dependency-injected collaborators typed as Python Protocols, with controlled implementations limited to `/test` Stage 5 exception 1 (failure simulation) for unavailable or failing formatters and exception 2 (interaction protocols) for recording the command shape, so tests cover missing-tool and formatter-failure behavior without patching global process APIs ([audit])
-- NEVER: framework mocks replace formatter discovery, execution, or the build behavior under verification; injected collaborators preserve the real boundary and expose observations for predicates owned by the linked tests ([audit])
-- NEVER: edit `dist/claude/` or `dist/codex/` by hand — the build is the only writer; manual edits desynchronize the source-output contract ([audit])
-- NEVER: use `!`cat ${CLAUDE_SKILL_DIR}/...`` execution-time injection in built output — shared content reaches both outputs via build-time fan-out ([audit])
-- NEVER: emit unescaped `${CLAUDE_SKILL_DIR}` references into `dist/codex/` outputs — Codex output uses `${SKILL_DIR}`; source lines carrying the rewrite-escape directive are the explicit exception ([audit])
-- ALWAYS: render each runtime-divergent name (the skill-directory variable, tool names, frontmatter field names, concept terms, per-runtime filenames such as the agent guide) into the target's native name from a source-owned per-runtime registry — no coding agent's names are the privileged source language ([audit])
-- ALWAYS: key the runtime-token registry by token kind (`tool`, `field`, `term`, `file`), each kind exposed as its own template global and declaring whether the source-layer guard enforces its names — `tool`, `field`, and `file` names are unique tokens the guard forbids raw, `term` concept terms are common-word and review-covered, so a new kind opts into or out of guard enforcement explicitly rather than every registered name being forbidden ([audit])
-- ALWAYS: strip a frontmatter field absent from a target's schema for that target, applied symmetrically in either direction — the schema decides what survives, not one privileged runtime ([audit])
-- ALWAYS: author a claim whose truth differs by runtime as a per-runtime conditional block, never as a single statement true for only one target ([audit])
-- NEVER: a raw runtime-divergent unique token (`AskUserQuestion`, `ScheduleWakeup`, `CLAUDE.md`, `AGENTS.md`, and the like) appears in authored `src/plugins/` or `src/_shared/` content outside the explicit ignore-list — a divergent reference is a registry token, a conditional, or a tracked exemption, enforced by a source-layer guard derived from the lint-enforced kinds (`tool`, `field`, `file`) that covers every authored file the build renders or inlines by default; common-English-word tool names together with the `term` kind's concept terms are covered by the frontmatter schema and review instead ([audit])
-- NEVER: add separate ADRs for individual build concerns (template engine, source layout, output layout, orchestration) — these decisions are interdependent and belong in this single ADR ([audit])
-- NEVER: distribute downstream-repo content from `plugins/` — `distribute_skills.py` reads from `dist/claude/`, the canonical home of Claude Code plugin content ([audit])
+### Audit: per-agent variation
+
+- agent-name-registry: ALWAYS: render each agent-specific name (the skill-directory variable, tool names, frontmatter field names, concept terms, per-agent filenames such as the agent guide) into the target's native name from a source-owned agent-specific token registry — no coding agent's names are the privileged source language.
+- token-kinds: ALWAYS: key the agent-specific token registry by token kind (`tool`, `field`, `term`, `file`), each kind exposed as its own template global and declaring whether the source-layer guard enforces its names — `tool`, `field`, and `file` names are unique tokens the guard forbids raw, `term` concept terms are common-word and review-covered, so a new kind opts into or out of guard enforcement explicitly rather than every registered name being forbidden.
+- symmetric-strip: ALWAYS: strip a frontmatter field absent from a target's schema for that target, applied symmetrically in either direction — the schema decides what survives, not one privileged agent.
+- portable-fields: ALWAYS: portable skill capability fields such as `argument-hint` and `allowed-tools` survive in both generated agent trees.
+- targets-field-stripped: ALWAYS: the build strips an agent source's `targets` field from every output.
+- conditional-blocks: ALWAYS: author a claim whose truth differs by agent as a per-agent conditional block, never as a single statement true for only one target.
+- directive-bodies: ALWAYS: `{!% include %!}` and `{!% require_skill %!}` directives expand to identical bodies in both targets.
+- raw-token-guard: NEVER: a raw agent-specific unique token (`AskUserQuestion`, `ScheduleWakeup`, `CLAUDE.md`, `AGENTS.md`, and the like) appears in authored `src/plugins/` or `src/_shared/` content outside the explicit ignore-list — a divergent reference is a registry token, a conditional, or a tracked exemption, enforced by a source-layer guard derived from the lint-enforced kinds (`tool`, `field`, `file`) that covers every authored file the build renders or inlines by default; common-English-word tool names together with the `term` kind's concept terms are covered by the frontmatter schema and review instead.
+
+### Audit: templating and layout
+
+- jinja-delimiters: ALWAYS: use Jinja2 with custom delimiters (`{!% %!}` and `{{! !}}`) for template processing — collision-free syntax in the presence of meta-skill content.
+- source-homes: ALWAYS: place every plugin source under `src/plugins/<plugin>/` and all canonical shared content under `src/_shared/<scope>/<topic>/` — a single home for each shared fragment.
+- every-target-output: ALWAYS: emit committed outputs into every registered target's generated tree for every plugin published to that target's marketplace catalog — a new target is covered by this rule rather than by rewriting it.
+- lefthook-gate: ALWAYS: run `just build-skills` from a lefthook pre-commit hook that fails the commit when `dist/` would change — stale dist is the failure mode this decision prevents.
+- no-hand-edit: NEVER: edit `dist/claude/` or `dist/codex/` by hand — the build, `outcomeeng/distribution/build.py`, is the only writer; manual edits desynchronize the source-output contract.
+- no-execution-injection: NEVER: use `!`cat ${CLAUDE_SKILL_DIR}/...`` execution-time injection in built output — shared content reaches both outputs via build-time fan-out.
+- codex-skill-dir: NEVER: emit unescaped `${CLAUDE_SKILL_DIR}` references into `dist/codex/` outputs — Codex output uses `${SKILL_DIR}`; source lines carrying the rewrite-escape directive are the explicit exception.
+- one-build-adr: NEVER: add separate ADRs for individual build concerns (template engine, source layout, output layout, orchestration) — these decisions are interdependent and belong in this single ADR.
+- no-plugins-distribution: NEVER: distribute downstream-repo content from `plugins/` — `distribute_skills.py` reads from `dist/claude/`, the canonical home of Claude Code plugin content.
+
+### Audit: formatter boundary
+
+- formatter-injection: ALWAYS: external formatter discovery and execution in the build accept dependency-injected collaborators typed as Python Protocols, with controlled implementations limited to `/test` Stage 5 exception 1 (failure simulation) for unavailable or failing formatters and exception 2 (interaction protocols) for recording the command shape, so tests cover missing-tool and formatter-failure behavior without patching global process APIs.
+- no-formatter-mocks: NEVER: framework mocks replace formatter discovery, execution, or the build behavior under verification; injected collaborators preserve the real boundary and expose observations for predicates owned by the linked tests.
