@@ -4,7 +4,7 @@ description: >-
   ALWAYS invoke this skill before writing or repairing deterministic tests for
   a spec assertion, selecting a decision Testing rule's assertion type, or when
   learning the testing approach.
-argument-hint: <full-spx-node-or-decision-path> [selected-assertions-json-array] [repair-block]
+argument-hint: <full-spx-node-or-decision-path> [selected-assertion-slugs-json-array] [repair-block]
 allowed-tools: Read, Glob, Grep, Write, Edit, request_user_input
 ---
 
@@ -121,7 +121,7 @@ Classify each assertion from its own quantifier before composing its level with 
 
 <assertion_types>
 
-Use evidence terms that describe what the test proves:
+Use evidence terms that describe what the test proves. Each term names a spec group heading, `Test.Scenario`, `Test.Conformance`, `Test.Property`, or `Test.Compliance`, or a `Test.Mapping:` subsection:
 
 - `scenario`: one existential interaction within the chosen level
 - `mapping`: inputs map to outputs or requests map to actions over a finite source-owned domain
@@ -283,7 +283,7 @@ Examples:
 
 **Step 1: Load tree context**
 
-Abort when `$ARGUMENTS` is empty: "A canonical spec node or ADR/PDR target is required." Otherwise parse it as one canonical target followed by an optional JSON array of exact assertion texts already selected for test. Preserve each array string verbatim; it identifies the untagged spec assertion this workflow may type. Reject malformed JSON or non-string array members before reading the target. A decision target uses decision-rule mode and accepts no assertion-text array. Text after the target and the optional array is a repair block: the verbatim result of each rejected verdict and the exact command line and output of each failed deterministic command of an earlier round on this target. Carry it into this workflow as repair input: repair every finding and failure it names within this workflow's scope, and report each one's disposition in the result.
+Abort when `$ARGUMENTS` is empty: "A canonical spec node or ADR/PDR target is required." Otherwise parse it as one canonical target followed by an optional JSON array of assertion slugs selected for test. Preserve each array string verbatim; it names one row of the spec that this workflow may type. Reject malformed JSON or non-string array members before reading the target. A decision target uses decision-rule mode and accepts no assertion-slug array. Text after the target and the optional array is a repair block: the verbatim result of each rejected verdict and the exact command line and output of each failed deterministic command of an earlier round on this target. Carry it into this workflow as repair input: repair every finding and failure it names within this workflow's scope, and report each one's disposition in the result.
 
 Check for `<PRODUCT_TREE_FOUNDATION>` and `<PRODUCT_TREE_CONTEXT>` markers. When either is absent: Use skill `product-tree:understand`. Use skill `product-tree:contextualize`.
 
@@ -293,7 +293,7 @@ For a spec target, this loads:
 - Ancestor ADRs/PDRs that constrain the testing approach
 - Lower-index sibling specs that provide context
 
-For a canonical ADR/PDR target, use decision-rule mode. Require context for the containing node, or `spx/` for a product-level decision, and read only that decision's `### Testing` rules for assertion typing. The implementing specs own executable evidence and evidence links.
+For a canonical ADR/PDR target, use decision-rule mode. Require context for the containing node, or `spx/` for a product-level decision, and read only that decision's test rules, the rules under its `Test.` group headings and `Test.Mapping:` subsections, for assertion typing. The implementing specs own executable evidence and evidence links.
 
 </step>
 
@@ -301,24 +301,26 @@ For a canonical ADR/PDR target, use decision-rule mode. Require context for the 
 
 **Step 2: Extract assertions from the spec**
 
-For a spec target, parse the target spec node and extract assertions already selected for `[test]` evidence plus the exact untagged assertions supplied to this invocation as selected test work. Ignore every other untagged assertion; verification-type selection remains outside this skill. Extract any existing test links from the selected set:
+For a spec target, parse the target spec node and take its test work from two sources only: every row under a `Test.` group heading or in a `Test.Mapping:` subsection, and every row whose slug the invocation supplies. Read no `[test]` tag; a spec row carries none. Ignore every other row; verification-type selection remains outside this skill. For each row of the test work, read its slug and whether the slug links a test file:
 
-| Type            | Pattern in spec                                    | Test strategy   |
-| --------------- | -------------------------------------------------- | --------------- |
-| **Scenario**    | `Given ... when ... then ... ([test](...))`        | Example-based   |
-| **Mapping**     | `{input} maps to {output} ([test](...))`           | Parameterized   |
-| **Conformance** | `{output} conforms to {standard} ([test](...))`    | Tool validation |
-| **Property**    | `{invariant} holds for all {domain} ([test](...))` | Property-based  |
-| **Compliance**  | `ALWAYS/NEVER: {rule} ([test](...))`               | Violating cases |
+| Type            | Row form in spec                                                   | Test strategy   |
+| --------------- | ------------------------------------------------------------------ | --------------- |
+| **Scenario**    | `- {slug}:` with indented `Given`, `When`, `Then`, and `And` lines | Example-based   |
+| **Mapping**     | `Test.Mapping: {slug}` subsection: one sentence and a case table   | Parameterized   |
+| **Conformance** | `- {slug}: {output} conforms to {standard}`                        | Tool validation |
+| **Property**    | `- {slug}: {invariant} holds for all {domain}`                     | Property-based  |
+| **Compliance**  | `- {slug}: ALWAYS/NEVER: {rule}`                                   | Violating cases |
+
+A row's slug links its test file as `[{slug}](tests/{filename})` once the file exists; before then the slug stands plain.
 
 Record each assertion with:
 
-- Assertion text
+- Slug and assertion text
 - Assertion type
-- Test link (if present) — path and whether it resolves
+- Slug link (if present) — path and whether it resolves
 - Test link status: exists / missing / stale
 
-For a decision target, extract only `### Testing` rules. Apply the complete assertion-type selection from `<testing_methodology>`: the quantifier separates existential scenario evidence from universal evidence, then the universal rule's finite source-owned domain, contract oracle, violating-rule boundary, or open domain selects mapping, conformance, compliance, or property. Record the existing assertion-type tag, if any. Ignore `### Eval` and `### Audit` rules; they remain with their selected specialists.
+For a decision target, extract only the rules that stand under a `Test.` group heading or in a `Test.Mapping:` subsection. Apply the complete assertion-type selection from `<testing_methodology>`: the quantifier separates existential scenario evidence from universal evidence, then the universal rule's finite source-owned domain, contract oracle, violating-rule boundary, or open domain selects mapping, conformance, compliance, or property. Record the heading or subsection each rule stands under. Ignore `Evaluate`, `Probe`, and `Audit` rules; they remain with their selected specialists.
 
 </step>
 
@@ -328,18 +330,18 @@ For a decision target, extract only `### Testing` rules. Apply the complete asse
 
 For each assertion:
 
-| Status            | Condition                               | Action                                     |
-| ----------------- | --------------------------------------- | ------------------------------------------ |
-| **Covered**       | Test link exists and resolves to a file | Verify in Step 4                           |
-| **Missing link**  | `[test]` selected with no path          | Must add test evidence link                |
-| **Broken link**   | Link present but file doesn't exist     | Must create test file                      |
-| **No assertions** | Spec has no typed assertions            | Spec needs work first — do not write tests |
+| Status            | Condition                                | Action                                      |
+| ----------------- | ---------------------------------------- | ------------------------------------------- |
+| **Covered**       | Slug link exists and resolves to a file  | Verify in Step 4                            |
+| **Missing link**  | Test-work row whose slug stands plain    | Must create the test file and link the slug |
+| **Broken link**   | Slug link present but file doesn't exist | Must create test file                       |
+| **No assertions** | Spec has no typed assertions             | Spec needs work first — do not write tests  |
 
-Treat an explicitly supplied untagged test assertion as a missing-link assertion. It proceeds through assertion typing and scaffold generation; an untagged assertion absent from the supplied selected set remains outside this workflow.
+Treat a supplied slug whose row stands under no `Test.` heading as a missing-link assertion. It proceeds through assertion typing and scaffold generation; a row outside the test work and absent from the supplied slugs remains outside this workflow.
 
-For a decision target, skip evidence-link and filename checks. Report a rule as covered when its existing assertion-type tag matches the type selected by the complete methodology procedure, and as needing update when the tag is absent or mismatched.
+For a decision target, skip evidence-link and filename checks. Report a rule as covered when it stands under the group heading, or in the `Test.Mapping:` subsection, that names the type selected by the complete methodology procedure, and as needing update when it stands elsewhere.
 
-**Legacy filename check:** For every **Covered** link above, verify the filename encodes assertion type and execution level. A file that provides coverage but lacks canonical naming is an imperfection — the test exists but its classification is opaque.
+**Legacy filename check:** For every **Covered** link above, verify the filename encodes assertion type and execution level, and that the assertion type in the name matches the type the row's heading names. A file that provides coverage but lacks canonical naming is an imperfection — the test exists but its classification is opaque.
 
 | Language   | Canonical pattern                                 | Legacy (fails check)                                                    |
 | ---------- | ------------------------------------------------- | ----------------------------------------------------------------------- |
@@ -404,7 +406,7 @@ For each assertion needing a new test:
 4. Name the file using `<naming_and_co_location>`.
 5. Scaffold the test structure based on assertion type and the language skill loaded in Step 5.
 
-In decision-rule mode, update each `### Testing` rule with exactly one selected assertion-type tag and create no test scaffold. Continue directly to the report step.
+In decision-rule mode, place each test rule under the group heading, or in the `Test.Mapping:` subsection, that names its selected assertion type; write no assertion-type tag and no evidence link, and create no test scaffold. Continue directly to the report step.
 
 **Specified nodes:** When the implementation module does not exist yet, the tests fail on import. That failure is the expected result: the test declares what the implementation must satisfy, and the Node stays Specified until its implementation passes the test. Report the failing result. Never add a skip marker, a conditional import, or any file that keeps the tests from a runner.
 
@@ -414,9 +416,9 @@ In decision-rule mode, update each `### Testing` rule with exactly one selected 
 
 **Step 7: Update spec assertion links**
 
-After creating test files, move each newly typed assertion under its canonical assertion-type heading and update the spec to add `([test](tests/{filename}))` links for each new assertion-test pair. This skill never selects or writes eval or audit evidence.
+Write each assertion this skill types under the group heading that names its assertion type, `Test.Scenario`, `Test.Conformance`, `Test.Property`, or `Test.Compliance`, or as its own `Test.Mapping: {slug}` subsection. A row opens with its slug and a colon, and a Scenario row continues on indented Given, When, Then, and And lines. A row carries no tag. After creating a test file, link the row's slug to that file as `[{slug}](tests/{filename})`; the assertion type in the file's name matches the type the row's heading names. This skill never selects or writes eval, probe, or audit evidence.
 
-In decision-rule mode, add no evidence link to the ADR/PDR. The implementing specs own the linked executable evidence.
+In decision-rule mode, add no evidence link and no tag to the ADR/PDR. The implementing specs own the linked executable evidence.
 
 </step>
 
@@ -467,14 +469,14 @@ When diagnosing a rejected or ineffective test workflow, read `${SKILL_DIR}/refe
 
 Testing output is sound when:
 
-- Every decision `### Testing` rule carries exactly one assertion-type tag selected from its quantifier plus the universal claim's domain, contract-oracle, or violating-rule shape, and no executable evidence link.
-- Every explicitly supplied untagged test assertion is moved under its selected assertion-type heading and receives one canonical `[test](path)` link; unrelated untagged assertions remain unchanged.
+- Every decision test rule stands under the group heading, or in the `Test.Mapping:` subsection, that names the assertion type selected from its quantifier plus the universal claim's domain, contract-oracle, or violating-rule shape, and carries no tag and no executable evidence link.
+- Every row of the test work stands under the heading that names its assertion type, carries no tag, and once its test file exists its slug links that file; rows outside the test work remain unchanged.
 - Every test file name encodes the assertion type and execution level; it includes a runner token only when the canonical model requires one.
 - Every test asserts source-coupled behavior and satisfies the binding-ownership rule in `/test-evidence-standards`.
 - Every source-owned value in the authored evidence is imported from its production owner, with no literal spelling of it left in a linked test, harness, or generator.
 - Every property test uses a meaningful generated domain and reports both the seed and replay path on failure.
 - Every property test generates product-owned variable behavior and separates finite real-boundary wiring unless the boundary itself is part of that variable behavior.
 - Every test double maps to one of the seven exception cases and preserves the behavior boundary the assertion claims.
-- Every spec assertion that receives test evidence links to the evidence file that verifies it.
+- Every spec assertion that receives test evidence links its slug to the evidence file that verifies it, and the assertion type in that file's name matches its heading's type.
 
 </success_criteria>

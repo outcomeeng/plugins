@@ -10,6 +10,14 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.2
+
+### Changed
+
+- **`/test` reads a spec's test work from its `Test.` headings and writes each row in the 4.0 form.** It takes the rows under a `Test.Scenario`, `Test.Conformance`, `Test.Property`, or `Test.Compliance` heading, the rows in a `Test.Mapping:` subsection, and the rows whose slugs its invocation supplies, and reads no `[test]` tag. The optional second argument is now a JSON array of assertion slugs rather than assertion texts. It writes each Assertion it types under the group heading that names its assertion type, or as its own `Test.Mapping:` subsection, opening the row with its slug and carrying no tag. Once it writes a test file, the row's slug links that file, and the assertion type in the file's name matches the type the heading names. For a decision target, it places each test rule under the heading or `Test.Mapping:` subsection that names its assertion type and writes no assertion-type tag and no evidence link. Before this change, `/test` selected work by `[test]` tag or by assertion text, appended `([test](path))` to a row, and tagged each decision `### Testing` rule with its assertion type.
+- **`/verify` passes `/test` the slugs of the Assertions it selected for test.** For each spec node, it passes the canonical node target plus a JSON array of the selected Assertions' slugs, which is what `/test` now reads. Before this change, it passed the Assertions' exact texts. The evaluate and probe routes are unchanged.
+- **`/verify` describes what `/test` does for a decision target in the 4.0 form.** It invokes `/test` in decision-rule mode so that `/test` places each decision test rule under the group heading, or in the `Test.Mapping:` subsection, that names its assertion type, and writes no assertion-type tag and no evidence link. Before this change, `/verify` described `/test` as selecting the rule's assertion-type tag.
+
 ## 0.115.1
 
 ### Fixed
