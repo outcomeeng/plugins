@@ -13,7 +13,7 @@ CAN find a session until its retention window elapses
 
 - window-listing: ALWAYS: an ended session stays listed until its window elapses.
 
-### Mapping: window-by-state
+### Test.Mapping: window-by-state
 
 Each session state maps to the window its listing follows.
 
@@ -22,17 +22,20 @@ Each session state maps to the window its listing follows.
 | active | not applicable |
 | ended  | seven days     |
 
-### Scenario: expiry
+### Test.Scenario: expiry
 
-- sweep-removal: Given an ended session whose window elapsed, when the sweep runs, then the session leaves the listing.
+- sweep-removal:
+  - Given an ended session whose window elapsed
+  - When the sweep runs
+  - Then the session leaves the listing
 
-### Eval: window-readout
+### Evaluate: window-readout
 
 A listing summarizer states each window in days over curated sessions.
 
-| Given            | Then                        |
-| ---------------- | --------------------------- |
-| an ended session | the window reads seven days |
+| Case  | Input            | Expected output             |
+| ----- | ---------------- | --------------------------- |
+| ended | an ended session | the window reads seven days |
 
 ### Audit
 

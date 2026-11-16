@@ -8,16 +8,17 @@ CAN find a session until its retention window elapses
 ## Assertions
 - window-listing: ALWAYS: an ended session stays listed until its window elapses.
 
-### Mapping: window-by-state
+### Test.Mapping: window-by-state
 Each session state maps to the window its listing follows.
 - active
 - ended
 
-### Scenario: expiry
-- sweep-removal: Given an ended session whose window elapsed, when the sweep runs, then the session leaves the listing.
+### Test.Scenario: expiry
+- sweep-removal:
 
-### Eval: window-readout
+### Evaluate: window-readout
 A listing summarizer states each window in days over curated sessions.
+- ended
 
 ### Audit
 - window-observable: ALWAYS: the listing states each window in days.
