@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Eval definition",
+  "description": "The table an eval.toml file parses to, as the eval loader accepts it.",
+  "type": "object",
+  "required": [
+    "title",
+    "cases",
+    "prompt"
+  ],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cases": {
+      "type": "string",
+      "minLength": 1
+    },
+    "prompt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "threshold": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "default": 0.85
+    },
+    "trials": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 1
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "not": {
+        "const": "inherit"
+      },
+      "default": "sonnet"
+    },
+    "plugin_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "owned_paths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._/-]+(/\\*\\*)?$"
+      }
+    },
+    "smoke_cases": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "ci_policy": {
+      "enum": [
+        "full",
+        "manual"
+      ],
+      "default": "full"
+    },
+    "prompt_source": {
+      "type": "object",
+      "required": [
+        "kind",
+        "template"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "producer-file",
+            "producer-section",
+            "producer-files"
+          ]
+        },
+        "template": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "section": {
+          "type": "string",
+          "minLength": 1
+        },
+        "producers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "producer-file"
+            }
+          },
+          "required": [
+            "producer"
+          ],
+          "not": {
+            "required": [
+              "section"
+            ]
+          }
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "producer-section"
+            }
+          },
+          "required": [
+            "producer",
+            "section"
+          ]
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "producer-files"
+            }
+          },
+          "required": [
+            "producers"
+          ],
+          "not": {
+            "required": [
+              "section"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
