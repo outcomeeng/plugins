@@ -54,7 +54,7 @@ The node concept is "instruction block" across this node, its decision, the gene
 - `spx/15-validation.enabler/32-reference-portability.enabler/reference-portability.md` and `outcomeeng/validation/reference_portability.py` — "retired generated guide paths `spx/CLAUDE.md` and `spx/AGENTS.md`".
 - [`spx/18-plugin-build.enabler/15-build-architecture.adr.md`](spx/18-plugin-build.enabler/15-build-architecture.adr.md) — "the agent guide read as `CLAUDE.md`/`AGENTS.md`" and the `file`-kind token.
 - `spx/21-product-tree.enabler/76-merge.enabler/merge.md` and the merge skills — "never … editing a generated guide".
-- The build runtime-token registry name `root_guide` (`outcomeeng/distribution/build.py`) and its ~60 `{{! file('root_guide') !}}` call sites across every plugin, governed by `spx/18-plugin-build.enabler/21-source-and-templating.enabler/21-runtime-parameterization.enabler`.
+- The build agent-specific token registry name `root_guide` (`outcomeeng/distribution/build.py`) and its ~60 `{{! file('root_guide') !}}` call sites across every plugin, governed by `spx/18-plugin-build.enabler/21-source-and-templating.enabler/21-runtime-parameterization.enabler`.
 
 Renaming "the agent guide" and `root_guide` requires one product-vocabulary decision followed by one build-token migration. Revisit this issue before any change renames either term; until that decision, "guide" remains the general description of the root files and `root_guide` remains the build token.
 
