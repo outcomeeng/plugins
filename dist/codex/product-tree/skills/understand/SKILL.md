@@ -40,7 +40,7 @@ When layers disagree, the lower layer is in violation and changes. Learning retu
 - ALWAYS: contextualize a node before discussing it and before reading or modifying any product content it governs; a compaction empties the set of contextualized nodes.
 - NEVER: read or modify product content that has no governing node — record the coverage gap.
 
-Product content is every artifact of the product a spec node governs or must govern: source, tests, evals, probes, generated output, specs, decisions, outcome records, status claims, notes, and configuration a spec declares; implementation is its code layer. Governance is derived, never assumed: a path under `spx/<node>/` is governed by that node; any other path by the node whose linked test, eval, or probe reaches it, or whose spec or decision names that path in an `[audit]` assertion; several matching nodes resolve to their lowest common ancestor. That lookup is a search under the live foundation marker and opens no file body. Product content with no governing node is a coverage gap: it is not read or modified, and the gap is recorded.
+Product content is every artifact of the product a spec node governs or must govern: source, tests, evals, probes, generated output, specs, decisions, outcome records, status claims, notes, and configuration a spec declares; implementation is its code layer. Governance is derived, never assumed: a path under `spx/<node>/` is governed by that node; any other path by the node whose linked test, eval, or probe reaches it, or whose spec or decision names that path in an Audit Assertion; several matching nodes resolve to their lowest common ancestor. That lookup is a search under the live foundation marker and opens no file body. Product content with no governing node is a coverage gap: it is not read or modified, and the gap is recorded.
 
 Not product content: operational configuration — the `spx/local/` overlays, which the skill that declares each reads without the marker — and the agent harness's own instruction and settings files, tool and command output, the session store, and scratch space. Work that touches no product content — PR inspection, check wait, merge, deploy, release, `spx session` operations, occupancy proof — is an operational continuation and triggers neither this skill nor `/contextualize`.
 
@@ -148,16 +148,16 @@ NN-{slug}.{kind}/
 ├── {slug}.outcome.md                   # optional outcome record; never on a product or variant
 ├── ISSUES.md                           # the only node-local note
 ├── knowledge/                          # optional OKF bundle: index.md and log.md required
-├── tests/                              # [test] files in the project's naming convention
-├── evals/{rule-slug}/eval.toml         # [eval] rules; cases, prompt, history beside it
-├── probes/{probe-slug}/probe.md        # [probe] protocols with the attested run's artifacts
+├── tests/                              # test evidence files in the project's naming convention
+├── evals/{rule-slug}/eval.toml         # eval rules; cases, prompt, history beside it
+├── probes/{probe-slug}/probe.md        # probe protocols with the attested run's artifacts
 └── NN-{child-slug}.{kind}/
 ```
 
 - The spec is `{slug}.spec.md`, repeating the directory's slug; at the root it repeats the product's name.
-- `[test]` evidence is co-located under `tests/`; each filename encodes subject, assertion type, execution level, and an optional runner in the project's language convention.
-- `[eval]` evidence is co-located under `evals/{rule-slug}/`: `eval.toml` plus the case, prompt, and template artifacts it declares by eval-relative path — canonically `cases.jsonl`, `prompt.md`, and `prompt.template.md`. A declared case or prompt path may reach a sibling eval's shared artifact; a declared template stays inside the eval directory. A declared producer source is a repository path outside the eval directory, never a co-located artifact. The eval harness generates `history.jsonl` and the ignored `runs/` transcripts at fixed names it owns; `eval.toml` never declares them.
-- `[probe]` evidence is co-located under `probes/{probe-slug}/`: `probe.md` records intent, environment and preconditions, the protocol, the attested run's observations, the Author's verdict, and limitations, linking every retained artifact — at least one inspectable artifact beside the prose; working runs stay in an ignored `runs/`.
+- Test evidence is co-located under `tests/`; each filename encodes subject, assertion type, execution level, and an optional runner in the project's language convention.
+- Eval evidence is co-located under `evals/{rule-slug}/`: `eval.toml` plus the case, prompt, and template artifacts it declares by eval-relative path — canonically `cases.jsonl`, `prompt.md`, and `prompt.template.md`. A declared case or prompt path may reach a sibling eval's shared artifact; a declared template stays inside the eval directory. A declared producer source is a repository path outside the eval directory, never a co-located artifact. The eval harness generates `history.jsonl` and the ignored `runs/` transcripts at fixed names it owns; `eval.toml` never declares them.
+- Probe evidence is co-located under `probes/{probe-slug}/`: `probe.md` records intent, environment and preconditions, the protocol, the attested run's observations, the Author's verdict, and limitations, linking every retained artifact — at least one inspectable artifact beside the prose; working runs stay in an ignored `runs/`.
 - The outcome record carries an `id`, one or more directional conditions each linking its metric source, and a selection-source link when the node holds variants — no value, threshold, impact, assertion, or state. A variant carries none; its outcomes belong to the parent.
 - `knowledge/` is a node's one reserved memory root: dated entries, newest-first `log.md`, an `index.md` per directory, typed front matter on every non-reserved file. It declares no truth and prunes with its node.
 - ADRs and PDRs are files inside the node whose subtree they govern, never child nodes; the root holds only root-scope records.
@@ -172,7 +172,7 @@ NN-{slug}.{kind}/
 
 - ALWAYS: classify content by the artifact purpose that owns it.
 
-The taxonomy is closed: `spx/` admits no artifact outside this table, the canonical node shape, and the optional knowledge root. Operational files under `spx/local/` are configuration. The note raises no placement question. Placement decides only between the governing layer (ADR or PDR) and the declaring layer (spec). Verification and implementation artifacts are never placed by classification: assertion tags derive evidence locations, and verification reachability with the language's declared infrastructure home derives implementation locations.
+The taxonomy is closed: `spx/` admits no artifact outside this table, the canonical node shape, and the optional knowledge root. Operational files under `spx/local/` are configuration. The note raises no placement question. Placement decides only between the governing layer (ADR or PDR) and the declaring layer (spec). Verification and implementation artifacts are never placed by classification: the verification type each group heading names and the artifact each slug links derive evidence locations, and verification reachability with the language's declared infrastructure home derives implementation locations.
 
 | Artifact            | Purpose                                            | Verified by                                  |
 | ------------------- | -------------------------------------------------- | -------------------------------------------- |
@@ -205,20 +205,22 @@ Assertions declare observable product output at the layer that owns the behavior
 
 - ALWAYS: choose exactly one verification type before choosing any test assertion type.
 
-| Type     | Tag                   | Verdict mode  | Use                                                                       |
-| -------- | --------------------- | ------------- | ------------------------------------------------------------------------- |
-| test     | `[test](path)`        | Deterministic | Behavior is a deterministic function of inputs.                           |
-| evaluate | `[eval](path)`        | Deterministic | LLM-driven behavior emits a parseable verdict scored against cases.       |
-| probe    | `[probe](path)`       | Attested      | A claim about the running node that only an executed observation settles. |
-| audit    | `[audit:{rule-slug}]` | Agentic       | A semantic constraint with no structural verdict to score.                |
+| Type     | Group heading                 | Verdict mode  | Use                                                                       |
+| -------- | ----------------------------- | ------------- | ------------------------------------------------------------------------- |
+| test     | `Test.{assertion type}`       | Deterministic | Behavior is a deterministic function of inputs.                           |
+| evaluate | `Evaluate: {slug}` subsection | Deterministic | LLM-driven behavior emits a parseable verdict scored against cases.       |
+| probe    | `Probe`                       | Attested      | A claim about the running node that only an executed observation settles. |
+| audit    | `Audit`                       | Agentic       | A semantic constraint with no structural verdict to score.                |
 
-Validate and Review back no assertion. Authoring declarations await selection untagged directly under `## Assertions` or a decision's `## Verification`, alongside routed subsections if present. Audit judges their declaration quality; approval proves neither evidence completeness nor Passing. Once routed, a spec-malleable assertion may omit its tag; every harder assertion carries exactly one. A toolchain without slug support retains pathless `[audit]`. A dangling `[test]`, `[eval]`, or `[probe]` link derives Declared without a structural defect. Audit slugs are unique within their spec and key status-claim results.
+Validate and Review back no assertion. A row — an Assertion of a spec or a rule of a decision record — carries no tag: the group heading above it names its verification type, its leading slug is its one name, and once its test file, eval rule, or probe protocol exists the slug links that artifact — a Node-relative path into the directory of its heading's type. Before the artifact exists the slug stands plain, and a dangling link derives Declared without a structural defect. An Audit Assertion links no artifact; its slug keys its status-claim result and its criteria are the row's own statement. A slug is unique within its file. `${SKILL_DIR}/references/grammar.md` carries the row form.
+
+A row whose slug links no evidence yet is a declaration awaiting verification selection; the evidence a malleability requires for Passing (see `<malleability_and_state>`) is a separate matter. Audit judges the declaration quality of such a row; approval proves neither evidence completeness nor Passing. Selecting the verification type is its own step, taken before any evidence exists.
 
 </verification_types>
 
 <assertion_types>
 
-- MUST: assign one assertion type only to `[test]` evidence and derive it from the claim's quantifier.
+- MUST: assign one assertion type only to test evidence and derive it from the claim's quantifier.
 
 | Assertion type | Quantifier                       | Test strategy             | Use                                                     |
 | -------------- | -------------------------------- | ------------------------- | ------------------------------------------------------- |
@@ -228,7 +230,7 @@ Validate and Review back no assertion. Authoring declarations await selection un
 | Property       | For all over an open value space | Property-based            | Invariant for every valid input.                        |
 | Compliance     | ALWAYS/NEVER rule                | Violating fixtures        | A deterministic behavioral boundary.                    |
 
-A universal is never a scenario. Choose mapping for a finite source-owned domain, conformance for an oracle, compliance for a rule exercised against violations, and property for an open domain; choose scenario only for one existential interaction. Evaluate, probe, and audit carry no assertion type.
+A test group heading names its assertion type after `Test.`. A universal is never a scenario. Choose mapping for a finite source-owned domain, conformance for an oracle, compliance for a rule exercised against violations, and property for an open domain; choose scenario only for one existential interaction. Evaluate, probe, and audit carry no assertion type.
 
 </assertion_types>
 
@@ -236,13 +238,13 @@ A universal is never a scenario. Choose mapping for a finite source-owned domain
 
 - MUST: select test, evaluate, probe, or audit evidence from the verdict the real subject can produce.
 
-Prefer `[test]` when behavior is deterministic; `[eval]` when the real LLM-driven producer emits a parseable contract a runner can score; `[probe]` when only observing the running node settles the claim; `[audit]` when no deterministic, attested, or structural verdict exists. A structural lint constraint is `[test]` evidence run against violating fixtures.
+Prefer test evidence when behavior is deterministic; eval evidence when the real LLM-driven producer emits a parseable contract a runner can score; probe evidence when only observing the running node settles the claim; an Audit Assertion when no deterministic, attested, or structural verdict exists. A structural lint constraint is test evidence run against violating fixtures.
 
 </verification_selection>
 
 <mixing_types>
 
-- ALWAYS: group mixed `[test]` assertions by assertion type and cite every node and decision by its complete `spx/...` path.
+- ALWAYS: group mixed test assertions by assertion type and cite every node and decision by its complete `spx/...` path.
 
 Each test file carries one assertion type; bare names such as `32-parser.capability` are ambiguous because other directories may reuse the prefix.
 
@@ -256,7 +258,7 @@ Each test file carries one assertion type; bare names such as `32-parser.capabil
 
 - ALWAYS: place prerequisites before consumers; numeric separation alone establishes no dependency.
 
-Nodes and decision records in one directory share one two-digit index space, extended by fractional inserts (`20.54`). An earlier node's contract is available as a prerequisite and constrains work that consumes it or falls within its stated scope; an unrelated earlier contract supplies awareness and creates no dependency. Same-index peers cannot supply prerequisites to each other, and independent siblings may occupy different indices. A lower-index decision record governs higher-index siblings and their descendants. An index never encodes roadmap order, time, or priority.
+Nodes and decision records in one directory share one two-digit index space, extended by fractional inserts (`20.54`). The context walk reads every sibling's published contract, while only a named lower-index provider constrains: an earlier node's contract is available as a prerequisite and constrains work that consumes it or falls within its stated scope, and an unrelated earlier contract supplies awareness and creates no dependency. Same-index peers cannot supply prerequisites to each other, and independent siblings may occupy different indices. A lower-index decision record governs higher-index siblings and their descendants. An index never encodes roadmap order, time, or priority.
 
 </index_semantics>
 
@@ -292,12 +294,12 @@ Siblings and children enter as published contracts, never subtree internals. `te
 
 - ALWAYS: use exactly the six verification types validate, test, evaluate, probe, audit, and review.
 
-- **validate** — deterministic conformance to configured tool standards, including the tree's structural and link contracts; runs on every change; backs no tag.
-- **test** — deterministic execution of behavior; backs `[test]`.
-- **evaluate** — deterministic scoring of structured producer output; backs `[eval]`.
-- **probe** — attested fidelity of the running node through an executed protocol; backs `[probe]`.
-- **audit** — agentic conformance or correctness judgment against an assertion's declared criteria; backs `[audit:{rule-slug}]`.
-- **review** — agentic open-ended judgment over the whole change, including each affected output node's spec against its malleability's expectations; backs no tag.
+- **validate** — deterministic conformance to configured tool standards, including the tree's structural and link contracts; runs on every change; backs no assertion.
+- **test** — deterministic execution of behavior; backs a Test group.
+- **evaluate** — deterministic scoring of structured producer output; backs an Evaluate subsection.
+- **probe** — attested fidelity of the running node through an executed protocol; backs a Probe group.
+- **audit** — agentic conformance or correctness judgment against an assertion's declared criteria; backs an Audit group, keyed by the row's slug.
+- **review** — agentic open-ended judgment over the whole change, including each affected output node's spec against its malleability's expectations; backs no assertion.
 
 A type's verdict mode is fixed, so whoever runs it reaches the same verdict, and a model never judges a deterministic verdict. The type set and the three modes never expand without amending this foundation and its governing decision. Evidence is what verification produces and commits; a test file, eval rule, or probe protocol is the assertion made executable, never evidence. Every attributed result carries a pin naming the declaration, the artifact, and the subject; a change to any pinned path invalidates it — test and evaluate run again, audit receives a new judgment, probe a fresh attested run.
 
@@ -313,11 +315,11 @@ After a mechanical repair, Validate runs and every Test and Evaluate result the 
 
 | Malleability     | Phase        | Still cheap to change              | Verification required for Passing                                          |
 | ---------------- | ------------ | ---------------------------------- | -------------------------------------------------------------------------- |
-| `spec`           | prototype    | spec, verification, implementation | Validate, reachability tests, and every tagged assertion result            |
-| `verification`   | experimental | verification, implementation       | Validate and a tagged result for every assertion                           |
+| `spec`           | prototype    | spec, verification, implementation | Validate, reachability tests, and every linked assertion result            |
+| `verification`   | experimental | verification, implementation       | Validate and a result for every linked assertion                           |
 | `implementation` | production   | implementation                     | Validate and a result for every assertion, with evidence that passes audit |
 
-A reachability test is a `[test]` file that executes the node's entry points and pins its API shape while asserting the minimum, so coverage attribution stays uniform while iteration stays free. **State** is the node's own claim against that declaration: **Declared** — the spec exists and required artifacts are missing; **Specified** — required artifacts exist without a current passing result; **Passing** — Validate passes and every required result is current and passes; **Failing** — a required result becomes invalid or stops passing after Passing under unchanged declarations. An initial failure leaves Specified. A changed decision or spec invalidates every affected pin and derives the state anew. **Effective** malleability and state derive over the node's dependency closure and are never committed.
+A reachability test is a test file that executes the node's entry points and pins its API shape while asserting the minimum, so coverage attribution stays uniform while iteration stays free. **State** is the node's own claim against that declaration: **Declared** — the spec exists and required artifacts are missing; **Specified** — required artifacts exist without a current passing result; **Passing** — Validate passes and every required result is current and passes; **Failing** — a required result becomes invalid or stops passing after Passing under unchanged declarations. An initial failure leaves Specified. A changed decision or spec invalidates every affected pin and derives the state anew. **Effective** malleability and state derive over the node's dependency closure and are never committed.
 
 </malleability_and_state>
 
@@ -389,7 +391,7 @@ A change invalidates another file when it removes a symbol that file references,
 
 <expense_ceiling>
 
-- NEVER: raise a cost, quota, worker, retry, timeout, or external-capacity ceiling without operator approval in the same turn.
+- NEVER: raise a spend, quota, token, worker, retry, timeout, hosted-runner, or paid-provider ceiling, explicit or implicit, without operator approval in the same turn.
 
 Command defaults are authority for cost-bearing and quota-bearing runs. When a default ceiling blocks a run, report the command, the ceiling, and the proposed increase.
 

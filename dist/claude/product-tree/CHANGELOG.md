@@ -10,6 +10,14 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.0
+
+### Changed
+
+- **`/understand` and its grammar reference state a spec row in the 4.0 form.** A row opens with its slug and a colon, a Scenario row continues on indented Given, When, Then, and And lines, and the row stands under a group heading that names its verification type: `Test.Scenario`, `Test.Conformance`, `Test.Property`, `Test.Compliance`, `Probe`, or `Audit`. A Mapping or Evaluate subsection carries its slug in its `Test.Mapping:` or `Evaluate:` heading, with one sentence and one table whose first cell in each row holds the slug of its case. No row carries a tag; once its test file, eval rule, or probe protocol exists, the slug links that artifact, and an Audit row links none. Before this change, the foundation taught `[test]`, `[eval]`, `[probe]`, and `[audit:{rule-slug}]` tags, which a 4.0 spec no longer carries. `references/grammar.md` replaces its tag productions with the row productions, and `references/status-claims.md` keys a test, eval, or probe result by the path its slug links and an audit result by the slug of its row.
+- **`/understand` separates a row that links no evidence from the evidence a malleability requires for Passing.** The foundation names verification selection as its own step, taken before any evidence exists, and the malleability table requires a linked result for every assertion at the harder levels.
+- **`/understand` states the context walk, the spend ceiling, and infrastructure placement in the spec's terms.** The context walk reads every sibling's published contract while only a named lower-index provider constrains. Raising a spend, quota, token, worker, retry, timeout, hosted-runner, or paid-provider ceiling, explicit or implicit, needs the Operator's approval in the same turn. `references/artifact-placement.md` cites the test-infrastructure PDR for the rule that naturally placed spec nodes govern harnesses, generators, and inert fixtures.
+
 ## 0.114.6
 
 ### Changed
