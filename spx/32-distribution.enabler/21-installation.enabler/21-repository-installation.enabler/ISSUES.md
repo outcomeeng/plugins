@@ -470,3 +470,25 @@ the repair under its own test-evidence audit.
 **Settlement condition**: generated config documents covering every case above
 drive the edit at level one, the linked test asserts the parsed result and
 idempotence, and the edit parses its output before it replaces the file.
+
+## The l2 native-profile test backs no Assertion
+
+**Evidence**: `tests/test_native_profile_execution.compliance.l2.py` runs a
+Codex row's child read through the installed app-server and checks that a row
+whose child the real listing lacks records the absent thread once. Before
+https://github.com/outcomeeng/plugins/pull/761, the native-profile row producer
+row linked this file beside
+`tests/test_native_profile_execution.compliance.l1.py`. In the settled form,
+`probe-row-producer` links only the l1 file, because a slug carries one link,
+and no Assertion of this Node links the l2 file. The Plugins Advisor recorded
+this as debt finding F-001 of run 2026-11-16_00-22-25-236-157781ced6d3.
+
+**Impact**: The gate still runs the l2 case, but the spec no longer states
+what it proves. An Author or Auditor who reads the spec sees no claim that the
+real app-server listing settles, and no Assertion holds the case when its
+behavior changes.
+
+**Settlement condition**: an Assertion of this Node links
+`tests/test_native_profile_execution.compliance.l2.py` and states the
+absent-child behavior it checks against the installed app-server, or the l2
+case moves into a file a linked Assertion names and the l2 file is removed.
