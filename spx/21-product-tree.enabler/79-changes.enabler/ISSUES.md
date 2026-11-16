@@ -23,3 +23,11 @@
 **Impact:** On a harness that names no scratch directory and is no hosted runner, the change audit has no location for its request files, so it stops or writes outside every location its rules allow.
 
 **Settlement condition:** [`spx/15-agent-tools.pdr.md`](spx/15-agent-tools.pdr.md) names the location a session without a harness-named scratch directory writes its request files to, and `audit-change` names that location.
+
+## The change auditor reaches opposite verdicts on one record at one Base
+
+**Evidence:** On 2026-11-15 the `change-auditor` of product-tree 0.114.3 audited outcomeeng/changes#867 twice before Applicable, both times at Base `7ce8f51a3d07e43b4d2c5b01c258c3a5d3fd545e`. Run `2026-11-15_23-33-14-190-06d4860de7bc` judged the body revision edited at 2026-11-15T23:29:34Z and sealed approved with no findings. Run `2026-11-15_23-57-50-594-7f779ed4b52a` judged the revision edited at 2026-11-15T23:53:44Z and sealed rejected, with findings on `front-matter-block` and `audit-before-applicable`. The issue's edit history holds those two revisions byte-equal. The `audit-record` assertion of `changes.md` has the audit judge each Declarations line against every Decision Record that governs its Node at the Base, so both runs judged one subject against one set of decisions.
+
+**Impact:** The verdict of a before-Applicable audit depends on the run, not on the record and its Base. An approval does not show that the record meets `front-matter-block` and `audit-before-applicable`, and a holder can advance a Leaf to Applicable on whichever run approves.
+
+**Settlement condition:** Two `audit-change` runs on a byte-equal record body at one Base seal the same verdict with the same findings.
