@@ -274,6 +274,12 @@ _SECTION_TITLES = {
     "PROPERTY": "Properties",
     "AUDIT": "Audit",
 }
+_TEST_HEADING_TYPES = {
+    "SCENARIO": "Scenario",
+    "MAPPING": "Mapping",
+    "CONFORMANCE": "Conformance",
+    "PROPERTY": "Property",
+}
 _RULE_MARKERS = ("ALWAYS", "NEVER", "MUST", "REQUIRED", "BLOCKING", "STOP")
 _RULE_BEARING_PSEUDO_XML_TAGS = frozenset(
     {
@@ -486,11 +492,14 @@ def _validate_spec_assertion(match: re.Match[str]) -> None:
     expected_index = int(match.group("index"))
     if kind in {"ALWAYS", "NEVER", "MUST"}:
         pattern = re.compile(
-            rf"^\s*-\s*(?:\[[^\]]*\]\([^)]*\):\s*)?{kind}:", re.MULTILINE
+            rf"^\s*-\s*(?:(?:\[[^\]]*\]\([^)]*\)|[A-Za-z0-9][A-Za-z0-9_-]*):\s*)?"
+            rf"{kind}:",
+            re.MULTILINE,
         )
         assertion_count = len(pattern.findall(text))
     else:
         assertion_count = len(_section_assertions(text, _SECTION_TITLES[kind]))
+        assertion_count += len(_typed_heading_assertions(text, kind))
     if assertion_count < expected_index:
         raise ReviewResultValidationError(
             f"finding 'rule' cites {kind}:{expected_index}, "
@@ -520,6 +529,37 @@ def _validate_decision_path(path: str, rule: str) -> None:
             "hyphen, then a slug of letters, digits, and hyphens (for example "
             "'21-example-decision'). Cite the decision file by its exact name."
         )
+
+
+def _typed_heading_assertions(text: str, kind: str) -> list[str]:
+    """Return the assertions under ``### Test.<Type>: <name>`` or ``### Audit: <name>``.
+
+    Each top-level list entry under a matching heading is one assertion. A
+    matching heading with no list entry is itself one assertion: a mapping's
+    table rows are its cases, so the table-bearing heading counts once.
+    """
+    heading_type = "Audit" if kind == "AUDIT" else f"Test.{_TEST_HEADING_TYPES[kind]}"
+    heading_pattern = re.compile(rf"^\s*###\s+{re.escape(heading_type)}:\s*\S")
+    next_heading_pattern = re.compile(r"^\s*#{1,3}\s+")
+    assertions: list[str] = []
+    entries: list[str] | None = None
+    in_fence = False
+    for line in text.splitlines():
+        if _is_markdown_fence(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if next_heading_pattern.match(line):
+            if entries is not None:
+                assertions.extend(entries or [line])
+            entries = [] if heading_pattern.match(line) else None
+            continue
+        if entries is not None and re.match(r"^-\s+", line):
+            entries.append(line)
+    if entries is not None:
+        assertions.extend(entries or ["heading"])
+    return assertions
 
 
 def _section_assertions(text: str, section_title: str) -> list[str]:
