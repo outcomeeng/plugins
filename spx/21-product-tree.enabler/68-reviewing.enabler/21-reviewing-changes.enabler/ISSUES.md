@@ -296,3 +296,11 @@ The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's
 **Impact.** The assertion's subject cannot be located, so no run can judge the Reviewer's blocking-finding counts against it, and the assertion stands without evidence.
 
 **Settlement condition.** The assertion names a locatable set of known-clean and known-broken diffs committed in the product, against which the Reviewer's blocking-finding counts are judged, or the Change that owns the assertion retires it.
+
+## The review prompt keys a tracked debt entry on a decision citation that spx validation rejects as a code span
+
+**Evidence.** `<tracked_debt>` in `src/plugins/product-tree/skills/review-changes/references/review-prompt.md` (line 135) has an `ISSUES.md` entry heading end with its entry key as three code spans: the file path, the unit label, and the rule citation. `<rule_citation>` in the same file (line 170) admits an ADR or PDR as `spx/<path>/<n>-<slug>.adr.md` or `spx/<path>/<n>-<slug>.pdr.md`, so the third code span of the key of a `debt` finding that cites a decision is a decision path. On 2026-11-16, spx 0.10.0 ran `spx validation markdown` on a tracked copy of this file with one added heading whose third code span held the path of [`spx/15-test-language.adr.md`](spx/15-test-language.adr.md). It reported `spx-link-shape` on that heading: the path "is a decision path written as text; cite it with a link". The same heading with the citation written as a link whose text is that code span passed. The prompt does not state whether a code span inside a link counts as one of the three code spans.
+
+**Impact.** A `debt` finding that cites a decision may match no entry key that passes spx validation. Its Author then writes a heading that fails validation or one the review may not match, and a review that does not match it reports the finding again as new `debt`.
+
+**Settlement condition.** One form of entry key whose rule citation names a decision passes spx validation and matches the tracked-debt rule of `review-prompt.md`, and `review-prompt.md` names that form.
