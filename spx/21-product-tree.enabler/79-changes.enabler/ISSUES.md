@@ -31,3 +31,11 @@
 **Impact:** The verdict of a before-Applicable audit depends on the run, not on the record and its Base. An approval does not show that the record meets `front-matter-block` and `audit-before-applicable`, and a holder can advance a Leaf to Applicable on whichever run approves.
 
 **Settlement condition:** Two `audit-change` runs on a byte-equal record body at one Base seal the same verdict with the same findings.
+
+## The before-Applicable audit passes a whole-spec replacement that drops Base rules its Intent does not name
+
+**Evidence.** On 2026-11-16, a Change record revision edited at 2026-11-16T02:26:06Z replaced the whole spec of `spx/21-product-tree.enabler/68-audit.enabler/32-changeset-coherence.enabler` at Base `916264e0ab61684e93562451d401031301875ade`. At that Base, lines 28 and 29 of `changeset-coherence.md` hold two Compliance rules: "ALWAYS: generated artifacts are collapsed onto their producing authored artifact before path breadth, authored-change size, or review load is assessed" and "NEVER: raw line count, file count, path breadth, or review-load measurements determine the verdict without semantic evidence". The replacement holds neither rule, and the revision's Statement of Intent names neither. The Plugins Advisor's review of that record and its audit before Applicable, run `2026-11-16_02-30-09-352-57ad33b71286`, both passed it. The `changes-reviewer` run `2026-11-16_02-52-09-116-25b65230f328` on the Changeset that applied it found the two dropped rules.
+
+**Impact.** A replacement that drops a Base rule can reach Applicable through an audit that finds nothing. The rule then leaves the spec without the Operator's review, and only a later review of the Changeset can catch it.
+
+**Settlement condition.** Before Applicable, the audit compares every Base row of a replaced spec with the replacement and reports each row the replacement drops without the Statement of Intent naming it.
