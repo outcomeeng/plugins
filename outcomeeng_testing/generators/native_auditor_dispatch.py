@@ -3,8 +3,8 @@
 Every name a case introduces is fresh per call, so a case selects only the
 shape the governing rule names: a configuration that parses, one that does
 not, one that already holds the writable-roots table, and a definition whose
-`tools` grant is absent or empty. Every table, key, and field name the product
-owns is imported from its owning module.
+`tools` grant is absent, empty, or every tool. Every table, key, field name,
+and sentinel the product owns is imported from its owning module.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ import json
 from enum import Enum
 from uuid import uuid4
 
-from outcomeeng.distribution.agents import AGENT_TOOLS_FIELD
+from outcomeeng.distribution.agents import AGENT_TOOLS_FIELD, ALL_TOOLS_SENTINEL
 from outcomeeng.distribution.contracts import FRONTMATTER_DELIMITER
 from outcomeeng.distribution.native_auditor_dispatch import (
     CODEX_SANDBOX_WORKSPACE_WRITE_TABLE,
@@ -76,20 +76,21 @@ def generated_sandbox_table_configs() -> tuple[str, ...]:
     )
 
 
-class GrantAbsence(Enum):
-    """How a Claude Code definition declares no `tools` grant."""
+class UnboundedGrant(Enum):
+    """How a Claude Code definition's `tools` field names no exact grant set: absent, empty, or every tool."""
 
     FIELD_REMOVED = "field-removed"
     EMPTY_STRING = "empty-string"
     EMPTY_LIST = "empty-list"
+    ALL_TOOLS = "all-tools"
 
 
-def definition_without_grants(text: str, absence: GrantAbsence) -> str:
-    """A Markdown agent definition with its `tools` field removed or emptied, every other line unchanged.
+def definition_with_unbounded_grant(text: str, grant: UnboundedGrant) -> str:
+    """A Markdown agent definition with its `tools` field removed, emptied, or granting every tool, every other line unchanged.
 
     The field's line and any indented continuation lines of it inside the
-    frontmatter are replaced; a definition that carries no field gains an
-    empty one at the frontmatter's end for the two empty forms.
+    frontmatter are replaced; a definition that carries no field gains the
+    replacement at the frontmatter's end for every form but the removal.
     """
     lines = text.splitlines(keepends=True)
     opener = f"{FRONTMATTER_DELIMITER}\n"
@@ -101,10 +102,11 @@ def definition_without_grants(text: str, absence: GrantAbsence) -> str:
         if line.rstrip("\n") == FRONTMATTER_DELIMITER
     )
     replacement = {
-        GrantAbsence.FIELD_REMOVED: (),
-        GrantAbsence.EMPTY_STRING: (f'{AGENT_TOOLS_FIELD}: ""\n',),
-        GrantAbsence.EMPTY_LIST: (f"{AGENT_TOOLS_FIELD}: []\n",),
-    }[absence]
+        UnboundedGrant.FIELD_REMOVED: (),
+        UnboundedGrant.EMPTY_STRING: (f'{AGENT_TOOLS_FIELD}: ""\n',),
+        UnboundedGrant.EMPTY_LIST: (f"{AGENT_TOOLS_FIELD}: []\n",),
+        UnboundedGrant.ALL_TOOLS: (f"{AGENT_TOOLS_FIELD}: {ALL_TOOLS_SENTINEL}\n",),
+    }[grant]
     frontmatter: list[str] = []
     inside_field = False
     placed = False

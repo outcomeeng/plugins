@@ -14,7 +14,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from outcomeeng.distribution.agents import AGENT_TOOLS_FIELD, agent_tool_grants
+from outcomeeng.distribution.agents import (
+    AGENT_TOOLS_FIELD,
+    ALL_TOOLS_SENTINEL,
+    agent_tool_grants,
+)
 from outcomeeng.distribution.build import agent_capability, agent_dispatch_name
 from outcomeeng.distribution.contracts import CLAUDE_DIST_RELATIVE, Target
 from outcomeeng.distribution.installation import (
@@ -390,17 +394,24 @@ def _launch_command(row: NativeAuditorRow, checkout: Path) -> tuple[str, ...]:
 
 
 def _claude_tool_grants(row: NativeAuditorRow) -> tuple[str, ...]:
-    """The `tools` grants the row's Claude Code definition declares; a definition with none launches nothing.
+    """The `tools` grants the row's Claude Code definition declares; a definition with none, or with every tool, launches nothing.
 
     An empty `--allowedTools` value approves no call, so the dispatched auditor
-    could only stall on its first approval; the row refuses before the parent
-    session starts instead.
+    could only stall on its first approval. A grant of every tool names no
+    exact set the parent could approve, and the parent runs no bypass mode. In
+    either case the row refuses before the parent session starts.
     """
     grants = agent_tool_grants(row.native_definition_path)
     if not grants:
         raise ValueError(
             f"Claude Code auditor definition {row.native_definition_path} for "
             f"{row.native_name} declares no `{AGENT_TOOLS_FIELD}` grant"
+        )
+    if ALL_TOOLS_SENTINEL in grants:
+        raise ValueError(
+            f"Claude Code auditor definition {row.native_definition_path} for "
+            f"{row.native_name} grants every tool through "
+            f"`{AGENT_TOOLS_FIELD}: {ALL_TOOLS_SENTINEL}`"
         )
     return grants
 

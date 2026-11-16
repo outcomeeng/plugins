@@ -57,8 +57,8 @@ from outcomeeng_testing.harnesses.native_auditor_dispatch import (
     run_native_auditor_dispatch,
 )
 from outcomeeng_testing.generators.native_auditor_dispatch import (
-    GrantAbsence,
-    definition_without_grants,
+    UnboundedGrant,
+    definition_with_unbounded_grant,
 )
 from outcomeeng_testing.harnesses.native_profile_execution import (
     CLAUDE_CREDENTIAL_VARIABLES,
@@ -286,15 +286,15 @@ def _row_for_state(state_root: Path) -> NativeAuditorRow:
     )
 
 
-def claude_definition_plant(absence: GrantAbsence) -> StatePlant:
-    """Plant a Claude Code row's materialized definition with its `tools` grant made absent as `absence` names."""
+def claude_definition_plant(grant: UnboundedGrant) -> StatePlant:
+    """Plant a Claude Code row's materialized definition with its `tools` field in the unbounded form `grant` names."""
 
     def plant(home: Path) -> None:
         row = _row_for_state(home.parent)
         if row.target is Target.CLAUDE and row.native_definition_path.is_file():
             row.native_definition_path.write_text(  # NOSONAR S2083 - the row's own disposable state root
-                definition_without_grants(
-                    row.shipped_definition_path.read_text(encoding="utf-8"), absence
+                definition_with_unbounded_grant(
+                    row.shipped_definition_path.read_text(encoding="utf-8"), grant
                 ),
                 encoding="utf-8",
             )

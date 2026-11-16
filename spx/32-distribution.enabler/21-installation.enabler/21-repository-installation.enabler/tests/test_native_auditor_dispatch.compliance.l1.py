@@ -9,7 +9,7 @@ from uuid import uuid4
 
 import pytest
 
-from outcomeeng.distribution.agents import AGENT_TOOLS_FIELD
+from outcomeeng.distribution.agents import AGENT_TOOLS_FIELD, ALL_TOOLS_SENTINEL
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import CODEX_HOME_CONFIG_PATH, CODEX_HOME_ENV
 from outcomeeng.distribution.native_auditor_dispatch import (
@@ -32,7 +32,7 @@ from outcomeeng.distribution.native_auditor_dispatch import (
     record_native_auditor_failure,
 )
 from outcomeeng_testing.generators.native_auditor_dispatch import (
-    GrantAbsence,
+    UnboundedGrant,
     generated_preserved_codex_configs,
     generated_sandbox_table_configs,
     generated_unparseable_codex_configs,
@@ -506,13 +506,13 @@ def test_naming_the_writable_roots_keeps_every_entry_the_codex_config_held_befor
                 ), (row.identifier, configuration)
 
 
-def test_a_claude_row_whose_definition_declares_no_tools_grant_launches_no_parent_and_records_that(
+def test_a_claude_row_whose_definition_declares_no_tools_grant_or_grants_every_tool_launches_no_parent_and_records_that(
     tmp_path: Path,
 ) -> None:
     selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
-    for absence in GrantAbsence:
+    for grant in UnboundedGrant:
         with native_auditor_launch(
-            {selected}, target=Target.CLAUDE, plant=claude_definition_plant(absence)
+            {selected}, target=Target.CLAUDE, plant=claude_definition_plant(grant)
         ) as observation:
             assert {item.observation.row.target for item in observation.rows} == {
                 Target.CLAUDE
@@ -520,23 +520,24 @@ def test_a_claude_row_whose_definition_declares_no_tools_grant_launches_no_paren
             for item in observation.rows:
                 row = item.observation.row
                 assert item.calls, row.identifier
-                planted = tmp_path / f"{absence.value}-{row.identifier}.md"
+                planted = tmp_path / f"{grant.value}-{row.identifier}.md"
                 planted.write_bytes(
                     item.calls[-1].state_files[
                         row.native_definition_path.relative_to(row.state_root)
                     ]
                 )
-                assert not agent_document_oracle(planted).frontmatter.get(
+                tools = agent_document_oracle(planted).frontmatter.get(
                     AGENT_TOOLS_FIELD
-                ), (absence, row.identifier)
+                )
+                assert not tools or tools == ALL_TOOLS_SENTINEL, (grant, tools)
                 assert not [
                     call
                     for call in item.calls
                     if set(row.launch_command) <= set(call.argv)
-                ], (absence, row.identifier)
+                ], (grant, row.identifier)
                 assert item.observation.launch_exit_code is None, row.identifier
                 condition = item.observation.terminal_condition
-                assert condition is not None, (absence, row.identifier)
+                assert condition is not None, (grant, row.identifier)
                 assert str(row.native_definition_path) in condition, condition
                 result = json.loads(row.result_path.read_text("utf-8"))
                 assert result[RESULT_TERMINAL_CONDITION_KEY] == condition
