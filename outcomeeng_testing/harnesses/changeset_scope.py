@@ -188,6 +188,7 @@ CHANGESET_SCOPE_CONTRACT = load_changeset_scope_contract_module()
 # remote name, so the remote it registers and the refs it points are one
 # vocabulary with the resolver's own.
 ORIGIN_REMOTE_NAME = str(CHANGESET_SCOPE_CONTRACT.ORIGIN_REMOTE_NAME)
+FETCH_HEAD_REF = "FETCH_HEAD"  # git-owned symbolic ref, not a product contract value
 ORIGIN_BARE_DIRECTORY = f"{ORIGIN_REMOTE_NAME}.git"
 # The short ``origin/HEAD`` selector a caller passes, and the full symbolic ref
 # and remote-tracking prefix git resolves it through.
@@ -428,6 +429,57 @@ def build_base_advanced_after_branch_repo(
 
 
 @dataclass(frozen=True)
+class FetchHeadFeatureRepo:
+    """A repo whose ``FETCH_HEAD`` names a feature commit one past the base tip.
+
+    ``feature_oid`` is the commit ``FETCH_HEAD`` names, ``feature_file`` the one
+    path that commit changes, and ``base_oid`` the published base tip it
+    descends from. The checkout sits on the base, so ``FETCH_HEAD`` is the only
+    ref naming the feature commit; a fetch of the base branch rewrites it.
+    """
+
+    repo: pathlib.Path
+    base_ref: str
+    feature_oid: str
+    feature_file: str
+    base_oid: str
+
+
+def build_fetch_head_feature_repo(
+    repo: pathlib.Path,
+    scenario: ChangesetScopeCase | None = None,
+) -> FetchHeadFeatureRepo:
+    """Build a repo whose real ``git fetch`` left ``FETCH_HEAD`` on a feature commit.
+
+    Sequence: initial commit A published as the origin base; feature commit F
+    on a branch pushed to the remote; ``git fetch origin <feature>`` writes
+    ``FETCH_HEAD`` as F; the checkout returns to the base at A.
+    """
+    scenario = _initialize_changeset_repo(repo, scenario)
+    base_oid = _git(repo, "rev-parse", "HEAD")
+    _publish_origin_base(repo, scenario, base_oid)
+
+    _git(repo, "switch", "-q", "-c", scenario.feature_branch)
+    commit_file(
+        repo,
+        scenario.feature_file,
+        scenario.feature_file,
+        scenario.feature_file,
+    )
+    feature_oid = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "push", "-q", ORIGIN_REMOTE_NAME, scenario.feature_branch)
+    _git(repo, "fetch", "-q", ORIGIN_REMOTE_NAME, scenario.feature_branch)
+    _git(repo, "switch", "-q", scenario.base_branch)
+    return FetchHeadFeatureRepo(
+        repo=repo,
+        base_ref=scenario.base_branch,
+        feature_oid=feature_oid,
+        feature_file=scenario.feature_file,
+        base_oid=base_oid,
+    )
+
+
+@dataclass(frozen=True)
 class LaggingRemoteTrackingRepo:
     """A repo whose local ``origin/<base>`` ref lags the remote's base tip.
 
@@ -548,6 +600,15 @@ def lagging_remote_tracking_repo(
 
 
 @contextmanager
+def fetch_head_feature_repo(
+    scenario: ChangesetScopeCase | None = None,
+) -> Iterator[FetchHeadFeatureRepo]:
+    """Yield a repository whose ``FETCH_HEAD`` names a feature commit."""
+    with temporary_changeset_scope() as paths:
+        yield build_fetch_head_feature_repo(paths.repo, scenario)
+
+
+@contextmanager
 def repo_without_origin(
     scenario: ChangesetScopeCase | None = None,
 ) -> Iterator[pathlib.Path]:
@@ -602,6 +663,101 @@ def branch_collision_state(
             state_dir=paths.repo,
             empty_state_dir=paths.empty_state_dir,
         )
+
+
+PULL_REQUEST_HEAD_REF = "refs/pull/1/head"
+FETCH_HEAD_REF = "FETCH_HEAD"
+
+
+@dataclass(frozen=True)
+class PullRequestHeadRepo:
+    """A repo whose ``FETCH_HEAD`` names a pull-request head past the base tip.
+
+    The pull-request head commit changes ``pull_request_file`` one commit past
+    ``origin/<base_ref>``; the checkout stays on the base tip, so the head
+    exists for the runner only through ``FETCH_HEAD``, which a real
+    ``git fetch`` of the pull-request ref wrote.
+    """
+
+    repo: pathlib.Path
+    base_ref: str
+    pull_request_head: str
+    pull_request_file: str
+
+
+def build_pull_request_head_repo(
+    repo: pathlib.Path,
+    scenario: ChangesetScopeCase | None = None,
+) -> PullRequestHeadRepo:
+    """Build a repo whose ``FETCH_HEAD`` is a fetched pull-request head.
+
+    Sequence: initial commit A published as ``origin/<base>``; one feature
+    commit F past A pushed to the bare remote's pull-request ref; the local
+    feature branch removed; the pull-request ref fetched so ``FETCH_HEAD`` is
+    F while ``HEAD`` stays at A.
+    """
+    scenario = _initialize_changeset_repo(repo, scenario)
+    _publish_origin_base(repo, scenario, _git(repo, "rev-parse", "HEAD"))
+    _git(repo, "switch", "-q", "-c", scenario.feature_branch)
+    commit_file(
+        repo,
+        scenario.feature_file,
+        scenario.feature_file,
+        scenario.feature_file,
+    )
+    head = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "push", "-q", ORIGIN_REMOTE_NAME, f"{head}:{PULL_REQUEST_HEAD_REF}")
+    _git(repo, "switch", "-q", scenario.base_branch)
+    _git(repo, "branch", "-q", "-D", scenario.feature_branch)
+    _git(repo, "fetch", "-q", ORIGIN_REMOTE_NAME, PULL_REQUEST_HEAD_REF)
+    return PullRequestHeadRepo(
+        repo=repo,
+        base_ref=scenario.base_branch,
+        pull_request_head=head,
+        pull_request_file=scenario.feature_file,
+    )
+
+
+@contextmanager
+def pull_request_head_repo(
+    scenario: ChangesetScopeCase | None = None,
+) -> Iterator[PullRequestHeadRepo]:
+    """Yield a generated pull-request-head repository and clean it up on exit."""
+    with temporary_changeset_scope() as paths:
+        yield build_pull_request_head_repo(paths.repo, scenario)
+
+
+@dataclass(frozen=True)
+class EmptyScopeRepo:
+    """A repo whose head is one commit past the base tip and changes no path."""
+
+    repo: pathlib.Path
+    base_ref: str
+
+
+def build_empty_scope_repo(
+    repo: pathlib.Path,
+    scenario: ChangesetScopeCase | None = None,
+) -> EmptyScopeRepo:
+    """Build a repo whose committed, staged, unstaged and untracked sections are empty.
+
+    The base tip A is published as ``origin/<base>``; the head is an empty
+    commit past A, so the head and base commit ids differ while no path
+    changes and the head is not behind the base.
+    """
+    scenario = _initialize_changeset_repo(repo, scenario)
+    _publish_origin_base(repo, scenario, _git(repo, "rev-parse", "HEAD"))
+    _git(repo, "commit", "-q", "--allow-empty", "-m", scenario.feature_branch)
+    return EmptyScopeRepo(repo=repo, base_ref=scenario.base_branch)
+
+
+@contextmanager
+def empty_scope_repo(
+    scenario: ChangesetScopeCase | None = None,
+) -> Iterator[EmptyScopeRepo]:
+    """Yield a generated empty-scope repository and clean it up on exit."""
+    with temporary_changeset_scope() as paths:
+        yield build_empty_scope_repo(paths.repo, scenario)
 
 
 def git_commit_oid(repo: pathlib.Path, ref: str) -> str:

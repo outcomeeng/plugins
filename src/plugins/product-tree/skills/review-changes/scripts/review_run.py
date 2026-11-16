@@ -849,7 +849,13 @@ def _start(args: argparse.Namespace) -> int:
     # resolution failure reports through the runner's diagnostic line.
     try:
         base_ref = compute_diff.resolve_base_ref()
-        head_ref = compute_diff.resolve_head_ref()
+        # The head resolves to a commit id before the base fetch below, which
+        # rewrites FETCH_HEAD, so a head named by that ref survives the fetch.
+        head_ref = str(
+            changeset_scope.commit_oid(
+                compute_diff.resolve_head_ref(), repo=pathlib.Path.cwd()
+            )
+        )
         changeset_scope.require_current_base(
             base_ref, head_ref, repo=pathlib.Path.cwd()
         )
@@ -884,6 +890,19 @@ def _start(args: argparse.Namespace) -> int:
             bundle_dir=scratch_dir,
         )
         manifest_path = pathlib.Path(str(summary[compute_diff.SUMMARY_MANIFEST_PATH]))
+        if not _manifest_changed_files(
+            _read_json_file(manifest_path, name=_MANIFEST_NAME), path=manifest_path
+        ):
+            repo = pathlib.Path.cwd()
+            sys.stderr.write(
+                "start: the review scope holds no changed path between base "
+                f"commit {changeset_scope.commit_oid(base_ref, repo=repo)} and "
+                f"head commit {head_ref}; no journal was opened. Check that "
+                f"{compute_diff.ENV_BASE_REF} and {compute_diff.ENV_HEAD_REF} "
+                "name the changeset to review, then rerun "
+                "`review_run.py start`.\n"
+            )
+            return 1
         metadata = _metadata_from_manifest(
             manifest_path=manifest_path,
             started_at=started_at,

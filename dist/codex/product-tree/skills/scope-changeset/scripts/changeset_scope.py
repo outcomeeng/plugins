@@ -155,6 +155,9 @@ def resolve_committed_scope(
     """Resolve HEAD, a branch, or an explicit three-dot range against a fetched base.
 
     Preserve explicit endpoints. A single ref uses the configured remote base.
+    The head resolves to a full commit id before any fetch, and every later
+    read uses that id, so a fetch that rewrites ``FETCH_HEAD`` or a
+    remote-tracking ref moves no head.
     A remote-tracking base is fetched first, which updates that ref and never
     the working tree, and a head behind the fetched tip is refused. The base
     identity is the fetched tip, not the merge-base commit; the changed paths
@@ -171,12 +174,13 @@ def resolve_committed_scope(
         else:
             base_ref = remote_tracking_ref(detect_base_ref(repo, runner=runner))
             head_ref = selector
-        require_current_base(base_ref, head_ref, repo=repo, runner=runner)
+        head_oid = commit_oid(head_ref, repo=repo, runner=runner)
+        require_current_base(base_ref, head_oid, repo=repo, runner=runner)
         return {
             ScopeField.BASE: commit_oid(base_ref, repo=repo, runner=runner),
-            ScopeField.HEAD: commit_oid(head_ref, repo=repo, runner=runner),
+            ScopeField.HEAD: head_oid,
             ScopeField.CHANGED_PATHS: expand_diff_range(
-                f"{base_ref}{RANGE_SEPARATOR}{head_ref}", repo=repo, runner=runner
+                f"{base_ref}{RANGE_SEPARATOR}{head_oid}", repo=repo, runner=runner
             ),
         }
     except subprocess.CalledProcessError as exc:
@@ -220,6 +224,7 @@ def require_current_base(
     """
     if not base_ref.startswith(ORIGIN_REF_PREFIX):
         return
+    head_oid = commit_oid(head_ref, repo=repo, runner=runner)
     bare_base = base_ref[len(ORIGIN_REF_PREFIX) :]
     if bare_base == HEAD_REF:
         bare_base = detect_base_ref(repo, runner=runner)
@@ -239,7 +244,7 @@ def require_current_base(
     )
     tip = commit_oid(base_ref, repo=repo, runner=runner)
     merge_base = runner(
-        ["git", "merge-base", tip, head_ref],
+        ["git", "merge-base", tip, head_oid],
         cwd=repo,
         capture_output=True,
         text=True,

@@ -275,8 +275,24 @@ The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's
 
 ## The token-only-output row stands under Compliance but links a conformance test
 
-**Evidence.** At `f32fce45e`, `reviewing-changes.md` line 87 holds the row that outcomeeng/changes#994 slugs `token-only-output`: "NEVER: the live `review-changes` skill path renders, summarizes, counts, or restates findings for the caller; caller-facing output is the raw run token". It stands under the Node's `### Compliance` heading and links `tests/test_skill_orchestration.conformance.l2.py`, whose name carries the assertion type `conformance`. The assertion type in a linked test file's name matches the assertion type its heading names.
+**Evidence.** `reviewing-changes.md` holds the `token-only-output` row, "NEVER: the live `review-changes` skill path renders, summarizes, counts, or restates findings for the caller; caller-facing output is the raw run token", plain under `### Test.Compliance: runner boundaries`, with no test linked. Its Evidence is `tests/test_skill_orchestration.conformance.l2.py`, whose name carries the assertion type `conformance` and which no row of the spec links. The assertion type in a linked test file's name matches the assertion type its heading names, so that file cannot link the row.
 
 **Impact.** The row's Evidence does not carry the type its heading declares, so the row's link fails the check that pairs a heading's type with its test file, and the conformance file stands as the Evidence of a Compliance rule.
 
 **Settlement condition.** A compliance test links the row, or the Change that owns the row retypes it.
+
+## The review prompt does not restrict a blocking absence finding to an absence the diff shows
+
+**Evidence.** The `observed-absence` assertion of [`spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md`](spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md) requires that a blocking finding assert the absence of a file or fact only when the diff contains the deletion or omission. Neither `src/plugins/product-tree/skills/review-changes/references/review-prompt.md` nor `src/plugins/product-tree/skills/review-changes/SKILL.md` states it. The only related text is the `<finding_validity>` instruction to frame a finding conditionally when the changeset omits a fact the finding depends on, and the word absence appears in neither file. Finding 2 of the sealed assertion-audit run `run-2026-11-16_02-23-14-791-07aab636fc2a`, rule `constraint-unmet`, severity `debt`, on Change outcomeeng/changes#994.
+
+**Impact.** A Reviewer can emit a blocking finding that asserts a missing artifact it cannot observe in the diff, and the Author repairs a gap that the changeset never introduced.
+
+**Settlement condition.** `review-prompt.md` instructs the Reviewer to emit a blocking finding that asserts the absence of a file or fact only when the diff contains the deletion or omission, and to assert no missing artifact it cannot observe, and one typed skill audit approves the amended prompt.
+
+## The known-diffs assertion names no locatable set of known-clean and known-broken diffs
+
+**Evidence.** The `known-diffs` assertion of [`spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md`](spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md) judges the Reviewer's blocking-finding counts against known-clean and known-broken diffs. The node holds no `evals` directory and no committed corpus or fixture of such diffs, and this file records the eval lane as suspended, so no set is named by path. Finding 3 of the sealed assertion-audit run `run-2026-11-16_02-23-14-791-07aab636fc2a`, rule `subject-not-found`, severity `debt`, on Change outcomeeng/changes#994.
+
+**Impact.** The assertion's subject cannot be located, so no run can judge the Reviewer's blocking-finding counts against it, and the assertion stands without evidence.
+
+**Settlement condition.** The assertion names a locatable set of known-clean and known-broken diffs committed in the product, against which the Reviewer's blocking-finding counts are judged, or the Change that owns the assertion retires it.

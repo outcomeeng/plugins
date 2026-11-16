@@ -269,3 +269,69 @@ ALWAYS: pseudo-XML sections are rule-bearing surfaces.
         assert "critical-rules" in slugs
         assert "principles" in slugs
         assert "rules" not in slugs
+
+
+class TestTypedHeadingAssertionCounts:
+    """Assertions under `Test.<Type>:` and `Audit:` headings are counted for citation."""
+
+    SPEC = """# Spec
+
+## Assertions
+
+### Test.Scenario: first
+
+- [one](tests/a.py):
+  - Given x
+  - Then y
+- [two](tests/a.py):
+  - Given x
+
+### Test.Mapping: [table](tests/m.py)
+
+| Case | Wire |
+| ---- | ---- |
+| a    | `a`  |
+| b    | `b`  |
+
+### Test.Property: p
+
+- [prop](tests/p.py): For every input
+
+### Test.Compliance: c
+
+- [linked](tests/c.py): ALWAYS: linked rule
+- slug-only: NEVER: slug rule
+
+### Audit: a
+
+- audit-one: The thing holds
+- audit-two: Another thing holds
+"""
+
+    @pytest.mark.parametrize(
+        ("kind", "count"),
+        [
+            ("SCENARIO", 2),
+            ("MAPPING", 1),
+            ("PROPERTY", 1),
+            ("ALWAYS", 1),
+            ("NEVER", 1),
+            ("AUDIT", 2),
+        ],
+    )
+    def test_cited_assertion_index_resolves_up_to_the_count(
+        self,
+        kind: str,
+        count: int,
+        tmp_path: pathlib.Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        review_result = load_review_result_module()
+        spec = tmp_path / "spx" / "node.md"
+        spec.parent.mkdir(parents=True)
+        spec.write_text(self.SPEC)
+        monkeypatch.chdir(tmp_path)
+
+        review_result._validate_rule_citation(f"spx/node.md:{kind}:{count}")
+        with pytest.raises(review_result.ReviewResultValidationError):
+            review_result._validate_rule_citation(f"spx/node.md:{kind}:{count + 1}")
