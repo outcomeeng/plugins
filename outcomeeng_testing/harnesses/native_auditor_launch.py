@@ -20,7 +20,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Final
 
-from outcomeeng.distribution.installation import CLAUDE_EXECUTABLE, CODEX_HOME_ENV
+from outcomeeng.distribution.installation import (
+    CLAUDE_EXECUTABLE,
+    CODEX_HOME_CONFIG_PATH,
+    CODEX_HOME_ENV,
+)
 from outcomeeng.distribution.native_auditor_dispatch import (
     AGENTS_DIRECTORY,
     BLOCKED_MARKER,
@@ -169,11 +173,28 @@ class DispatchCall:
     """The stdin the command received."""
     fixture_repository: FixtureRepository | None = None
     """The fixture checkout as git reads it, for a command that names the fixture directory."""
+    codex_config: bytes | None = field(default=None, repr=False)
+    """Bytes of the `config.toml` the command's Codex home held, when it holds one."""
+    directories: frozenset[Path] = frozenset()
+    """Every directory of the row's state outside a git store, keyed relative to it."""
 
 
 def _saved_login(home: Path) -> bytes | None:
     login = home / AUTH_FILENAME
     return login.read_bytes() if login.is_file() else None
+
+
+def _codex_config(home: Path) -> bytes | None:
+    config = home / CODEX_HOME_CONFIG_PATH
+    return config.read_bytes() if config.is_file() else None
+
+
+def _state_directories(state_root: Path) -> frozenset[Path]:
+    return frozenset(
+        path.relative_to(state_root)
+        for path in state_root.rglob("*")
+        if path.is_dir() and GIT_DIRECTORY not in path.parts
+    )
 
 
 def _materialized_state(state_root: Path) -> dict[Path, bytes]:
@@ -226,6 +247,8 @@ def _record_dispatch_call(
         _saved_login(home),
         input_text,
         _fixture_repository(home.parent, argv, input_text),
+        _codex_config(home),
+        _state_directories(home.parent),
     )
 
 

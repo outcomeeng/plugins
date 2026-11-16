@@ -2,6 +2,9 @@
 
 import hashlib
 import json
+import tomllib
+from collections.abc import Sequence
+from pathlib import Path
 from uuid import uuid4
 
 from outcomeeng.distribution.contracts import Target
@@ -16,6 +19,7 @@ from outcomeeng.distribution.native_auditor_dispatch import (
     native_auditor_rows,
     record_native_auditor_failure,
 )
+from outcomeeng_testing.harnesses.agent_conversion import agent_document_oracle
 from outcomeeng_testing.harnesses.discovery_auth import CREDENTIAL_ENVIRONMENTS
 from outcomeeng_testing.harnesses.discovery_auth_cases import (
     NATIVE_FAILURE_EXIT_CODE,
@@ -42,6 +46,20 @@ STRIPPABLE = (
     | CLAUDE_CREDENTIAL_VARIABLES
     | CREDENTIAL_ENVIRONMENTS
 )
+SCRATCH_VARIABLES = ("RUNNER_TEMP", "TMPDIR")
+"""The scratch locations a hosted session's payload guidance falls back to."""
+
+
+def option_values(argv: Sequence[str], option: str) -> list[str]:
+    """The value after every occurrence of `option` in a command."""
+    return [argv[index + 1] for index, word in enumerate(argv[:-1]) if word == option]
+
+
+def definition_tool_grants(definition: Path) -> tuple[str, ...]:
+    """The `tools` grants a Markdown agent definition declares, read through PyYAML."""
+    tools = agent_document_oracle(definition).frontmatter["tools"]
+    assert isinstance(tools, str), definition
+    return tuple(grant.strip() for grant in tools.split(","))
 
 
 def test_every_row_launches_once_from_the_shipped_definition_passing_only_the_selected_credential() -> (
@@ -274,3 +292,54 @@ def test_a_failed_or_timed_out_installation_retains_evidence_and_does_not_launch
                     set(item.row.launch_command) <= set(call.argv)
                     for item in observation.rows
                 ), call.argv
+
+
+def test_each_auditor_parent_reaches_the_fixture_repository_and_scratch_directory_and_approves_exactly_the_definition_grants() -> (
+    None
+):
+    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
+    with native_auditor_launch({selected}) as observation:
+        assert {item.observation.row.target for item in observation.rows} == set(Target)
+        for item in observation.rows:
+            row = item.observation.row
+            launches = [
+                call for call in item.calls if set(row.launch_command) <= set(call.argv)
+            ]
+            assert len(launches) == 1, row.identifier
+            launch = launches[0]
+            repository = row.fixture_path.parent
+            scratch = launch.environment[SCRATCH_VARIABLES[0]]
+            assert {launch.environment[name] for name in SCRATCH_VARIABLES} == {
+                scratch
+            }, row.identifier
+            scratch_path = Path(scratch)
+            assert scratch_path.relative_to(row.state_root) in launch.directories, (
+                row.identifier
+            )
+            assert not scratch_path.is_relative_to(repository), row.identifier
+            access_roots = [str(repository), scratch]
+            if row.target is Target.CLAUDE:
+                assert option_values(launch.argv, "--add-dir") == access_roots, (
+                    row.identifier,
+                    launch.argv,
+                )
+                allowed = option_values(launch.argv, "--allowedTools")
+                assert len(allowed) == 1, (row.identifier, launch.argv)
+                assert tuple(allowed[0].split(",")) == definition_tool_grants(
+                    row.shipped_definition_path
+                ), row.identifier
+            else:
+                assert option_values(launch.argv, "--sandbox") == ["workspace-write"], (
+                    row.identifier,
+                    launch.argv,
+                )
+                assert 'approval_policy="never"' in option_values(launch.argv, "-c"), (
+                    row.identifier,
+                    launch.argv,
+                )
+                assert "--strict-config" in launch.argv, row.identifier
+                assert launch.codex_config is not None, row.identifier
+                configuration = tomllib.loads(launch.codex_config.decode("utf-8"))
+                assert configuration["sandbox_workspace_write"] == {
+                    "writable_roots": access_roots
+                }, row.identifier
