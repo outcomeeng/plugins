@@ -275,7 +275,7 @@ The changes-reviewer requires a test to pin `SIGNAL_GRACE_SECONDS` to the spec's
 
 ## The token-only-output row stands under Compliance but links a conformance test
 
-**Evidence.** At `f32fce45e`, `reviewing-changes.md` line 87 holds the row that outcomeeng/changes#994 slugs `token-only-output`: "NEVER: the live `review-changes` skill path renders, summarizes, counts, or restates findings for the caller; caller-facing output is the raw run token". It stands under the Node's `### Compliance` heading and links `tests/test_skill_orchestration.conformance.l2.py`, whose name carries the assertion type `conformance`. The assertion type in a linked test file's name matches the assertion type its heading names.
+**Evidence.** `reviewing-changes.md` holds the `token-only-output` row, "NEVER: the live `review-changes` skill path renders, summarizes, counts, or restates findings for the caller; caller-facing output is the raw run token", plain under `### Test.Compliance: runner boundaries`, with no test linked. Its Evidence is `tests/test_skill_orchestration.conformance.l2.py`, whose name carries the assertion type `conformance` and which no row of the spec links. The assertion type in a linked test file's name matches the assertion type its heading names, so that file cannot link the row.
 
 **Impact.** The row's Evidence does not carry the type its heading declares, so the row's link fails the check that pairs a heading's type with its test file, and the conformance file stands as the Evidence of a Compliance rule.
 
