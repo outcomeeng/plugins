@@ -485,7 +485,9 @@ def _validate_spec_assertion(match: re.Match[str]) -> None:
     kind = match.group("kind")
     expected_index = int(match.group("index"))
     if kind in {"ALWAYS", "NEVER", "MUST"}:
-        pattern = re.compile(rf"^\s*-\s*{kind}:", re.MULTILINE)
+        pattern = re.compile(
+            rf"^\s*-\s*(?:\[[^\]]*\]\([^)]*\):\s*)?{kind}:", re.MULTILINE
+        )
         assertion_count = len(pattern.findall(text))
     else:
         assertion_count = len(_section_assertions(text, _SECTION_TITLES[kind]))
