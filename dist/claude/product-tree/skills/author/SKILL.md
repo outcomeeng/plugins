@@ -13,7 +13,7 @@ A Product Tree artifact — a product document, decision record (ADR/PDR), outpu
 
 <stop_triggers>
 
-About to choose an assertion's verification type (`[test]` / `[eval]` / `[probe]` / `[audit]`) or its assertion type (scenario / mapping / conformance / property / compliance); about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which invokes `/verify` before the selected specialist. Write the assertion or decision-rule text without a tag or type subsection; never select which type it resolves to, and never write the test or implementation behind it.
+About to choose a spec Assertion's verification type (test, eval, probe, audit) or its test assertion type (scenario / mapping / conformance / property / compliance) that no Declarations line of the Change states; about to write or edit a test file; about to implement a work item -> STOP. That work belongs to `/apply`, which invokes `/verify` before the selected specialist. Write the group heading a Declarations line states, and ask the open question under `<input>` when none states one; never write a tag, and never write the test or implementation behind an Assertion. Write decision-rule text without a tag or type subsection.
 
 </stop_triggers>
 
@@ -24,6 +24,7 @@ About to choose an assertion's verification type (`[test]` / `[eval]` / `[probe]
 - **Change reference.** Accept the Change only as its full issue URL, which names its store; a `#N` or `owner/repo#N` reference stops before any read with result `blocked`, naming the reference and the URL form required. Read the Change with `gh issue view <issue-url> --json body`, and take the operation, the artifact type, the settled content, and the placement for the target from its `# Output` and `# Frame`.
 - **Settled placement.** A target path that the Change's Frame names settles placement; Step 3 then writes without presenting the placement for confirmation.
 - **Repair block.** Text after the target and the Change reference is the verbatim result of each rejected verdict and the exact command line and output of each failed deterministic command of an earlier round on this target. Repair every finding and failure it names within this workflow's scope, and report each one's disposition in the result.
+- **Assertion heading.** A Declarations line of the Change that states the group heading or subsection heading of a spec Assertion fixes that heading; Step 5 keeps it as stated.
 - **Open question.** A question the packet and the loaded truth leave open — kind, placement, content, or an operator-owned gap — is asked through `AskUserQuestion` when that tool is available; otherwise the workflow stops before writing with result `blocked`, naming the question verbatim and the write it blocks.
 
 </input>
@@ -173,7 +174,15 @@ Resolve operator-owned gaps as `<input>` states for an open question. Do not ask
 
 **Step 5: Draft the artifact**
 
-Use the appropriate canonical template provided by `/understand` for the artifact shell and final target shape. Its typed assertion examples describe the post-`/verify` artifact and are not copied into an authoring draft. Draft new spec assertions directly under `## Assertions` and new decision rules directly under `## Verification`, without a type heading or tag; `/apply` invokes `/verify` and the selected specialist to materialize the final heading and tag.
+Use the appropriate canonical template provided by `/understand` for the artifact shell and row form. Draft new decision rules directly under `## Verification`, without a type heading or tag; `/apply` invokes `/verify` and the selected specialist to materialize the final heading.
+
+**Spec Assertion form** (from live `/understand` `references/grammar.md` `<assertion_rows>`):
+
+- Write each Assertion outside a Mapping or Evaluate subsection as a row opened by its slug and a colon, under the group heading that names its verification type: `### Test.Scenario`, `### Test.Conformance`, `### Test.Property`, `### Test.Compliance`, `### Probe`, or `### Audit`, with a shared subject after a colon.
+- Write a Scenario Assertion with only its slug and the colon on its first line, and indented Given, When, Then, and And lines after it.
+- Write each Mapping or Evaluate Assertion as its own subsection headed `### Test.Mapping: {slug}` or `### Evaluate: {slug}`, holding one sentence and one table whose first cell in each row holds the slug of its case.
+- Write no tag. Link no test file, eval rule, or probe protocol that does not exist; the slug stands plain until the artifact exists.
+- Keep the group or subsection heading a Declarations line of the Change states for the Assertion.
 
 **Voice rules** (from live `/understand` `<atemporal_voice>`):
 
@@ -183,9 +192,8 @@ Use the appropriate canonical template provided by `/understand` for the artifac
 
 **Assertion rules** (from live `/understand` `<assertion_model>`):
 
-- Every output node has at least one assertion; a spec-malleable assertion may omit its tag, and every harder assertion carries exactly one once `/verify` selects it
-- Each new assertion remains untagged until `/apply` invokes `/verify`; an untagged authoring draft is the input to verification selection, not an invalid authoring result
-- `/verify` selects each assertion's verification type; when it selects test, `/test` and `/author-{language}-test` select the assertion type and language expression. Authoring chooses neither.
+- Every output node has at least one assertion, and no assertion carries a tag.
+- The group heading of a new Assertion is the one its Declarations line states; `/verify` selects a verification type for evidence, and when it selects test, `/test` and `/author-{language}-test` select the assertion type and language expression. Authoring chooses none of them.
 
 **Reference rules**:
 
@@ -211,9 +219,9 @@ Before writing files, check:
 - [ ] Atemporal voice throughout — no temporal markers
 - [ ] For an outcome record: every condition is directional, carries no value, and links its metric source; the selection source is present exactly when the node holds variants
 - [ ] For a probe protocol: intent, preconditions, protocol, and limitations are present, and no verdict is written before an attested run
-- [ ] New spec assertions sit directly under `## Assertions` without a verification tag or assertion-type heading; `/apply` invokes `/verify` to select both before evidence construction
+- [ ] Every new spec Assertion opens with its slug and a colon under the group heading its Declarations line states, a Scenario Assertion continues on indented Given, When, Then, and And lines, each Mapping or Evaluate Assertion is its own subsection with one sentence and one table keyed by case slug, and none carries a tag
 - [ ] New ADR/PDR rules sit directly under `## Verification` in ALWAYS/NEVER form without a verification subsection or tag; `/verify` selects the subsection and tag before the selected specialist proceeds
-- [ ] Authoring has not independently selected a verification type, test assertion type, evidence path, or language expression
+- [ ] Authoring has not independently selected a verification type, test assertion type, evidence path, or language expression that no Declarations line states
 - [ ] No content misplacement (per `/understand` `references/artifact-placement.md` `<common_misplacements>`)
 
 </step>
@@ -332,7 +340,7 @@ How to avoid: read the proposed container name aloud and ask "what would I refus
 
 **Failure 6: Authoring preselected `### Audit` instead of leaving verification routing to `/verify`**
 
-Claude placed PDR rules like "`install` performs an atomic write (write to temp + rename) so settings.json is never observed in a partial state ([audit:atomic-install-write])" and "Running `install` twice for the same rule is a no-op the second time ([audit:install-idempotent])" under `### Audit`. Both rules describe behaviors a finite test can falsify, but authoring preselected audit before the verification router examined their real subjects.
+Claude placed PDR rules like "`install` performs an atomic write (write to temp + rename) so settings.json is never observed in a partial state" and "Running `install` twice for the same rule is a no-op the second time" under `### Audit`. Both rules describe behaviors a finite test can falsify, but authoring preselected audit before the verification router examined their real subjects.
 
 How to avoid: write each new rule directly under `## Verification` without a subsection or tag. `/apply` invokes `/verify`, which classifies the real subject; `/test` selects the assertion type only after test is selected. Authoring never performs that classification itself.
 
@@ -376,7 +384,7 @@ Authoring is complete when:
 
 - The artifact exists at its canonical path, its filename and node kind match that path, and its index preserves the loaded sibling ordering.
 - The artifact contains its template-required declaration shape in atemporal voice, and every node or decision citation is a full path from `spx/`.
-- New spec assertions sit directly under `## Assertions`, and new decision rules sit directly under `## Verification`; both remain untagged and untyped for `/apply` to route through `/verify`.
+- New spec Assertions sit under the group heading their Declarations lines state, in the row form of `<workflow>` Step 5, and carry no tag; new decision rules sit directly under `## Verification`, untagged and untyped for `/apply` to route through `/verify`.
 - A newly authored node has no empty `tests/` directory; that directory appears only when the selected test specialist writes the first test file.
 - `spx validation markdown` exits zero and `spx spec status --format json` returns a valid projection for the authored tree.
 - When product truth, a decision, or an ancestor assertion changes, `/align` reports no unaligned first affected lower spec; any remaining downstream work is recorded in the Change that carries it.

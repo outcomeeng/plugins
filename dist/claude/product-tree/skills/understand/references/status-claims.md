@@ -6,7 +6,7 @@ The status claim `spx.status.json` every output node carries, the results and pi
 
 <status_claim>
 
-The projector is the claim's only writer; operators and agents author specs, verification artifacts, and implementation, never state. The claim records the node's own `state`, the `malleability` the measurement ran against, and `verification` results grouped by type. Test, eval, and probe entries key by the node-relative path their tag links; audit entries key by rule slug; a variant's copies of its parent's entries key by the parent artifact's tree-absolute path.
+The projector is the claim's only writer; operators and agents author specs, verification artifacts, and implementation, never state. The claim records the node's own `state`, the `malleability` the measurement ran against, and `verification` results grouped by type. Test, eval, and probe entries key by the node-relative path their slug links; audit entries key by the slug of the Audit row; a variant's copies of its parent's entries key by the parent artifact's tree-absolute path.
 
 ```json
 {
@@ -52,6 +52,6 @@ An initial failed or unrun result leaves Specified; Failing records a regression
 
 <gate_composition>
 
-The claim records each result as `passed`, `failed`, or `not-run`, keyed by tagged path (audit by rule slug), with a pin and, for Agentic and Attested results, actor provenance and a run. Merge gates a changeset by the least malleable node it touches: Validate always; Review for a verification-malleable node; the evidence audits before Review for an implementation-malleable node; product and outcome-record changes run Validate and Review regardless. A passing consumer's dependency change may neither raise a malleability nor make any node in its closure cease Passing.
+The claim records each result as `passed`, `failed`, or `not-run`, keyed by linked path (audit by the slug of its row), with a pin and, for Agentic and Attested results, actor provenance and a run. Merge gates a changeset by the least malleable node it touches: Validate always; Review for a verification-malleable node; the evidence audits before Review for an implementation-malleable node; product and outcome-record changes run Validate and Review regardless. A passing consumer's dependency change may neither raise a malleability nor make any node in its closure cease Passing.
 
 </gate_composition>

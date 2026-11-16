@@ -1,0 +1,6 @@
+spx/20-example.domain/15-readout.pdr.md
+# Window readout
+
+GOVERNS the readout of retention windows
+SO THAT operators reviewing sessions
+CAN RELY ON each window reading in days.

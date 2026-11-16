@@ -1,6 +1,6 @@
 # {Decision Name}
 
-DEFINES {term} AS {definition — one line for each term the decision owns; omit the paragraph when it owns none}
+DEFINES {term} AS {definition — one line for each term the decision owns; omit the line when it owns none}
 
 GOVERNS {the product behavior this decision governs, stated as permanent truth}
 SO THAT {who relies on it}
@@ -8,32 +8,42 @@ CAN RELY ON {the user-observable behavior, not implementation}
 
 ## Verification
 
-- {slug}: {ALWAYS or NEVER, then one sentence stating a rule awaiting verification selection.}
+### Test.Mapping: {slug}
 
-### Mapping: {slug}
+{One sentence mapping a finite set of inputs to their outputs, stating every condition the outcomes depend on.}
 
-{One sentence mapping a finite set of inputs to their outputs.}
+| Case        | {Output column}   |
+| ----------- | ----------------- |
+| {case-slug} | {expected result} |
 
-| Case              | {Output column}   |
-| ----------------- | ----------------- |
-| {short case name} | {expected result} |
+### Test.Scenario: {subject}
 
-### {Scenario | Conformance | Property | Compliance}: {subject}
+- {slug}:
+  - Given {context}
+  - When {action}
+  - Then {result}
+  - And {further result}
 
-- {slug}: {One sentence stating the rule. A group of more than ten rules splits by subject; a group whose rules share no subject takes the heading `### {Scenario | Conformance | Property | Compliance}`.}
+### Test.Conformance: {subject}
 
-### Eval: {slug}
+- {slug}: {One sentence stating that an output conforms to a standard or schema. A group of more than ten rules splits by subject; a group whose rules share no subject takes the heading `### Test.Conformance`.}
 
-{One sentence stating behavior of a skill, agent, or classifier whose output has a parseable contract, graded over curated cases.}
+### Test.Property: {subject}
 
-| Given                 | Then                             |
-| --------------------- | -------------------------------- |
-| {the input of a case} | {the verdict the producer emits} |
+- {slug}: {One sentence stating an invariant that holds for all code the decision governs.}
 
-### Probe
+### Test.Compliance: {subject}
 
-- {slug}: {One sentence stating a claim about the running node that only an executed observation settles.}
+- {slug}: {ALWAYS or NEVER, then one sentence stating a behavior that holds or is prohibited.}
 
-### Audit
+### Evaluate: {slug}
+
+{One sentence naming the producer, the context it receives, and how the eval compares an output with its expectation.}
+
+| Case        | Input                 | Expected output                  |
+| ----------- | --------------------- | -------------------------------- |
+| {case-slug} | {the input of a case} | {the verdict the producer emits} |
+
+### Audit: {subject}
 
 - {slug}: {One sentence stating a semantic constraint an audit skill judges, with no deterministic test or graded eval.}

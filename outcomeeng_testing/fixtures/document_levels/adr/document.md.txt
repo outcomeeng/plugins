@@ -8,12 +8,12 @@ SO THAT the same declarations and results always yield the same state.
 
 ## Verification
 
-### Property: derivation
+### Test.Property: derivation
 
 - state-deterministic: Identical declarations, artifacts, attributed results, and pins produce identical state.
 - current-results-only: Only current results satisfy a node's verification requirements.
 
-### Compliance: validity
+### Test.Compliance: validity
 
 - no-invalid-satisfaction: NEVER: an invalidated result satisfies a required verification result.
 

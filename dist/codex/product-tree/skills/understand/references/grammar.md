@@ -9,7 +9,7 @@ The structural grammar of the durable map — the shapes a loader accepts — in
 1. `<lexical>`: slugs, indices, ids
 2. `<nodes_and_files>`: directory names, decision files, and the files inside a node
 3. `<front_matter>`: the spec's YAML fields
-4. `<assertion_tags>`: the four tag forms and their paths
+4. `<assertion_rows>`: the row form, group headings, Mapping and Evaluate subsections, and slug links
 5. `<verification_artifacts>`: test, eval, and probe directories
 6. `<containment>`: the per-kind productions
 7. `<links>`: the two anchored link shapes
@@ -63,23 +63,37 @@ malleability: spec                          # output nodes only; spec | verifica
 
 </front_matter>
 
-<assertion_tags>
+<assertion_rows>
 
 ```ebnf
-test-path  = "tests/" , test-file ;
-eval-path  = "evals/" , slug , "/" , "eval.toml" ;
-probe-path = "probes/" , slug , "/" , "probe.md" ;
-
-test-tag  = "[test](" , test-path , ")" ;
-eval-tag  = "[eval](" , eval-path , ")" ;
-probe-tag = "[probe](" , probe-path , ")" ;
-audit-tag = "[audit:" , slug , "]"            (* the rule slug keys the claim entry *)
-          | "[audit]" ;                       (* the pathless form a toolchain that has not adopted the slug parses *)
+line-slug     = slug ;                                 (* unique within its file *)
+line-text     = ? prose that holds no "[" outside a contract, row, or knowledge link ? ;
+nl            = ? line break ? ;
+heading-mark  = ? Markdown heading marker at the level the heading takes in its file ? ;
+subject       = ? the subject the rules of the group share ? ;
+sentence      = line-text ;
+test-path     = "tests/" , test-file ;
+eval-path     = "evals/" , slug , "/" , "eval.toml" ;
+probe-path    = "probes/" , slug , "/" , "probe.md" ;
+slug-link     = "[" , line-slug , "](" , ( test-path | eval-path | probe-path ) , ")" ;
+step-line     = "  - " , ( "Given" | "When" | "Then" | "And" ) , " " , line-text ;
+row           = "- " , ( line-slug | slug-link ) ,
+                ( ": " , line-text | ":" , nl , step-line , { nl , step-line } ) ;  (* step lines in a Scenario only *)
+group-type    = "Test.Scenario" | "Test.Conformance" | "Test.Property" | "Test.Compliance" | "Probe" | "Audit" ;
+group-heading = heading-mark , group-type , [ ": " , subject ] ;
+rule-group    = group-heading , nl , row , { nl , row } ;
+case-table    = ? Markdown table whose first cell in each row holds the slug of its case ? ;
+mapping       = heading-mark , "Test.Mapping: " , ( line-slug | slug-link ) , nl , sentence , nl , case-table ;
+evaluate      = heading-mark , "Evaluate: " , ( line-slug | slug-link ) , nl , sentence , nl , case-table ;
 ```
 
-Each linked path is node-relative and leads into the tag's own directory. A rule slug is unique within its spec. A dangling test, eval, or probe tag yields Declared.
+A spec row outside a Mapping or Evaluate subsection opens with its slug and a colon, and so does a rule of a decision record. A Scenario row holds only its slug and a colon on its first line, and continues on indented Given, When, Then, and And lines. A row stands under a group heading that names its verification type: `### Test.Scenario`, `### Test.Conformance`, `### Test.Property`, or `### Test.Compliance` heads a test group, `### Probe` a probe group, and `### Audit` an audit group; a shared subject follows the type after a colon.
 
-</assertion_tags>
+A Mapping or Evaluate subsection carries its slug in its heading, `### Test.Mapping: {slug}` or `### Evaluate: {slug}`, and holds one sentence and one table whose first cell in each row holds the slug of its case; a case slug is unique within its table. The sentence of a Mapping states the set and every condition its outcomes depend on; the sentence of an Evaluate names the producer, the context it receives, and how the eval compares an output with its expectation. An Evaluate states no threshold.
+
+No row carries a tag. The group heading names the verification type, and the row's slug is its one name. Once its test file, eval rule, or probe protocol exists, the slug links that artifact by a node-relative path into the directory of its heading's type; before then the slug stands plain, and a dangling link derives Declared. An Audit row links no artifact, and its slug keys the claim entry. A slug is unique within its file.
+
+</assertion_rows>
 
 <verification_artifacts>
 

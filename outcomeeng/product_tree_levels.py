@@ -4,10 +4,14 @@ The form is the PDR or ADR template or an output-kind or variant spec template.
 A proof of concept for the form: the views follow from a document's structure
 alone, so a parser in the SPX CLI can derive the same views. A document in that
 form holds a title, an opening, subsection headings, rules opened by a slug, and
-mapping tables. An eval is its own subsection of one sentence and a case table.
+tables. A Mapping and an Evaluate each form their own subsection of one sentence
+and a case table. A Scenario rule holds only its slug on its first line, and its
+Given, When, Then, and And steps follow as indented bullets.
 Level 1 is the path, the title, and the opening. Level 2 adds each heading, each
-rule's slug and sentence, and the first column of each mapping table; an eval
-contributes its heading and sentence. Level 3 is the whole file.
+rule's slug and sentence, and the first column of each Mapping and Evaluate
+table, the case column; a Scenario rule contributes its slug, and its steps stay
+at level 3. Level 3 is the whole file. A record whose only table is an Evaluate
+case table takes the same level 2 view.
 
 Usage: python3 -m outcomeeng.product_tree_levels --level 1|2|3 <file>
 """
@@ -22,11 +26,16 @@ from pathlib import Path
 FRONT_MATTER_FENCE = "---"
 TITLE_PREFIX = "# "
 HEADING_PREFIXES = ("## ", "### ")
-MAPPING_HEADING_PREFIX = "### Mapping:"
-EVAL_HEADING_PREFIX = "### Eval:"
+MAPPING_HEADING_PREFIX = "### Test.Mapping:"
+EVALUATE_HEADING_PREFIX = "### Evaluate:"
+CODE_FENCE_PREFIXES = ("```", "~~~")
 BULLET_PREFIX = "- "
 TABLE_CELL_FENCE = "|"
 TABLE_HEADER_ROWS = 2
+
+
+class MissingTitleError(ValueError):
+    """Raised when a document holds no title line."""
 
 
 class Level(IntEnum):
@@ -53,6 +62,22 @@ def _is_heading(line: str) -> bool:
     return line.startswith(HEADING_PREFIXES)
 
 
+def _is_fence(line: str) -> bool:
+    return line.lstrip().startswith(CODE_FENCE_PREFIXES)
+
+
+def _fenced_flags(lines: list[str]) -> list[bool]:
+    """Flag each line that is a code fence or lies between two of them."""
+    flags: list[bool] = []
+    inside = False
+    for line in lines:
+        fence = _is_fence(line)
+        flags.append(inside or fence)
+        if fence:
+            inside = not inside
+    return flags
+
+
 def _trim_blank_edges(lines: list[str]) -> list[str]:
     start, end = 0, len(lines)
     while start < end and not lines[start].strip():
@@ -63,15 +88,17 @@ def _trim_blank_edges(lines: list[str]) -> list[str]:
 
 
 def _split_title_and_rest(lines: list[str]) -> tuple[str, list[str]]:
-    index = next(
-        position for position, line in enumerate(lines) if line.startswith(TITLE_PREFIX)
-    )
-    return lines[index], lines[index + 1 :]
+    fenced = _fenced_flags(lines)
+    for position, line in enumerate(lines):
+        if line.startswith(TITLE_PREFIX) and not fenced[position]:
+            return line, lines[position + 1 :]
+    raise MissingTitleError("The document holds no title line")
 
 
 def _split_opening(rest: list[str]) -> tuple[list[str], list[str]]:
+    fenced = _fenced_flags(rest)
     for index, line in enumerate(rest):
-        if _is_heading(line):
+        if _is_heading(line) and not fenced[index]:
             return _trim_blank_edges(rest[:index]), rest[index:]
     return _trim_blank_edges(rest), []
 
@@ -90,11 +117,18 @@ class _LevelTwoView:
     def __init__(self) -> None:
         self.emitted: list[str] = []
         self._rule_lines: list[str] = []
-        self._in_mapping = False
+        self._sentence_lines: list[str] = []
+        self._lists_cases = False
         self._in_sentence_subsection = False
         self._table_rows_seen = 0
 
+    def flush_sentence(self) -> None:
+        if self._sentence_lines:
+            self.emitted.append(" ".join(self._sentence_lines))
+            self._sentence_lines.clear()
+
     def flush_rule(self) -> None:
+        self.flush_sentence()
         if self._rule_lines:
             self.emitted.append(BULLET_PREFIX + " ".join(self._rule_lines))
             self._rule_lines.clear()
@@ -115,32 +149,38 @@ class _LevelTwoView:
         if self.emitted:
             self.emitted.append("")
         self.emitted.append(heading)
-        self._in_mapping = heading.startswith(MAPPING_HEADING_PREFIX)
-        self._in_sentence_subsection = self._in_mapping or heading.startswith(
-            EVAL_HEADING_PREFIX
+        self._lists_cases = heading.startswith(
+            (MAPPING_HEADING_PREFIX, EVALUATE_HEADING_PREFIX)
         )
+        self._in_sentence_subsection = self._lists_cases
         self._table_rows_seen = 0
 
     def _consume_sentence_subsection(self, line: str, stripped: str) -> None:
         if not _is_table_row(line):
-            self.emitted.append(stripped)
+            self._sentence_lines.append(stripped)
             return
+        self.flush_sentence()
         self._table_rows_seen += 1
-        if self._in_mapping and self._table_rows_seen > TABLE_HEADER_ROWS:
+        if self._table_rows_seen > TABLE_HEADER_ROWS:
             self.emitted.append(BULLET_PREFIX + _first_cell(line))
 
     def _consume_rule(self, line: str, stripped: str) -> None:
-        if stripped.startswith(BULLET_PREFIX):
+        if line.startswith(BULLET_PREFIX):
             self.flush_rule()
-            self._rule_lines.append(stripped[len(BULLET_PREFIX) :])
-        elif self._rule_lines and not _is_table_row(line):
+            self._rule_lines.append(line[len(BULLET_PREFIX) :].strip())
+        elif (
+            self._rule_lines
+            and not _is_table_row(line)
+            and not stripped.startswith(BULLET_PREFIX)
+        ):
             self._rule_lines.append(stripped)
 
 
 def _level_two_body(sections: list[str]) -> list[str]:
     view = _LevelTwoView()
-    for line in sections:
-        view.consume(line)
+    for line, in_fence in zip(sections, _fenced_flags(sections), strict=True):
+        if not in_fence:
+            view.consume(line)
     view.flush_rule()
     return view.emitted
 

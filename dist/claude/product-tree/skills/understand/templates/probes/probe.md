@@ -1,6 +1,6 @@
 # {Probe name}
 
-The protocol lives at `probes/{probe-slug}/probe.md`, the target of the assertion's `[probe]` tag. Working runs stay in an ignored `runs/` inside this directory; every attested run retains at least one inspectable artifact beside this file.
+The protocol lives at `probes/{probe-slug}/probe.md`, the target of the link on the slug of its probe row. Working runs stay in an ignored `runs/` inside this directory; every attested run retains at least one inspectable artifact beside this file.
 
 ## Intent
 

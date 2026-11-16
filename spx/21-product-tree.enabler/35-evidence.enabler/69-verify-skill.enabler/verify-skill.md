@@ -41,6 +41,7 @@ CAN route every assertion to test, evaluate, probe, or audit before a specialist
 
 ### Audit: routing workflow
 
+- keeps-change-heading: `/verify` routes an Assertion under the group heading its Change states and writes no tag; the Assertion's slug gains its evidence link only once that evidence exists.
 - typing-after-selection: Test assertion typing occurs only after test is selected; a test assertion type chosen before the verification type fails the audit.
 - invoked-for-selection: Every workflow that delegates verification-type selection invokes `/verify` rather than a type-specific specialist.
 - no-duplicated-specialist: `/verify` duplicates no test assertion typing, language expression, eval producer specialization, or audit judgment.
