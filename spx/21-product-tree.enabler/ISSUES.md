@@ -141,7 +141,7 @@ Surfaced by the local `changes-reviewer` (run `2026-07-24_18-55-59-928-7b385135a
 
 ## 24. The eval-lane bullet states the producer-source boundary as harness-enforced
 
-The `/understand` `<files_in_a_node>` eval-lane bullet (authored in `src/plugins/product-tree/skills/understand/SKILL.md`, mirrored in both generated runtime trees and asserted by the eval-lane `[audit]` assertion in `spx/21-product-tree.enabler/product-tree.md`) states "A declared producer source is a repository path outside the eval directory, never a co-located artifact." The "never" clause is convention, not an enforced invariant: `_resolve_repo_relative_path` in `outcomeeng_evals/producer_prompt.py` (the resolver for `prompt_source.producer`/`producers`) rejects absolute paths and parent traversal and requires repo-root containment, but never checks that the resolved path falls outside the eval directory — unlike the template resolver, whose eval-directory containment is code-backed.
+The `/understand` `<files_in_a_node>` eval-lane bullet (authored in `src/plugins/product-tree/skills/understand/SKILL.md`, mirrored in both generated runtime trees and asserted by the `eval-lane-file-set` Audit row in `spx/21-product-tree.enabler/product-tree.md`) states "A declared producer source is a repository path outside the eval directory, never a co-located artifact." The "never" clause is convention, not an enforced invariant: `_resolve_repo_relative_path` in `outcomeeng_evals/producer_prompt.py` (the resolver for `prompt_source.producer`/`producers`) rejects absolute paths and parent traversal and requires repo-root containment, but never checks that the resolved path falls outside the eval directory — unlike the template resolver, whose eval-directory containment is code-backed.
 
 **Resolution shape**: either add an eval-directory-exclusion check to producer-path resolution in `outcomeeng_evals/producer_prompt.py` so the code matches the stated invariant, or soften the bullet (and the mirrored spec assertion and changelog entry) to state the boundary as convention across every current usage. The choice spans the eval-harness node's code, so it is not a wording-only edit.
 
@@ -162,21 +162,21 @@ Preserved refs and observed heads:
 
 **Resolution shape.** Contextualize `spx/21-product-tree.enabler`, `spx/21-product-tree.enabler/16-verification.enabler`, `spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler`, `spx/43-instructions.enabler/21-skills.enabler`, and `spx/31-outcomeeng.enabler/31-verification.enabler`; fetch the base and derive each ref's complete commit and patch sets against `origin/main`, comparing the refs pairwise; classify every unique change as already merged, carried by the subagent-creator changeset, retained for a new changeset, superseded by current product truth, or blocked on an explicit product decision, recording full commit identity, affected node, and evidence; group retained changes into dependency-ordered, independently reviewable changesets, keeping skill-content, review-journal, and broader methodology changes separate; ship each through its deterministic lane, typed auditors, changeset review, and `/merge`; delete a ref only after a final comparison proves it carries no unique work.
 
-## The foundation, its grammar reference, and `/verify` name the audit tag `[audit:{rule-slug}]` while the next form leads each rule with its slug
+## The tree migration has not retagged every `[audit]` assertion into the row form the foundation declares
 
-**Evidence:** The `/understand` foundation (`src/plugins/product-tree/skills/understand/SKILL.md`, the verification types table and the assertion model) and `references/grammar.md` `<assertion_tags>` name the audit tag `[audit:{rule-slug}]` and describe a spec assertion that carries a verification tag. [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) states that a decision record's rule carries no tag, that a spec rule carries none until its evidence link, that its group heading names its verification type, and that its leading slug is its one name, and the PDR and spec templates write that form, with an eval as its own `### Eval: <slug>` subsection. The installed `/verify` accepts only `[test](path)`, `[eval](path)`, `[probe](path)`, `[audit:{rule-slug}]`, and the pathless `[audit]`, so it cannot route an eval subsection or a rule without a tag, and no `product-tree:eval` skill is installed. Every other `[audit]` assertion in this tree keeps the pathless form the installed SPX CLI parses.
+**Evidence:** The `/understand` foundation, `references/grammar.md`, and `/verify` write a spec assertion as a row that opens with its slug under a group heading naming its verification type, with no tag, as [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) declares, and `spx/21-product-tree.enabler/product-tree.md` writes that form. Every other `[audit]` assertion in this tree keeps the pathless `([audit])` tail the installed SPX CLI parses. `/verify` routes an eval to `product-tree:eval`, and no such skill is installed.
 
-**Impact:** A reader of the foundation meets a tag the templates no longer write, and `/verify` cannot route an assertion in the next form.
+**Impact:** A reader meets two assertion forms across the tree, and `/verify` reports `capability-required` for an eval assertion until a specialist is installed.
 
-**Settlement condition:** A Change amends the foundation text and `references/grammar.md` `<assertion_tags>` to the next form within the eager-foundation ceiling of `/skill-standards` `<eager_foundation_exception>`, `/verify` accepts the shapes the next form writes, and the tree migration this repository's consumer Change carries retags the remaining assertions.
+**Settlement condition:** The tree migration this repository's consumer Change carries retags the remaining `([audit])` assertions into the row form, and a `product-tree:eval` skill is installed or the eval route is removed.
 
 ## The tree carries the 3.x grammar while the foundation declares 4.0
 
-**Evidence:** Every node directory in this tree is `.enabler` or `.outcome`, every spec is `{slug}.md`, the root spec is `outcomeeng.product.md`, no spec carries a status claim, front matter is partial and unprojected — every node spec under `spx/21-product-tree.enabler` and `spx/43-coding-agents.enabler`, and `spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`, carries an `id` and `malleability: spec`, and `spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md` also carries a `tier` field, all of which `spx validation markdown` accepts and `spx spec status` does not project, while the node specs of every other subtree carry no front matter. The node's own `[test]` assertions on `{slug}.md` and the enabler directory describe the parser this repository ships and runs today. The `/understand` foundation, `spx.config.yaml`, and this node's Compliance assertions declare the 4.0 grammar: seven kinds, `{slug}.spec.md`, front matter, the status claim, `ISSUES.md` as the only note, and work ordering in a Change.
+**Evidence:** Every node directory in this tree is `.enabler` or `.outcome`, every spec is `{slug}.md`, the root spec is `outcomeeng.product.md`, no spec carries a status claim, front matter is partial and unprojected — every node spec under `spx/21-product-tree.enabler` and `spx/43-coding-agents.enabler`, and `spx/31-outcomeeng.enabler/32-changes.enabler/changes.md`, carries an `id` and `malleability: spec`, and `spx/21-product-tree.enabler/68-reviewing.enabler/21-reviewing-changes.enabler/reviewing-changes.md` also carries a `tier` field, all of which `spx validation markdown` accepts and `spx spec status` does not project, while the node specs of every other subtree carry no front matter. The node's own Test rows in `spx/21-product-tree.enabler/product-tree.md` write the 4.0 row form, and their subject is `{slug}.md` and the enabler directory, the parser this repository ships and runs today. The `/understand` foundation, `spx.config.yaml`, and this node's Compliance assertions declare the 4.0 grammar: seven kinds, `{slug}.spec.md`, front matter, the status claim, `ISSUES.md` as the only note, and work ordering in a Change.
 
 **Impact:** `/contextualize`, `/align`, and `/refactor` parse both forms; a reader of this tree sees the prior form until the migration.
 
-**Settlement condition:** The SPX CLI admits the seven suffixes, `{slug}.spec.md`, front matter, and the status claim; this repository's consumer Change migrates every directory and spec, and these `[test]` assertions state the 4.0 grammar against the migrated parser.
+**Settlement condition:** The SPX CLI admits the seven suffixes, `{slug}.spec.md`, front matter, and the status claim; this repository's consumer Change migrates every directory and spec, and these Test rows state the 4.0 grammar against the migrated parser.
 
 ## DEBT [payload]: the foundation renders 94 and 171 code points under its eager ceiling
 
@@ -215,26 +215,6 @@ Revisit and settlement condition: one conditional paragraph moved into the refer
 **Impact:** the skill can change without invalidating node-specific evidence, and its governing node must be inferred from plugin ownership instead of derived from a declared audit assertion or linked verification path.
 
 **Settlement condition:** a spec assertion under the owning Product Tree node names the refocus skill surface and routes its activation and workflow contract to current evidence.
-
-## The delivered-value assertion carries the audit tag where eval evidence once linked
-
-**Evidence:** The `product-tree.md` assertion that the `/understand` skill declares delivered value as value merged to the default branch through `/merge` linked `76-merge.enabler/evals/local-completion-boundary/eval.toml` as `[eval]` evidence. The `spx-link-shape` rule of `@outcomeeng/spx` 0.8.0 rejects that path with "should not enter a descendant node's directory", and rejects its tree-absolute form as "an assertion evidence link; link evidence node-local from inside the asserting node", so the assertion carries `([audit])`. The `76-merge.enabler` node keeps the eval linked from its own assertions in `merge.md`. That eval grades a status-assessment simulation, recorded in the `76-merge.enabler` node's `ISSUES.md`, and never graded the `/understand` text.
-
-**Impact:** The assertion rests on audit evidence alone, and no eval scores the `/understand` skill's delivered-value declaration.
-
-**Settlement condition:** An eval under this node's `evals/` scores the `/understand` skill's delivered-value declaration and the assertion links it as `[eval]`, or the audit tag stands and gains its rule slug when the tree adopts the `[audit:{rule-slug}]` form.
-
-## DEBT [verdict-source-not-sealed-run]: the apply skill reads four auditor verdicts from structured output, not a sealed run
-
-Defect class: `verdict-source-not-sealed-run`.
-
-Finding: assertion 18 of `spx/21-product-tree.enabler/65-apply.enabler/apply.md` requires the verdicts of `adr-auditor`, `test-evidence-auditor`, `eval-evidence-auditor` and `implementation-auditor` to be read from the terminal status of a sealed run, as the verification decision [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) declares. `src/plugins/product-tree/skills/apply/SKILL.md` Step 4 requires a structured JSON verdict with `APPROVED`, and Step 8a, `<review_gates>` and `<success_criteria>` use `REJECTED`, `FAIL` and `overall: PASS` verdicts for the ADR, test-evidence and eval-evidence auditors; only Step 8, for `implementation-auditor`, reads the sealed-run `terminalStatus`.
-
-Evidence: run token `2026-10-17_01-48-26-442-f2c3646f8f3d`, read at head `1097a3b67e61591f80830bc56e1f7091d46b1a1b`. Base-ref evidence: `git diff -U0 origin/main HEAD` leaves assertion 18 and those SKILL.md passages untouched.
-
-Impact: an approval of an ADR, a test-evidence body or an eval-evidence body in the apply lifecycle rests on a verdict object outside the sealed run, which the assertion forbids.
-
-Revisit and settlement condition: Step 4, Step 8a, `<review_gates>` and `<success_criteria>` of the apply skill read each of the four auditors' verdicts from the terminal status of the sealed run whose token the launch returns, and one typed skill audit approves the amended skill.
 
 ## DEBT [duplication]: two harnesses each derive the traceback header
 
