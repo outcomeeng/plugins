@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 from collections.abc import Iterable, Sequence
@@ -31,6 +32,12 @@ from outcomeeng.distribution.profiles import (
 )
 
 NATIVE_PROFILE_ARTIFACTS_DIRECTORY: Final = Path("native-profile-execution")
+PROBE_NAME_PREFIX: Final = "profile-probe"
+CODEX_NAME_SEPARATOR: Final = "_"
+CODEX_NAME_DISALLOWED: Final = re.compile(r"[^a-z0-9_]")
+"""Every character outside the Codex agent-name alphabet of lowercase letters, digits, and underscores."""
+CLAUDE_INITIALIZE_REQUEST_ID: Final = "profile-probe-initialize"
+"""The request id of the initialize control request a Claude Code parent receives on stdin."""
 
 
 @dataclass(frozen=True)
@@ -100,16 +107,30 @@ def _native_definition_path(state_root: Path, target: Target, name: str) -> Path
     return state_root / agent_home / "agents" / name
 
 
+def native_probe_name(target: Target, identifier: str) -> str:
+    """The name one harness registers and launches a row's probe definition by.
+
+    Codex accepts only lowercase letters, digits, and underscores in an agent
+    name, so every other character of the Claude Code form becomes an
+    underscore there.
+    """
+    name = f"{PROBE_NAME_PREFIX}-{identifier}"
+    if target is Target.CLAUDE:
+        return name
+    return CODEX_NAME_DISALLOWED.sub(CODEX_NAME_SEPARATOR, name.lower())
+
+
 def _native_launch_command(target: Target) -> tuple[str, ...]:
     if target is Target.CLAUDE:
         return (
             CLAUDE_EXECUTABLE,
             "-p",
+            "--input-format",
+            "stream-json",
             "--output-format",
             "stream-json",
             "--verbose",
             "--include-partial-messages",
-            "--forward-subagent-text",
         )
     return (
         CODEX_EXECUTABLE,
@@ -134,7 +155,11 @@ class NativeCommandRunner(Protocol):
     """Execute one native parent session with explicit process boundaries."""
 
     def __call__(
-        self, argv: Sequence[str], cwd: Path, environment: Mapping[str, str]
+        self,
+        argv: Sequence[str],
+        cwd: Path,
+        environment: Mapping[str, str],
+        input_text: str | None = None,
     ) -> subprocess.CompletedProcess[str]: ...
 
 
@@ -163,7 +188,8 @@ def run_native_profile_row(
     """Capture one child invocation from already installed disposable state."""
     native_environment = dict(environment)
     command = _launch_command(row, checkout)
-    result = runners.parent(command, checkout, native_environment)
+    launch_input = _launch_input(row)
+    result = runners.parent(command, checkout, native_environment, launch_input)
     sanitized_stdout = runners.sanitize(result.stdout)
     sanitized_stderr = runners.sanitize(result.stderr)
     child_observation: dict[str, object] = {}
@@ -173,7 +199,7 @@ def run_native_profile_row(
     elif isinstance(row.configuration, CodexConfiguration):
         evidence = collect_native_child_evidence(
             sanitized_stdout,
-            f"profile-probe-{row.identifier}",
+            native_probe_name(row.target, row.identifier),
             row.configuration,
             reader=runners.thread,
             cwd=checkout,
@@ -189,7 +215,7 @@ def run_native_profile_row(
                 "materialized": True,
                 "discovered": evidence.thread is not None
                 and evidence.thread.get("agentRole")
-                == f"profile-probe-{row.identifier}",
+                == native_probe_name(row.target, row.identifier),
                 "evidence": str(row.result_path),
             },
         )
@@ -203,6 +229,9 @@ def run_native_profile_row(
             "parent_command": result.args
             if isinstance(result.args, str)
             else list(result.args),
+            "parent_input": None
+            if launch_input is None
+            else runners.sanitize(launch_input),
             "exit_code": result.returncode,
             "stdout": sanitized_stdout,
             "stderr": sanitized_stderr,
@@ -247,7 +276,7 @@ def _render_definition(row: NativeProfileRow) -> str:
     if row.target is Target.CLAUDE:
         fields = ("name", "description", *values)
         frontmatter = {
-            "name": f"profile-probe-{row.identifier}",
+            "name": native_probe_name(row.target, row.identifier),
             "description": "One native profile-execution evidence child.",
             **values,
         }
@@ -260,7 +289,7 @@ def _render_definition(row: NativeProfileRow) -> str:
         )
     return "\n".join(
         (
-            f"name = {json.dumps(f'profile-probe-{row.identifier}')}",
+            f"name = {json.dumps(native_probe_name(row.target, row.identifier))}",
             'description = "One native profile-execution evidence child."',
             *(f"{name} = {json.dumps(value)}" for name, value in values.items()),
             f"developer_instructions = {json.dumps(child_prompt)}",
@@ -270,10 +299,32 @@ def _render_definition(row: NativeProfileRow) -> str:
 
 
 def _launch_command(row: NativeProfileRow, checkout: Path) -> tuple[str, ...]:
-    prompt = _parent_prompt(row)
     if row.target is Target.CLAUDE:
-        return (row.launch_commands[0][0], "-p", prompt, *row.launch_commands[0][2:])
-    return (*row.launch_commands[0], "-C", str(checkout), prompt)
+        return row.launch_commands[0]
+    return (*row.launch_commands[0], "-C", str(checkout), _parent_prompt(row))
+
+
+def _launch_input(row: NativeProfileRow) -> str | None:
+    """The stdin a Claude Code parent reads: the initialize request, then the prompt.
+
+    The initialize request asks the parent to forward its child's text, which
+    carries `parent_tool_use_id`, on every release the harness supports; the
+    command-line option for it is absent from the pinned release. A Codex
+    parent reads its prompt from its arguments and receives no stdin.
+    """
+    if row.target is not Target.CLAUDE:
+        return None
+    initialize = {
+        "type": "control_request",
+        "request_id": CLAUDE_INITIALIZE_REQUEST_ID,
+        "request": {"subtype": "initialize", "forwardSubagentText": True},
+    }
+    prompt = {
+        "type": "user",
+        "message": {"role": "user", "content": _parent_prompt(row)},
+        "parent_tool_use_id": None,
+    }
+    return "".join(json.dumps(line) + "\n" for line in (initialize, prompt))
 
 
 def _parent_prompt(row: NativeProfileRow) -> str:
@@ -282,7 +333,7 @@ def _parent_prompt(row: NativeProfileRow) -> str:
     )
     return (
         "Use the native subagent tool exactly once to launch "
-        f"`profile-probe-{row.identifier}` with the prompt `Complete`."
+        f"`{native_probe_name(row.target, row.identifier)}` with the prompt `Complete`."
         f"{isolation} Wait for its result. Do not launch another child."
     )
 

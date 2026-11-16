@@ -152,12 +152,22 @@ class NativeProfileInterval:
         return self.redactor.clean(text)
 
     def run(
-        self, argv: Sequence[str], cwd: Path, environment: Mapping[str, str]
+        self,
+        argv: Sequence[str],
+        cwd: Path,
+        environment: Mapping[str, str],
+        input_text: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         if self.authentication is not None:
-            return self.authentication.run(argv, cwd=cwd, env=environment)
+            return self.authentication.run(
+                argv, cwd=cwd, env=environment, input_text=input_text
+            )
         result = self.runner(
-            argv, cwd=cwd, env=environment, input_text=None, timeout=self.remaining()
+            argv,
+            cwd=cwd,
+            env=environment,
+            input_text=input_text,
+            timeout=self.remaining(),
         )
         return subprocess.CompletedProcess(
             argv,
@@ -173,14 +183,18 @@ class NativeProfileInterval:
         )
 
     def parent(
-        self, argv: Sequence[str], cwd: Path, environment: Mapping[str, str]
+        self,
+        argv: Sequence[str],
+        cwd: Path,
+        environment: Mapping[str, str],
+        input_text: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         command = (
             (argv[0], *FILE_STORE_ARGS, *argv[1:])
             if self.authentication is not None
             else tuple(argv)
         )
-        return self.run(command, cwd, environment)
+        return self.run(command, cwd, environment, input_text)
 
     def thread(
         self, thread_id: str, cwd: Path, environment: Mapping[str, str]

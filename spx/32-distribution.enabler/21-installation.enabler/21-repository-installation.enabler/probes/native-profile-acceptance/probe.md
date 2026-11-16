@@ -1,6 +1,6 @@
 # Native profile acceptance
 
-The protocol lives at `probes/native-profile-acceptance/probe.md`, the target of the assertion's `[probe]` tag. Working runs stay in an ignored `runs/` inside this directory; every attested run retains at least one inspectable artifact beside this file.
+The protocol lives at `probes/native-profile-acceptance/probe.md`, which the `native-profile-acceptance` slug in `repository-installation.md` links. Working runs stay in an ignored `runs/` inside this directory; every attested run retains at least one inspectable artifact beside this file.
 
 ## Intent
 

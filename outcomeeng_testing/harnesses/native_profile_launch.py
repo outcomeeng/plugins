@@ -19,13 +19,18 @@ import subprocess
 from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Protocol
+from typing import Final, Protocol
 from uuid import uuid4
 
 from outcomeeng.distribution.contracts import Target
-from outcomeeng.distribution.installation import CODEX_EXEC_SUBCOMMAND, CODEX_HOME_ENV
+from outcomeeng.distribution.installation import (
+    CLAUDE_EXECUTABLE,
+    CODEX_EXEC_SUBCOMMAND,
+    CODEX_HOME_ENV,
+)
 from outcomeeng.distribution.native_thread_evidence import (
     NATIVE_THREAD_STARTED,
     NativeParentEvent,
@@ -197,13 +202,50 @@ class NativeLaunchObservation:
     """The ambient environment the run received, every strippable name planted."""
 
 
+class ParentStream(Enum):
+    """What a completed Claude Code parent session prints."""
+
+    SILENT = "silent"
+    """No output, so the stream carries no forwarded child event."""
+    FORWARDED_CHILD = "forwarded-child"
+    """One forwarded child message naming the parent's one tool use."""
+
+
+FORWARDED_TOOL_USE_ID: Final = f"toolu_{uuid4().hex}"
+"""The parent tool use the planted forwarded child message names."""
+
+
+def _forwarded_child_stream(argv: Sequence[str]) -> str:
+    """A Claude Code parent's stream carrying one forwarded child message."""
+    if argv[0] != CLAUDE_EXECUTABLE:
+        return ""
+    event = {
+        "type": "assistant",
+        "parent_tool_use_id": FORWARDED_TOOL_USE_ID,
+        "message": {"role": "assistant", "content": [{"type": "text", "text": "Done"}]},
+    }
+    return json.dumps(event) + "\n"
+
+
+PARENT_STREAMS: Final[Mapping[ParentStream, Callable[[Sequence[str]], str]]] = {
+    ParentStream.SILENT: _silent,
+    ParentStream.FORWARDED_CHILD: _forwarded_child_stream,
+}
+
+
 @contextmanager
 def native_profile_launch(
     claude_credentials: Collection[str] = CLAUDE_CREDENTIAL_VARIABLES,
+    parent_stream: ParentStream = ParentStream.SILENT,
 ) -> Iterator[NativeLaunchObservation]:
-    """Run every row with `claude_credentials` planted beside every other strippable name."""
+    """Run every row with `claude_credentials` planted beside every other strippable name.
+
+    Every completed parent session prints the stream `parent_stream` names.
+    """
     with launch_case() as case:
-        runner = native_launch_runner(case.credentials.runner)
+        runner = native_launch_runner(
+            case.credentials.runner, PARENT_STREAMS[parent_stream]
+        )
         environment = ambient_environment(
             case.credentials.original_environment, claude_credentials=claude_credentials
         )

@@ -12,6 +12,7 @@ harness exposes observations only.
 from __future__ import annotations
 
 import json
+import subprocess
 from collections.abc import Collection, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -24,6 +25,7 @@ from outcomeeng.distribution.native_auditor_dispatch import (
     AGENTS_DIRECTORY,
     BLOCKED_MARKER,
     FIXTURE_DIRECTORY,
+    GIT_EXECUTABLE,
     NativeAuditorDispatchObservation,
     native_auditor_rows,
 )
@@ -56,6 +58,10 @@ from outcomeeng_testing.harnesses.native_profile_launch import (
     row_launches,
 )
 
+
+GIT_DIRECTORY: Final = ".git"
+"""The fixture repository's own store, left out of the materialized state."""
+GIT_READ_TIMEOUT_SECONDS: Final = 30
 
 PLANTED_RUN_TOKEN = "2026-01-02_03-04-05-678-0123456789ab"
 PLANTED_RUN_FILE_NAME = f"run-{PLANTED_RUN_TOKEN}.jsonl"
@@ -116,6 +122,39 @@ def _machine_stream(argv: Sequence[str], message: str) -> str:
 
 
 @dataclass(frozen=True)
+class GitRead:
+    """One git read of the fixture directory: its exit code and stripped output."""
+
+    exit_code: int
+    output: str
+
+
+@dataclass(frozen=True)
+class FixtureRepository:
+    """The reads a dispatched auditor makes of its fixture's checkout, taken when the launch ran."""
+
+    toplevel: GitRead
+    """`rev-parse --show-toplevel` in the fixture directory."""
+    base: GitRead
+    """`rev-parse --verify origin/HEAD^{commit}`, the auditor's default base."""
+    head: GitRead
+    """`rev-parse --verify HEAD^{commit}`."""
+    status: GitRead
+    """`status --porcelain --untracked-files=all`."""
+    changed: GitRead
+    """`diff --name-status --no-renames origin/HEAD...HEAD`."""
+
+
+FIXTURE_GIT_READS: Final[Mapping[str, tuple[str, ...]]] = {
+    "toplevel": ("rev-parse", "--show-toplevel"),
+    "base": ("rev-parse", "--verify", "--end-of-options", "origin/HEAD^{commit}"),
+    "head": ("rev-parse", "--verify", "--end-of-options", "HEAD^{commit}"),
+    "status": ("status", "--porcelain", "--untracked-files=all"),
+    "changed": ("diff", "--name-status", "--no-renames", "origin/HEAD...HEAD"),
+}
+
+
+@dataclass(frozen=True)
 class DispatchCall:
     """One recorded command and the materialized state present when it ran."""
 
@@ -126,6 +165,10 @@ class DispatchCall:
     """Bytes of every file under an `agents` or `fixture` directory of the row's state, keyed relative to it."""
     saved_login: bytes | None = field(default=None, repr=False)
     """Bytes the command's Codex home resolves its saved login to, when it holds one."""
+    input_text: str | None = field(default=None, repr=False)
+    """The stdin the command received."""
+    fixture_repository: FixtureRepository | None = None
+    """The fixture checkout as git reads it, for a command that names the fixture directory."""
 
 
 def _saved_login(home: Path) -> bytes | None:
@@ -137,14 +180,43 @@ def _materialized_state(state_root: Path) -> dict[Path, bytes]:
     return {
         path.relative_to(state_root): path.read_bytes()
         for path in state_root.rglob("*")
-        if path.is_file() and {AGENTS_DIRECTORY, FIXTURE_DIRECTORY} & set(path.parts)
+        if path.is_file()
+        and {AGENTS_DIRECTORY, FIXTURE_DIRECTORY} & set(path.parts)
+        and GIT_DIRECTORY not in path.parts
     }
+
+
+def _git_read(directory: Path, arguments: Sequence[str]) -> GitRead:
+    result = subprocess.run(
+        (GIT_EXECUTABLE, "-C", str(directory), *arguments),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=GIT_READ_TIMEOUT_SECONDS,
+    )
+    return GitRead(result.returncode, result.stdout.strip())
+
+
+def _fixture_repository(
+    state_root: Path, argv: Sequence[str], input_text: str | None
+) -> FixtureRepository | None:
+    """Read the fixture checkout when the command names the fixture directory."""
+    fixture = state_root / FIXTURE_DIRECTORY
+    if not fixture.is_dir():
+        return None
+    named = " ".join((*argv, input_text or ""))
+    if f"/{state_root.name}/{FIXTURE_DIRECTORY}/" not in named:
+        return None
+    reads = {
+        name: _git_read(fixture, arguments)
+        for name, arguments in FIXTURE_GIT_READS.items()
+    }
+    return FixtureRepository(**reads)
 
 
 def _record_dispatch_call(
     argv: Sequence[str], env: Mapping[str, str], input_text: str | None
 ) -> DispatchCall:
-    del input_text
     home = Path(env[CODEX_HOME_ENV])
     return DispatchCall(
         tuple(argv),
@@ -152,6 +224,8 @@ def _record_dispatch_call(
         dict(env),
         _materialized_state(home.parent),
         _saved_login(home),
+        input_text,
+        _fixture_repository(home.parent, argv, input_text),
     )
 
 
