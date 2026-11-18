@@ -33,6 +33,8 @@ Before a Position holder reads or changes a file of the Product, it reads, in th
 
 It reads `tests/`, `evals/`, `probes/` and `audits/` when it verifies. It reads a Node's State from its `spx.status.json`, which spx alone writes. A Node's front-matter field `malleability`, `spec`, `verification` or `implementation`, states what verification the Node needs; a Node with no such field counts as `implementation`.
 
+An Assertion that a model's output decides is an Audit Assertion, declared under `### Audit`. A Position holder writes no `Evaluate` subsection and no eval: it declares as an Audit Assertion every Assertion it would verify by an eval.
+
 ## Applying a Change
 
 A Position holder that claims an Applicable Change is its Applier. The Applier takes these steps:
