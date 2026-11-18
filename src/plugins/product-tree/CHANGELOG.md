@@ -10,6 +10,13 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.4
+
+### Changed
+
+- **A merge closes the absorbed Change's issue as a duplicate of the survivor's issue, and the readers read the absorber from that link.** `/manage-change` takes an optional survivor reference after `abandoned` and, for a Change a merge absorbs, closes its issue with `gh issue close --duplicate-of <survivor>`, and `/author-change` merge passes the survivor's reference. The `audit-change` runner's `read-relations` returns as `absorbers` the issue the named issue's duplicate link names, or none for an issue not closed as a duplicate, and reads no `Predecessors` value for it. Before this change, a reader took the absorber from the issues whose `Predecessors` value names the Change, and the merge closed the absorbed issue as not planned with no link to the survivor. A Change that several survivors' predecessors name links to the survivor that absorbed it last.
+- **`read-relations` reads a Change's Children through the store's filter on the `Parent` field.** It reads pages of 100 Children, at most 10 pages, and a tenth page that still reports a further page blocks with `page-bound-reached` naming `100 Children per page, 10 pages`. Before this change, it read every issue of the store at 100 per page, so a store of more than 1000 issues blocked every Change audit with `page-bound-reached`. The `change-standards` `github-store` reference states the filtered read, the duplicate-link read, and the duplicate close.
+
 ## 0.115.3
 
 ### Changed

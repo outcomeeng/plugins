@@ -91,7 +91,7 @@ For a Sliced Leaf, after a publish that writes its body and the readback, launch
 - `record`: draft a new Change at Proposed and publish it. A Change with no Parent records as Submitted for its Priority decision; a Child records as Available with its Parent's Priority.
 - `publish`: revise a stored record from its Draft and publish it. Keep `predecessors` and `parent` as stored; `base` moves only with a body write under `base-on-body`.
 - `split`: below Applicable only, under `split`, record each Child from its own Draft with `parent` naming the source, then publish the source as a Parent: its body only the Statement of Intent, its Base cleared.
-- `merge`: on the Operator's direction only, under `merge-direction`, append the absorbed Change to the survivor's `predecessors`, publish the survivor, and close the absorbed Change through `product-tree:manage-change` with `abandoned`.
+- `merge`: on the Operator's direction only, under `merge-direction`, append the absorbed Change to the survivor's `predecessors`, publish the survivor, and close the absorbed Change through `product-tree:manage-change` with `abandoned` and the survivor's reference, which closes the absorbed issue as a duplicate of the survivor's issue.
 - `reframe`: edit the record in place, publish it, and make the `lower` Transition to Proposed through `product-tree:manage-change`.
 
 </operations>
@@ -122,6 +122,6 @@ Return the Change reference, the operation, the Maturity and Lifecycle read back
 - Every publish followed a passing form check on the exact Draft it wrote, and a Framed or Sliced publish traced each Verification result to a Declarations line.
 - The issue title, body, fields, and blockers read back equal to the Draft, with the body from `## Statement of Intent` and no front matter.
 - A Sliced Leaf reached Applicable only through an audit run sealed `approved` with no finding on its current body and Base.
-- A split left the source a Parent with no Base and every Child naming it; a merge appended the absorbed Change to the survivor's predecessors and closed it Abandoned; a reframe lowered the Change to Proposed.
+- A split left the source a Parent with no Base and every Child naming it; a merge appended the absorbed Change to the survivor's predecessors and closed it Abandoned as a duplicate of the survivor's issue; a reframe lowered the Change to Proposed.
 
 </success_criteria>
