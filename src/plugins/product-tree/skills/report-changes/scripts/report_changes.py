@@ -37,6 +37,7 @@ MAX_PAGES = 10
 FIELD_VALUE_LIMIT = 50
 ASSIGNEE_LIMIT = 100
 BLOCKER_LIMIT = 100
+DUPLICATE_CHAIN_LIMIT = 100
 
 MATURITIES = ("Proposed", "Framed", "Sliced", "Executable")
 LIFECYCLES = ("Available", "Claimed", "Submitted", "Applied", "Abandoned")
@@ -65,6 +66,12 @@ class IssueState(StrEnum):
 
     OPEN = "OPEN"
     CLOSED = "CLOSED"
+
+
+class IssueStateReason(StrEnum):
+    """The reason an issue closed, in the store's GraphQL answer."""
+
+    COMPLETED = "COMPLETED"
 
 
 class BlockerState(StrEnum):
@@ -146,10 +153,19 @@ class ChangesetKind(StrEnum):
     PULL_REQUEST = "pull_request"
 
 
+class DuplicateField(StrEnum):
+    NUMBER = "number"
+    STATE = "state"
+    STATE_REASON = "stateReason"
+    DUPLICATE_OF = "duplicateOf"
+
+
 class Waiting(StrEnum):
-    CONFIRMATION = "confirmation"
+    PRIORITY = "waiting: Priority"
+    OPERATOR = "waiting: the Operator's next move"
     HOLDER = "holder"
     BLOCKERS = "blockers"
+    REFINEMENT = "refinement"
     CLAIM = "claim"
     CHECKS = "checks"
 
@@ -160,6 +176,7 @@ class Bound(StrEnum):
     BLOCKERS = "100 blockers, one page"
     EVENTS = "100 events per page, 10 pages"
     ASSIGNEES = "100 assignees"
+    DUPLICATE_LINKS = "100 duplicate links per chain"
 
 
 STORE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$")
@@ -168,7 +185,8 @@ CLAIM_PATTERN = re.compile(rf"^{re.escape(CLAIM_PREFIX)} (\S+) (.+)$")
 
 STORE_QUERY = (
     "query($o:String!,$r:String!,$after:String){repository(owner:$o,name:$r){"
-    "issues(first:100,after:$after){pageInfo{hasNextPage endCursor} nodes{"
+    f"issues(first:100,after:$after,states:[{IssueState.OPEN}])"
+    "{pageInfo{hasNextPage endCursor} nodes{"
     "number url title state assignees(first:100){nodes{login}} "
     "issueFieldValues(first:50){nodes{"
     "... on IssueFieldSingleSelectValue{name field{... on IssueFieldSingleSelect{name}}} "
@@ -183,6 +201,11 @@ EVENT_QUERY = (
     "... on IssueFieldChangedEvent{createdAt actor{login} previousValue newValue "
     "issueField{... on IssueFieldSingleSelect{name} ... on IssueFieldText{name}}}"
     "}}}}}"
+)
+
+DUPLICATE_QUERY = (
+    "query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){"
+    "issue(number:$n){number state stateReason duplicateOf{number}}}}"
 )
 
 
@@ -494,6 +517,89 @@ def read_blockers(
     return blockers
 
 
+def read_duplicate_link(
+    runner: GhRunner, store: str, number: int, label: str
+) -> dict[str, Any]:
+    read = f"duplicate link of {label}"
+    owner, repo = store.split("/", 1)
+    data = graphql(
+        runner, read, DUPLICATE_QUERY, {"o": owner, "r": repo, "n": number}
+    )
+    try:
+        issue = data["repository"]["issue"]
+        return {
+            DuplicateField.NUMBER: issue[DuplicateField.NUMBER],
+            DuplicateField.STATE: issue[DuplicateField.STATE],
+            DuplicateField.STATE_REASON: issue[DuplicateField.STATE_REASON],
+            DuplicateField.DUPLICATE_OF: (
+                issue[DuplicateField.DUPLICATE_OF] or {}
+            ).get(DuplicateField.NUMBER),
+        }
+    except (KeyError, TypeError) as error:
+        raise BlockedRead(read, f"unreadable output: missing {error}") from error
+
+
+def blocker_store_and_number(request: Request, identity: str) -> tuple[str, int]:
+    store, _, number = identity.rpartition("#")
+    return (store or request.store), int(number)
+
+
+def survivor_of(
+    request: Request, runner: GhRunner, identity: str
+) -> dict[str, Any]:
+    """Follow the duplicate link, step by step, to the first issue not closed as a duplicate."""
+    store, number = blocker_store_and_number(request, identity)
+    seen: set[int] = set()
+    for _step in range(DUPLICATE_CHAIN_LIMIT):
+        if number in seen:
+            raise BlockedRead(
+                f"duplicate link of {store}#{number}",
+                f"the duplicate links of {identity} close on a cycle",
+                bound=Bound.DUPLICATE_LINKS,
+            )
+        seen.add(number)
+        issue = read_duplicate_link(runner, store, number, f"{store}#{number}")
+        if issue[DuplicateField.DUPLICATE_OF] is None:
+            return issue
+        number = issue[DuplicateField.DUPLICATE_OF]
+    raise BlockedRead(
+        f"duplicate link of {identity}",
+        f"{identity} follows more than {DUPLICATE_CHAIN_LIMIT} duplicate links",
+        bound=Bound.DUPLICATE_LINKS,
+    )
+
+
+@dataclass(frozen=True)
+class BlockerEffect:
+    """The blockers that hold a Change, and whether one needs the Change refined."""
+
+    holding: tuple[str, ...]
+    refinement: bool
+
+
+def blocker_effect(
+    request: Request, runner: GhRunner, blockers: list[dict[str, Any]]
+) -> BlockerEffect:
+    holding: list[str] = []
+    refinement = False
+    for blocker in blockers:
+        identity = blocker[BlockerField.NUMBER]
+        if blocker[BlockerField.STATE] == BlockerState.OPEN:
+            holding.append(identity)
+            continue
+        if (
+            str(blocker[BlockerField.STATE_REASON]).upper()
+            == IssueStateReason.COMPLETED
+        ):
+            continue
+        survivor = survivor_of(request, runner, identity)
+        if survivor[DuplicateField.STATE] == IssueState.OPEN:
+            holding.append(identity)
+        elif survivor[DuplicateField.STATE_REASON] != IssueStateReason.COMPLETED:
+            refinement = True
+    return BlockerEffect(tuple(holding), refinement)
+
+
 def read_comments(
     request: Request, runner: GhRunner, number: int
 ) -> list[dict[str, Any]]:
@@ -652,12 +758,14 @@ def root_of(number: int, by_number: dict[int, Change]) -> int | str:
 
 def waiting_state(
     change: Change,
-    open_blockers: list[str],
+    effect: BlockerEffect,
     claim: dict[str, str] | None,
     checks_pending: bool,
 ) -> list[str]:
     if change.lifecycle == "Submitted":
-        return [f"{Waiting.CONFIRMATION}: {change.maturity}"]
+        if change.maturity == "Proposed" and change.parent is None:
+            return [Waiting.PRIORITY]
+        return [Waiting.OPERATOR]
     if change.lifecycle == "Claimed":
         if claim is None:
             waiting = [
@@ -671,8 +779,10 @@ def waiting_state(
             waiting.append(Waiting.CHECKS)
         return waiting
     if change.lifecycle == "Available":
-        if open_blockers:
-            return [f"{Waiting.BLOCKERS}: {', '.join(open_blockers)}"]
+        if effect.holding:
+            return [f"{Waiting.BLOCKERS}: {', '.join(effect.holding)}"]
+        if effect.refinement:
+            return [Waiting.REFINEMENT]
         return [Waiting.CLAIM]
     return [NO_WAITING]
 
@@ -707,26 +817,29 @@ def build_report(request: Request, runner: GhRunner) -> list[dict[str, Any]]:
     blockers_by_number = {
         c.number: read_blockers(request, runner, c.number) for c in candidates
     }
+    effects: dict[int, BlockerEffect] = {}
+
+    def effect_of(change: Change) -> BlockerEffect:
+        if change.number not in effects:
+            effects[change.number] = blocker_effect(
+                request, runner, blockers_by_number[change.number]
+            )
+        return effects[change.number]
+
     if request.blocked is not None:
         candidates = [
-            c
-            for c in candidates
-            if any(
-                b[BlockerField.STATE] == BlockerState.OPEN
-                for b in blockers_by_number[c.number]
-            )
-            == request.blocked
+            c for c in candidates if bool(effect_of(c).holding) == request.blocked
         ]
     candidates.sort(key=lambda c: (priority_rank(request, c), c.number))
 
     rows: list[dict[str, Any]] = []
     for change in candidates:
         blockers = blockers_by_number[change.number]
-        open_blockers = [
-            b[BlockerField.NUMBER]
-            for b in blockers
-            if b[BlockerField.STATE] == BlockerState.OPEN
-        ]
+        effect = (
+            effect_of(change)
+            if change.lifecycle == "Available"
+            else BlockerEffect((), False)
+        )
         comments = read_comments(request, runner, change.number)
         handoff = newest_handoff(comments)
         changeset, checks_pending = read_changeset(handoff, runner)
@@ -753,7 +866,7 @@ def build_report(request: Request, runner: GhRunner) -> list[dict[str, Any]]:
                 RowField.BLOCKERS: blockers,
                 RowField.CHANGESET: changeset,
                 RowField.WAITING: waiting_state(
-                    change, open_blockers, claim, checks_pending
+                    change, effect, claim, checks_pending
                 ),
                 RowField.NEXT_ACTION: next_action,
             }
