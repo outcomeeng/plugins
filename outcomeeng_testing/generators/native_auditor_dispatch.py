@@ -85,12 +85,38 @@ class UnboundedGrant(Enum):
     ALL_TOOLS = "all-tools"
 
 
+def generated_tool_grants() -> tuple[str, ...]:
+    """Fresh tool grants, three names no shipped definition declares, in a fresh order."""
+    return tuple(f"Tool{uuid4().hex}" for _ in range(3))
+
+
+def definition_with_tool_grants(text: str, grants: tuple[str, ...]) -> str:
+    """A Markdown agent definition whose `tools` field names exactly `grants`, every other line unchanged."""
+    return _definition_with_tools_lines(
+        text, (f"{AGENT_TOOLS_FIELD}: {', '.join(grants)}\n",)
+    )
+
+
 def definition_with_unbounded_grant(text: str, grant: UnboundedGrant) -> str:
     """A Markdown agent definition with its `tools` field removed, emptied, or granting every tool, every other line unchanged.
 
+    See `_definition_with_tools_lines` for how the field is replaced.
+    """
+    replacement = {
+        UnboundedGrant.FIELD_REMOVED: (),
+        UnboundedGrant.EMPTY_STRING: (f'{AGENT_TOOLS_FIELD}: ""\n',),
+        UnboundedGrant.EMPTY_LIST: (f"{AGENT_TOOLS_FIELD}: []\n",),
+        UnboundedGrant.ALL_TOOLS: (f"{AGENT_TOOLS_FIELD}: {ALL_TOOLS_SENTINEL}\n",),
+    }[grant]
+    return _definition_with_tools_lines(text, replacement)
+
+
+def _definition_with_tools_lines(text: str, replacement: tuple[str, ...]) -> str:
+    """A Markdown agent definition with its `tools` field replaced by `replacement`.
+
     The field's line and any indented continuation lines of it inside the
     frontmatter are replaced; a definition that carries no field gains the
-    replacement at the frontmatter's end for every form but the removal.
+    replacement at the frontmatter's end.
     """
     lines = text.splitlines(keepends=True)
     opener = f"{FRONTMATTER_DELIMITER}\n"
@@ -101,12 +127,6 @@ def definition_with_unbounded_grant(text: str, grant: UnboundedGrant) -> str:
         for index, line in enumerate(lines[1:], start=1)
         if line.rstrip("\n") == FRONTMATTER_DELIMITER
     )
-    replacement = {
-        UnboundedGrant.FIELD_REMOVED: (),
-        UnboundedGrant.EMPTY_STRING: (f'{AGENT_TOOLS_FIELD}: ""\n',),
-        UnboundedGrant.EMPTY_LIST: (f"{AGENT_TOOLS_FIELD}: []\n",),
-        UnboundedGrant.ALL_TOOLS: (f"{AGENT_TOOLS_FIELD}: {ALL_TOOLS_SENTINEL}\n",),
-    }[grant]
     frontmatter: list[str] = []
     inside_field = False
     placed = False

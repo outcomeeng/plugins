@@ -35,6 +35,7 @@ from outcomeeng_testing.generators.native_auditor_dispatch import (
     UnboundedGrant,
     generated_preserved_codex_configs,
     generated_sandbox_table_configs,
+    generated_tool_grants,
     generated_unparseable_codex_configs,
 )
 from outcomeeng_testing.harnesses.agent_conversion import agent_document_oracle
@@ -52,6 +53,7 @@ from outcomeeng_testing.harnesses.native_auditor_launch import (
     PLANTED_RUN_TOKEN,
     LaunchReturn,
     claude_definition_plant,
+    claude_tool_grants_plant,
     codex_config_plant,
     native_auditor_failure,
     native_auditor_launch,
@@ -151,10 +153,7 @@ def test_every_row_launches_once_from_the_shipped_definition_passing_only_the_se
 def test_dispatch_success_derives_from_the_rendered_projection_whatever_prose_surrounds_it() -> (
     None
 ):
-    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
-    with native_auditor_launch(
-        {selected}, returned=LaunchReturn.PROJECTION_ONLY
-    ) as observation:
+    with native_auditor_launch(returned=LaunchReturn.PROJECTION_ONLY) as observation:
         assert observation.rows
         for item in observation.rows:
             row = item.observation.row
@@ -166,10 +165,7 @@ def test_dispatch_success_derives_from_the_rendered_projection_whatever_prose_su
 
 
 def test_the_run_file_is_recovered_from_a_reply_that_names_no_label() -> None:
-    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
-    with native_auditor_launch(
-        {selected}, returned=LaunchReturn.FREE_FORM
-    ) as observation:
+    with native_auditor_launch(returned=LaunchReturn.FREE_FORM) as observation:
         assert observation.rows
         for item in observation.rows:
             row = item.observation.row
@@ -183,9 +179,8 @@ def test_the_run_file_is_recovered_from_a_reply_that_names_no_label() -> None:
 def test_a_rendered_projection_that_quotes_the_blocked_word_is_not_a_blocked_result() -> (
     None
 ):
-    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
     with native_auditor_launch(
-        {selected}, returned=LaunchReturn.PROJECTION_QUOTING_BLOCKED
+        returned=LaunchReturn.PROJECTION_QUOTING_BLOCKED
     ) as observation:
         assert observation.rows
         for item in observation.rows:
@@ -203,10 +198,7 @@ def test_a_rendered_projection_that_quotes_the_blocked_word_is_not_a_blocked_res
 def test_a_reply_without_a_rendered_projection_or_blocked_diagnostic_records_a_terminal_condition() -> (
     None
 ):
-    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
-    with native_auditor_launch(
-        {selected}, returned=LaunchReturn.UNSTRUCTURED
-    ) as observation:
+    with native_auditor_launch(returned=LaunchReturn.UNSTRUCTURED) as observation:
         assert observation.rows
         for item in observation.rows:
             row = item.observation.row
@@ -219,9 +211,8 @@ def test_a_reply_without_a_rendered_projection_or_blocked_diagnostic_records_a_t
 def test_a_failure_recorded_after_a_dispatch_retains_every_field_the_dispatch_captured() -> (
     None
 ):
-    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
     condition = uuid4().hex
-    with native_auditor_launch({selected}) as observation:
+    with native_auditor_launch() as observation:
         assert observation.rows
         for item in observation.rows:
             row = item.observation.row
@@ -249,8 +240,9 @@ def test_a_failure_recorded_after_a_dispatch_retains_every_field_the_dispatch_ca
 
 
 def test_a_failed_launch_records_its_terminal_condition_without_a_retry() -> None:
-    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
-    with native_auditor_launch({selected}, NATIVE_FAILURE_EXIT_CODE) as observation:
+    with native_auditor_launch(
+        launch_exit_code=NATIVE_FAILURE_EXIT_CODE
+    ) as observation:
         assert observation.rows
         for item in observation.rows:
             row = item.observation.row
@@ -316,8 +308,7 @@ def test_a_failed_or_timed_out_installation_retains_evidence_and_does_not_launch
 def test_each_auditor_parent_reaches_the_fixture_repository_and_scratch_directory_and_approves_exactly_the_definition_grants() -> (
     None
 ):
-    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
-    with native_auditor_launch({selected}) as observation:
+    with native_auditor_launch() as observation:
         assert {item.observation.row.target for item in observation.rows} == set(Target)
         for item in observation.rows:
             row = item.observation.row
@@ -364,11 +355,36 @@ def test_each_auditor_parent_reaches_the_fixture_repository_and_scratch_director
                 ), (row.identifier, configuration)
 
 
+def test_a_claude_parent_approves_exactly_the_grants_a_planted_definition_declares_and_no_shipped_ones() -> (
+    None
+):
+    for grants in (generated_tool_grants(), generated_tool_grants()):
+        with native_auditor_launch(
+            target=Target.CLAUDE, plant=claude_tool_grants_plant(grants)
+        ) as observation:
+            assert observation.rows
+            for item in observation.rows:
+                row = item.observation.row
+                launches = parent_launches(item)
+                assert len(launches) == 1, row.identifier
+                argv = launches[0].argv
+                allowed = option_values(argv, CLAUDE_ALLOWED_TOOLS_OPTION)
+                assert len(allowed) == 1, (row.identifier, argv)
+                approved = tuple(allowed[0].split(CLAUDE_ALLOWED_TOOLS_SEPARATOR))
+                assert approved == grants, (row.identifier, approved)
+                assert not set(approved) & set(
+                    definition_tool_grants(row.shipped_definition_path)
+                ), row.identifier
+                assert option_values(argv, CLAUDE_ADD_DIRECTORY_OPTION) == [
+                    str(row.fixture_path.parent),
+                    launches[0].environment[SCRATCH_ENVIRONMENT_VARIABLES[0]],
+                ], (row.identifier, argv)
+
+
 def test_each_claude_add_dir_takes_exactly_one_path_and_allowed_tools_follows_the_last_as_its_own_option() -> (
     None
 ):
-    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
-    with native_auditor_launch({selected}, target=Target.CLAUDE) as observation:
+    with native_auditor_launch(target=Target.CLAUDE) as observation:
         assert {item.observation.row.target for item in observation.rows} == {
             Target.CLAUDE
         }
@@ -420,7 +436,6 @@ def test_a_codex_row_without_a_selected_codex_home_launches_no_parent_and_record
 def test_a_codex_row_whose_config_does_not_parse_or_already_holds_the_sandbox_table_launches_no_parent_and_records_the_refusal() -> (
     None
 ):
-    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
     unparseable = generated_unparseable_codex_configs()
     holding_table = generated_sandbox_table_configs()
     for text in unparseable:
@@ -430,7 +445,7 @@ def test_a_codex_row_whose_config_does_not_parse_or_already_holds_the_sandbox_ta
         assert CODEX_SANDBOX_WORKSPACE_WRITE_TABLE in tomllib.loads(text), text
     for text in (*unparseable, *holding_table):
         with native_auditor_launch(
-            {selected}, target=Target.CODEX, plant=codex_config_plant(text)
+            target=Target.CODEX, plant=codex_config_plant(text)
         ) as observation:
             assert {item.observation.row.target for item in observation.rows} == {
                 Target.CODEX
@@ -454,13 +469,12 @@ def test_a_codex_row_whose_config_does_not_parse_or_already_holds_the_sandbox_ta
 def test_naming_the_writable_roots_keeps_every_entry_the_codex_config_held_before() -> (
     None
 ):
-    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
     for text in generated_preserved_codex_configs():
         held = tomllib.loads(text)
         assert held, text
         assert CODEX_SANDBOX_WORKSPACE_WRITE_TABLE not in held, text
         with native_auditor_launch(
-            {selected}, target=Target.CODEX, plant=codex_config_plant(text)
+            target=Target.CODEX, plant=codex_config_plant(text)
         ) as observation:
             assert {item.observation.row.target for item in observation.rows} == {
                 Target.CODEX
@@ -489,10 +503,9 @@ def test_naming_the_writable_roots_keeps_every_entry_the_codex_config_held_befor
 def test_a_claude_row_whose_definition_declares_no_tools_grant_or_grants_every_tool_launches_no_parent_and_records_that(
     tmp_path: Path,
 ) -> None:
-    selected = sorted(CLAUDE_CREDENTIAL_VARIABLES)[0]
     for grant in UnboundedGrant:
         with native_auditor_launch(
-            {selected}, target=Target.CLAUDE, plant=claude_definition_plant(grant)
+            target=Target.CLAUDE, plant=claude_definition_plant(grant)
         ) as observation:
             assert {item.observation.row.target for item in observation.rows} == {
                 Target.CLAUDE

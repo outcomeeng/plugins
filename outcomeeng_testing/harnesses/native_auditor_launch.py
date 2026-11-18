@@ -58,6 +58,7 @@ from outcomeeng_testing.harnesses.native_auditor_dispatch import (
 )
 from outcomeeng_testing.generators.native_auditor_dispatch import (
     UnboundedGrant,
+    definition_with_tool_grants,
     definition_with_unbounded_grant,
 )
 from outcomeeng_testing.harnesses.native_profile_execution import (
@@ -302,6 +303,22 @@ def claude_definition_plant(grant: UnboundedGrant) -> StatePlant:
     return plant
 
 
+def claude_tool_grants_plant(grants: tuple[str, ...]) -> StatePlant:
+    """Plant a Claude Code row's materialized definition with its `tools` field naming exactly `grants`."""
+
+    def plant(home: Path) -> None:
+        row = _row_for_state(home.parent)
+        if row.target is Target.CLAUDE and row.native_definition_path.is_file():
+            row.native_definition_path.write_text(  # NOSONAR S2083 - the row's own disposable state root
+                definition_with_tool_grants(
+                    row.shipped_definition_path.read_text(encoding="utf-8"), grants
+                ),
+                encoding="utf-8",
+            )
+
+    return plant
+
+
 def auditor_launch_runner(
     credentials: NativeCredentialRunner,
     launch_exit_code: int,
@@ -334,6 +351,10 @@ def auditor_launch_runner(
     return RecordingRunner(credentials, record, complete)
 
 
+SELECTED_CLAUDE_CREDENTIAL: Final = min(CLAUDE_CREDENTIAL_VARIABLES)
+"""The one Claude Code credential a launch plants unless the case names others: the choice is incidental to every assertion that takes it."""
+
+
 @dataclass(frozen=True)
 class DispatchLaunchObservation:
     rows: tuple[RowLaunch[NativeAuditorDispatchObservation, DispatchCall], ...]
@@ -352,7 +373,7 @@ class DispatchFailureObservation:
 
 @contextmanager
 def native_auditor_launch(
-    claude_credentials: Collection[str] = CLAUDE_CREDENTIAL_VARIABLES,
+    claude_credentials: Collection[str] | None = None,
     launch_exit_code: int = 0,
     returned: LaunchReturn = LaunchReturn.RUN_TOKEN,
     *,
@@ -361,9 +382,16 @@ def native_auditor_launch(
 ) -> Iterator[DispatchLaunchObservation]:
     """Run every row of `target`, or every row, with `claude_credentials` planted beside every other strippable name.
 
+    A case that names no credentials plants the one `SELECTED_CLAUDE_CREDENTIAL`.
+
     `plant` writes its state into each row before every command other than
     the dispatch launch.
     """
+    planted = (
+        {SELECTED_CLAUDE_CREDENTIAL}
+        if claude_credentials is None
+        else set(claude_credentials)
+    )
     with launch_case() as case:
         runner = auditor_launch_runner(
             case.credentials.runner,
@@ -375,7 +403,7 @@ def native_auditor_launch(
             plant,
         )
         environment = ambient_environment(
-            case.credentials.original_environment, claude_credentials=claude_credentials
+            case.credentials.original_environment, claude_credentials=planted
         )
         rows = run_native_auditor_dispatch(
             case.artifact_root,
