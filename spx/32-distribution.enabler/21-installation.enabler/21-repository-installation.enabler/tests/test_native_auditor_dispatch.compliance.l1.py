@@ -55,6 +55,8 @@ from outcomeeng_testing.harnesses.native_auditor_launch import (
     codex_config_plant,
     native_auditor_failure,
     native_auditor_launch,
+    parent_launches,
+    retained_result,
     native_auditor_without_codex_home,
 )
 from outcomeeng_testing.harnesses.native_profile_execution import (
@@ -100,11 +102,7 @@ def test_every_row_launches_once_from_the_shipped_definition_passing_only_the_se
             assert len(observation.rows) == len(native_auditor_rows(repository_root()))
             for item in observation.rows:
                 row = item.observation.row
-                launches = [
-                    call
-                    for call in item.calls
-                    if set(row.launch_command) <= set(call.argv)
-                ]
+                launches = parent_launches(item)
                 assert len(launches) == 1, (row.identifier, launches)
                 launch = launches[0]
                 assert item.observation.launch_exit_code == 0, row.identifier
@@ -127,7 +125,7 @@ def test_every_row_launches_once_from_the_shipped_definition_passing_only_the_se
                 assert row.loading_path.is_file()
                 assert row.result_path.is_file()
                 assert item.observation.terminal_condition is None, row.identifier
-                result = json.loads(row.result_path.read_text("utf-8"))
+                result = retained_result(row)
                 assert result[RESULT_TERMINAL_CONDITION_KEY] is None, row.identifier
                 assert result[RESULT_RUN_TOKEN_KEY] == PLANTED_RUN_TOKEN, row.identifier
                 assert result[RESULT_RUN_FILE_KEY] == PLANTED_RUN_FILE, row.identifier
@@ -161,7 +159,7 @@ def test_dispatch_success_derives_from_the_rendered_projection_whatever_prose_su
         for item in observation.rows:
             row = item.observation.row
             assert item.observation.terminal_condition is None, row.identifier
-            result = json.loads(row.result_path.read_text("utf-8"))
+            result = retained_result(row)
             assert result[RESULT_RUN_TOKEN_KEY] == PLANTED_RUN_TOKEN, row.identifier
             assert result[RESULT_RUN_FILE_KEY] == PLANTED_RUN_FILE_NAME, row.identifier
             assert result[RESULT_BLOCKED_KEY] is False, row.identifier
@@ -176,7 +174,7 @@ def test_the_run_file_is_recovered_from_a_reply_that_names_no_label() -> None:
         for item in observation.rows:
             row = item.observation.row
             assert item.observation.terminal_condition is None, row.identifier
-            result = json.loads(row.result_path.read_text("utf-8"))
+            result = retained_result(row)
             assert result[RESULT_RUN_TOKEN_KEY] == PLANTED_RUN_TOKEN, row.identifier
             assert result[RESULT_RUN_FILE_KEY] == PLANTED_RUN_FILE, row.identifier
             assert result[RESULT_PROJECTION_KEY] == PLANTED_PROJECTION, row.identifier
@@ -193,7 +191,7 @@ def test_a_rendered_projection_that_quotes_the_blocked_word_is_not_a_blocked_res
         for item in observation.rows:
             row = item.observation.row
             assert item.observation.terminal_condition is None, row.identifier
-            result = json.loads(row.result_path.read_text("utf-8"))
+            result = retained_result(row)
             assert result[RESULT_BLOCKED_KEY] is False, row.identifier
             assert result[RESULT_RUN_TOKEN_KEY] == PLANTED_RUN_TOKEN, row.identifier
             assert result[RESULT_RUN_FILE_KEY] == PLANTED_RUN_FILE_NAME, row.identifier
@@ -213,7 +211,7 @@ def test_a_reply_without_a_rendered_projection_or_blocked_diagnostic_records_a_t
         for item in observation.rows:
             row = item.observation.row
             assert item.observation.terminal_condition is not None, row.identifier
-            result = json.loads(row.result_path.read_text("utf-8"))
+            result = retained_result(row)
             assert result[RESULT_RUN_TOKEN_KEY] is None, row.identifier
             assert result[RESULT_PROJECTION_KEY] is None, row.identifier
 
@@ -227,11 +225,11 @@ def test_a_failure_recorded_after_a_dispatch_retains_every_field_the_dispatch_ca
         assert observation.rows
         for item in observation.rows:
             row = item.observation.row
-            captured = json.loads(row.result_path.read_text("utf-8"))
+            captured = retained_result(row)
             failure = record_native_auditor_failure(
                 row, condition, install_exit_code=NATIVE_FAILURE_EXIT_CODE
             )
-            retained = json.loads(row.result_path.read_text("utf-8"))
+            retained = retained_result(row)
             assert retained.keys() >= captured.keys(), row.identifier
             assert {
                 key: retained[key]
@@ -256,14 +254,12 @@ def test_a_failed_launch_records_its_terminal_condition_without_a_retry() -> Non
         assert observation.rows
         for item in observation.rows:
             row = item.observation.row
-            launches = [
-                call for call in item.calls if set(row.launch_command) <= set(call.argv)
-            ]
+            launches = parent_launches(item)
             assert len(launches) == 1, row.identifier
             assert item.calls[-1] is launches[0]
             assert item.observation.launch_exit_code == NATIVE_FAILURE_EXIT_CODE
             assert item.observation.terminal_condition is not None
-            result = json.loads(row.result_path.read_text("utf-8"))
+            result = retained_result(row)
             assert (
                 result[RESULT_TERMINAL_CONDITION_KEY]
                 == item.observation.terminal_condition
@@ -287,11 +283,7 @@ def test_a_missing_or_ambiguous_claude_credential_fails_its_row_without_a_launch
             )
             for item in observation.rows:
                 row = item.observation.row
-                launches = [
-                    call
-                    for call in item.calls
-                    if set(row.launch_command) <= set(call.argv)
-                ]
+                launches = parent_launches(item)
                 if row.target is Target.CLAUDE:
                     assert item.observation.terminal_condition is not None
                     assert item.observation.launch_exit_code is None
@@ -329,9 +321,7 @@ def test_each_auditor_parent_reaches_the_fixture_repository_and_scratch_director
         assert {item.observation.row.target for item in observation.rows} == set(Target)
         for item in observation.rows:
             row = item.observation.row
-            launches = [
-                call for call in item.calls if set(row.launch_command) <= set(call.argv)
-            ]
+            launches = parent_launches(item)
             assert len(launches) == 1, row.identifier
             launch = launches[0]
             repository = row.fixture_path.parent
@@ -384,9 +374,7 @@ def test_each_claude_add_dir_takes_exactly_one_path_and_allowed_tools_follows_th
         }
         for item in observation.rows:
             row = item.observation.row
-            launches = [
-                call for call in item.calls if set(row.launch_command) <= set(call.argv)
-            ]
+            launches = parent_launches(item)
             assert len(launches) == 1, row.identifier
             argv = launches[0].argv
             scratch = launches[0].environment[SCRATCH_ENVIRONMENT_VARIABLES[0]]
@@ -423,7 +411,7 @@ def test_a_codex_row_without_a_selected_codex_home_launches_no_parent_and_record
             assert item.launch_exit_code is None, row.identifier
             assert item.terminal_condition is not None, row.identifier
             assert CODEX_HOME_ENV in item.terminal_condition, row.identifier
-            result = json.loads(row.result_path.read_text("utf-8"))
+            result = retained_result(row)
             assert result[RESULT_TERMINAL_CONDITION_KEY] == item.terminal_condition
             assert result.get(RESULT_RUN_TOKEN_KEY) is None, row.identifier
             assert result.get(RESULT_PROJECTION_KEY) is None, row.identifier
@@ -449,11 +437,7 @@ def test_a_codex_row_whose_config_does_not_parse_or_already_holds_the_sandbox_ta
             }
             for item in observation.rows:
                 row = item.observation.row
-                assert not [
-                    call
-                    for call in item.calls
-                    if set(row.launch_command) <= set(call.argv)
-                ], (row.identifier, text)
+                assert not parent_launches(item), (row.identifier, text)
                 assert item.calls, row.identifier
                 last = item.calls[-1]
                 assert last.codex_config == text.encode("utf-8"), row.identifier
@@ -461,7 +445,7 @@ def test_a_codex_row_whose_config_does_not_parse_or_already_holds_the_sandbox_ta
                 condition = item.observation.terminal_condition
                 assert condition is not None, (row.identifier, text)
                 assert str(last.home / CODEX_HOME_CONFIG_PATH) in condition, condition
-                result = json.loads(row.result_path.read_text("utf-8"))
+                result = retained_result(row)
                 assert result[RESULT_TERMINAL_CONDITION_KEY] == condition
                 assert result.get(RESULT_RUN_TOKEN_KEY) is None, row.identifier
                 assert result.get(RESULT_PROJECTION_KEY) is None, row.identifier
@@ -483,11 +467,7 @@ def test_naming_the_writable_roots_keeps_every_entry_the_codex_config_held_befor
             }
             for item in observation.rows:
                 row = item.observation.row
-                launches = [
-                    call
-                    for call in item.calls
-                    if set(row.launch_command) <= set(call.argv)
-                ]
+                launches = parent_launches(item)
                 assert len(launches) == 1, row.identifier
                 launch = launches[0]
                 assert item.observation.terminal_condition is None, row.identifier
@@ -530,16 +510,12 @@ def test_a_claude_row_whose_definition_declares_no_tools_grant_or_grants_every_t
                     AGENT_TOOLS_FIELD
                 )
                 assert not tools or tools == ALL_TOOLS_SENTINEL, (grant, tools)
-                assert not [
-                    call
-                    for call in item.calls
-                    if set(row.launch_command) <= set(call.argv)
-                ], (grant, row.identifier)
+                assert not parent_launches(item), (grant, row.identifier)
                 assert item.observation.launch_exit_code is None, row.identifier
                 condition = item.observation.terminal_condition
                 assert condition is not None, (grant, row.identifier)
                 assert str(row.native_definition_path) in condition, condition
-                result = json.loads(row.result_path.read_text("utf-8"))
+                result = retained_result(row)
                 assert result[RESULT_TERMINAL_CONDITION_KEY] == condition
                 assert result.get(RESULT_RUN_TOKEN_KEY) is None, row.identifier
                 assert result.get(RESULT_PROJECTION_KEY) is None, row.identifier

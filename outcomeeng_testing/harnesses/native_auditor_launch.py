@@ -391,6 +391,22 @@ def native_auditor_launch(
         )
 
 
+def parent_launches(
+    item: RowLaunch[NativeAuditorDispatchObservation, DispatchCall],
+) -> list[DispatchCall]:
+    """The recorded commands of `item`'s row that carry the row's parent launch command."""
+    return [
+        call
+        for call in item.calls
+        if set(item.observation.row.launch_command) <= set(call.argv)
+    ]
+
+
+def retained_result(row: NativeAuditorRow) -> dict[str, object]:
+    """The parsed result artifact the row retained."""
+    return json.loads(row.result_path.read_text("utf-8"))
+
+
 @dataclass
 class ParentRecorder:
     """A parent runner that records each launch it receives and completes it with no output."""
