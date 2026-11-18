@@ -5,7 +5,10 @@
   "issue": {
     "number": 12,
     "duplicateOf": {
-      "number": 30
+      "number": 30,
+      "repository": {
+        "nameWithOwner": "example-org/example-changes"
+      }
     },
     "issueFieldValues": {
       "pageInfo": {

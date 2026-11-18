@@ -23,6 +23,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/report-changes` blocks on a duplicate link that leaves the declared store.** The script selects the repository each duplicate link names and follows the link only when that repository is the declared Change store, compared without regard to case. A blocker closed as a duplicate of an issue in another repository gives a blocked result that names the link's repository and the declared store, with no row, and the script reads no issue of the other repository. Same-store chains read as before. Before this change, the script read the linked issue's number in the blocker's own store, so the row named the wrong survivor or the read returned a null issue and blocked as unreadable output.
 
+- **`read-relations` and the `change-standards` duplicate-link read block on a duplicate link that leaves the declared store.** The `audit-change` runner selects the repository each duplicate link names and returns `unreadable-output` naming the link's issue, its repository, and the declared store when that repository is not the declared Change store, compared without regard to case, with no absorber returned; a link that names no repository blocks the same way. The `github-store` reference of `change-standards` selects the repository in its duplicate-link read and states the same block. Same-store links read as before. Before this change, both readers took the linked issue's number as an issue of the Change store, so an absorber named the wrong issue or an issue that does not exist.
+
 ## 0.115.3
 
 ### Changed

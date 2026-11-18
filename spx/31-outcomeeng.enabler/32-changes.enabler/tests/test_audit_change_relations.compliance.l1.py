@@ -8,7 +8,8 @@ reader of ``Predecessors`` returns as absorbers instead of the issue the
 duplicate link names, for the absorbers rule; a Children read that is no filter
 on the ``Parent`` field or a page size other than the stated one, and a child
 that sits on a page after the first, for the Children read rule; a store that
-never ends its Children connection, for the Children-page bound; and an issue
+never ends its Children connection, for the Children-page bound; a duplicate
+link that names an issue of another store, for the store rule; and an issue
 whose field-value connection reports a further page, for the field-value
 bound. Each scenario
 states what its issues declare, the bounds come from the assertion text, and
@@ -23,7 +24,10 @@ import re
 from outcomeeng_testing.harnesses.audit_change_relations import (
     ABSORBERS,
     CHILDREN_ON_LATER_PAGE,
+    CROSS_STORE_DUPLICATE,
+    DECLARED_STORE,
     FIELD_VALUES_UNFINISHED,
+    LINKED_STORE,
     NOT_DUPLICATE,
     UNENDING_ISSUES,
     declared,
@@ -49,6 +53,19 @@ def test_the_absorber_is_the_issue_the_duplicate_link_names_and_no_predecessors_
     assert observed.exit_code == ExitCode.OK
     assert observed.result[Result.STATUS] == Status.OK
     assert observed.result[Result.ABSORBERS] == declared(ABSORBERS)
+
+
+def test_a_duplicate_link_that_leaves_the_declared_store_blocks_naming_both_stores() -> (
+    None
+):
+    observed = read_relations(CROSS_STORE_DUPLICATE)
+
+    assert observed.exit_code == ExitCode.BLOCKED
+    assert observed.result[Result.STATUS] == Status.BLOCKED
+    assert observed.result[Result.REASON] == Reason.UNREADABLE_OUTPUT
+    assert DECLARED_STORE in str(observed.result[Result.DETAIL])
+    assert LINKED_STORE in str(observed.result[Result.DETAIL])
+    assert Result.ABSORBERS not in observed.result
 
 
 def test_an_issue_not_closed_as_a_duplicate_has_no_absorber() -> None:

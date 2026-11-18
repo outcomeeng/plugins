@@ -84,7 +84,9 @@ the empty string when the store holds none.
 ``read-relations`` starts ``gh`` once per page of the named issue's Children and
 returns the named issue's Product and Parent, the issue its duplicate link names
 as its absorber, and its Children, which it reads through the store's filter on
-the ``Parent`` field in pages of 100 Children, at most 10 pages.
+the ``Parent`` field in pages of 100 Children, at most 10 pages. A duplicate
+link that names an issue of another repository blocks as ``unreadable-output``
+naming both stores.
 """
 
 from __future__ import annotations
@@ -283,6 +285,7 @@ class StoreField(StrEnum):
     BODY = "body"
     ISSUES = "issues"
     DUPLICATE_OF = "duplicateOf"
+    NAME_WITH_OWNER = "nameWithOwner"
     NUMBER = "number"
     VALUE = "value"
     ISSUE_FIELD_VALUES = "issueFieldValues"
@@ -363,7 +366,8 @@ _ISSUE_FIELD_VALUES_SELECTION: Final = (
 _RELATIONS_QUERY: Final = (
     "query($o:String!,$r:String!,$n:Int!,$p:Float!,$after:String)"
     f"{{repository(owner:$o,name:$r){{issue(number:$n){{number "
-    f"{StoreField.DUPLICATE_OF}{{number}} {_ISSUE_FIELD_VALUES_SELECTION}}} "
+    f"{StoreField.DUPLICATE_OF}{{number {StoreField.REPOSITORY}"
+    f"{{{StoreField.NAME_WITH_OWNER}}}}} {_ISSUE_FIELD_VALUES_SELECTION}}} "
     f"{StoreField.ISSUES}(first:{AUTHORITY_PAGE_SIZE},after:$after,"
     'filterBy:{issueFieldValues:[{fieldName:"Parent",numberValue:$p}]})'
     "{pageInfo{hasNextPage endCursor} nodes{number "
@@ -1416,7 +1420,9 @@ def _read_relations(
     when the named issue is not closed as a duplicate. The children are read
     through the store's filter on the ``Parent`` number field, one page of
     ``AUTHORITY_PAGE_SIZE`` Children per call, at most ``AUTHORITY_MAX_PAGES``
-    pages; a read that fills the bound blocks and returns no relation.
+    pages; a read that fills the bound blocks and returns no relation. A
+    duplicate link that names an issue of another repository than the named
+    issue's store blocks, naming both stores, and returns no relation.
     """
     owner, repository, number = _issue_identity(request)
     own: dict[str, object] | None = None
@@ -1461,6 +1467,25 @@ def _read_relations(
             own = _field_values(named)
             link = named.get(StoreField.DUPLICATE_OF)
             if isinstance(link, dict) and isinstance(link.get(StoreField.NUMBER), int):
+                link_repository = link.get(StoreField.REPOSITORY)
+                link_store = (
+                    link_repository.get(StoreField.NAME_WITH_OWNER)
+                    if isinstance(link_repository, dict)
+                    else None
+                )
+                if not isinstance(link_store, str) or not link_store:
+                    raise Blocked(
+                        BlockReason.UNREADABLE_OUTPUT,
+                        f"duplicate link of {owner}/{repository}#{number} names no "
+                        f"repository{_STORE_HINT}",
+                    )
+                if link_store.casefold() != f"{owner}/{repository}".casefold():
+                    raise Blocked(
+                        BlockReason.UNREADABLE_OUTPUT,
+                        f"{owner}/{repository}#{number} is closed as a duplicate of "
+                        f"{link_store}#{link[StoreField.NUMBER]}, outside the "
+                        f"declared store {owner}/{repository}",
+                    )
                 absorbers = [link[StoreField.NUMBER]]
         for entry in nodes:
             numbered = entry.get(StoreField.NUMBER) if isinstance(entry, dict) else None

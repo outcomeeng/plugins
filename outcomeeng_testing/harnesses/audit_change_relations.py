@@ -1,7 +1,7 @@
 """Replay harness for the audit-change runner's ``read-relations`` operation.
 
 Backs the ``[test]`` evidence that the operation decodes a Change's Parent,
-returns its absorbers, reads the store's Children through the store's filter on the
+returns its absorbers, blocks a duplicate link that leaves the declared store, reads the store's Children through the store's filter on the
 ``Parent`` field page by page until the store reports no further page, and
 blocks when a read fills a bound. The runner reaches the store
 only through its injected command seam, so the harness passes the runner a
@@ -47,6 +47,10 @@ PARENT_FIXTURES: Final = _FIXTURES_DIR / "parent"
 CHILDREN_ON_LATER_PAGE: Final = _FIXTURES_DIR / "children-on-later-page.json"
 ABSORBERS: Final = _FIXTURES_DIR / "absorbers.json"
 NOT_DUPLICATE: Final = _FIXTURES_DIR / "not-duplicate.json"
+CROSS_STORE_DUPLICATE: Final = _FIXTURES_DIR / "cross-store-duplicate.json"
+#: The declared store of the invented Change and the store its cross-store fixture links to.
+DECLARED_STORE: Final = "example-org/example-changes"
+LINKED_STORE: Final = "other-org/other-changes"
 UNENDING_ISSUES: Final = _FIXTURES_DIR / "unending-issues.json"
 FIELD_VALUES_UNFINISHED: Final = _FIXTURES_DIR / "field-values-unfinished.json"
 
