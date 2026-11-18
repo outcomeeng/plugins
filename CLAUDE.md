@@ -61,9 +61,11 @@ A Verifier runs only the skill its definition names.
 
 Until https://github.com/outcomeeng/changes/issues/944 closes Applied, spx writes no Audit File, so CI keeps each Audit entry that has no Audit File on its pin. From 944's close on, the gate fails each Audit entry without an Audit File, as methodology 4.0 states.
 
-When a Position holder needs an answer from the Operator and the orchestration file sets `operator_available = true`, it asks through AskUserQuestion. This holds however many earlier questions the Operator dismissed.
+## Asking the Operator and stopping
 
-A Position holder stops working only to hand off, or for an answer it cannot settle itself. Before it stops, it asks the Operator through AskUserQuestion when the orchestration file sets `operator_available = true`, and otherwise mails its overseer.
+When a Position holder needs an answer from the Operator, it asks through AskUserQuestion, unless the orchestration file sets `operator_available = false`. This holds however many earlier questions the Operator dismissed.
+
+A Position holder stops working only to hand off, or for an answer it cannot settle itself. Before it stops, it asks the Operator through AskUserQuestion, unless the orchestration file sets `operator_available = false`, in which case it mails its overseer.
 
 Work is done only when it is merged into `main` on origin.
 
