@@ -21,7 +21,7 @@ The record each row reads is the one [`spx/31-outcomeeng.enabler/32-changes.enab
 
 - [report-rows](tests/test_report_changes.property.l1.py): report-changes lists each open Change of the declared store that passes its filters, one row each with the Change's number, URL, title, Product, Maturity, Lifecycle, Priority, holder, and Parent as the store holds them, in the Priority order `spx/local/changes.md` declares, a Change with no Priority last, then by ascending issue number, over every page of the store's open issues
 
-### Test.Mapping: report-columns
+### Test.Mapping: [report-columns](tests/test_report_changes.mapping.l1.py)
 
 Each row derives these columns from the Change and its Transition comments.
 

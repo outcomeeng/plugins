@@ -3,8 +3,11 @@
 The governing assertion says ``report-changes`` lists each open Change that
 passes its filters as one row carrying the store's own values, orders the rows
 by the Priority order with a Change that has no Priority standing last and
-then by ascending issue number, and reads every page of the store, so the rows
-equal the matching open Changes whatever the number of pages.
+then by ascending issue number, and reads every page of the store's open
+issues, so the rows equal the matching open Changes whatever the number of
+pages. The store answers an open-only read with the open issues alone, so a
+script that reads the issues of every state asks for more than the store's open
+issues and fails the page-read assertion.
 
 Cases come from the generator over stores: any number of issues dealt across
 any number of pages, with each field and each filter absent or present. The
@@ -79,5 +82,7 @@ def test_rows_equal_the_matching_open_changes_in_priority_order_over_every_page(
             assert row[Row.HOLDER] == list(issue.assignees)
             assert row[Row.PARENT] == issue.parent
         assert len(observed.store_page_calls) == len(generated.page_sizes)
+        for call in observed.store_page_calls:
+            assert call.graphql_states == (script.IssueState.OPEN,)
 
     exercise_generated_stores(assert_case)
