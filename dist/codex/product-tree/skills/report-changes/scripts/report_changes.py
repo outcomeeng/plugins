@@ -158,6 +158,9 @@ class DuplicateField(StrEnum):
     STATE = "state"
     STATE_REASON = "stateReason"
     DUPLICATE_OF = "duplicateOf"
+    REPOSITORY = "repository"
+    NAME_WITH_OWNER = "nameWithOwner"
+    DUPLICATE_STORE = "duplicateStore"
 
 
 class Waiting(StrEnum):
@@ -213,7 +216,8 @@ EVENT_QUERY = (
 
 DUPLICATE_QUERY = (
     "query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){"
-    "issue(number:$n){number state stateReason duplicateOf{number}}}}"
+    "issue(number:$n){number state stateReason "
+    "duplicateOf{number repository{nameWithOwner}}}}}"
 )
 
 
@@ -533,13 +537,17 @@ def read_duplicate_link(
     data = graphql(runner, read, DUPLICATE_QUERY, {"o": owner, "r": repo, "n": number})
     try:
         issue = data["repository"]["issue"]
+        link = issue[DuplicateField.DUPLICATE_OF]
         return {
             DuplicateField.NUMBER: issue[DuplicateField.NUMBER],
             DuplicateField.STATE: issue[DuplicateField.STATE],
             DuplicateField.STATE_REASON: issue[DuplicateField.STATE_REASON],
-            DuplicateField.DUPLICATE_OF: (issue[DuplicateField.DUPLICATE_OF] or {}).get(
-                DuplicateField.NUMBER
-            ),
+            DuplicateField.DUPLICATE_OF: None
+            if link is None
+            else link[DuplicateField.NUMBER],
+            DuplicateField.DUPLICATE_STORE: None
+            if link is None
+            else link[DuplicateField.REPOSITORY][DuplicateField.NAME_WITH_OWNER],
         }
     except (KeyError, TypeError) as error:
         raise BlockedRead(read, f"unreadable output: missing {error}") from error
@@ -573,19 +581,31 @@ def survivor_of(
 def follow_duplicate_links(
     request: Request, runner: GhRunner, identity: str, store: str, number: int
 ) -> dict[str, Any]:
-    """Follow the duplicate link, step by step, to the first issue not closed as a duplicate."""
-    seen: set[int] = set()
+    """Follow the duplicate link, step by step, to the first issue not closed as a duplicate.
+
+    A link that leaves the declared store is a blocked read naming both stores.
+    """
+    seen: set[tuple[str, int]] = set()
     for _step in range(DUPLICATE_CHAIN_LIMIT):
-        if number in seen:
+        if (store, number) in seen:
             raise BlockedRead(
                 f"duplicate link of {store}#{number}",
                 f"the duplicate links of {identity} close on a cycle",
                 bound=Bound.DUPLICATE_LINKS,
             )
-        seen.add(number)
+        seen.add((store, number))
         issue = read_duplicate_link(runner, store, number, f"{store}#{number}")
         if issue[DuplicateField.DUPLICATE_OF] is None:
             return issue
+        link_store = issue[DuplicateField.DUPLICATE_STORE]
+        if link_store.casefold() != request.store.casefold():
+            raise BlockedRead(
+                f"duplicate link of {store}#{number}",
+                f"{store}#{number} is closed as a duplicate of "
+                f"{link_store}#{issue[DuplicateField.DUPLICATE_OF]}, "
+                f"outside the declared store {request.store}",
+            )
+        store = request.store
         number = issue[DuplicateField.DUPLICATE_OF]
     raise BlockedRead(
         f"duplicate link of {identity}",

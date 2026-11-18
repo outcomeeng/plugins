@@ -7,7 +7,8 @@ cases are the failures of every kind of read the script makes, each in every
 way a read fails (a nonzero exit, output that is not JSON, a `gh` that cannot
 start), and one store per bound: an issue connection that never ends, an issue
 whose field-value connection is full, a blocker list that is full, an assignee
-connection that is full, and an event timeline that never ends. The
+connection that is full, an event timeline that never ends, and a blocker
+closed as a duplicate of an issue in another repository. The
 bounds come from the script's exports, and the counts that fill them come
 from the bounds. A script that skips a failed read, or returns the rows it has,
 returns rows where the rule demands none.
@@ -20,6 +21,7 @@ vocabulary of `gh`, HTTP, and GraphQL, which those tools own.
 from __future__ import annotations
 
 from outcomeeng_testing.harnesses.report_changes import (
+    CROSS_STORE_DUPLICATE_STORE,
     GH_API,
     GH_ISSUE,
     GH_PULL_REQUEST,
@@ -187,6 +189,46 @@ def test_a_priority_the_order_omits_blocks_naming_the_priority_order_and_returns
     assert f"{omitted.store.store}#{omitted.number}" in observed.result[Report.DETAIL]
     assert repr(omitted.priority) in observed.result[Report.DETAIL]
     assert Report.ROWS not in observed.result
+
+
+def test_a_duplicate_link_into_another_repository_blocks_naming_both_stores() -> None:
+    """Design record.
+
+    Assertion: NEVER return a shorter list in place of a failure; a blocker
+    closed as a duplicate of an issue in a repository other than the declared
+    store yields a blocked result naming the link's repository and the declared
+    store, and no row, and the link is not followed.
+    Production subject: the script's entry point reading an Available Change
+    whose one blocker is closed as a duplicate of issue 7 of another repository.
+    Case provenance: the whole-payload fixture `cross-store-duplicate.json`,
+    whose duplicate-link answer names `other-org/other-repo` and whose issue 7
+    is open there, so a script that follows the link into the declared store
+    reads the wrong issue.
+    Oracle owner: the fixture's declared store and its recorded link
+    repository, and the github-store reference: a Change reference whose
+    `owner/repo` differs from the declared store is a blocked operation naming
+    both.
+    Rejected mutation: the script follows the link number inside the declared
+    store, or ignores the link's repository and returns the row it has.
+    Failure observation: the exit code is not blocked, the detail omits either
+    store, rows are present, or a duplicate link beyond the blocker's is read.
+    """
+    replayed = load_recorded_store(CROSS_STORE_DUPLICATE_STORE)
+    blocker = replayed.duplicates["2"]
+    link = replayed.duplicates["2"]["duplicateOf"]
+    link_store = link["repository"]["nameWithOwner"]  # type: ignore[index]
+
+    observed = report(replayed)
+
+    assert observed.exit_code == script.EXIT_BLOCKED
+    assert observed.result[Report.STATUS] == script.ReportStatus.BLOCKED
+    assert Report.ROWS not in observed.result
+    assert link_store != replayed.store
+    assert link_store in observed.result[Report.DETAIL]
+    assert replayed.store in observed.result[Report.DETAIL]
+    assert {call.issue_number for call in observed.duplicate_read_calls} == {
+        blocker["number"]
+    }
 
 
 def test_the_script_issues_reading_commands_only_and_writes_no_file() -> None:

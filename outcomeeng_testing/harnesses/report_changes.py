@@ -73,6 +73,7 @@ _FIXTURES_DIR: Final = REPO_ROOT / "outcomeeng_testing" / "fixtures" / "report_c
 RECORDED_STORE: Final = _FIXTURES_DIR / "store.json"
 #: A store of one page holding one open Change, with that Change's row read by hand.
 ONE_OPEN_CHANGE_STORE: Final = _FIXTURES_DIR / "one-open-change.json"
+CROSS_STORE_DUPLICATE_STORE: Final = _FIXTURES_DIR / "cross-store-duplicate.json"
 
 #: The invented store every generated store claims to be.
 GENERATED_STORE_IDENTITY: Final = "example-org/example-changes"

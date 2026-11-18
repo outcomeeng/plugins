@@ -1484,7 +1484,10 @@
       "state": "CLOSED",
       "stateReason": "DUPLICATE",
       "duplicateOf": {
-        "number": 22
+        "number": 22,
+        "repository": {
+          "nameWithOwner": "example-org/example-changes"
+        }
       }
     },
     "22": {
@@ -1504,7 +1507,10 @@
       "state": "CLOSED",
       "stateReason": "DUPLICATE",
       "duplicateOf": {
-        "number": 25
+        "number": 25,
+        "repository": {
+          "nameWithOwner": "example-org/example-changes"
+        }
       }
     },
     "25": {
@@ -1518,7 +1524,10 @@
       "state": "CLOSED",
       "stateReason": "DUPLICATE",
       "duplicateOf": {
-        "number": 27
+        "number": 27,
+        "repository": {
+          "nameWithOwner": "example-org/example-changes"
+        }
       }
     },
     "27": {
@@ -1526,7 +1535,10 @@
       "state": "CLOSED",
       "stateReason": "DUPLICATE",
       "duplicateOf": {
-        "number": 28
+        "number": 28,
+        "repository": {
+          "nameWithOwner": "example-org/example-changes"
+        }
       }
     },
     "28": {
@@ -1540,7 +1552,10 @@
       "state": "CLOSED",
       "stateReason": "DUPLICATE",
       "duplicateOf": {
-        "number": 30
+        "number": 30,
+        "repository": {
+          "nameWithOwner": "example-org/example-changes"
+        }
       }
     },
     "30": {
@@ -1548,7 +1563,10 @@
       "state": "CLOSED",
       "stateReason": "DUPLICATE",
       "duplicateOf": {
-        "number": 31
+        "number": 31,
+        "repository": {
+          "nameWithOwner": "example-org/example-changes"
+        }
       }
     },
     "31": {

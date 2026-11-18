@@ -21,6 +21,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **`/report-changes` reads each blocker's duplicate-link chain once per run.** The script keeps the survivor it finds for each closed, not-Completed blocker and reuses it for every Change that names the same blocker, so a blocker that N Changes share costs at most 100 duplicate-link reads in all. It computes a Change's blocker effect only for an Available Change, whose row reads it, and for each candidate when the `blocked` filter is given, which the filter needs. The rows and the blocked results are unchanged. Before this change, the script followed the chain again for each Change that named the blocker.
 
+- **`/report-changes` blocks on a duplicate link that leaves the declared store.** The script selects the repository each duplicate link names and follows the link only when that repository is the declared Change store, compared without regard to case. A blocker closed as a duplicate of an issue in another repository gives a blocked result that names the link's repository and the declared store, with no row, and the script reads no issue of the other repository. Same-store chains read as before. Before this change, the script read the linked issue's number in the blocker's own store, so the row named the wrong survivor or the read returned a null issue and blocked as unreadable output.
+
 ## 0.115.3
 
 ### Changed
