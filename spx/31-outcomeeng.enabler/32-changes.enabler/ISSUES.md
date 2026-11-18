@@ -97,14 +97,14 @@ Impact: on a store whose records take the new form, `report-changes` reports no 
 
 Settlement condition: a Change amends `report-no-shorter-list` and the report rows to the Transition comments, migrates the script, its fixture, and its tests to them, and one typed skill audit of `report-changes` raises no `record-form-only` finding.
 
-## DEBT [record-form]: open Children hold a Priority that differs from their Parent's
+## DEBT [record-form]: no Change skill writes a Child's Priority when its Parent's changes
 
 Defect class: `record-form`.
 
-Finding: methodology 4.0 `change-graph/change-graph.md` line 94 has a Child take the Priority of its Parent, and the `priority` row of `record-keys` in `src/plugins/product-tree/skills/change-standards/SKILL.md` line 53 holds the same. The Change store `outcomeeng/changes` does not. `author-change` writes a Child's Priority only when it records or publishes the Child (`src/plugins/product-tree/skills/author-change/SKILL.md` lines 73 and 91). No step writes the Priority of a Child when its Parent's Priority changes, and no check reports a Child whose Priority differs from its Parent's.
+Finding: methodology 4.0 `change-graph/change-graph.md` line 94 has a Child take the Priority of its Parent, and the `priority` row of `record-keys` in `src/plugins/product-tree/skills/change-standards/SKILL.md` line 53 holds the same. `author-change` writes a Child's Priority only when it records or publishes the Child (`src/plugins/product-tree/skills/author-change/SKILL.md` lines 73 and 91). No step writes the Priority of a Child when its Parent's Priority changes, and no check reports a Child whose Priority differs from its Parent's.
 
 Evidence: on 2026-11-18, 146 of the 258 open Children in `outcomeeng/changes` held a Priority that differs from their Parent's: 85 held another value, 60 held none, and 1 held a value while its Parent held none. A read of the `Parent` and `Priority` issue fields of all 1010 store issues reproduced the counts the Methodology Advisor's review of methodology pull request 251 found.
 
 Impact: an Applier takes Changes in the order of the Priority alone, so a Child whose Priority differs from its Parent's stands earlier or later than the Operator's Priority decision on its Parent places it, and `report-changes` orders its rows by that Priority.
 
-Settlement condition: every open Child in the store holds the Priority of its Parent, and the Provider writes each Child's Priority when its Parent's changes, or a check reports every Child whose Priority differs from its Parent's.
+Settlement condition: the Change skills write each Child's Priority when its Parent's changes, or a check reports every Child whose Priority differs from its Parent's.
