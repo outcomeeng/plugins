@@ -326,7 +326,7 @@ _GRAPHQL: Final = (GH_EXECUTABLE, "api", "graphql")
 
 #: One store read takes pages of this many entries, at most this many pages.
 AUTHORITY_PAGE_SIZE: Final = 100
-AUTHORITY_MAX_PAGES: Final = 10
+AUTHORITY_MAX_PAGES: Final = 20
 
 _QUERY_HEAD: Final = (
     "query($o:String!,$r:String!,$n:Int!,$after:String)"
