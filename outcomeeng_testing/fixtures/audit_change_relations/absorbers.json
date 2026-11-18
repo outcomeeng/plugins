@@ -1,102 +1,68 @@
 {
   "declared": [
-    30,
-    32
+    30
   ],
+  "issue": {
+    "number": 12,
+    "duplicateOf": {
+      "number": 30
+    },
+    "issueFieldValues": {
+      "pageInfo": {
+        "hasNextPage": false
+      },
+      "nodes": [
+        {
+          "name": "Example Product",
+          "field": {
+            "name": "Product"
+          }
+        },
+        {
+          "value": "example-org/example-changes#5, example-org/example-changes#33",
+          "field": {
+            "name": "Predecessors"
+          }
+        }
+      ]
+    }
+  },
   "pages": [
     {
-      "data": {
-        "repository": {
-          "issues": {
+      "pageInfo": {
+        "hasNextPage": false,
+        "endCursor": "cursor-end"
+      },
+      "nodes": [
+        {
+          "number": 40,
+          "issueFieldValues": {
             "pageInfo": {
-              "hasNextPage": false,
-              "endCursor": "cursor-end"
+              "hasNextPage": false
             },
             "nodes": [
               {
-                "number": 12,
-                "issueFieldValues": {
-                  "pageInfo": {
-                    "hasNextPage": false
-                  },
-                  "nodes": [
-                    {
-                      "value": "example-org/example-changes#5, example-org/example-changes#33",
-                      "field": {
-                        "name": "Predecessors"
-                      }
-                    }
-                  ]
+                "name": "Example Product",
+                "field": {
+                  "name": "Product"
                 }
               },
               {
-                "number": 30,
-                "issueFieldValues": {
-                  "pageInfo": {
-                    "hasNextPage": false
-                  },
-                  "nodes": [
-                    {
-                      "value": "example-org/example-changes#11, example-org/example-changes#12",
-                      "field": {
-                        "name": "Predecessors"
-                      }
-                    }
-                  ]
+                "value": 12,
+                "field": {
+                  "name": "Parent"
                 }
               },
               {
-                "number": 31,
-                "issueFieldValues": {
-                  "pageInfo": {
-                    "hasNextPage": false
-                  },
-                  "nodes": [
-                    {
-                      "value": "example-org/example-changes#120",
-                      "field": {
-                        "name": "Predecessors"
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "number": 32,
-                "issueFieldValues": {
-                  "pageInfo": {
-                    "hasNextPage": false
-                  },
-                  "nodes": [
-                    {
-                      "value": "example-org/example-changes#112, example-org/example-changes#12",
-                      "field": {
-                        "name": "Predecessors"
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "number": 33,
-                "issueFieldValues": {
-                  "pageInfo": {
-                    "hasNextPage": false
-                  },
-                  "nodes": [
-                    {
-                      "value": "example-org/example-changes#12",
-                      "field": {
-                        "name": "Predecessors"
-                      }
-                    }
-                  ]
+                "value": "example-org/example-changes#12, example-org/example-changes#9",
+                "field": {
+                  "name": "Predecessors"
                 }
               }
             ]
           }
         }
-      }
+      ]
     }
   ]
 }

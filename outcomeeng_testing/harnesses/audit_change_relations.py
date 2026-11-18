@@ -1,8 +1,9 @@
 """Replay harness for the audit-change runner's ``read-relations`` operation.
 
 Backs the ``[test]`` evidence that the operation decodes a Change's Parent,
-returns its absorbers, reads the store's issue pages until the store reports no
-further page, and blocks when a read fills a bound. The runner reaches the store
+returns its absorbers, reads the store's Children through the store's filter on the
+``Parent`` field page by page until the store reports no further page, and
+blocks when a read fills a bound. The runner reaches the store
 only through its injected command seam, so the harness passes the runner a
 recording collaborator that answers each ``gh api graphql`` call with a page in
 the shape of the store's answer, under the interaction-protocol exception of the
@@ -11,11 +12,13 @@ test methodology.
 Every replayed scenario is an inert fixture file under
 ``outcomeeng_testing/fixtures/audit_change_relations``, written with invented
 issue numbers and identities because the Change store is private and this
-repository is public. A fixture holds ``pages``, the store answers in reading
-order, and ``declared``, what the fixture's issues state for the case under
-test. The collaborator answers the first call with the first page and each later
-call with the page that follows the page whose ``endCursor`` the call passes as
-``after``; once the pages run out it answers with the final page again, which is
+repository is public. A fixture holds ``issue``, the named issue as the store
+answers it with its duplicate link and field values, ``pages``, the filtered
+Children connection pages in reading order, and ``declared``, what the
+fixture's issues state for the case under test. Every answer carries the named
+issue and one Children page: the first page for the first call and, for each
+later call, the page that follows the page whose ``endCursor`` the call passes
+as ``after``; once the pages run out the final page answers again, which is
 what a store that never ends its connection does. The page bound the test
 compares against comes from the spec assertion text, read here by path.
 
@@ -43,16 +46,19 @@ RELATIONS_ISSUE: Final = "example-org/example-changes#12"
 PARENT_FIXTURES: Final = _FIXTURES_DIR / "parent"
 CHILDREN_ON_LATER_PAGE: Final = _FIXTURES_DIR / "children-on-later-page.json"
 ABSORBERS: Final = _FIXTURES_DIR / "absorbers.json"
+NOT_DUPLICATE: Final = _FIXTURES_DIR / "not-duplicate.json"
 UNENDING_ISSUES: Final = _FIXTURES_DIR / "unending-issues.json"
 FIELD_VALUES_UNFINISHED: Final = _FIXTURES_DIR / "field-values-unfinished.json"
 
 _PAGE_BOUND_PHRASE: Final = re.compile(
-    r"blocked result naming `(\d+ issues per page, \d+ pages)`"
+    r"blocked result naming `(\d+ Children per page, \d+ pages)`"
 )
+_PAGE_SIZE_PHRASE: Final = re.compile(r"in pages of (\d+) Children")
 _FIELD_BOUND_PHRASE: Final = re.compile(
     r"blocked result naming `(\d+ issue field values per issue)`"
 )
 _AFTER_ARGUMENT_PREFIX: Final = "after="
+_QUERY_ARGUMENT_PREFIX: Final = "query="
 
 _runner = load_runner()
 
@@ -65,6 +71,8 @@ class RelationsObservation:
     result: dict[str, object]
     #: The argument vector of every command the runner issued to the store.
     store_calls: tuple[tuple[str, ...], ...]
+    #: The GraphQL query text of every store call.
+    queries: tuple[str, ...]
     #: The ``after`` cursor each store call passed, ``None`` for the first page.
     cursors: tuple[str | None, ...]
 
@@ -80,13 +88,23 @@ def declared(fixture: Path) -> object:
 
 
 def spec_issue_page_bound() -> str:
-    """The issue-page bound the spec assertion says a blocked read names."""
+    """The Children-page bound the spec assertion says a blocked read names."""
     found = _PAGE_BOUND_PHRASE.search(CHANGES_SPEC.read_text(encoding="utf-8"))
     if found is None:
         raise RuntimeError(
-            f"no read-relations issue page bound stated in {CHANGES_SPEC}"
+            f"no read-relations Children page bound stated in {CHANGES_SPEC}"
         )
     return found.group(1)
+
+
+def spec_children_page_size() -> int:
+    """The Children page size the spec assertion states."""
+    found = _PAGE_SIZE_PHRASE.search(CHANGES_SPEC.read_text(encoding="utf-8"))
+    if found is None:
+        raise RuntimeError(
+            f"no read-relations Children page size stated in {CHANGES_SPEC}"
+        )
+    return int(found.group(1))
 
 
 def spec_field_value_bound() -> str:
@@ -102,13 +120,16 @@ def spec_field_value_bound() -> str:
 class _StoreReplay:
     """Answer each store call with the page its ``after`` cursor selects."""
 
-    def __init__(self, pages: Sequence[dict[str, object]]) -> None:
+    def __init__(
+        self, issue: dict[str, object], pages: Sequence[dict[str, object]]
+    ) -> None:
+        self._issue = issue
         self._pages = pages
         self.calls: list[tuple[str, ...]] = []
         self.cursors: list[str | None] = []
 
     def _end_cursor(self, page: dict[str, object]) -> str:
-        return str(page["data"]["repository"]["issues"]["pageInfo"]["endCursor"])  # type: ignore[index]
+        return str(page["pageInfo"]["endCursor"])  # type: ignore[index]
 
     def __call__(
         self, argv: Sequence[str], /, *, cwd: Path, stdin: str | None
@@ -130,13 +151,14 @@ class _StoreReplay:
             position = ends.index(after) + 1 if after in ends else len(self._pages)
         page = self._pages[min(position, len(self._pages) - 1)]
         # The CLI prints an answer as one line of JSON.
-        return _runner.CommandResult(0, json.dumps(page), "")
+        answer = {"data": {"repository": {"issue": self._issue, "issues": page}}}
+        return _runner.CommandResult(0, json.dumps(answer), "")
 
 
 def read_relations(fixture: Path) -> RelationsObservation:
     """Request ``read-relations`` for the invented Change while the store replays ``fixture``."""
-    pages = json.loads(fixture.read_text(encoding="utf-8"))["pages"]
-    replay = _StoreReplay(pages)
+    replayed = json.loads(fixture.read_text(encoding="utf-8"))
+    replay = _StoreReplay(replayed["issue"], replayed["pages"])
     request = json.dumps(
         {
             _runner.RequestField.OPERATION: _runner.Operation.READ_RELATIONS,
@@ -148,5 +170,11 @@ def read_relations(fixture: Path) -> RelationsObservation:
         exit_code=int(code),
         result=dict(result),
         store_calls=tuple(replay.calls),
+        queries=tuple(
+            arg.removeprefix(_QUERY_ARGUMENT_PREFIX)
+            for call in replay.calls
+            for arg in call
+            if arg.startswith(_QUERY_ARGUMENT_PREFIX)
+        ),
         cursors=tuple(replay.cursors),
     )
