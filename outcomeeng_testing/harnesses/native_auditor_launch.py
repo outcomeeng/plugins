@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Final
+from typing import Final, cast
 
 from outcomeeng.distribution.contracts import Target
 from outcomeeng.distribution.installation import (
@@ -432,7 +432,7 @@ def parent_launches(
 
 def retained_result(row: NativeAuditorRow) -> dict[str, object]:
     """The parsed result artifact the row retained."""
-    return json.loads(row.result_path.read_text("utf-8"))
+    return cast(dict[str, object], json.loads(row.result_path.read_text("utf-8")))
 
 
 @dataclass
