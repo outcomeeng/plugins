@@ -17,7 +17,8 @@ or a generated store from ``outcomeeng_testing.generators.report_changes``
 rendered into the store's answer shapes here. A fixture holds the store's
 ``pages`` in reading order, the REST ``blockers``, the ``comments``, and the field-change ``events`` per
 issue number, the pull request ``checks`` per URL, and ``direct``, the rows
-read by hand from those answers. The collaborator answers the first store
+read by hand from those answers. A read of one issue by number is answered from the same pages with the issue's node whatever its state, which is how a
+closed ancestor the open-issues read leaves off its pages stays readable. The collaborator answers the first store
 call with the first page and each later one with the page that follows the
 page whose ``endCursor`` the call passes as ``after``; once the pages run out
 it answers with the final page again, which is what a store that never ends
@@ -72,6 +73,7 @@ _FIXTURES_DIR: Final = REPO_ROOT / "outcomeeng_testing" / "fixtures" / "report_c
 RECORDED_STORE: Final = _FIXTURES_DIR / "store.json"
 #: A store of one page holding one open Change, with that Change's row read by hand.
 ONE_OPEN_CHANGE_STORE: Final = _FIXTURES_DIR / "one-open-change.json"
+CROSS_STORE_DUPLICATE_STORE: Final = _FIXTURES_DIR / "cross-store-duplicate.json"
 
 #: The invented store every generated store claims to be.
 GENERATED_STORE_IDENTITY: Final = "example-org/example-changes"
@@ -90,6 +92,7 @@ GRAPHQL_WRITE_OPERATION: Final = "mutation"
 _QUERY_PREFIX: Final = "query="
 _AFTER_PREFIX: Final = "after="
 _NUMBER_PREFIX: Final = "n="
+_STATES_ARGUMENT: Final = re.compile(r"states:\s*\[?([A-Z_,\s]+?)\]?[\s,)]")
 _BLOCKERS_PATH: Final = re.compile(r"issues/(\d+)/dependencies/blocked_by$")
 
 #: Property run configuration for generated stores.
@@ -99,6 +102,9 @@ GENERATED_STORE_PROPERTY_REPLAY: Final = (
     "just test spx/31-outcomeeng.enabler/32-changes.enabler/60-report-changes.enabler/"
     "tests/test_report_changes.property.l1.py"
 )
+
+#: The REST state reason of an issue closed as completed, which GitHub owns.
+_COMPLETED_REASON: Final = "completed"
 
 _SIMULATED_FAILURE: Final = "simulated failure"
 _SIMULATED_UNREADABLE: Final = "this is not JSON"
@@ -129,6 +135,7 @@ class ReadKind(StrEnum):
     COMMENTS = "comments"
     EVENTS = "events"
     CHECKS = "checks"
+    DUPLICATES = "duplicates"
 
 
 class FaultKind(StrEnum):
@@ -158,6 +165,8 @@ class ReplayedStore:
     comments: dict[str, list[dict[str, object]]] = field(default_factory=dict)
     events: dict[str, list[dict[str, object]]] = field(default_factory=dict)
     checks: dict[str, list[dict[str, object]]] = field(default_factory=dict)
+    #: The duplicate-link answer of each closed or open issue a blocker chain reaches, by number.
+    duplicates: dict[str, dict[str, object]] = field(default_factory=dict)
     direct: list[dict[str, object]] = field(default_factory=list)
     #: Whether every page of an issue's field-change events reports a further page.
     events_never_end: bool = False
@@ -193,6 +202,28 @@ class GhCall:
         )
 
     @property
+    def graphql_states(self) -> tuple[str, ...]:
+        """The issue states the GraphQL query's ``states`` argument names, none when it has no such argument."""
+        query = self.graphql_query
+        found = _STATES_ARGUMENT.search(query) if query is not None else None
+        if found is None:
+            return ()
+        return tuple(name for name in re.split(r"[,\s]+", found.group(1)) if name)
+
+    @property
+    def issue_number(self) -> int | None:
+        """The issue number a GraphQL call passes as its ``n`` variable."""
+        value = next(
+            (
+                arg.removeprefix(_NUMBER_PREFIX)
+                for arg in self.argv
+                if arg.startswith(_NUMBER_PREFIX)
+            ),
+            None,
+        )
+        return int(value) if value is not None else None
+
+    @property
     def rest_method(self) -> str | None:
         """The HTTP method a `gh api` REST call names, ``None`` when it names none."""
         if self.command != GH_API or self.verb == GH_GRAPHQL:
@@ -222,6 +253,15 @@ class ReportObservation:
             call
             for call in self.calls
             if call.graphql_query == load_script().EVENT_QUERY
+        )
+
+    @property
+    def duplicate_read_calls(self) -> tuple[GhCall, ...]:
+        """The calls that read one issue's state and duplicate link."""
+        return tuple(
+            call
+            for call in self.calls
+            if call.graphql_query == load_script().DUPLICATE_QUERY
         )
 
     @property
@@ -282,6 +322,7 @@ def load_recorded_store(path: Path = RECORDED_STORE) -> ReplayedStore:
         comments=document["comments"],
         events=document["events"],
         checks=document["checks"],
+        duplicates=document.get("duplicates", {}),
         direct=document["direct"],
     )
 
@@ -417,7 +458,9 @@ def render_generated(generated: GeneratedStore) -> ReplayedStore:
             {
                 "number": number,
                 "state": state,
-                "state_reason": None,
+                "state_reason": (
+                    _COMPLETED_REASON if state == script.BlockerState.CLOSED else None
+                ),
                 "repository_url": _REST_REPOSITORY_URL,
             }
             for number, state in zip(issue.blocker_numbers, issue.blocker_states)
@@ -440,7 +483,9 @@ class _Replay:
         self._fault = fault
         self.calls: list[GhCall] = []
 
-    def _page_for(self, after: str | None) -> dict[str, object]:
+    def _page_for(
+        self, after: str | None, states: tuple[str, ...]
+    ) -> dict[str, object]:
         pages = self._replayed.pages
         position = 0
         if after is not None:
@@ -449,7 +494,23 @@ class _Replay:
                 for page in pages
             ]
             position = ends.index(after) + 1 if after in ends else len(pages)
-        return pages[min(position, len(pages) - 1)]
+        page = copy.deepcopy(pages[min(position, len(pages) - 1)])
+        if states:
+            nodes = page["data"]["repository"]["issues"]["nodes"]  # type: ignore[index]
+            nodes[:] = [node for node in nodes if node["state"] in states]
+        return page
+
+    def _issue(self, number: int) -> object:
+        """The store's node for one issue of any state, none when the store holds no such issue.
+
+        A read of a single issue reaches an issue the open-issues read leaves
+        off its pages, so this answer is not filtered by state.
+        """
+        for page in self._replayed.pages:
+            for node in page["data"]["repository"]["issues"]["nodes"]:  # type: ignore[index]
+                if node["number"] == number:
+                    return copy.deepcopy(node)
+        return None
 
     def _value(self, argv: Sequence[str], prefix: str) -> str | None:
         return next(
@@ -462,7 +523,9 @@ class _Replay:
         argv = call.argv
         query = call.graphql_query
         if query == script.STORE_QUERY:
-            return ReadKind.STORE, self._page_for(self._value(argv, _AFTER_PREFIX))
+            return ReadKind.STORE, self._page_for(
+                self._value(argv, _AFTER_PREFIX), call.graphql_states
+            )
         if query == script.EVENT_QUERY:
             number = self._value(argv, _NUMBER_PREFIX)
             nodes = self._replayed.events.get(str(number), [])
@@ -477,6 +540,13 @@ class _Replay:
             }
             return ReadKind.EVENTS, {
                 "data": {"repository": {"issue": {"timelineItems": timeline}}}
+            }
+        if query is not None and query == script.DUPLICATE_QUERY:
+            issue = self._replayed.duplicates.get(str(call.issue_number))
+            return ReadKind.DUPLICATES, {"data": {"repository": {"issue": issue}}}
+        if query is not None and call.issue_number is not None:
+            return ReadKind.STORE, {
+                "data": {"repository": {"issue": self._issue(call.issue_number)}}
             }
         if call.command == GH_API and call.verb is not None:
             found = _BLOCKERS_PATH.search(call.verb)

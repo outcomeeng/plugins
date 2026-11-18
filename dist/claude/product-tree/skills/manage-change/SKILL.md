@@ -5,7 +5,7 @@ description: >-
   lowering, closing Applied, or closing Abandoned a Change in the declared
   Change Store. NEVER assign a Change, write its Maturity or Lifecycle, or close
   its issue by hand.
-argument-hint: "<claim|release|submit|advance|lower|applied|abandoned> <#N | owner/repo#N | issue-url> [Maturity] [reason]"
+argument-hint: "<claim|release|submit|advance|lower|applied|abandoned> <#N | owner/repo#N | issue-url> [Maturity] [reason | survivor]"
 arguments: transition reference
 allowed-tools: Read, Write, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(gh api repos/*/issues/*/dependencies/blocked_by --method GET -F per_page=100), Bash(git status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git ls-remote --heads origin:*), Bash(git worktree list --porcelain), Bash(git rev-parse:*), Bash(git merge-base --is-ancestor:*), Bash(git push -u origin HEAD:*), Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(spx spec status:*), Bash(spx verification run render:*), Bash(spx verification run input:*), Bash(id -un), Bash(hostname -s), Bash(printenv CLAUDE_CODE_SESSION_ID), Agent, Skill
 ---
@@ -26,7 +26,7 @@ Use skill `product-tree:sync-base`. It brings the claimed branch current, in ste
 
 <intake>
 
-Take `$transition` as one of `claim`, `release`, `submit`, `advance`, `lower`, `applied`, and `abandoned`; any other value, an empty one included, is refused naming the seven, with nothing read. Take `$reference` as `#N`, `owner/repo#N`, or an issue URL; any other form is refused naming the three. `advance` takes a target Maturity as its next token, and an `advance` to Applicable then takes the run token of the record's sealed audit run; `lower` takes a target Maturity and then its reason, the rest of the arguments; a missing or unknown Maturity, or a `lower` without a reason, is refused naming what it lacks. `claim` takes an optional absolute worktree root to claim for, which must hold no `.` or `..` segment; without it, the claim is for this session's worktree. No other Transition takes a further token.
+Take `$transition` as one of `claim`, `release`, `submit`, `advance`, `lower`, `applied`, and `abandoned`; any other value, an empty one included, is refused naming the seven, with nothing read. Take `$reference` as `#N`, `owner/repo#N`, or an issue URL; any other form is refused naming the three. `advance` takes a target Maturity as its next token, and an `advance` to Applicable then takes the run token of the record's sealed audit run; `lower` takes a target Maturity and then its reason, the rest of the arguments; a missing or unknown Maturity, or a `lower` without a reason, is refused naming what it lacks. `claim` takes an optional absolute worktree root to claim for, which must hold no `.` or `..` segment; without it, the claim is for this session's worktree. `abandoned` takes an optional survivor reference, in one of the three forms, when a merge absorbs the Change; a survivor in another store than the declared one is refused naming both. No other Transition takes a further token.
 
 </intake>
 
@@ -41,7 +41,7 @@ Take `$transition` as one of `claim`, `release`, `submit`, `advance`, `lower`, `
    - `advance` of a Sliced Leaf to Applicable: this session as holder, once the Applicable condition holds as step 4 states.
    - `lower` to Sliced by the Applier, for a decision line that differs from the reviewed line or a failed Application check, and by any session whose publish wrote the body of an Applicable record: this session, naming that cause in the reason.
    - `lower` to Proposed for a reframe: this session as Refiner.
-   - `abandoned` of a Change a merge absorbs: this session as Refiner, on the Operator's direction.
+   - `abandoned` of a Change a merge absorbs: this session as Refiner, on the Operator's direction, with the survivor's reference; the survivor must name the absorbed Change in its `predecessors`, read under `<reads>`, and an `abandoned` with no survivor is the Operator's Abandoned close of a Change no merge absorbs.
    - `applied` of a Leaf: this session as holder.
 4. **Check the condition.**
    - For an `advance` to Sliced or Applicable, confirm `github-binding`: read the body's edit history and the Base field's change events under `<reads>`, and require the current body and Base to equal those the review or the audit read, or the review to carry forward to them under `review-carry`. For Applicable, require each Node the record's infrastructure lines name to stand on the default branch with State Passing under `spx spec status --format json`, or a blocker to build it. Read the audit's sealed run with `spx verification run render --verification-type audit --scope-type file --scope <owner>/<repo>#<N> --run <run-token>` and its retained record with the same arguments to `spx verification run input`; advance only when the run is sealed `approved` with no finding and the retained record's body and `base` equal the current body and Base, under `audit-binding`.
@@ -56,7 +56,7 @@ Take `$transition` as one of `claim`, `release`, `submit`, `advance`, `lower`, `
    - `advance`: write the target Maturity, then post the `advance` comment.
    - `lower`: write the target Maturity, then post the `lower` comment with its `reason`. After a lower other than the Applier's to write a decision line, make the `release` Transition next under `lower-claim`.
    - `applied`: post the `applied` comment, with `changeset` for a Leaf, remove the assignee, write Lifecycle Applied, then close the issue as completed.
-   - `abandoned`: post the `abandoned` comment, remove the assignee, write Lifecycle Abandoned, then close the issue as not planned.
+   - `abandoned`: post the `abandoned` comment, remove the assignee, write Lifecycle Abandoned, then close the issue as not planned, or, for a Change a merge absorbs, as a duplicate of the survivor's issue, so that the absorbed issue's duplicate link names the survivor.
 7. **Read back** under `<write_discipline>`: every field the Transition writes equals its target, every other field is unchanged, the assignee list is the intended holder or empty, and the Transition's own comment is the newest Transition comment.
 8. **Bring the branch.** After a `claim` for this worktree, read the newest `release` comment's `handoff.branch`. For a branch on origin, `git fetch origin <branch>`; when `git worktree list --porcelain` shows another worktree holding it, run `git switch -c <branch>-<n> origin/<branch>` with the first `<n>` from 2 for which `git branch --list` and `git ls-remote --heads origin` print nothing; otherwise `git switch <branch>`. A failed fetch or switch leaves the Claim standing and the checkout unchanged, and is reported verbatim. Then use skill `product-tree:sync-base`.
 

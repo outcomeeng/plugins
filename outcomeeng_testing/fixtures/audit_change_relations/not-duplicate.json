@@ -1,0 +1,64 @@
+{
+  "declared": [],
+  "issue": {
+    "number": 12,
+    "duplicateOf": null,
+    "issueFieldValues": {
+      "pageInfo": {
+        "hasNextPage": false
+      },
+      "nodes": [
+        {
+          "name": "Example Product",
+          "field": {
+            "name": "Product"
+          }
+        },
+        {
+          "value": "example-org/example-changes#5, example-org/example-changes#33",
+          "field": {
+            "name": "Predecessors"
+          }
+        }
+      ]
+    }
+  },
+  "pages": [
+    {
+      "pageInfo": {
+        "hasNextPage": false,
+        "endCursor": "cursor-end"
+      },
+      "nodes": [
+        {
+          "number": 40,
+          "issueFieldValues": {
+            "pageInfo": {
+              "hasNextPage": false
+            },
+            "nodes": [
+              {
+                "name": "Example Product",
+                "field": {
+                  "name": "Product"
+                }
+              },
+              {
+                "value": 12,
+                "field": {
+                  "name": "Parent"
+                }
+              },
+              {
+                "value": "example-org/example-changes#12",
+                "field": {
+                  "name": "Predecessors"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

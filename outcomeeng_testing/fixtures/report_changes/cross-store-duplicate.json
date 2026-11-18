@@ -1,0 +1,101 @@
+{
+  "store": "example-org/example-changes",
+  "priority_order": [
+    "Blocker",
+    "Urgent",
+    "Normal",
+    "Deferred"
+  ],
+  "pages": [
+    {
+      "data": {
+        "repository": {
+          "issues": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": "cursor-0"
+            },
+            "nodes": [
+              {
+                "number": 1,
+                "url": "https://github.com/example-org/example-changes/issues/1",
+                "title": "Blocked by a duplicate that leaves the store",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "name": "Normal",
+                      "field": {
+                        "name": "Priority"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "blockers": {
+    "1": [
+      {
+        "number": 2,
+        "state": "closed",
+        "state_reason": "duplicate",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ]
+  },
+  "comments": {},
+  "events": {},
+  "checks": {},
+  "direct": [
+    {
+      "number": 1,
+      "url": "https://github.com/example-org/example-changes/issues/1",
+      "title": "Blocked by a duplicate that leaves the store"
+    }
+  ],
+  "duplicates": {
+    "2": {
+      "number": 2,
+      "state": "CLOSED",
+      "stateReason": "DUPLICATE",
+      "duplicateOf": {
+        "number": 7,
+        "repository": {
+          "nameWithOwner": "other-org/other-repo"
+        }
+      }
+    },
+    "7": {
+      "number": 7,
+      "state": "OPEN",
+      "stateReason": null,
+      "duplicateOf": null
+    }
+  }
+}

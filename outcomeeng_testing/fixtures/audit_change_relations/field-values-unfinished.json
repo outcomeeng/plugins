@@ -1,41 +1,35 @@
 {
   "declared": null,
-  "pages": [
-    {
-      "data": {
-        "repository": {
-          "issues": {
-            "pageInfo": {
-              "hasNextPage": false,
-              "endCursor": "cursor-end"
-            },
-            "nodes": [
-              {
-                "number": 12,
-                "issueFieldValues": {
-                  "pageInfo": {
-                    "hasNextPage": true
-                  },
-                  "nodes": [
-                    {
-                      "name": "Example Product",
-                      "field": {
-                        "name": "Product"
-                      }
-                    },
-                    {
-                      "value": 7,
-                      "field": {
-                        "name": "Parent"
-                      }
-                    }
-                  ]
-                }
-              }
-            ]
+  "issue": {
+    "number": 12,
+    "duplicateOf": null,
+    "issueFieldValues": {
+      "pageInfo": {
+        "hasNextPage": true
+      },
+      "nodes": [
+        {
+          "name": "Example Product",
+          "field": {
+            "name": "Product"
+          }
+        },
+        {
+          "value": 7,
+          "field": {
+            "name": "Parent"
           }
         }
-      }
+      ]
+    }
+  },
+  "pages": [
+    {
+      "pageInfo": {
+        "hasNextPage": false,
+        "endCursor": "cursor-end"
+      },
+      "nodes": []
     }
   ]
 }

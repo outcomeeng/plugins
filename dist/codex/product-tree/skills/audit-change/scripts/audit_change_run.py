@@ -81,10 +81,12 @@ command blocks with ``command-failed``.
 ``read-published`` starts ``gh`` once and returns the issue's published body,
 the empty string when the store holds none.
 
-``read-relations`` starts ``gh`` once per page of the store's issues and returns
-the named issue's Product and Parent, its Parent's Product, and the issues whose
-Parent is the named issue, and the issues whose Predecessors value names it,
-within the same page bound as ``read-authority``.
+``read-relations`` starts ``gh`` once per page of the named issue's Children and
+returns the named issue's Product and Parent, the issue its duplicate link names
+as its absorber, and its Children, which it reads through the store's filter on
+the ``Parent`` field in pages of 100 Children, at most 10 pages. A duplicate
+link that names an issue of another repository blocks as ``unreadable-output``
+naming both stores.
 """
 
 from __future__ import annotations
@@ -282,6 +284,8 @@ class StoreField(StrEnum):
     TITLE = "title"
     BODY = "body"
     ISSUES = "issues"
+    DUPLICATE_OF = "duplicateOf"
+    NAME_WITH_OWNER = "nameWithOwner"
     NUMBER = "number"
     VALUE = "value"
     ISSUE_FIELD_VALUES = "issueFieldValues"
@@ -350,16 +354,24 @@ _PUBLISHED_QUERY: Final = (
     f"{{repository(owner:$o,name:$r){{issue(number:$n){{{StoreField.BODY}}}}}}}"
 )
 ISSUE_FIELD_VALUES_PAGE_SIZE: Final = 50
-_RELATIONS_QUERY: Final = (
-    "query($o:String!,$r:String!,$after:String)"
-    f"{{repository(owner:$o,name:$r){{{StoreField.ISSUES}"
-    f"(first:{AUTHORITY_PAGE_SIZE},after:$after)"
-    "{pageInfo{hasNextPage endCursor} nodes{number "
+_ISSUE_FIELD_VALUES_SELECTION: Final = (
     f"issueFieldValues(first:{ISSUE_FIELD_VALUES_PAGE_SIZE})"
     "{pageInfo{hasNextPage} nodes{... on IssueFieldNumberValue{value field{... on IssueFieldNumber{name}}}"
     " ... on IssueFieldTextValue{value field{... on IssueFieldText{name}}}"
     " ... on IssueFieldSingleSelectValue{name field{... on IssueFieldSingleSelect"
-    "{name}}}}}}}}}"
+    "{name}}}}}"
+)
+#: The named issue with its duplicate link, and one page of the issues whose
+#: ``Parent`` number field equals the named issue's number.
+_RELATIONS_QUERY: Final = (
+    "query($o:String!,$r:String!,$n:Int!,$p:Float!,$after:String)"
+    f"{{repository(owner:$o,name:$r){{issue(number:$n){{number "
+    f"{StoreField.DUPLICATE_OF}{{number {StoreField.REPOSITORY}"
+    f"{{{StoreField.NAME_WITH_OWNER}}}}} {_ISSUE_FIELD_VALUES_SELECTION}}} "
+    f"{StoreField.ISSUES}(first:{AUTHORITY_PAGE_SIZE},after:$after,"
+    'filterBy:{issueFieldValues:[{fieldName:"Parent",numberValue:$p}]})'
+    "{pageInfo{hasNextPage endCursor} nodes{number "
+    f"{_ISSUE_FIELD_VALUES_SELECTION}}}}}}}}}"
 )
 PRODUCT_FIELD: Final = "Product"
 PARENT_FIELD: Final = "Parent"
@@ -1402,16 +1414,20 @@ def _field_values(node: Mapping[str, object]) -> dict[str, object]:
 def _read_relations(
     context: _Context, request: Mapping[str, object]
 ) -> dict[str, object]:
-    """Return the issue's Product and Parent, its Parent's Product, and its children.
+    """Return the issue's Product and Parent, its absorber, and its children.
 
-    Reads every issue of the store's repository within the page bound; a child
-    is an issue whose ``Parent`` number field equals the named issue's number,
-    and an absorber is an issue whose ``Predecessors`` text field, split at
-    every comma followed by one space, holds the named issue's identity.
+    The absorber is the issue the named issue's duplicate link names, and none
+    when the named issue is not closed as a duplicate. The children are read
+    through the store's filter on the ``Parent`` number field, one page of
+    ``AUTHORITY_PAGE_SIZE`` Children per call, at most ``AUTHORITY_MAX_PAGES``
+    pages; a read that fills the bound blocks and returns no relation. A
+    duplicate link that names an issue of another repository than the named
+    issue's store blocks, naming both stores, and returns no relation.
     """
     owner, repository, number = _issue_identity(request)
-    target = int(number)
-    by_number: dict[int, dict[str, object]] = {}
+    own: dict[str, object] | None = None
+    absorbers: list[int] = []
+    children: list[dict[str, object]] = []
     cursor: str | None = None
     for _page in range(AUTHORITY_MAX_PAGES):
         argv = [
@@ -1422,21 +1438,55 @@ def _read_relations(
             f"o={owner}",
             "-f",
             f"r={repository}",
+            "-F",
+            f"n={number}",
+            "-F",
+            f"p={number}",
         ]
         if cursor is not None:
             argv += ["-f", f"after={cursor}"]
         node: object = _json_lines(_command(context, argv, cwd=context.cwd), argv=argv)[
             -1
         ]
-        for key in (StoreField.DATA, StoreField.REPOSITORY, StoreField.ISSUES):
+        for key in (StoreField.DATA, StoreField.REPOSITORY):
             node = node.get(key) if isinstance(node, dict) else None
-        nodes = node.get(StoreField.NODES) if isinstance(node, dict) else None
-        info = node.get(StoreField.PAGE_INFO) if isinstance(node, dict) else None
-        if not isinstance(nodes, list) or not isinstance(info, dict):
+        named = node.get(StoreField.ISSUE) if isinstance(node, dict) else None
+        page = node.get(StoreField.ISSUES) if isinstance(node, dict) else None
+        nodes = page.get(StoreField.NODES) if isinstance(page, dict) else None
+        info = page.get(StoreField.PAGE_INFO) if isinstance(page, dict) else None
+        if (
+            not isinstance(named, dict)
+            or not isinstance(nodes, list)
+            or not isinstance(info, dict)
+        ):
             raise Blocked(
                 BlockReason.UNREADABLE_OUTPUT,
-                f"relations page carries no nodes array and pageInfo object{_STORE_HINT}",
+                f"relations page carries no issue object, nodes array, and pageInfo object{_STORE_HINT}",
             )
+        if own is None:
+            own = _field_values(named)
+            link = named.get(StoreField.DUPLICATE_OF)
+            if isinstance(link, dict) and isinstance(link.get(StoreField.NUMBER), int):
+                link_repository = link.get(StoreField.REPOSITORY)
+                link_store = (
+                    link_repository.get(StoreField.NAME_WITH_OWNER)
+                    if isinstance(link_repository, dict)
+                    else None
+                )
+                if not isinstance(link_store, str) or not link_store:
+                    raise Blocked(
+                        BlockReason.UNREADABLE_OUTPUT,
+                        f"duplicate link of {owner}/{repository}#{number} names no "
+                        f"repository{_STORE_HINT}",
+                    )
+                if link_store.casefold() != f"{owner}/{repository}".casefold():
+                    raise Blocked(
+                        BlockReason.UNREADABLE_OUTPUT,
+                        f"{owner}/{repository}#{number} is closed as a duplicate of "
+                        f"{link_store}#{link[StoreField.NUMBER]}, outside the "
+                        f"declared store {owner}/{repository}",
+                    )
+                absorbers = [link[StoreField.NUMBER]]
         for entry in nodes:
             numbered = entry.get(StoreField.NUMBER) if isinstance(entry, dict) else None
             if not isinstance(numbered, int):
@@ -1444,34 +1494,19 @@ def _read_relations(
                     BlockReason.UNREADABLE_OUTPUT,
                     f"relations page holds an entry with no issue number{_STORE_HINT}",
                 )
-            by_number[numbered] = _field_values(entry)
+            children.append(
+                {
+                    ResultField.NUMBER: numbered,
+                    ResultField.PRODUCT: _field_values(entry).get(PRODUCT_FIELD),
+                }
+            )
         if info.get(StoreField.HAS_NEXT_PAGE) is not True:
-            own = by_number.get(target, {})
-            parent = own.get(PARENT_FIELD)
             return {
                 ResultField.ISSUE: request[RequestField.ISSUE],
                 ResultField.PRODUCT: own.get(PRODUCT_FIELD),
-                ResultField.PARENT: parent,
-                ResultField.CHILDREN: [
-                    {
-                        ResultField.NUMBER: child,
-                        ResultField.PRODUCT: values.get(PRODUCT_FIELD),
-                    }
-                    for child, values in sorted(by_number.items())
-                    if values.get(PARENT_FIELD) == target
-                ],
-                ResultField.ABSORBERS: [
-                    absorber
-                    for absorber, values in sorted(by_number.items())
-                    if request[RequestField.ISSUE]
-                    in str(values.get(PREDECESSORS_FIELD, "")).split(
-                        PREDECESSOR_SEPARATOR
-                    )
-                    and f"{owner}/{repository}#{absorber}"
-                    not in str(own.get(PREDECESSORS_FIELD, "")).split(
-                        PREDECESSOR_SEPARATOR
-                    )
-                ],
+                ResultField.PARENT: own.get(PARENT_FIELD),
+                ResultField.CHILDREN: children,
+                ResultField.ABSORBERS: absorbers,
             }
         cursor = info.get(StoreField.END_CURSOR)
         if not isinstance(cursor, str) or not cursor:
@@ -1479,10 +1514,10 @@ def _read_relations(
                 BlockReason.UNREADABLE_OUTPUT,
                 f"relations page reports a further page and no end cursor{_STORE_HINT}",
             )
-    bound = f"{AUTHORITY_PAGE_SIZE} issues per page, {AUTHORITY_MAX_PAGES} pages"
+    bound = f"{AUTHORITY_PAGE_SIZE} Children per page, {AUTHORITY_MAX_PAGES} pages"
     raise Blocked(
         BlockReason.PAGE_BOUND_REACHED,
-        f"the issues read is not complete at {bound}{_BOUND_HINT}",
+        f"the Children read is not complete at {bound}{_BOUND_HINT}",
         evidence={ResultField.BOUND: bound},
     )
 

@@ -225,6 +225,7 @@ Where the Change Store is a GitHub repository, each part of a record has the one
 
 ### Test.Compliance: github-store
 
+- github-merge: ALWAYS: a merge closes the absorbed Change's issue as a duplicate of the survivor's issue, so the absorbed issue's duplicate link names the survivor, and the Provider reads a Change's absorber from that link alone; a Change that several survivors' predecessors name links to the survivor that absorbed it last, and the other survivors keep it in their predecessors.
 - github-binding: ALWAYS: an advance to Sliced or to Applicable binds the body revision the issue's edit history holds at the time of the advance's comment and the Base value the Base field's change events hold at that time, and the Provider confirms the binding only while the current body equals that revision and the current Base equals that value, or the Operator's review carries forward to them.
 - github-later-edit: ALWAYS: a body edit after an advance keeps the review of each part that review-carry carries forward, and takes a new audit.
 - github-race: ALWAYS: because GitHub's issue update takes no expected revision, the Provider records the body's last edit at its read and fails the publish when the last edit right before its write differs; after its write it reads the edit history, restores a revision another writer wrote between its read and its write, where GitHub still holds it, and fails the publish; a revision written after its write stands, and that publish fails too.

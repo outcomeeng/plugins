@@ -487,6 +487,334 @@
                     }
                   ]
                 }
+              },
+              {
+                "number": 12,
+                "url": "https://github.com/example-org/example-changes/issues/12",
+                "title": "Awaiting a Priority",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Proposed",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Submitted",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 13,
+                "url": "https://github.com/example-org/example-changes/issues/13",
+                "title": "Blocked by a merge into an open Change",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 14,
+                "url": "https://github.com/example-org/example-changes/issues/14",
+                "title": "Blocked by an Abandoned Change",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 15,
+                "url": "https://github.com/example-org/example-changes/issues/15",
+                "title": "Blocked by a merge into an Abandoned Change",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 16,
+                "url": "https://github.com/example-org/example-changes/issues/16",
+                "title": "Blocked by two merges into an Applied Change",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 17,
+                "url": "https://github.com/example-org/example-changes/issues/17",
+                "title": "Blocked by two merges into an Abandoned Change",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 18,
+                "url": "https://github.com/example-org/example-changes/issues/18",
+                "title": "Child of a closed Change",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "value": 9,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 19,
+                "url": "https://github.com/example-org/example-changes/issues/19",
+                "title": "Grandchild through a closed Change",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "value": 40,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 40,
+                "url": "https://github.com/example-org/example-changes/issues/40",
+                "title": "Closed middle of a Parent chain",
+                "state": "CLOSED",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Applied",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "value": 1,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 41,
+                "url": "https://github.com/example-org/example-changes/issues/41",
+                "title": "Held by one blocker and sent to refinement by another",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    }
+                  ]
+                }
               }
             ]
           }
@@ -507,6 +835,60 @@
         "state": "closed",
         "state_reason": "completed",
         "repository_url": "https://api.github.com/repos/other-org/other-repo"
+      }
+    ],
+    "13": [
+      {
+        "number": 20,
+        "state": "closed",
+        "state_reason": "duplicate",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "14": [
+      {
+        "number": 23,
+        "state": "closed",
+        "state_reason": "not_planned",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "15": [
+      {
+        "number": 24,
+        "state": "closed",
+        "state_reason": "duplicate",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "16": [
+      {
+        "number": 26,
+        "state": "closed",
+        "state_reason": "duplicate",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "17": [
+      {
+        "number": 29,
+        "state": "closed",
+        "state_reason": "duplicate",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "41": [
+      {
+        "number": 20,
+        "state": "closed",
+        "state_reason": "duplicate",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      },
+      {
+        "number": 23,
+        "state": "closed",
+        "state_reason": "not_planned",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
       }
     ]
   },
@@ -707,7 +1089,7 @@
       "blockers": [],
       "changeset": "none",
       "waiting": [
-        "confirmation: Framed"
+        "waiting: the Operator's next move"
       ],
       "next_action": "none recorded"
     },
@@ -891,6 +1273,307 @@
         "claim"
       ],
       "next_action": "none recorded"
+    },
+    {
+      "number": 12,
+      "url": "https://github.com/example-org/example-changes/issues/12",
+      "title": "Awaiting a Priority",
+      "product": "example-product",
+      "maturity": "Proposed",
+      "lifecycle": "Submitted",
+      "priority": null,
+      "holder": [],
+      "parent": null,
+      "root": 12,
+      "blockers": [],
+      "changeset": "none",
+      "waiting": [
+        "waiting: Priority"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 13,
+      "url": "https://github.com/example-org/example-changes/issues/13",
+      "title": "Blocked by a merge into an open Change",
+      "product": "example-product",
+      "maturity": "Sliced",
+      "lifecycle": "Available",
+      "priority": null,
+      "holder": [],
+      "parent": null,
+      "root": 13,
+      "blockers": [
+        {
+          "number": "20",
+          "state": "closed",
+          "state_reason": "duplicate"
+        }
+      ],
+      "changeset": "none",
+      "waiting": [
+        "blockers: 20"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 14,
+      "url": "https://github.com/example-org/example-changes/issues/14",
+      "title": "Blocked by an Abandoned Change",
+      "product": "example-product",
+      "maturity": "Sliced",
+      "lifecycle": "Available",
+      "priority": null,
+      "holder": [],
+      "parent": null,
+      "root": 14,
+      "blockers": [
+        {
+          "number": "23",
+          "state": "closed",
+          "state_reason": "not_planned"
+        }
+      ],
+      "changeset": "none",
+      "waiting": [
+        "refinement"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 15,
+      "url": "https://github.com/example-org/example-changes/issues/15",
+      "title": "Blocked by a merge into an Abandoned Change",
+      "product": "example-product",
+      "maturity": "Sliced",
+      "lifecycle": "Available",
+      "priority": null,
+      "holder": [],
+      "parent": null,
+      "root": 15,
+      "blockers": [
+        {
+          "number": "24",
+          "state": "closed",
+          "state_reason": "duplicate"
+        }
+      ],
+      "changeset": "none",
+      "waiting": [
+        "refinement"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 16,
+      "url": "https://github.com/example-org/example-changes/issues/16",
+      "title": "Blocked by two merges into an Applied Change",
+      "product": "example-product",
+      "maturity": "Sliced",
+      "lifecycle": "Available",
+      "priority": null,
+      "holder": [],
+      "parent": null,
+      "root": 16,
+      "blockers": [
+        {
+          "number": "26",
+          "state": "closed",
+          "state_reason": "duplicate"
+        }
+      ],
+      "changeset": "none",
+      "waiting": [
+        "claim"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 17,
+      "url": "https://github.com/example-org/example-changes/issues/17",
+      "title": "Blocked by two merges into an Abandoned Change",
+      "product": "example-product",
+      "maturity": "Sliced",
+      "lifecycle": "Available",
+      "priority": null,
+      "holder": [],
+      "parent": null,
+      "root": 17,
+      "blockers": [
+        {
+          "number": "29",
+          "state": "closed",
+          "state_reason": "duplicate"
+        }
+      ],
+      "changeset": "none",
+      "waiting": [
+        "refinement"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 18,
+      "url": "https://github.com/example-org/example-changes/issues/18",
+      "title": "Child of a closed Change",
+      "product": "example-product",
+      "maturity": "Sliced",
+      "lifecycle": "Available",
+      "priority": null,
+      "holder": [],
+      "parent": 9,
+      "root": 9,
+      "blockers": [],
+      "changeset": "none",
+      "waiting": [
+        "claim"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 19,
+      "url": "https://github.com/example-org/example-changes/issues/19",
+      "title": "Grandchild through a closed Change",
+      "product": "example-product",
+      "maturity": "Sliced",
+      "lifecycle": "Available",
+      "priority": null,
+      "holder": [],
+      "parent": 40,
+      "root": 1,
+      "blockers": [],
+      "changeset": "none",
+      "waiting": [
+        "claim"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 41,
+      "url": "https://github.com/example-org/example-changes/issues/41",
+      "title": "Held by one blocker and sent to refinement by another",
+      "product": "example-product",
+      "maturity": "Sliced",
+      "lifecycle": "Available",
+      "priority": null,
+      "holder": [],
+      "parent": null,
+      "root": 41,
+      "blockers": [
+        {
+          "number": "20",
+          "state": "closed",
+          "state_reason": "duplicate"
+        },
+        {
+          "number": "23",
+          "state": "closed",
+          "state_reason": "not_planned"
+        }
+      ],
+      "changeset": "none",
+      "waiting": [
+        "blockers: 20"
+      ],
+      "next_action": "none recorded"
     }
-  ]
+  ],
+  "duplicates": {
+    "20": {
+      "number": 20,
+      "state": "CLOSED",
+      "stateReason": "DUPLICATE",
+      "duplicateOf": {
+        "number": 22,
+        "repository": {
+          "nameWithOwner": "example-org/example-changes"
+        }
+      }
+    },
+    "22": {
+      "number": 22,
+      "state": "OPEN",
+      "stateReason": null,
+      "duplicateOf": null
+    },
+    "23": {
+      "number": 23,
+      "state": "CLOSED",
+      "stateReason": "NOT_PLANNED",
+      "duplicateOf": null
+    },
+    "24": {
+      "number": 24,
+      "state": "CLOSED",
+      "stateReason": "DUPLICATE",
+      "duplicateOf": {
+        "number": 25,
+        "repository": {
+          "nameWithOwner": "example-org/example-changes"
+        }
+      }
+    },
+    "25": {
+      "number": 25,
+      "state": "CLOSED",
+      "stateReason": "NOT_PLANNED",
+      "duplicateOf": null
+    },
+    "26": {
+      "number": 26,
+      "state": "CLOSED",
+      "stateReason": "DUPLICATE",
+      "duplicateOf": {
+        "number": 27,
+        "repository": {
+          "nameWithOwner": "example-org/example-changes"
+        }
+      }
+    },
+    "27": {
+      "number": 27,
+      "state": "CLOSED",
+      "stateReason": "DUPLICATE",
+      "duplicateOf": {
+        "number": 28,
+        "repository": {
+          "nameWithOwner": "example-org/example-changes"
+        }
+      }
+    },
+    "28": {
+      "number": 28,
+      "state": "CLOSED",
+      "stateReason": "COMPLETED",
+      "duplicateOf": null
+    },
+    "29": {
+      "number": 29,
+      "state": "CLOSED",
+      "stateReason": "DUPLICATE",
+      "duplicateOf": {
+        "number": 30,
+        "repository": {
+          "nameWithOwner": "example-org/example-changes"
+        }
+      }
+    },
+    "30": {
+      "number": 30,
+      "state": "CLOSED",
+      "stateReason": "DUPLICATE",
+      "duplicateOf": {
+        "number": 31,
+        "repository": {
+          "nameWithOwner": "example-org/example-changes"
+        }
+      }
+    },
+    "31": {
+      "number": 31,
+      "state": "CLOSED",
+      "stateReason": "NOT_PLANNED",
+      "duplicateOf": null
+    }
+  }
 }

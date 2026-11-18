@@ -241,10 +241,10 @@ A Handoff is the latest continuation a holder persists: the active branch or Cha
 - `change-type`: a Change is a Parent when another record names it as its parent, and a Leaf otherwise; the type derives from those relations and is never stored.
 - `one-product`: every Change names one Product. A Parent names none of its Children and none of their Products.
 - `split`: the Refiner splits a Leaf into Children only below Applicable, and records a Child under a Parent at any Maturity of either.
-- `merge`: a merge closes the absorbed Change Abandoned and adds it to the survivor's `predecessors`.
+- `merge`: a merge closes the absorbed Change Abandoned and adds it to the survivor's `predecessors`; in the Change Store it closes the absorbed issue as a duplicate of the survivor's issue, and the absorber of a Change is the issue its duplicate link names, never a Change whose `predecessors` names it. A Change that several survivors' `predecessors` name links to the survivor that absorbed it last, and the other survivors keep it in their `predecessors`.
 - `merge-direction`: the Refiner merges two Changes only on the Operator's direction.
 - `blocker-applied`: a blocking Change satisfies the blocker when it closes Applied.
-- `blocker-abandoned`: a blocking Change that closes Abandoned through a merge passes its block to the Change that names it as predecessor, and one that closes Abandoned without a merge returns the dependent Change to Refinement.
+- `blocker-abandoned`: a blocking Change that closes Abandoned through a merge passes its block to the Change its duplicate link names, and one that closes Abandoned without a merge returns the dependent Change to Refinement.
 - `blocker-cycle`: no member of a blocker cycle remains Sliced or Applicable until the Refiner removes the cycle.
 - `same-passage`: of two open Changes that amend the same passage of a file, the one that reaches Application second names the other as a blocking Change.
 - `store-outside`: the Change Store of each Product is a fixed parameter the Operator records outside the Product Tree, and no move between Change Stores exists.
