@@ -550,9 +550,30 @@ def blocker_store_and_number(request: Request, identity: str) -> tuple[str, int]
     return (store or request.store), int(number)
 
 
-def survivor_of(request: Request, runner: GhRunner, identity: str) -> dict[str, Any]:
-    """Follow the duplicate link, step by step, to the first issue not closed as a duplicate."""
+def survivor_of(
+    request: Request,
+    runner: GhRunner,
+    identity: str,
+    survivors: dict[tuple[str, int], dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Return the survivor of a blocker, read once per blocker for the run.
+
+    `survivors` holds each blocker's survivor, so a blocker that several Changes
+    share reads its duplicate links once.
+    """
     store, number = blocker_store_and_number(request, identity)
+    if survivors is not None and (store, number) in survivors:
+        return survivors[(store, number)]
+    survivor = follow_duplicate_links(request, runner, identity, store, number)
+    if survivors is not None:
+        survivors[(store, number)] = survivor
+    return survivor
+
+
+def follow_duplicate_links(
+    request: Request, runner: GhRunner, identity: str, store: str, number: int
+) -> dict[str, Any]:
+    """Follow the duplicate link, step by step, to the first issue not closed as a duplicate."""
     seen: set[int] = set()
     for _step in range(DUPLICATE_CHAIN_LIMIT):
         if number in seen:
@@ -582,7 +603,10 @@ class BlockerEffect:
 
 
 def blocker_effect(
-    request: Request, runner: GhRunner, blockers: list[dict[str, Any]]
+    request: Request,
+    runner: GhRunner,
+    blockers: list[dict[str, Any]],
+    survivors: dict[tuple[str, int], dict[str, Any]] | None = None,
 ) -> BlockerEffect:
     holding: list[str] = []
     refinement = False
@@ -596,7 +620,7 @@ def blocker_effect(
             == IssueStateReason.COMPLETED
         ):
             continue
-        survivor = survivor_of(request, runner, identity)
+        survivor = survivor_of(request, runner, identity, survivors)
         if survivor[DuplicateField.STATE] == IssueState.OPEN:
             holding.append(identity)
         elif survivor[DuplicateField.STATE_REASON] != IssueStateReason.COMPLETED:
@@ -846,11 +870,12 @@ def build_report(request: Request, runner: GhRunner) -> list[dict[str, Any]]:
         c.number: read_blockers(request, runner, c.number) for c in candidates
     }
     effects: dict[int, BlockerEffect] = {}
+    survivors: dict[tuple[str, int], dict[str, Any]] = {}
 
     def effect_of(change: Change) -> BlockerEffect:
         if change.number not in effects:
             effects[change.number] = blocker_effect(
-                request, runner, blockers_by_number[change.number]
+                request, runner, blockers_by_number[change.number], survivors
             )
         return effects[change.number]
 
