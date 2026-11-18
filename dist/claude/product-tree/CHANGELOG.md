@@ -18,7 +18,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Changed
 
-- **Each `/diagnose` remediation item carries a severity.** The skill adds one remediation item per non-healthy check, naming that check, its verdict, and its bucket as the item's severity. A startup failure yields one item of severity `broken` that directs installing or updating `@outcomeeng/spx` to the manifest floor.
+- **Each `/diagnose` remediation item carries a severity.** The skill adds one remediation item per non-healthy check, naming that check, its verdict, and its bucket as the item's severity. A startup failure yields one item with concern `spx-diagnose-startup` and no severity, with an action that directs installing or updating `@outcomeeng/spx` to the manifest floor.
 
 ## 0.115.5
 
