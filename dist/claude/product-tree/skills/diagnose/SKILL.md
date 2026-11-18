@@ -32,7 +32,8 @@ remediation judgment for every non-healthy verdict.
    manifest is rejected, or the exit code is nonzero before a report is emitted,
    report stdout, stderr, and the exit code verbatim, then direct the user to
    install or update `@outcomeeng/spx` to the floor declared in the manifest, as
-   one remediation item of severity `broken`.
+   one remediation item that names the startup failure as its subject, carries
+   concern `spx-diagnose-startup` and an action, and carries no severity.
 
 </workflow>
 
