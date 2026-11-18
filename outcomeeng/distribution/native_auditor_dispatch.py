@@ -8,17 +8,25 @@ import os
 import re
 import shutil
 import subprocess
+import tomllib
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
+from outcomeeng.distribution.agents import (
+    AGENT_TOOLS_FIELD,
+    ALL_TOOLS_SENTINEL,
+    agent_tool_grants,
+)
 from outcomeeng.distribution.build import agent_capability, agent_dispatch_name
 from outcomeeng.distribution.contracts import CLAUDE_DIST_RELATIVE, Target
 from outcomeeng.distribution.installation import (
     CLAUDE_EXECUTABLE,
     CODEX_EXEC_SUBCOMMAND,
     CODEX_EXECUTABLE,
+    CODEX_HOME_CONFIG_PATH,
+    CODEX_HOME_ENV,
     ISOLATED_CLAUDE_CONFIG_DIRECTORY,
     ISOLATED_CODEX_HOME_DIRECTORY,
     generated_codex_agents_root,
@@ -44,12 +52,18 @@ CLAUDE_AGENT_SUFFIX: Final = ".md"
 CODEX_AGENT_SUFFIX: Final = ".toml"
 AGENTS_DIRECTORY: Final = "agents"
 FIXTURE_DIRECTORY: Final = "fixture"
+SCRATCH_DIRECTORY: Final = "scratch"
+"""The row's session scratch directory, beside its fixture repository under the row's state root."""
+SCRATCH_ENVIRONMENT_VARIABLES: Final = ("RUNNER_TEMP", "TMPDIR")
+"""The variables that name the scratch location a dispatched session writes its payload files to."""
 CONFIGURATION_FILENAME: Final = "configuration.json"
 LOADING_FILENAME: Final = "loading.json"
 RESULT_FILENAME: Final = "result.json"
 BLOCKED_MARKER: Final = "BLOCKED"
 RUN_FILE_WORD_PATTERN: Final = re.compile(r"[^\s\"'`<>(){}\[\],]+")
 SENTENCE_PUNCTUATION: Final = ".;:!?"
+CODEX_STRICT_CONFIG_OPTION: Final = "--strict-config"
+"""The Codex option that refuses a configuration key the CLI does not recognize."""
 
 NATIVE_LAUNCH_COMMANDS: Final[Mapping[Target, tuple[str, ...]]] = {
     Target.CLAUDE: (
@@ -64,11 +78,24 @@ NATIVE_LAUNCH_COMMANDS: Final[Mapping[Target, tuple[str, ...]]] = {
         CODEX_EXECUTABLE,
         CODEX_EXEC_SUBCOMMAND,
         "--json",
-        "--strict-config",
+        CODEX_STRICT_CONFIG_OPTION,
         "--skip-git-repo-check",
     ),
 }
 """Each harness's headless launch command, before the dispatch prompt is placed."""
+
+CLAUDE_ADD_DIRECTORY_OPTION: Final = "--add-dir"
+CLAUDE_ALLOWED_TOOLS_OPTION: Final = "--allowedTools"
+CLAUDE_ALLOWED_TOOLS_SEPARATOR: Final = ","
+CODEX_WORKSPACE_WRITE_OPTIONS: Final = (
+    "--sandbox",
+    "workspace-write",
+    "-c",
+    'approval_policy="never"',
+)
+"""The Codex parent's sandbox and approval options: writes reach only the writable roots, and no call waits on an approval."""
+CODEX_SANDBOX_WORKSPACE_WRITE_TABLE: Final = "sandbox_workspace_write"
+CODEX_WRITABLE_ROOTS_KEY: Final = "writable_roots"
 
 RESULT_RUN_TOKEN_KEY: Final = "run_token"
 RESULT_RUN_FILE_KEY: Final = "run_file"
@@ -129,10 +156,16 @@ class NativeAuditorRow:
     state_root: Path
     native_definition_path: Path
     fixture_path: Path
+    scratch_path: Path
     configuration_path: Path
     loading_path: Path
     result_path: Path
     launch_command: tuple[str, ...]
+
+    @property
+    def access_roots(self) -> tuple[Path, Path]:
+        """The directories the row's parent session reaches: its fixture repository and its scratch directory."""
+        return (self.fixture_path.parent, self.scratch_path)
 
 
 @dataclass(frozen=True)
@@ -203,6 +236,7 @@ def native_auditor_rows(
                         row_state, target, definition.name
                     ),
                     fixture_path=row_state / FIXTURE_DIRECTORY / fixture_name,
+                    scratch_path=row_state / SCRATCH_DIRECTORY,
                     configuration_path=row_artifacts / CONFIGURATION_FILENAME,
                     loading_path=row_artifacts / LOADING_FILENAME,
                     result_path=row_artifacts / RESULT_FILENAME,
@@ -230,6 +264,7 @@ def materialize_native_auditor(row: NativeAuditorRow) -> None:
     row.native_definition_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(row.shipped_definition_path, row.native_definition_path)
     _materialize_fixture_repository(row)
+    row.scratch_path.mkdir(parents=True, exist_ok=True)
     _write_json(
         row.configuration_path,
         {
@@ -325,10 +360,105 @@ def _dispatch_prompt(row: NativeAuditorRow) -> str:
 
 
 def _launch_command(row: NativeAuditorRow, checkout: Path) -> tuple[str, ...]:
+    """The parent command: the harness's launch command, the row's access grants, and the prompt.
+
+    A Claude Code parent reaches each access root through `--add-dir` and
+    approves exactly the dispatched definition's `tools` grants, because a
+    headless session refuses every call that would wait on an approval. A Codex
+    parent runs under the workspace-write sandbox with no approval, and reaches
+    the access roots through the writable roots its `CODEX_HOME` declares.
+    """
     prompt = _dispatch_prompt(row)
     if row.target is Target.CLAUDE:
-        return (row.launch_command[0], "-p", prompt, *row.launch_command[2:])
-    return (*row.launch_command, "-C", str(checkout), prompt)
+        directories = (
+            argument
+            for root in row.access_roots
+            for argument in (CLAUDE_ADD_DIRECTORY_OPTION, str(root))
+        )
+        return (
+            row.launch_command[0],
+            "-p",
+            prompt,
+            *row.launch_command[2:],
+            *directories,
+            CLAUDE_ALLOWED_TOOLS_OPTION,
+            CLAUDE_ALLOWED_TOOLS_SEPARATOR.join(_claude_tool_grants(row)),
+        )
+    return (
+        *row.launch_command,
+        *CODEX_WORKSPACE_WRITE_OPTIONS,
+        "-C",
+        str(checkout),
+        prompt,
+    )
+
+
+def _claude_tool_grants(row: NativeAuditorRow) -> tuple[str, ...]:
+    """The `tools` grants the row's Claude Code definition declares; a definition with none, or with every tool, launches nothing.
+
+    An empty `--allowedTools` value approves no call, so the dispatched auditor
+    could only stall on its first approval. A grant of every tool names no
+    exact set the parent could approve, and the parent runs no bypass mode. In
+    either case the row refuses before the parent session starts.
+    """
+    grants = agent_tool_grants(row.native_definition_path)
+    if not grants:
+        raise ValueError(
+            f"Claude Code auditor definition {row.native_definition_path} for "
+            f"{row.native_name} declares no `{AGENT_TOOLS_FIELD}` grant"
+        )
+    if ALL_TOOLS_SENTINEL in grants:
+        raise ValueError(
+            f"Claude Code auditor definition {row.native_definition_path} for "
+            f"{row.native_name} grants every tool through "
+            f"`{AGENT_TOOLS_FIELD}: {ALL_TOOLS_SENTINEL}`"
+        )
+    return grants
+
+
+def _session_environment(
+    row: NativeAuditorRow, environment: Mapping[str, str]
+) -> dict[str, str]:
+    """The parent session's environment, naming the row's scratch directory as its scratch location."""
+    scratch = str(row.scratch_path)
+    return {
+        **environment,
+        **dict.fromkeys(SCRATCH_ENVIRONMENT_VARIABLES, scratch),
+    }
+
+
+def _declare_codex_writable_roots(
+    row: NativeAuditorRow, environment: Mapping[str, str]
+) -> None:
+    """Name the row's access roots as the writable roots of the selected `CODEX_HOME`.
+
+    A dispatched Codex child inherits the writable roots only from a top-level
+    `[sandbox_workspace_write]` table of the selected home's `config.toml`, so
+    the table is appended there and every entry the home already holds is kept.
+    """
+    home = environment.get(CODEX_HOME_ENV)
+    if not home:
+        raise ValueError(f"Codex auditor dispatch requires a selected {CODEX_HOME_ENV}")
+    config = Path(home) / CODEX_HOME_CONFIG_PATH
+    text = config.read_text(encoding="utf-8") if config.exists() else ""
+    try:
+        document = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as error:
+        raise ValueError(f"unreadable Codex configuration {config}: {error}") from error
+    if CODEX_SANDBOX_WORKSPACE_WRITE_TABLE in document:
+        raise ValueError(
+            f"Codex configuration {config} already declares "
+            f"[{CODEX_SANDBOX_WORKSPACE_WRITE_TABLE}]"
+        )
+    roots = ", ".join(json.dumps(str(root)) for root in row.access_roots)
+    table = (
+        f"[{CODEX_SANDBOX_WORKSPACE_WRITE_TABLE}]\n"
+        f"{CODEX_WRITABLE_ROOTS_KEY} = [{roots}]\n"
+    )
+    separator = "\n" if text and not text.endswith("\n") else ""
+    config.write_text(  # NOSONAR S2083 - the home is the row's own disposable CODEX_HOME
+        f"{text}{separator}{table}", encoding="utf-8"
+    )
 
 
 def run_native_auditor_row(
@@ -339,8 +469,16 @@ def run_native_auditor_row(
     parent: NativeCommandRunner,
     sanitize: EvidenceSanitizer,
 ) -> NativeAuditorDispatchObservation:
-    """Make the one native dispatch of an auditor from already installed disposable state."""
-    result = parent(_launch_command(row, checkout), checkout, dict(environment))
+    """Make the one native dispatch of an auditor from already installed disposable state.
+
+    Every refusal — a Codex home whose writable roots cannot be declared, a
+    Claude Code definition that declares no tool grant — raises `ValueError`
+    before the parent runner is called, so a refused row launches nothing.
+    """
+    if row.target is Target.CODEX:
+        _declare_codex_writable_roots(row, environment)
+    command = _launch_command(row, checkout)
+    result = parent(command, checkout, _session_environment(row, environment))
     stdout = sanitize(result.stdout)
     stderr = sanitize(result.stderr)
     message = _returned_message(row.target, stdout)

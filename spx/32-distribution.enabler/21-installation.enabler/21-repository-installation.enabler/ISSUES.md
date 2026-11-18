@@ -492,3 +492,27 @@ behavior changes.
 `tests/test_native_profile_execution.compliance.l2.py` and states the
 absent-child behavior it checks against the installed app-server, or the l2
 case moves into a file a linked Assertion names and the l2 file is removed.
+
+## The descendant-timeout scenario fails under host load
+
+`test_timeout_terminates_descendant_before_returning` in
+`tests/test_native_profile_process.scenario.l1.py` runs a parent and a
+descendant that outlast a 1.0-second execution timeout,
+`TEST_TIMEOUT_SECONDS` in `outcomeeng_testing/harnesses/capturing_runner.py`.
+The timeout covers both the start of the child and its write of the
+descendant's process id, so a loaded host can expire it before the child has
+written that id.
+
+**Evidence**: `just verify-marketplace-installation` at
+`3a4afc8a3309a92ef9d0edab6c22432eea84b42a` failed with 1 failure and 289 passes
+at a host load average near 4.8. The one failure was this test, at a check that
+printed `assert False`. A rerun of the same Node's tests at the same head passed
+all 290 tests.
+
+**Impact**: a Changeset that touches neither this test nor its harness fails
+its focused lane or `just check-full` on a loaded host, and the failure says
+nothing about that Changeset.
+
+**Settlement condition**: the test passes in repeated runs at a host load
+average of 5 or more, or its failure output names which of its four checks
+failed and why.

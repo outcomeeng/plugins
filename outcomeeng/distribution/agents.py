@@ -201,6 +201,16 @@ def parse_agent_markdown(path: Path) -> SourceAgent:
     return parse_agent_text(text, source_path=path, name=name)
 
 
+def agent_tool_grants(path: Path) -> tuple[str, ...]:
+    """The `tools` grants one agent markdown definition's frontmatter declares, in order.
+
+    Reads only the `tools` field, so a rendered definition that pins a native
+    model or effort still yields its grants.
+    """
+    frontmatter, _body = _split_frontmatter(path.read_text(encoding="utf-8"))
+    return _string_tuple(frontmatter, AGENT_TOOLS_FIELD)
+
+
 def parse_agent_text(text: str, *, source_path: Path, name: str) -> SourceAgent:
     """Parse rendered plugin agent markdown already held as text.
 
@@ -952,6 +962,7 @@ __all__ = [
     "AGENT_NAME_FIELD",
     "AGENT_SKILL_ENABLED_FIELD",
     "AGENT_SKILL_INCLUDE_INSTRUCTIONS_FIELD",
+    "AGENT_TOOLS_FIELD",
     "APPROVAL_POLICY_FIELD",
     "AGENT_SOURCE_DIRECTORY_NAME",
     "ALL_TOOLS_SENTINEL",
@@ -973,6 +984,7 @@ __all__ = [
     "SourceAgent",
     "TomlArrayTable",
     "agent_environment_marker",
+    "agent_tool_grants",
     "convert_agent",
     "convert_agents",
     "generated_agent_type",

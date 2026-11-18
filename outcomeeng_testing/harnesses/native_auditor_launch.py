@@ -13,21 +13,31 @@ from __future__ import annotations
 
 import json
 import subprocess
-from collections.abc import Collection, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Final
+from tempfile import TemporaryDirectory
+from typing import Final, cast
 
-from outcomeeng.distribution.installation import CLAUDE_EXECUTABLE, CODEX_HOME_ENV
+from outcomeeng.distribution.contracts import Target
+from outcomeeng.distribution.installation import (
+    CLAUDE_EXECUTABLE,
+    CODEX_HOME_CONFIG_PATH,
+    CODEX_HOME_ENV,
+)
 from outcomeeng.distribution.native_auditor_dispatch import (
     AGENTS_DIRECTORY,
     BLOCKED_MARKER,
     FIXTURE_DIRECTORY,
     GIT_EXECUTABLE,
     NativeAuditorDispatchObservation,
+    NativeAuditorRow,
+    materialize_native_auditor,
     native_auditor_rows,
+    record_native_auditor_failure,
+    run_native_auditor_row,
 )
 from outcomeeng.validation.implementation_audit_contract import (
     EVENT_RUN_ID_FIELD,
@@ -46,8 +56,15 @@ from outcomeeng_testing.harnesses.installation import repository_root
 from outcomeeng_testing.harnesses.native_auditor_dispatch import (
     run_native_auditor_dispatch,
 )
+from outcomeeng_testing.generators.native_auditor_dispatch import (
+    UnboundedGrant,
+    definition_with_tool_grants,
+    definition_with_unbounded_grant,
+)
 from outcomeeng_testing.harnesses.native_profile_execution import (
     CLAUDE_CREDENTIAL_VARIABLES,
+    NativeProfileInterval,
+    run_native_rows,
 )
 from outcomeeng_testing.harnesses.native_profile_failures import NativeFailureRunner
 from outcomeeng_testing.harnesses.native_profile_launch import (
@@ -169,11 +186,28 @@ class DispatchCall:
     """The stdin the command received."""
     fixture_repository: FixtureRepository | None = None
     """The fixture checkout as git reads it, for a command that names the fixture directory."""
+    codex_config: bytes | None = field(default=None, repr=False)
+    """Bytes of the `config.toml` the command's Codex home held, when it holds one."""
+    directories: frozenset[Path] = frozenset()
+    """Every directory of the row's state outside a git store, keyed relative to it."""
 
 
 def _saved_login(home: Path) -> bytes | None:
     login = home / AUTH_FILENAME
     return login.read_bytes() if login.is_file() else None
+
+
+def _codex_config(home: Path) -> bytes | None:
+    config = home / CODEX_HOME_CONFIG_PATH
+    return config.read_bytes() if config.is_file() else None
+
+
+def _state_directories(state_root: Path) -> frozenset[Path]:
+    return frozenset(
+        path.relative_to(state_root)
+        for path in state_root.rglob("*")
+        if path.is_dir() and GIT_DIRECTORY not in path.parts
+    )
 
 
 def _materialized_state(state_root: Path) -> dict[Path, bytes]:
@@ -226,7 +260,63 @@ def _record_dispatch_call(
         _saved_login(home),
         input_text,
         _fixture_repository(home.parent, argv, input_text),
+        _codex_config(home),
+        _state_directories(home.parent),
     )
+
+
+StatePlant = Callable[[Path], None]
+"""Writes planted state into a row before one of its commands runs; it receives the command's Codex home."""
+
+
+def codex_config_plant(text: str) -> StatePlant:
+    """Plant `text` as the `config.toml` of the command's Codex home."""
+
+    def plant(home: Path) -> None:
+        (home / CODEX_HOME_CONFIG_PATH).write_text(text, encoding="utf-8")
+
+    return plant
+
+
+def _row_for_state(state_root: Path) -> NativeAuditorRow:
+    """The auditor row whose disposable state is `state_root`."""
+    return next(
+        row
+        for row in native_auditor_rows(repository_root(), Path(), state_root.parent)
+        if row.state_root.name == state_root.name
+    )
+
+
+def claude_definition_plant(grant: UnboundedGrant) -> StatePlant:
+    """Plant a Claude Code row's materialized definition with its `tools` field in the unbounded form `grant` names."""
+
+    def plant(home: Path) -> None:
+        row = _row_for_state(home.parent)
+        if row.target is Target.CLAUDE and row.native_definition_path.is_file():
+            row.native_definition_path.write_text(  # NOSONAR S2083 - the row's own disposable state root
+                definition_with_unbounded_grant(
+                    row.shipped_definition_path.read_text(encoding="utf-8"), grant
+                ),
+                encoding="utf-8",
+            )
+
+    return plant
+
+
+def claude_tool_grants_plant(grants: tuple[str, ...]) -> StatePlant:
+    """Plant a Claude Code row's materialized definition with its `tools` field naming exactly `grants`."""
+
+    def plant(home: Path) -> None:
+        row = _row_for_state(home.parent)
+        if row.target is Target.CLAUDE and row.native_definition_path.is_file():
+            row.native_definition_path.write_text(  # NOSONAR S2083 - the row's own disposable state root
+                definition_with_tool_grants(
+                    row.shipped_definition_path.read_text(encoding="utf-8"), grants
+                ),
+                encoding="utf-8",
+            )
+
+    return plant
 
 
 def auditor_launch_runner(
@@ -234,15 +324,35 @@ def auditor_launch_runner(
     launch_exit_code: int,
     launches: frozenset[tuple[str, ...]],
     returned: LaunchReturn = LaunchReturn.RUN_TOKEN,
+    plant: StatePlant | None = None,
 ) -> RecordingRunner[DispatchCall]:
-    """A recording runner that completes every command and fails the dispatch launch on request."""
+    """A recording runner that completes every command and fails the dispatch launch on request.
+
+    Before every command other than the dispatch launch, `plant` writes its
+    state into the row, so the state stands when the producer reads it ahead
+    of the launch; the call is recorded after the plant.
+    """
+
+    def is_launch(argv: Sequence[str]) -> bool:
+        return any(set(launch) <= set(argv) for launch in launches)
+
+    def record(
+        argv: Sequence[str], env: Mapping[str, str], input_text: str | None
+    ) -> DispatchCall:
+        if plant is not None and not is_launch(argv):
+            plant(Path(env[CODEX_HOME_ENV]))
+        return _record_dispatch_call(argv, env, input_text)
 
     def complete(argv: Sequence[str]) -> tuple[int, str]:
-        if any(set(launch) <= set(argv) for launch in launches):
+        if is_launch(argv):
             return launch_exit_code, _machine_stream(argv, _returned_message(returned))
         return 0, ""
 
-    return RecordingRunner(credentials, _record_dispatch_call, complete)
+    return RecordingRunner(credentials, record, complete)
+
+
+SELECTED_CLAUDE_CREDENTIAL: Final = min(CLAUDE_CREDENTIAL_VARIABLES)
+"""The one Claude Code credential a launch plants unless the case names others: the choice is incidental to every assertion that takes it."""
 
 
 @dataclass(frozen=True)
@@ -263,11 +373,25 @@ class DispatchFailureObservation:
 
 @contextmanager
 def native_auditor_launch(
-    claude_credentials: Collection[str] = CLAUDE_CREDENTIAL_VARIABLES,
+    claude_credentials: Collection[str] | None = None,
     launch_exit_code: int = 0,
     returned: LaunchReturn = LaunchReturn.RUN_TOKEN,
+    *,
+    target: Target | None = None,
+    plant: StatePlant | None = None,
 ) -> Iterator[DispatchLaunchObservation]:
-    """Run every row with `claude_credentials` planted beside every other strippable name."""
+    """Run every row of `target`, or every row, with `claude_credentials` planted beside every other strippable name.
+
+    A case that names no credentials plants the one `SELECTED_CLAUDE_CREDENTIAL`.
+
+    `plant` writes its state into each row before every command other than
+    the dispatch launch.
+    """
+    planted = (
+        {SELECTED_CLAUDE_CREDENTIAL}
+        if claude_credentials is None
+        else set(claude_credentials)
+    )
     with launch_case() as case:
         runner = auditor_launch_runner(
             case.credentials.runner,
@@ -276,21 +400,127 @@ def native_auditor_launch(
                 row.launch_command for row in native_auditor_rows(repository_root())
             ),
             returned,
+            plant,
         )
         environment = ambient_environment(
-            case.credentials.original_environment, claude_credentials=claude_credentials
+            case.credentials.original_environment, claude_credentials=planted
         )
         rows = run_native_auditor_dispatch(
             case.artifact_root,
             checkout=repository_root(),
             environment=environment,
             runner=runner,
+            target=target,
         )
         yield DispatchLaunchObservation(
             row_launches(rows, runner.calls),
             environment,
             case.credentials.initial.encode("utf-8"),
         )
+
+
+def parent_launches(
+    item: RowLaunch[NativeAuditorDispatchObservation, DispatchCall],
+) -> list[DispatchCall]:
+    """The recorded commands of `item`'s row that carry the row's parent launch command."""
+    return [
+        call
+        for call in item.calls
+        if set(item.observation.row.launch_command) <= set(call.argv)
+    ]
+
+
+def retained_result(row: NativeAuditorRow) -> dict[str, object]:
+    """The parsed result artifact the row retained."""
+    return cast(dict[str, object], json.loads(row.result_path.read_text("utf-8")))
+
+
+@dataclass
+class ParentRecorder:
+    """A parent runner that records each launch it receives and completes it with no output."""
+
+    launches: list[tuple[str, ...]] = field(default_factory=list)
+
+    def __call__(
+        self,
+        argv: Sequence[str],
+        cwd: Path,
+        environment: Mapping[str, str],
+        input_text: str | None = None,
+    ) -> subprocess.CompletedProcess[str]:
+        del cwd, environment, input_text
+        self.launches.append(tuple(argv))
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+
+def _unreached_runner(
+    argv: Sequence[str],
+    *,
+    cwd: Path,
+    env: Mapping[str, str],
+    input_text: str | None,
+    timeout: float,
+) -> subprocess.CompletedProcess[str]:
+    """The installation runner of a drive that runs no installation: any call is a harness error."""
+    del cwd, env, input_text, timeout
+    raise RuntimeError(f"unexpected native command {list(argv)}")
+
+
+@dataclass(frozen=True)
+class UnsetCodexHomeObservation:
+    rows: tuple[NativeAuditorDispatchObservation, ...]
+    launches: tuple[tuple[str, ...], ...]
+    """Every parent launch the rows issued."""
+    environment: Mapping[str, str]
+    """The environment each row's dispatch received."""
+
+
+@contextmanager
+def native_auditor_without_codex_home() -> Iterator[UnsetCodexHomeObservation]:
+    """Dispatch every Codex row from an environment that selects no `CODEX_HOME`.
+
+    The installation the full harness performs always selects the row's
+    disposable `CODEX_HOME`, so this drive skips it: the shared row driver
+    materializes each row and records its failure, and the row's dispatch
+    receives an ambient environment, every strippable name planted, that
+    names no Codex home.
+    """
+    with TemporaryDirectory() as temporary_directory:
+        artifact_root = Path(temporary_directory) / "artifacts"
+        environment = {
+            name: value
+            for name, value in ambient_environment(
+                {}, claude_credentials=CLAUDE_CREDENTIAL_VARIABLES
+            ).items()
+            if name != CODEX_HOME_ENV
+        }
+        parent = ParentRecorder()
+
+        def plan(state_root: Path) -> tuple[NativeAuditorRow, ...]:
+            return native_auditor_rows(repository_root(), artifact_root, state_root)
+
+        def execute(
+            row: NativeAuditorRow, mirror: Path, interval: NativeProfileInterval
+        ) -> NativeAuditorDispatchObservation:
+            return run_native_auditor_row(
+                row,
+                checkout=mirror,
+                environment=environment,
+                parent=parent,
+                sanitize=interval.sanitize,
+            )
+
+        rows = run_native_rows(
+            artifact_root,
+            checkout=repository_root(),
+            plan=plan,
+            materialize=materialize_native_auditor,
+            execute=execute,
+            record_failure=record_native_auditor_failure,
+            runner=_unreached_runner,
+            target=Target.CODEX,
+        )
+        yield UnsetCodexHomeObservation(rows, tuple(parent.launches), environment)
 
 
 @contextmanager
