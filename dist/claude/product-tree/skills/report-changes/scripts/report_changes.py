@@ -183,16 +183,24 @@ STORE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*/[A-Za-z0-9._-]+$")
 PULL_REQUEST_PATTERN = re.compile(r"^https?://[^\s]+/pull/\d+$")
 CLAIM_PATTERN = re.compile(rf"^{re.escape(CLAIM_PREFIX)} (\S+) (.+)$")
 
-STORE_QUERY = (
-    "query($o:String!,$r:String!,$after:String){repository(owner:$o,name:$r){"
-    f"issues(first:100,after:$after,states:[{IssueState.OPEN}])"
-    "{pageInfo{hasNextPage endCursor} nodes{"
+ISSUE_NODE = (
     "number url title state assignees(first:100){nodes{login}} "
     "issueFieldValues(first:50){nodes{"
     "... on IssueFieldSingleSelectValue{name field{... on IssueFieldSingleSelect{name}}} "
     "... on IssueFieldTextValue{value field{... on IssueFieldText{name}}} "
     "... on IssueFieldNumberValue{value field{... on IssueFieldNumber{name}}}"
-    "}}}}}}"
+    "}}"
+)
+STORE_QUERY = (
+    "query($o:String!,$r:String!,$after:String){repository(owner:$o,name:$r){"
+    f"issues(first:100,after:$after,states:[{IssueState.OPEN}])"
+    "{pageInfo{hasNextPage endCursor} nodes{"
+    f"{ISSUE_NODE}"
+    "}}}}"
+)
+ISSUE_QUERY = (
+    "query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){"
+    f"issue(number:$n){{{ISSUE_NODE}}}}}}}"
 )
 EVENT_QUERY = (
     "query($o:String!,$r:String!,$n:Int!,$after:String){repository(owner:$o,name:$r){"
@@ -522,18 +530,16 @@ def read_duplicate_link(
 ) -> dict[str, Any]:
     read = f"duplicate link of {label}"
     owner, repo = store.split("/", 1)
-    data = graphql(
-        runner, read, DUPLICATE_QUERY, {"o": owner, "r": repo, "n": number}
-    )
+    data = graphql(runner, read, DUPLICATE_QUERY, {"o": owner, "r": repo, "n": number})
     try:
         issue = data["repository"]["issue"]
         return {
             DuplicateField.NUMBER: issue[DuplicateField.NUMBER],
             DuplicateField.STATE: issue[DuplicateField.STATE],
             DuplicateField.STATE_REASON: issue[DuplicateField.STATE_REASON],
-            DuplicateField.DUPLICATE_OF: (
-                issue[DuplicateField.DUPLICATE_OF] or {}
-            ).get(DuplicateField.NUMBER),
+            DuplicateField.DUPLICATE_OF: (issue[DuplicateField.DUPLICATE_OF] or {}).get(
+                DuplicateField.NUMBER
+            ),
         }
     except (KeyError, TypeError) as error:
         raise BlockedRead(read, f"unreadable output: missing {error}") from error
@@ -544,9 +550,7 @@ def blocker_store_and_number(request: Request, identity: str) -> tuple[str, int]
     return (store or request.store), int(number)
 
 
-def survivor_of(
-    request: Request, runner: GhRunner, identity: str
-) -> dict[str, Any]:
+def survivor_of(request: Request, runner: GhRunner, identity: str) -> dict[str, Any]:
     """Follow the duplicate link, step by step, to the first issue not closed as a duplicate."""
     store, number = blocker_store_and_number(request, identity)
     seen: set[int] = set()
@@ -741,14 +745,38 @@ def read_changeset(
     return changeset, any(check[CheckField.RESULT] != CHECK_SUCCESS for check in checks)
 
 
-def root_of(number: int, by_number: dict[int, Change]) -> int | str:
+def read_issue(request: Request, runner: GhRunner, number: int) -> Change | None:
+    """Read one issue of any state, none when the store holds no such issue."""
+    read = f"issue {request.store}#{number}"
+    data = graphql(
+        runner,
+        read,
+        ISSUE_QUERY,
+        {"o": request.owner, "r": request.repo, "n": number},
+    )
+    try:
+        node = data["repository"]["issue"]
+    except (KeyError, TypeError) as error:
+        raise BlockedRead(read, f"unreadable output: missing {error}") from error
+    return None if node is None else change_of(read, node)
+
+
+def root_of(
+    request: Request,
+    runner: GhRunner,
+    number: int,
+    known: dict[int, Change | None],
+) -> int | str:
+    """Follow Parent to a Change with none, reading an ancestor the open read left off by its number."""
     seen: set[int] = set()
     current = number
     while True:
         if current in seen:
             return UNRESOLVED_ROOT
         seen.add(current)
-        change = by_number.get(current)
+        if current not in known:
+            known[current] = read_issue(request, runner, current)
+        change = known[current]
         if change is None:
             return UNRESOLVED_ROOT
         if change.parent is None:
@@ -812,7 +840,7 @@ def priority_rank(request: Request, change: Change) -> int:
 
 def build_report(request: Request, runner: GhRunner) -> list[dict[str, Any]]:
     changes = read_store(request, runner)
-    by_number = {change.number: change for change in changes}
+    known: dict[int, Change | None] = {change.number: change for change in changes}
     candidates = [change for change in changes if matches(request, change)]
     blockers_by_number = {
         c.number: read_blockers(request, runner, c.number) for c in candidates
@@ -862,12 +890,10 @@ def build_report(request: Request, runner: GhRunner) -> list[dict[str, Any]]:
                 RowField.PRIORITY: change.priority,
                 RowField.HOLDER: list(change.assignees),
                 RowField.PARENT: change.parent,
-                RowField.ROOT: root_of(change.number, by_number),
+                RowField.ROOT: root_of(request, runner, change.number, known),
                 RowField.BLOCKERS: blockers,
                 RowField.CHANGESET: changeset,
-                RowField.WAITING: waiting_state(
-                    change, effect, claim, checks_pending
-                ),
+                RowField.WAITING: waiting_state(change, effect, claim, checks_pending),
                 RowField.NEXT_ACTION: next_action,
             }
         )
