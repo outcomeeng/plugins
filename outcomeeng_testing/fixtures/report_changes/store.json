@@ -673,6 +673,148 @@
                     }
                   ]
                 }
+              },
+              {
+                "number": 18,
+                "url": "https://github.com/example-org/example-changes/issues/18",
+                "title": "Child of a closed Change",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "value": 9,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 19,
+                "url": "https://github.com/example-org/example-changes/issues/19",
+                "title": "Grandchild through a closed Change",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "value": 40,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 40,
+                "url": "https://github.com/example-org/example-changes/issues/40",
+                "title": "Closed middle of a Parent chain",
+                "state": "CLOSED",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Applied",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "value": 1,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "number": 41,
+                "url": "https://github.com/example-org/example-changes/issues/41",
+                "title": "Held by one blocker and sent to refinement by another",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Sliced",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Available",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    }
+                  ]
+                }
               }
             ]
           }
@@ -732,6 +874,20 @@
         "number": 29,
         "state": "closed",
         "state_reason": "duplicate",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      }
+    ],
+    "41": [
+      {
+        "number": 20,
+        "state": "closed",
+        "state_reason": "duplicate",
+        "repository_url": "https://api.github.com/repos/example-org/example-changes"
+      },
+      {
+        "number": 23,
+        "state": "closed",
+        "state_reason": "not_planned",
         "repository_url": "https://api.github.com/repos/example-org/example-changes"
       }
     ]
@@ -1253,6 +1409,71 @@
       "changeset": "none",
       "waiting": [
         "refinement"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 18,
+      "url": "https://github.com/example-org/example-changes/issues/18",
+      "title": "Child of a closed Change",
+      "product": "example-product",
+      "maturity": "Sliced",
+      "lifecycle": "Available",
+      "priority": null,
+      "holder": [],
+      "parent": 9,
+      "root": 9,
+      "blockers": [],
+      "changeset": "none",
+      "waiting": [
+        "claim"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 19,
+      "url": "https://github.com/example-org/example-changes/issues/19",
+      "title": "Grandchild through a closed Change",
+      "product": "example-product",
+      "maturity": "Sliced",
+      "lifecycle": "Available",
+      "priority": null,
+      "holder": [],
+      "parent": 40,
+      "root": 1,
+      "blockers": [],
+      "changeset": "none",
+      "waiting": [
+        "claim"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 41,
+      "url": "https://github.com/example-org/example-changes/issues/41",
+      "title": "Held by one blocker and sent to refinement by another",
+      "product": "example-product",
+      "maturity": "Sliced",
+      "lifecycle": "Available",
+      "priority": null,
+      "holder": [],
+      "parent": null,
+      "root": 41,
+      "blockers": [
+        {
+          "number": "20",
+          "state": "closed",
+          "state_reason": "duplicate"
+        },
+        {
+          "number": "23",
+          "state": "closed",
+          "state_reason": "not_planned"
+        }
+      ],
+      "changeset": "none",
+      "waiting": [
+        "blockers: 20"
       ],
       "next_action": "none recorded"
     }

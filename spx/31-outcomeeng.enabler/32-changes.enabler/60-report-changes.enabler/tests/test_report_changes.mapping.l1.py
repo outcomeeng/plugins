@@ -2,8 +2,10 @@
 
 The governing table states, for each case, the store value a column maps
 from. The replayed store is a recorded multi-page fixture whose answers hold a
-Change for each case: a Parent cycle, an absent Parent, a Change with no
-Handoff, a Handoff whose ``Branch or PR`` line reads ``none``, a Handoff that
+Change for each case: a Parent cycle, an absent Parent, a Parent that is a
+closed issue, a Parent chain that runs through a closed issue to an open Change, an unheld Change held by one blocker and sent to
+refinement by another,
+a Change with no Handoff, a Handoff whose ``Branch or PR`` line reads ``none``, a Handoff that
 names a branch, a Handoff that names a pull request with a check that has not
 concluded success, a Submitted Change that waits for a Priority and one that
 waits for the Operator, a held Change, a reclaimed Change, an unheld Change
@@ -68,6 +70,91 @@ def test_root_blockers_changeset_and_next_action_equal_the_direct_reads() -> Non
     assert script.NO_NEXT_ACTION in [
         direct[Row.NEXT_ACTION] for direct in recorded.direct
     ]
+
+
+def test_root_follows_parent_through_an_ancestor_that_is_a_closed_issue() -> None:
+    """Design record.
+
+    Assertion: the root column is the Change reached by following parent to one
+    with none; it is unresolved only when the chain closes on a cycle or an
+    absent Change, so an ancestor that is a closed issue, which the read of open
+    issues leaves off its pages, still resolves the chain.
+    Production subject: the script's entry point reading open Changes whose
+    Parent is a closed issue, one that has no Parent and one that has an open
+    Parent.
+    Case provenance: the recorded store's open Change whose Parent is a closed
+    Applied issue with no Parent, and its open Change whose Parent is a closed
+    issue whose own Parent is an open Change with no Parent.
+    Oracle owner: the fixture's direct rows, read by hand by the spec sentence:
+    the closed issue exists in the store, so it is no absent Change.
+    Rejected mutation: the script resolves a root only through the issues of its
+    open read, so a closed ancestor reads as absent and the root is unresolved.
+    Failure observation: the row's root is unresolved where the direct row names
+    the Change the chain ends on.
+    """
+    recorded = load_recorded_store()
+
+    observed = report(recorded)
+
+    assert observed.exit_code == script.EXIT_OK
+    rows = {row[Row.NUMBER]: row for row in observed.result[Report.ROWS]}
+    open_numbers = {
+        node["number"]
+        for page in recorded.pages
+        for node in page["data"]["repository"]["issues"]["nodes"]
+        if node["state"] == script.IssueState.OPEN
+    }
+    closed_parents = [
+        direct
+        for direct in recorded.direct
+        if direct[Row.PARENT] is not None
+        and direct[Row.PARENT] not in open_numbers
+        and direct[Row.ROOT] != script.UNRESOLVED_ROOT
+    ]
+    assert len(closed_parents) >= 2
+    assert any(direct[Row.ROOT] == direct[Row.PARENT] for direct in closed_parents)
+    assert any(direct[Row.ROOT] != direct[Row.PARENT] for direct in closed_parents)
+    for direct in closed_parents:
+        assert rows[direct[Row.NUMBER]][Row.ROOT] == direct[Row.ROOT]
+
+
+def test_a_holding_blocker_outranks_a_blocker_that_needs_refinement() -> None:
+    """Design record.
+
+    Assertion: an unheld Available Change with two blockers, one that holds it
+    (an open survivor) and one whose survivor is closed Abandoned, waits on
+    `blockers: <numbers>` naming the holding blocker, and never on `refinement`.
+    Production subject: the script's entry point reading an Available Change
+    whose blockers are a duplicate that ends at an open Change and a blocker
+    closed Abandoned with no duplicate link.
+    Case provenance: the recorded store's Change with those two blockers, whose
+    duplicate answers the fixture records.
+    Oracle owner: the fixture's direct row, read by hand from those answers by
+    the spec sentence.
+    Rejected mutation: the script lets a blocker that needs refinement override
+    a holding blocker, or names the blockers in the wrong order of precedence.
+    Failure observation: the row's waiting entry is `refinement` or omits the
+    holding blocker's number where the direct row names it.
+    """
+    recorded = load_recorded_store()
+
+    observed = report(recorded)
+
+    assert observed.exit_code == script.EXIT_OK
+    rows = {row[Row.NUMBER]: row for row in observed.result[Report.ROWS]}
+    mixed = [
+        direct
+        for direct in recorded.direct
+        if direct[Row.LIFECYCLE] == "Available"
+        and len(direct[Row.BLOCKERS]) == 2
+        and direct[Row.WAITING][0].startswith(script.Waiting.BLOCKERS)
+    ]
+    assert mixed
+    for direct in mixed:
+        waiting = rows[direct[Row.NUMBER]][Row.WAITING]
+        assert waiting == direct[Row.WAITING]
+        assert waiting[0].startswith(f"{script.Waiting.BLOCKERS}: ")
+        assert script.Waiting.REFINEMENT not in waiting
 
 
 def test_waiting_state_equals_the_direct_read_for_every_waiting_state() -> None:

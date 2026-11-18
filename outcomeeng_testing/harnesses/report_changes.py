@@ -17,7 +17,8 @@ or a generated store from ``outcomeeng_testing.generators.report_changes``
 rendered into the store's answer shapes here. A fixture holds the store's
 ``pages`` in reading order, the REST ``blockers``, the ``comments``, and the field-change ``events`` per
 issue number, the pull request ``checks`` per URL, and ``direct``, the rows
-read by hand from those answers. The collaborator answers the first store
+read by hand from those answers. A read of one issue by number is answered from the same pages with the issue's node whatever its state, which is how a
+closed ancestor the open-issues read leaves off its pages stays readable. The collaborator answers the first store
 call with the first page and each later one with the page that follows the
 page whose ``endCursor`` the call passes as ``after``; once the pages run out
 it answers with the final page again, which is what a store that never ends
@@ -498,6 +499,18 @@ class _Replay:
             nodes[:] = [node for node in nodes if node["state"] in states]
         return page
 
+    def _issue(self, number: int) -> object:
+        """The store's node for one issue of any state, none when the store holds no such issue.
+
+        A read of a single issue reaches an issue the open-issues read leaves
+        off its pages, so this answer is not filtered by state.
+        """
+        for page in self._replayed.pages:
+            for node in page["data"]["repository"]["issues"]["nodes"]:  # type: ignore[index]
+                if node["number"] == number:
+                    return copy.deepcopy(node)
+        return None
+
     def _value(self, argv: Sequence[str], prefix: str) -> str | None:
         return next(
             (arg.removeprefix(prefix) for arg in argv if arg.startswith(prefix)),
@@ -530,6 +543,10 @@ class _Replay:
         if query is not None and query == script.DUPLICATE_QUERY:
             issue = self._replayed.duplicates.get(str(call.issue_number))
             return ReadKind.DUPLICATES, {"data": {"repository": {"issue": issue}}}
+        if query is not None and call.issue_number is not None:
+            return ReadKind.STORE, {
+                "data": {"repository": {"issue": self._issue(call.issue_number)}}
+            }
         if call.command == GH_API and call.verb is not None:
             found = _BLOCKERS_PATH.search(call.verb)
             if found:
