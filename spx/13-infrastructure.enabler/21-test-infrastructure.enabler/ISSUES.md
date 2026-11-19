@@ -19,3 +19,11 @@ Standing finding on `spx/13-infrastructure.enabler/21-test-infrastructure.enable
 **Impact**: the inlined-step rule lives in a test helper, outside both the linked test bodies and any production module, and the expected file name is test-owned data; neither the enforcement nor the expectation has a source owner.
 
 **Settlement condition**: a production validator owns the inlined-step rule and the tests import it, and the expected workflow file name comes from the fixture's source rather than a test literal. https://github.com/outcomeeng/changes/issues/816 carries that remedy.
+
+## Most test files carry a subject spx does not admit as Evidence
+
+**Evidence**: spx main, at `outcomeeng/spx` commit `9d362690e25c21e1ea1dbbe87a9f71db2e379465`, admits a test file as Evidence only when its subject is a kebab-case slug. `isTestFileName` in `src/lib/spec-tree/index.ts` requires `isEvidenceCore`, which splits the subject at `-` and requires every word to match `^[a-z][a-z0-9]*$` (`WORD_PATTERN` in `src/lib/spec-tree/config.ts`). The `test-core` production of the methodology's grammar takes a `slug` as the subject the same way. At `f83f39569`, 227 of the 277 tracked `spx/**/tests/test_*.py` files carry an underscored multi-word subject, such as `test_python_code_quality.compliance.l1.py` and `test_ci_gate.compliance.l1.py` in this Node. They sit in 62 of the 72 Nodes that hold tests, and in 59 of those Nodes every test file does. Every one of the 277 files otherwise fits the `test-core` form. `pyproject.toml` runs pytest with `--import-mode=importlib`, so a file with a kebab-case subject stays collectable.
+
+**Impact**: The projector sees none of those 227 files as Evidence, so a Node whose required test results lie in them cannot read Passing.
+
+**Settlement condition**: Every tracked test file carries a kebab-case subject.
