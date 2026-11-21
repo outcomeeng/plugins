@@ -383,6 +383,45 @@ def check_keys(context: Context, draft: Draft, recorded: bool) -> bool:
     return has_base
 
 
+def default_branch(context: Context) -> str:
+    """Return the remote-tracking ref of the default branch, ``origin/main`` when unresolved."""
+    head = context.git("rev-parse", "--abbrev-ref", "origin/HEAD")
+    return (
+        head.stdout.strip()
+        if head.exit_code == 0 and head.stdout.strip()
+        else "origin/main"
+    )
+
+
+def ere_escape(text: str) -> str:
+    """Escape ``text`` for a POSIX extended regular expression."""
+    return re.sub(r"([\\.^$*+?()\[\]{}|])", r"\\\1", text)
+
+
+def merged_changeset(context: Context, issue: str | None) -> str | None:
+    """Return the default-branch commit whose message references ``issue``, or None.
+
+    A Changeset references its Change, so a commit on the default branch whose
+    message names the issue as ``owner/repo#N`` or by its issue URL shows that a
+    Changeset that references the Leaf has merged.
+    """
+    if issue is None:
+        return None
+    owner_repo, _, number = issue.partition("#")
+    url = f"https://github.com/{owner_repo}/issues/{number}"
+    result = context.git(
+        "log",
+        default_branch(context),
+        "-E",
+        f"--grep={ere_escape(issue)}([^0-9]|$)",
+        f"--grep={ere_escape(url)}([^0-9]|$)",
+        "-1",
+        "--format=%H",
+    )
+    commit = result.stdout.strip()
+    return commit if result.exit_code == 0 and commit else None
+
+
 def check_base(context: Context, base: str | None) -> str | None:
     """Judge the Base; return it when it resolves."""
     if base is None or not SHA_RE.match(base):
@@ -399,12 +438,7 @@ def check_base(context: Context, base: str | None) -> str | None:
             f"base {base} names no commit in the checkout; fetch the default branch and confirm the commit",
         )
         return None
-    head = context.git("rev-parse", "--abbrev-ref", "origin/HEAD")
-    default = (
-        head.stdout.strip()
-        if head.exit_code == 0 and head.stdout.strip()
-        else "origin/main"
-    )
+    default = default_branch(context)
     if context.git("merge-base", "--is-ancestor", base, default).exit_code != 0:
         context.add(
             Rule.DRAFT_BASE,
@@ -1278,9 +1312,18 @@ def check_path_naming(
 
 
 def check_declarations(
-    context: Context, lines: list[str], base: str | None, blockers: list[str]
+    context: Context,
+    lines: list[str],
+    base: str | None,
+    blockers: list[str],
+    sliced_base: str | None = None,
 ) -> list[tuple[str, Operation]]:
-    """Judge every Declarations subsection; return each heading with its operation."""
+    """Judge every Declarations subsection; return each heading with its operation.
+
+    ``sliced_base`` is the Base of a Leaf whose Changeset has merged into the
+    default branch, as the latest advance to Sliced recorded it; each deletion,
+    move, or replacement is read there instead of at ``base``.
+    """
     subsections = split_subsections(context, lines)
     if subsections is None:
         return []
@@ -1294,7 +1337,14 @@ def check_declarations(
     node_count = 0
     for sub in subsections:
         operation = check_payload(context, sub)
-        read_path = check_heading(context, sub, operation, base, tree, moved)
+        op_base = (
+            sliced_base
+            if sliced_base is not None
+            and operation is not None
+            and operation.kind in ("delete", "move", "replace")
+            else base
+        )
+        read_path = check_heading(context, sub, operation, op_base, tree, moved)
         check_new_artifact(context, sub, declared_new, siblings)
         if not is_new(sub.heading) and sub.preamble:
             context.add(
@@ -1315,10 +1365,10 @@ def check_declarations(
         if operation is None:
             continue
         operations.append((sub.heading, operation))
-        check_operation_kind(context, sub, operation, base, tree)
-        check_front_matter(context, sub, operation, base)
+        check_operation_kind(context, sub, operation, op_base, tree)
+        check_front_matter(context, sub, operation, op_base)
         if operation.kind in ("edit", "move", "create"):
-            check_diff_lines(context, sub, operation, base, read_path)
+            check_diff_lines(context, sub, operation, op_base, read_path)
         if operation.kind in ("delete", "move"):
             removed.append(sub.heading)
         if operation.kind == "move" and operation.rename_to:
@@ -1349,11 +1399,17 @@ def check_store(
     draft: Draft,
     issue: str | None,
     read_edited_at: str | None,
-    published: pathlib.Path | None,
+    old: Draft | None,
     base: str | None,
     operations: list[tuple[str, Operation]],
+    merged: bool,
 ) -> None:
-    """Judge the publish against the Change Store and the published record."""
+    """Judge the publish against the Change Store and the published record.
+
+    ``old`` is the Draft composed from the stored Sliced record. Once a Changeset
+    that references the Leaf has merged, ``merged`` holds and the operations
+    are read at the Sliced Base, so a new base refuses no publish.
+    """
     if len(draft.body) > GITHUB_BODY_LIMIT:
         context.add(
             Rule.SIZE_LIMIT,
@@ -1395,11 +1451,7 @@ def check_store(
                 issue,
                 f"the stored revision was edited at {stamp}, after the read at {read_edited_at}; read the record again and redo the publish",
             )
-    if published is not None and scalar(draft.values.get("maturity", "")) == "Sliced":
-        try:
-            old = parse_draft(published.read_text(encoding=TEXT_ENCODING))
-        except OSError as exc:
-            raise Unusable(f"--published {published} cannot be read: {exc}") from exc
+    if old is not None and not merged:
         old_base = scalar(old.values.get("base", ""))
         if old_base and old_base != base:
             unresolved = (
@@ -1453,12 +1505,29 @@ def check(
     base = check_base(context, scalar(draft.values.get("base", ""))) if leaf else None
     declarations = check_body(context, draft, leaf)
     blockers = flow_list(draft.values.get("blockers", "")) or []
+    old: Draft | None = None
+    if published is not None and scalar(draft.values.get("maturity", "")) == "Sliced":
+        try:
+            old = parse_draft(published.read_text(encoding=TEXT_ENCODING))
+        except OSError as exc:
+            raise Unusable(f"--published {published} cannot be read: {exc}") from exc
+    merged = old is not None and merged_changeset(context, issue) is not None
+    old_base = scalar(old.values.get("base", "")) if old is not None else ""
+    sliced_base = (
+        old_base
+        if merged
+        and SHA_RE.match(old_base)
+        and context.git("cat-file", "-e", f"{old_base}^{{commit}}").exit_code == 0
+        else None
+    )
     operations = (
-        check_declarations(context, declarations, base, blockers)
+        check_declarations(context, declarations, base, blockers, sliced_base)
         if declarations is not None
         else []
     )
-    check_store(context, draft, issue, read_edited_at, published, base, operations)
+    check_store(
+        context, draft, issue, read_edited_at, old, base, operations, merged
+    )
     status = "fail" if context.findings else "pass"
     return (
         ExitCode.FAIL if context.findings else ExitCode.PASS,
