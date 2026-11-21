@@ -30,10 +30,8 @@ remediation judgment for every non-healthy verdict.
    verdict, and its bucket as the item's severity.
 5. When the command cannot start, the `diagnose` subcommand is missing, the
    manifest is rejected, or the exit code is nonzero before a report is emitted,
-   report stdout, stderr, and the exit code verbatim, then direct the user to
-   install or update `@outcomeeng/spx` to the floor declared in the manifest, as
-   one remediation item that names the startup failure as its subject, carries
-   concern `spx-diagnose-startup` and an action, and carries no severity.
+   relay the startup failure: stdout, stderr, and the exit code verbatim. Add no
+   remediation item, because no report carries a verdict to ground one.
 
 </workflow>
 
@@ -54,8 +52,8 @@ remediation judgment for every non-healthy verdict.
   match the `spx diagnose` output character for character.
 - Each remediation statement traces to a per-check verdict, reading, or
   remediation field of the report.
-- A startup failure appears with stdout, stderr, and exit code verbatim, followed
-  by the install-or-update direction.
+- A startup failure appears with stdout, stderr, and exit code verbatim, and with
+  no remediation item.
 - The skill body contains no check classification table and no overall-verdict
   fold.
 
