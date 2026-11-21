@@ -85,7 +85,7 @@ The plugin ships the round definitions this skill launches for Claude Code only.
 
 <application_check>
 
-Run every check against the current default branch plus the effects of the Change's earlier subsections, in record order:
+Run every check against the current default branch plus the effects of the Change's earlier subsections, in record order. Once a Changeset that references the Change has merged, the check passes each line and each operation of the record that already stands on the default branch as the Change leaves it:
 
 - The Base resolves to a commit.
 - A `+` slug with no `-` partner is absent from its file; a `+` heading with no `-` partner is absent, and a `-` heading is present.
