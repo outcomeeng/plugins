@@ -1525,9 +1525,7 @@ def check(
         if declarations is not None
         else []
     )
-    check_store(
-        context, draft, issue, read_edited_at, old, base, operations, merged
-    )
+    check_store(context, draft, issue, read_edited_at, old, base, operations, merged)
     status = "fail" if context.findings else "pass"
     return (
         ExitCode.FAIL if context.findings else ExitCode.PASS,

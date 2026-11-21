@@ -177,7 +177,9 @@ def test_merged_leaf_reads_its_deletion_at_the_sliced_base(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str], message: str
 ) -> None:
     draft, extra = merged_record_fix(tmp_path, message)
-    reported = findings(tmp_path / "repo", draft, capsys, extra, StoreStampRunner(STAMP))
+    reported = findings(
+        tmp_path / "repo", draft, capsys, extra, StoreStampRunner(STAMP)
+    )
     assert [f for f in reported if f["location"] == RECORD] == []
 
 
@@ -192,6 +194,8 @@ def test_unmerged_leaf_keeps_the_operator_bound_base_failure(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str], message: str
 ) -> None:
     draft, extra = merged_record_fix(tmp_path, message)
-    reported = findings(tmp_path / "repo", draft, capsys, extra, StoreStampRunner(STAMP))
+    reported = findings(
+        tmp_path / "repo", draft, capsys, extra, StoreStampRunner(STAMP)
+    )
     rules = [f["rule"] for f in reported if f["location"] == RECORD]
     assert "operator-bound-base" in rules
