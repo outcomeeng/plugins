@@ -13,3 +13,11 @@ The shipped artifact and its evidence still carry the old contract. `outcomeeng/
 **Settlement condition.** A published `@outcomeeng/spx` release provides the revised manifest schema and the marketplace-install classification that reads each agent's selection authority: home-selection parsing, the reading of Claude Code install records for the invocation checkout at project and local scope, and native inspection outside product configuration discovery. The repository's floor and CI pin then sit at that release, the manifest contract, the harness and the shipped template carry no `expected_plugins` or its exact-fields validation, the generated `dist/claude` and `dist/codex` trees agree with their sources, and the conformance test verifies that the manifest carries the spx-version floor, the outcomeeng marketplace identity and the check set only.
 
 **Related.** `outcomeeng/changes#123`, `outcomeeng/changes#122` and `outcomeeng/changes#192` carry the `spx diagnose` side of this move.
+
+## A not-applicable check's remediation item is unstated `src/plugins/product-tree/skills/diagnose/SKILL.md` `workflow step 4` `evidence`
+
+**Evidence.** The diagnostic-remediation Evaluate subsection in `diagnostics.md` and step 4 of the shipped `diagnose` skill add one remediation item per non-healthy check, naming that check, its verdict and its bucket as the item's severity. A check in bucket `not-applicable` is neither healthy nor degraded, so a degraded report that also carries a `not-applicable` check leaves open whether that check gets an item of severity `not-applicable`. No case of the eval mixes a `not-applicable` check with a degraded one. The product-tree-review CI review raised this as a DEBT finding on https://github.com/outcomeeng/plugins/pull/782 at head `1a8d7be6f8c1182a4c386901fbeef4b90d48b51d`, and the Plugins Maintainer ruled it accepted.
+
+**Impact.** Two readings of the skill both pass the eval, so the eval cannot tell whether a consumer sees a remediation item for a check whose surface is absent.
+
+**Settlement condition.** The spec and the skill state whether a `not-applicable` check gets a remediation item in a non-healthy report, and the Evaluate table carries a case that mixes a `not-applicable` check with a degraded one and pins the stated reading.
