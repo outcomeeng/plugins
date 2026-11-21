@@ -97,7 +97,7 @@ Impact: on a store whose records take the new form, `report-changes` reports no 
 
 Settlement condition: a Change amends `report-no-shorter-list` and the report rows to the Transition comments, migrates the script, its fixture, and its tests to them, and one typed skill audit of `report-changes` raises no `record-form-only` finding.
 
-## DEBT [evidence]: the Probe merged-record-fix stands unattested `spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md` `review-carry` `evidence`
+## DEBT [evidence]: the Probe merged-record-fix stands unattested [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) `review-carry` `evidence`
 
 Defect class: `evidence`.
 
