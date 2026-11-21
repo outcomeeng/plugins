@@ -88,14 +88,17 @@ def write_draft(
     intent: Intent,
     heading: str,
     payload: Sequence[str],
+    *,
+    maturity: str = "Proposed",
+    name: str = "draft.md",
 ) -> Path:
-    """Write a Proposed Draft on ``base`` with one Declarations subsection."""
-    draft = directory / "draft.md"
+    """Write a Draft at ``maturity`` on ``base`` with one Declarations subsection."""
+    draft = directory / name
     lines = [
         "---",
         f"title: {intent.title}",
         "product: plugins",
-        "maturity: Proposed",
+        f"maturity: {maturity}",
         "lifecycle: Submitted",
         "parent: null",
         "predecessors: []",
@@ -123,11 +126,38 @@ def write_draft(
     return draft
 
 
+@dataclass(frozen=True)
+class StoreStampRunner:
+    """Answer the Change Store's edit-stamp read with ``stamp``; run every other command.
+
+    The form check reads the stored record's edit stamp through ``gh``. This
+    runner returns ``stamp`` for that one read and runs ``git`` and every other
+    command for real, so a publish check needs no network.
+    """
+
+    stamp: str
+
+    def __call__(self, argv: Sequence[str], /, *, cwd: Path) -> object:
+        module = load_form_check()
+        if list(argv[:3]) == ["gh", "api", "graphql"]:
+            answer = {"data": {"repository": {"issue": {"lastEditedAt": self.stamp}}}}
+            return module.CommandResult(0, json.dumps(answer), "")
+        return module.run_subprocess(argv, cwd=cwd)
+
+
 def findings(
-    repo: Path, draft: Path, capsys: pytest.CaptureFixture[str]
+    repo: Path,
+    draft: Path,
+    capsys: pytest.CaptureFixture[str],
+    extra: Sequence[str] = (),
+    runner: StoreStampRunner | None = None,
 ) -> list[dict[str, str]]:
     """Run the form check on ``draft`` against ``repo`` and return its findings."""
-    load_form_check().main(["--root", str(repo), "--draft", str(draft)])
+    argv = ["--root", str(repo), "--draft", str(draft), *extra]
+    if runner is None:
+        load_form_check().main(argv)
+    else:
+        load_form_check().main(argv, runner)
     reported: list[dict[str, str]] = json.loads(capsys.readouterr().out).get(
         "findings", []
     )

@@ -17,7 +17,7 @@ CAN write, check, and audit every Change record in one form
 
 ### Test.Compliance: form check rows
 
-- form-check-merged-base: ALWAYS: for a Leaf whose Changeset has merged into the default branch, the form check reads each deletion, move or replacement at the Base the latest advance to Sliced recorded, and refuses no publish on a new base.
+- [form-check-merged-base](tests/test_form_check_rows.compliance.l2.py): ALWAYS: for a Leaf whose Changeset has merged into the default branch, the form check reads each deletion, move or replacement at the Base the latest advance to Sliced recorded, and refuses no publish on a new base.
 - [form-check-linked-heading](tests/test_form_check_rows.compliance.l2.py): ALWAYS: the form check takes the slug of a Mapping or Evaluate subsection whose heading carries a slug link as that link's text, and accepts the infrastructure line keyed by that slug.
 - [form-check-scenario-steps](tests/test_form_check_rows.compliance.l2.py): ALWAYS: the form check reads every indented line opening with Given, When, Then or And that follows a `+` Scenario row as part of that row, and requires no slug of it.
 
