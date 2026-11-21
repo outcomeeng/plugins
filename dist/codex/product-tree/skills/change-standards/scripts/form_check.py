@@ -399,11 +399,13 @@ def ere_escape(text: str) -> str:
 
 
 def merged_changeset(context: Context, issue: str | None) -> str | None:
-    """Return the default-branch commit whose message references ``issue``, or None.
+    """Return the default-branch commit whose ``Refs:`` trailer names ``issue``, or None.
 
-    A Changeset references its Change, so a commit on the default branch whose
-    message names the issue as ``owner/repo#N`` or by its issue URL shows that a
-    Changeset that references the Leaf has merged.
+    A Changeset references its Change through the ``Refs:`` trailer of its
+    commits, so a commit on the default branch with a ``Refs:`` line naming the
+    issue as ``owner/repo#N`` or by its issue URL shows that a Changeset that
+    references the Leaf has merged. A mention of the issue anywhere else in a
+    commit message shows no such thing.
     """
     if issue is None:
         return None
@@ -413,8 +415,8 @@ def merged_changeset(context: Context, issue: str | None) -> str | None:
         "log",
         default_branch(context),
         "-E",
-        f"--grep={ere_escape(issue)}([^0-9]|$)",
-        f"--grep={ere_escape(url)}([^0-9]|$)",
+        f"--grep=^Refs:.*{ere_escape(issue)}([^0-9]|$)",
+        f"--grep=^Refs:.*{ere_escape(url)}([^0-9]|$)",
         "-1",
         "--format=%H",
     )

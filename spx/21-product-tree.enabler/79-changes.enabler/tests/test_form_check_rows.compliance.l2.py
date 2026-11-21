@@ -2,12 +2,13 @@
 
 Covers ``form-check-merged-base``, ``form-check-linked-heading`` and
 ``form-check-scenario-steps`` in ``../changes.md``. Once the default branch
-holds a commit that references the Leaf's issue, the check reads a deletion at
-the Base of the stored Sliced record and refuses no publish on a new base, for a
-deletion, a move and a replacement alike; a
-commit that references no issue, or another issue, and a stored Base that
-resolves to no commit, leave the ``operator-bound-base`` failure standing. A Mapping heading whose subject is a slug link names that slug,
-so the infrastructure line keyed by the slug satisfies the check. The indented
+holds a commit whose ``Refs:`` trailer names the Leaf's issue, the check reads
+each deletion, move and replacement at the Base of the stored Sliced record and
+refuses no publish on a new base. A commit whose trailer names no issue or
+another issue, a commit that names the issue only in prose, and a stored Base
+that resolves to no commit leave the ``operator-bound-base`` failure standing.
+A Mapping heading whose subject is a slug link names that slug, so the
+infrastructure line keyed by the slug satisfies the check. The indented
 Given, When, Then and And lines after a ``+`` Scenario row belong to that row, so
 the check asks no slug of them. Each case builds a synthetic repository with one
 implementation-malleable Node, commits it as the Base, and checks one Draft. The
@@ -244,6 +245,10 @@ def test_merged_leaf_reads_its_operation_at_the_sliced_base(
         ("move", "spec: change reading"),
         ("replace", "spec: change reading"),
         ("delete", "spec: change reading\n\nRefs: outcomeeng/changes#70"),
+        (
+            "delete",
+            f"docs: file the audits of {ISSUE}\n\nTwo audits of {ISSUE} differ.",
+        ),
     ],
 )
 def test_unmerged_leaf_keeps_the_operator_bound_base_failure(
