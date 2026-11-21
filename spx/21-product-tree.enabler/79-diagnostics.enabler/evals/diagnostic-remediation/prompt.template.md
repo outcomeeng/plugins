@@ -3,7 +3,6 @@
 Apply the complete producer below as the `diagnose` skill whose first workflow step already ran. Run no command. The captured result of that run, `spx diagnose --manifest "${CLAUDE_SKILL_DIR}/manifest.json" --format json`, follows the producer, with stdout parsed when it holds a report.
 
 {producer_file}
-
 The captured `spx diagnose` result (JSON-encoded):
 
 ```json
