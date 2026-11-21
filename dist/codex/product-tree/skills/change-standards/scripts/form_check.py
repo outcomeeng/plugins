@@ -1402,13 +1402,15 @@ def check_store(
     old: Draft | None,
     base: str | None,
     operations: list[tuple[str, Operation]],
-    merged: bool,
+    sliced_base: str | None,
 ) -> None:
     """Judge the publish against the Change Store and the published record.
 
-    ``old`` is the Draft composed from the stored Sliced record. Once a Changeset
-    that references the Leaf has merged, ``merged`` holds and the operations
-    are read at the Sliced Base, so a new base refuses no publish.
+    ``old`` is the Draft composed from the stored Sliced record. ``sliced_base``
+    is its Base once a Changeset that references the Leaf has merged and that
+    Base resolves; the operations are then read there, so a new base refuses no
+    publish. A merged Leaf whose Sliced Base does not resolve keeps the
+    comparison, and a former Base that no longer resolves still fails it.
     """
     if len(draft.body) > GITHUB_BODY_LIMIT:
         context.add(
@@ -1451,7 +1453,7 @@ def check_store(
                 issue,
                 f"the stored revision was edited at {stamp}, after the read at {read_edited_at}; read the record again and redo the publish",
             )
-    if old is not None and not merged:
+    if old is not None and sliced_base is None:
         old_base = scalar(old.values.get("base", ""))
         if old_base and old_base != base:
             unresolved = (
@@ -1525,7 +1527,9 @@ def check(
         if declarations is not None
         else []
     )
-    check_store(context, draft, issue, read_edited_at, old, base, operations, merged)
+    check_store(
+        context, draft, issue, read_edited_at, old, base, operations, sliced_base
+    )
     status = "fail" if context.findings else "pass"
     return (
         ExitCode.FAIL if context.findings else ExitCode.PASS,

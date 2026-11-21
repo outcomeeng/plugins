@@ -4,8 +4,8 @@ Covers ``form-check-merged-base``, ``form-check-linked-heading`` and
 ``form-check-scenario-steps`` in ``../changes.md``. Once the default branch
 holds a commit that references the Leaf's issue, the check reads a deletion at
 the Base of the stored Sliced record and refuses no publish on a new base; a
-commit that references no issue, or another issue, leaves the
-``operator-bound-base`` failure standing. A Mapping heading whose subject is a slug link names that slug,
+commit that references no issue, or another issue, and a stored Base that
+resolves to no commit, leave the ``operator-bound-base`` failure standing. A Mapping heading whose subject is a slug link names that slug,
 so the infrastructure line keyed by the slug satisfies the check. The indented
 Given, When, Then and And lines after a ``+`` Scenario row belong to that row, so
 the check asks no slug of them. Each case builds a synthetic repository with one
@@ -142,14 +142,15 @@ DELETION = ["```diff", "deleted file", "```"]
 
 
 def merged_record_fix(
-    tmp_path: pathlib.Path, message: str
+    tmp_path: pathlib.Path, message: str, stored_base: str | None = None
 ) -> tuple[pathlib.Path, list[str]]:
     """Merge a deletion with ``message`` and write the fix Draft and its stored record.
 
     The Base holds a Decision Record. The stored Sliced record deletes it on that
     Base. A commit on the default branch carries ``message`` and deletes the
-    record, and the fix Draft deletes it on the new head. Returns the fix Draft
-    and the publish arguments.
+    record, and the fix Draft deletes it on the new head. ``stored_base``
+    replaces the stored record's Base when given. Returns the fix Draft and the
+    publish arguments.
     """
     repo = tmp_path / "repo"
     files = {**BASE_FILES, RECORD: "# Reading\n\nThe thing reads one thing.\n"}
@@ -159,7 +160,13 @@ def merged_record_fix(
     head = git(repo, "rev-parse", "HEAD")
     git(repo, "update-ref", "refs/remotes/origin/main", head)
     published = write_draft(
-        tmp_path, sliced, INTENT, RECORD, DELETION, maturity="Sliced", name="stored.md"
+        tmp_path,
+        stored_base or sliced,
+        INTENT,
+        RECORD,
+        DELETION,
+        maturity="Sliced",
+        name="stored.md",
     )
     draft = write_draft(tmp_path, head, INTENT, RECORD, DELETION, maturity="Sliced")
     extra = ["--issue", ISSUE, "--read-edited-at", STAMP, "--published", str(published)]
@@ -194,6 +201,19 @@ def test_unmerged_leaf_keeps_the_operator_bound_base_failure(
     tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str], message: str
 ) -> None:
     draft, extra = merged_record_fix(tmp_path, message)
+    reported = findings(
+        tmp_path / "repo", draft, capsys, extra, StoreStampRunner(STAMP)
+    )
+    rules = [f["rule"] for f in reported if f["location"] == RECORD]
+    assert "operator-bound-base" in rules
+
+
+def test_merged_leaf_with_an_unresolvable_stored_base_keeps_the_failure(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    draft, extra = merged_record_fix(
+        tmp_path, f"spec: delete reading\n\nRefs: {ISSUE}", stored_base="f" * 40
+    )
     reported = findings(
         tmp_path / "repo", draft, capsys, extra, StoreStampRunner(STAMP)
     )
