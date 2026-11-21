@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Added
 
-- **The changeset-coherence audit names a split with a `split-required` finding.** A `REJECTED` verdict for two or more independently mergeable clusters now carries one blocking finding keyed `scope:split-required` beside its dependency-ordered review units. The rule joins the audit's rule catalog, and `/audit-changeset-coherence` emits no identifier outside it. Before this change, a rejected verdict carried review units and no finding, so a consumer reading findings saw a rejection without a rule.
+- **The changeset-coherence audit names a split with a `split-required` finding.** A `REJECTED` verdict for two or more independently mergeable clusters now carries one blocking finding keyed `scope:split-required`, whose evidence names the independently mergeable clusters and carries the dependency-ordered review-unit sequence of `recommended_pr_sequence`. The rule joins the audit's rule catalog, and `/audit-changeset-coherence` emits no identifier outside it. Before this change, a rejected verdict carried review units and no finding, so a consumer reading findings saw a rejection without a rule.
 
 ### Changed
 
