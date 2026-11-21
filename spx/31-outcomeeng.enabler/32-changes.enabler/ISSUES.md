@@ -96,3 +96,15 @@ Evidence: the constants and the `winning_claim`, `newest_handoff`, and `read_ava
 Impact: on a store whose records take the new form, `report-changes` reports no holder session, no changeset, and no next action, and filters by values the store no longer holds.
 
 Settlement condition: a Change amends `report-no-shorter-list` and the report rows to the Transition comments, migrates the script, its fixture, and its tests to them, and one typed skill audit of `report-changes` raises no `record-form-only` finding.
+
+## DEBT [evidence]: the Probe merged-record-fix stands unattested `spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md` `review-carry` `evidence`
+
+Defect class: `evidence`.
+
+Finding: the product-tree-review CI review of [PR #783](https://github.com/outcomeeng/plugins/pull/783) on head `86964164d8817dd0cdc5d3a37eeb0c59d9cd9507` found no evidence for the Probe `merged-record-fix` that the PR declares in `changes.md`. The Plugins Maintainer ruled to accept the finding for the Probe and to drop it for `review-carry`, `audit-binding` and `application-check`, whose plain slugs record their Declared state.
+
+Evidence: the Probe's slug in `changes.md` links no `probes/merged-record-fix/probe.md`. The Probe needs a Leaf whose Changeset merged and whose record a later publish fixes, and that Leaf exists only once PR #783 merges.
+
+Impact: the Node holds a Declared Probe until the attested run.
+
+Settlement condition: `probes/merged-record-fix/probe.md` records an attested run in which a Leaf whose Changeset merged keeps the Operator's review of each part a later publish leaves unchanged and closes Applied, and the Probe's slug links it.
