@@ -81,6 +81,7 @@ class RecordingStore:
             return fc.run_subprocess(command, cwd=cwd)
         joined = " ".join(command)
         if command[1:3] == ["api", "graphql"]:
+            answer: dict[str, object]
             if "issueFields" in joined:
                 answer = {"data": {"organization": {"issueFields": {"nodes": FIELDS}}}}
             elif "mutation" in joined:

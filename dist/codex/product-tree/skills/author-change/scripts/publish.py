@@ -21,6 +21,7 @@ import sys
 import tempfile
 from collections.abc import Sequence
 from types import ModuleType
+from typing import Any
 
 PROVIDER = (
     pathlib.Path(__file__).resolve().parents[2]
@@ -80,7 +81,7 @@ def load_form_check() -> ModuleType:
 class Store:
     """The GitHub Change Store, reached through the form check's command runner."""
 
-    def __init__(self, repo: str, root: pathlib.Path, runner: object) -> None:
+    def __init__(self, repo: str, root: pathlib.Path, runner: Any) -> None:
         self.repo = repo
         self.owner, _, self.name = repo.partition("/")
         self.root = root
@@ -88,45 +89,44 @@ class Store:
         self.writes: list[str] = []
 
     def gh(self, *argv: str) -> str:
-        result = self.runner(["gh", *argv], cwd=self.root)  # type: ignore[operator]
+        result = self.runner(["gh", *argv], cwd=self.root)
         if result.exit_code != 0:
             raise PublishError(
                 f"gh {' '.join(argv[:2])} failed: {result.stderr.strip()}"
             )
         return str(result.stdout)
 
-    def graphql(self, query: str, **variables: str) -> dict[str, object]:
+    def graphql(self, query: str, **variables: str) -> Any:
         argv = ["api", "graphql", "-f", f"query={query}"]
         for key, value in variables.items():
             flag = "-F" if key in ("n", "v_number") else "-f"
             argv += [flag, f"{key.removesuffix('_number')}={value}"]
-        data: dict[str, object] = json.loads(self.gh(*argv) or "{}")
-        return data
+        return json.loads(self.gh(*argv) or "{}")
 
     def issue(self, number: int) -> dict[str, str]:
         data = self.graphql(ISSUE_QUERY, o=self.owner, r=self.name, n=str(number))
-        node = data.get("data", {}).get("repository", {}).get("issue")  # type: ignore[union-attr]
+        node = data.get("data", {}).get("repository", {}).get("issue")
         if not node:
             raise PublishError(f"the store holds no issue {self.repo}#{number}")
         return dict(node)
 
-    def fields(self) -> dict[str, dict[str, object]]:
+    def fields(self) -> dict[str, Any]:
         data = self.graphql(FIELDS_QUERY, l=self.owner)
         nodes = (
             data.get("data", {})
             .get("organization", {})
             .get("issueFields", {})
             .get("nodes", [])
-        )  # type: ignore[union-attr]
+        )
         if len(nodes) >= FIELD_LIMIT:
             raise PublishError(f"blocked read: {FIELD_LIMIT} issue fields")
         return {str(n["name"]): n for n in nodes if n.get("name")}
 
-    def set_field(self, issue_id: str, field: dict[str, object], value: str) -> None:
+    def set_field(self, issue_id: str, field: Any, value: str) -> None:
         name = str(field["name"])
         if "options" in field:
             option = next(
-                (o["id"] for o in field["options"] if o["name"] == value),  # type: ignore[union-attr]
+                (o["id"] for o in field["options"] if o["name"] == value),
                 None,
             )
             if option is None:
@@ -138,7 +138,7 @@ class Store:
             self.graphql(SET_TEXT, i=issue_id, f=str(field["id"]), v=value)
         self.writes.append(f"set {name}")
 
-    def clear_field(self, issue_id: str, field: dict[str, object]) -> None:
+    def clear_field(self, issue_id: str, field: Any) -> None:
         self.graphql(DELETE, i=issue_id, f=str(field["id"]))
         self.writes.append(f"clear {field['name']}")
 
@@ -193,13 +193,13 @@ def number_of(reference: str | None, repo: str) -> int | None:
 def write_record(
     fc: ModuleType,
     store: Store,
-    draft: object,
+    draft: Any,
     issue: str | None,
     read_edited_at: str | None,
 ) -> str:
     """Write the Draft's title, body, fields and blockers; return the issue reference."""
-    values = draft.values  # type: ignore[attr-defined]
-    body_text = draft.body  # type: ignore[attr-defined]
+    values = draft.values
+    body_text = draft.body
     body = body_text[body_text.index("## Statement of Intent") :]
     title = fc.scalar(values.get("title", "")) or ""
     scratch = pathlib.Path(tempfile.mkdtemp(prefix="publish-"))
@@ -277,7 +277,7 @@ def publish(
     issue: str | None,
     read_edited_at: str | None,
     published: pathlib.Path | None,
-    runner: object | None = None,
+    runner: Any | None = None,
 ) -> tuple[int, dict[str, object]]:
     """Check the Draft's form and write it only on a pass; return the exit code and result."""
     fc = load_form_check()
@@ -294,8 +294,8 @@ def publish(
     return 0, {"status": "published", "issue": reference, "writes": store.writes}
 
 
-def main(argv: Sequence[str] | None = None, runner: object | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+def main(argv: Sequence[str] | None = None, runner: Any | None = None) -> int:
+    parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument(
         "--root", required=True, help="absolute path of the checkout root"
     )
