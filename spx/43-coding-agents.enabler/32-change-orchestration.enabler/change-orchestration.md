@@ -5,29 +5,34 @@ malleability: spec
 
 # Change Orchestration
 
-PROVIDES the Orchestrator position's duties for one Change — claiming it for an Applier, starting that Applier's agent session, checking its progress, and passing questions up the chain of positions
+PROVIDES the Orchestrator Position's duties for one Change — claiming it for an Applier, starting that Applier's agent session, checking its progress, and passing questions up the Chain of Positions
 SO THAT an operator
 CAN have each Applicable Change applied by its own Applier session without opening that session's pane
 
-The Orchestrator is a position, never one of the five Roles: it holds no Role for the Change it orchestrates and produces no artifact of it. The Applier it starts holds the Change and applies it through `spx/31-outcomeeng.enabler/32-changes.enabler/65-change-application.enabler`.
-
 ## Assertions
 
-### Audit: orchestration
+### Audit: Position and start
 
+- orchestrator-position: ALWAYS: the Orchestrator is a Position, never one of the five Roles: it holds no Role for the Change it orchestrates and produces no artifact of it, and the Applier it starts holds the Change and applies it through `spx/31-outcomeeng.enabler/32-changes.enabler/65-change-application.enabler`
 - claim-and-start: ALWAYS: `/orchestrate-change` claims one Change for its Applier, naming the Applier's worktree root, and starts one Applier session for it in the root pane `spx/43-coding-agents.enabler/18-herdr-environment.enabler` returns when it creates the Applier's worktree, for a root absent from the pool, or opens the existing one, either grouped with the herdr workspace the invocation names; on Claude Code the session starts with the product-tree definition `change-applier` selected
 - codex-start-unavailable: ALWAYS: on Codex, `/orchestrate-change` Start returns an explicit `unavailable` result naming the Change and writes no store state, while Check runs unchanged; on Claude Code, Start returns no such result
 - no-question-tool: ALWAYS: the Applier session's start and every resume withhold the harness's structured-question tool through the harness setting alone; no skill detects whether its session is an Applier
 - one-definition: ALWAYS: `/orchestrate-change` names `change-applier` as the one configured definition it starts, and starts no session through any other definition
-- classifier-retry: ALWAYS: a start the harness's classifier refuses is retried once, only after retracing the refused request, the classifier's reason, and each step that shaped the request, and changed only by the correction that retrace finds, so a retrace that finds no defect resubmits the request unchanged; a second refusal stops the start and reports the refused request, the reason, and the Claim still held to the Orchestrator's principal
+- classifier-retry: ALWAYS: a start the harness's classifier refuses is retried once, only after retracing the refused request, the classifier's reason, and each step that shaped the request, and changed only by the correction that retrace finds, so a retrace that finds no defect resubmits the request unchanged; a second refusal stops the start and reports the refused request, the reason, and the Claim still held to the Orchestrator's overseer
+
+### Audit: checks and reports
+
 - periodic-checks: ALWAYS: the Orchestrator checks each Applier at regular intervals and, finding one stalled or near its context limit, prompts, compacts or restarts it; a restarted Applier relaunches into the pane its stop kept, keeps the Claim it holds and confirms it against the Change's holder and the worktree its newest claim comment records, and continues from the Change and its latest Handoff; a new claim follows only a release that left the Change Available with no holder
 - priority-order: ALWAYS: across the Changes one Orchestrator orchestrates, it settles blockers and questions in the order `spx/local/changes.md` declares for the Change store's priority field, and orders Changes of equal priority, and every Change when the overlay declares no priority field, by ascending issue number
-- questions-upward: ALWAYS: the Orchestrator answers no question the Applier raises; it passes each question the Applier writes into the Change verbatim, once per submission, to its principal as a message record of `spx/43-coding-agents.enabler/21-agent-communication.enabler`
+- questions-upward: ALWAYS: the Orchestrator answers no question the Applier raises; it passes each question the Applier writes into the Change verbatim, once per submission, up the Chain of Positions to the next higher rank that holds its context, as a message record of `spx/43-coding-agents.enabler/21-agent-communication.enabler`
 - not-verifier: NEVER: the Orchestrator acts as a Verifier
 - lifecycle-ends-checks: ALWAYS: `/orchestrate-change` reads the Change's Lifecycle from the store at each check, and ends its checks of that Applier when the Lifecycle is `Applied` or `Abandoned`
-- no-input-at-screen: NEVER: the Orchestrator sends a prompt or keystroke into a pane whose Applier session waits at a question or approval screen; it reports the screen verbatim to the principal as a message record, once per screen under one correlation per Change, and ends that check
-- screen-report-lookup: ALWAYS: `/orchestrate-change` finds an earlier screen report among its principal's records through the agent-mail capability's list operation with the all-records option, and reads or acknowledges none of them
+- no-input-at-screen: NEVER: the Orchestrator sends a prompt or keystroke into a pane whose Applier session waits at a question or approval screen; it reports the screen verbatim to its overseer as a message record, once per screen under one correlation per Change, and ends that check
+- screen-report-lookup: ALWAYS: `/orchestrate-change` finds an earlier screen report among its overseer's records through the agent-mail capability's list operation with the all-records option, and reads or acknowledges none of them
 - stop-released-session: ALWAYS: the Orchestrator stops the session of an Applier that released its Change, other than a release its Hazards attribute to the session itself ending, stalling or running out of context, once the worktree status shows no running Applier work and the pane does not wait at a question or approval screen, which it reports instead and neither stops nor prompts; the stop leaves the pane at its shell and retains the worktree and its ignored drafts
+
+### Audit: permissions
+
 - launch-write-paths: ALWAYS: before each Applier start or relaunch, `/orchestrate-change` obtains from SPX's `spx verification run paths` the canonical write paths of the verification runs the Applier session records, supplies each path through the harness's supported parent-session permission configuration, on Claude Code an additional-directory option among the start's agent arguments, and preserves the operator's approval policy
 - permission-preflight: ALWAYS: after each Applier start or relaunch and before sending the Change's issue reference, `/orchestrate-change` runs a permission preflight that checks the Applier session's effective native child policy for write access to each supplied path, and stops with a configuration error naming each path the policy denies
 - renewed-planning: ALWAYS: `/orchestrate-change` plans permissions anew for each start, each relaunch, and each changed verification scope
