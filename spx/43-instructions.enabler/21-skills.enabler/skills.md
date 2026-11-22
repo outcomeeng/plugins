@@ -16,6 +16,10 @@ The skills-about-skills cluster is three peers with distinct roles:
 
 ## Assertions
 
+### Audit: run recording
+
+- record-as-judged: ALWAYS: `/audit-skill` and the auditor template of `/author-skill` record the root unit, where the run has one, as soon as the run starts, each other unit as soon as its judgment completes, and each finding the run records as soon as it is raised and its unit is recorded, so no unit or finding waits for the judgment of a later unit
+
 ### Compliance
 
 - ALWAYS: a composing skill names each static dependency — one `plugin:skill` name with no argument — through the shared `require_skill` directive, states a dependency that carries an argument or a run-time-resolved name as the owned `Use skill` sentence with that value in place, and declares skill-use capability through the optional `tool('use_skill')` frontmatter token, so every generated agent surface receives its native instruction and capability set ([audit])

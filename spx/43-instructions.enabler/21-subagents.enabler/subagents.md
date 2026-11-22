@@ -43,6 +43,7 @@ The subagents-about-subagents cluster is three peers with distinct roles:
 
 ### Audit: audit-subagent
 
+- record-as-judged: ALWAYS: `/audit-subagent` records each governing-declaration unit as soon as that declaration is read, the definition unit as soon as its judgment completes, and each finding the run records as soon as it is raised and the definition unit is recorded, so no unit or finding waits for the judgment of a later unit.
 - standards-loaded-first: ALWAYS: `/author-subagent` and `/audit-subagent` load `/subagent-standards` before doing any authoring or evaluation work — prevents memory-based assessment.
 - one-configuration: ALWAYS: `/audit-subagent` judges exactly one subagent configuration per invocation, and auditing several configurations dispatches one invocation per configuration.
 - changeset-run: ALWAYS: `/audit-subagent` records one changeset-scoped verification run with one unit for the definition the changeset changes and one unit for each governing declaration it reads, keys each finding `<unit>:<rule-id>`, and returns `BLOCKED` when the changeset leaves the definition unchanged or a governing standard is unreadable.
