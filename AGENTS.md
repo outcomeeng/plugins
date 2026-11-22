@@ -42,4 +42,5 @@ Work is done only when it is merged into `main` on origin.
 ## This repository
 
 - Product Tree: migrating from 3.2.
+- No Node is Passing. The repository commits no `spx.status.json`, so `spx spec status` reads every Node as declared or specified. A sealed `spx verification run` records an Audit or Review verdict and makes no Node Passing.
 - Merge runs `just check-full`, the Quality Gate of the `check` workflow. CI review: the `product-tree-review` workflow.
