@@ -10,7 +10,7 @@ Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `
 
 ### Changed
 
-- **`/orchestrate-change` names the overseer and the Chain of Positions.** Its last argument is the overseer's mail name, `<overseer-mail-name>`, and the skill reports a release or a screen to the overseer, lists the overseer's records, and passes a question that reopens product or architecture judgment up the Chain of Positions. It calls the Orchestrator a Position. Before this change, the skill named the same agent-mail recipient the principal. The argument keeps its position, so a caller passes the same value.
+- **`/orchestrate-change` names the overseer and the Chain of Positions.** Its last argument is the overseer's mail name, `<overseer-mail-name>`, and the skill reports a release or a screen to the overseer, lists the overseer's records, and passes a question that reopens product or architecture judgment up the Chain of Positions. It calls the Orchestrator a Position. A **Check** that reports a screen or a release returns result `checked` with reason `awaiting-overseer`, where it returned `awaiting-principal`, so a caller that matches the reason matches the new value. Before this change, the skill named the same agent-mail recipient the principal. The argument keeps its position, so a caller passes the same value.
 
 ## 0.21.0
 
