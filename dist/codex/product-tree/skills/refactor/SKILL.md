@@ -171,7 +171,7 @@ A move that changes the node's parent or its index starts only when the matrix f
 
 After applying any operation, run the product's verify command for the spec lane against the restructured tree: `spx validation markdown` and `spx spec status --format json`, and every further command the root guide names for a spec-only change, which runs through per-call approval where the grants above omit it. A nonzero exit stops the run with the command, its exit code, and its failing output. Then check each criterion:
 
-- [ ] No broken evidence links — every `([test](...))` in affected specs resolves to an existing file
+- [ ] No broken evidence links — every slug link to a test file in affected specs resolves to an existing file
 - [ ] No orphaned test files — every test file in affected `tests/` directories is linked from an assertion
 - [ ] Notes (ISSUES.md, and a prior-form PLAN.md) moved with their node — they are node-local, not shared (do not need evidence links)
 - [ ] No empty nodes — every node has at least one assertion
@@ -227,9 +227,9 @@ How to avoid: In the impact analysis step, glob for all ADRs/PDRs in the source 
 
 **Failure 2: Test links broken after move, not caught**
 
-Claude moved a node and its `tests/` directory but didn't update the assertion evidence links in ancestor specs that referenced `([test](old-path/tests/...))`. The assertions still claimed coverage, but the links pointed to nonexistent files.
+Claude moved a node and its `tests/` directory but didn't update the assertion evidence links in ancestor specs that linked `[slug](old-path/tests/...)`. The assertions still claimed coverage, but the links pointed to nonexistent files.
 
-How to avoid: After any move, grep the entire `spx/` tree for the old path. Every match is a broken reference that must be updated. The validation step checks "every `([test](...))` resolves to an existing file" — run it.
+How to avoid: After any move, grep the entire `spx/` tree for the old path. Every match is a broken reference that must be updated. The validation step checks that every slug link to a test file resolves to an existing file — run it.
 
 **Failure 3: Bare decision reference survived the move**
 

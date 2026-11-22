@@ -3,7 +3,7 @@ model: "sonnet"
 effort: "medium"
 name: change-tester
 description: >-
-  Round session `/apply-change` launches by exact name when a Declarations subsection needs routed `[test]` evidence produced or repaired through `/test`.
+  Round session `/apply-change` launches by exact name when a Declarations subsection needs routed Test evidence produced or repaired through `/test`.
 disallowedTools: Agent, AskUserQuestion
 skills:
   - product-tree:test

@@ -211,7 +211,7 @@ Why it failed: Claude treated an implementation detail measurable by a specialis
 
 How to avoid: Step 4 asks "Is the behavior the CAN RELY ON line names falsifiable from the user's perspective?"
 
-**Failure 3: Approved a universal claim tagged as a scenario**
+**Failure 3: Approved a universal claim under a `### Test.Scenario` heading**
 
 Claude saw the rule "csv-format: ALWAYS: every export conforms to RFC 4180." in a `### Test.Scenario: export` group and approved it because the prose read like a concrete interaction. `ALWAYS` is a universal claim, and a single scenario cannot establish a claim about every case — the group should be `Test.Mapping`, `Test.Conformance`, `Test.Property`, or `Test.Compliance`. The mismatch is `assertion-type-mismatch`, not `invalid-tag`.
 

@@ -68,7 +68,7 @@ Classify each `.md` file in scope by its filename extension or parent directory 
 - Files inside `tests/` directories (test code, not specs)
 - `ISSUES.md` files, and any `PLAN.md` a tree authored under a 3.x version still carries (stale-prone notes, not spec artifacts)
 - Files inside `spx/local/` directory (skill overlays, not spec artifacts)
-- Files inside an `evals/` directory sitting directly under a node directory (the co-located `[eval]` evidence lane the canonical node shape in live `/understand` `<files_in_a_node>` declares, not spec artifacts); an `evals/` directory anywhere else stays in scope
+- Files inside an `evals/` directory sitting directly under a node directory (the co-located Evaluate evidence lane the canonical node shape in live `/understand` `<files_in_a_node>` declares, not spec artifacts); an `evals/` directory anywhere else stays in scope
 - Files inside a `knowledge/` directory sitting directly under a node directory or the product root (knowledge bundles the canonical node shape in live `/understand` `<files_in_a_node>` declares, not spec artifacts); a `knowledge/` directory anywhere else stays in scope
 
 </file_classification>
@@ -169,7 +169,7 @@ Report only the factual gap: the changed higher-level declaration, the constrain
 
 <failure_modes>
 
-**Evidence specialization reported as duplication.** Claude reported child `[test]` rules over concrete workflow-observability helpers as duplicates of marketplace-wide ancestor semantic-evidence rules. The finding collapsed deterministic falsification at a narrow code surface into semantic judgment at a broad scope, so removing the child rules would have weakened the evidence chain. Compare both content and evidence mechanism before reporting duplication: same-content and same-evidence repetition is misplaced, while child `[test]` concretizing ancestor `[audit]` is valid specialization.
+**Evidence specialization reported as duplication.** Claude reported child Test rules over concrete workflow-observability helpers as duplicates of marketplace-wide ancestor semantic-evidence rules. The finding collapsed deterministic falsification at a narrow code surface into semantic judgment at a broad scope, so removing the child rules would have weakened the evidence chain. Compare both content and evidence mechanism before reporting duplication: same-content and same-evidence repetition is misplaced, while a child Test rule concretizing an ancestor Audit rule is valid specialization.
 
 </failure_modes>
 
