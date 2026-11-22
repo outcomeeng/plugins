@@ -33,7 +33,8 @@ anywhere and every process it starts:
 - a candidate edited before ``start``, and after it before ``reconcile``;
 - a scope payload SPX rejects, which blocks with SPX's exit code and stderr;
 - a request that is not UTF-8 text;
-- a candidate that is absent, a directory, unreadable, or Windows-1252 text;
+- a candidate that is absent, a directory, unreadable, or Windows-1252 text,
+  and a candidate outside the draft store or linked into it;
 - for each operation that takes a ``runToken``, a request naming a started
   run with fields its operation does not take, which blocks with that
   operation and run token;
@@ -63,7 +64,9 @@ Every operation that names a candidate or a record path takes the Product's
 checkout root as ``root``, an absolute path, and runs its ``git`` and ``spx``
 commands with that root as the working directory. ``read-candidate``,
 ``start``, ``add-scope``, ``add-finding``, ``reconcile``, and ``finish`` read
-the candidate at the absolute Draft path the request names, and key the run by
+the candidate at the absolute Draft path the request names, which ``read-candidate``,
+``start``, and ``reconcile`` accept only when ``spx draft list --kind change
+--all`` run from ``root`` lists it and it is no link, and key the run by
 the scope type ``file`` and the scope the request's ``issue`` names, the
 canonical ``owner/repo#N`` reference of the audited Change. ``read-at``,
 ``governing-decisions``, and ``resolve-reference`` resolve the path a record
@@ -334,6 +337,15 @@ DRAFT_CREATE_COMMAND: Final = (
     "create",
     "--kind",
     CHANGE_DRAFT_KIND,
+)
+#: The command that lists every Change Draft the SPX draft store retains.
+DRAFT_LIST_COMMAND: Final = (
+    SPX_EXECUTABLE,
+    "draft",
+    "list",
+    "--kind",
+    CHANGE_DRAFT_KIND,
+    "--all",
 )
 GH_EXECUTABLE: Final = "gh"
 _GRAPHQL: Final = (GH_EXECUTABLE, "api", "graphql")
@@ -933,6 +945,50 @@ def _within(root: pathlib.Path, path: pathlib.Path, named: str) -> bool:
         ) from exc
 
 
+def _listed_draft(
+    context: _Context, root: pathlib.Path, draft: pathlib.Path
+) -> pathlib.Path:
+    """Return ``draft`` when the draft store lists it and it is no link, or block.
+
+    The candidate is a Change Draft at the absolute path ``spx draft create``
+    returned, so a path the store run from ``root`` does not list, or a link
+    in its place, never reaches a read.
+    """
+    stdout = _command(context, DRAFT_LIST_COMMAND, cwd=root)
+    listed: set[str] = set()
+    for line in stdout.splitlines():
+        if not line.strip():
+            continue
+        try:
+            entries = json.loads(line)
+        except (ValueError, RecursionError) as exc:
+            raise Blocked(
+                BlockReason.UNREADABLE_OUTPUT,
+                f"`{' '.join(DRAFT_LIST_COMMAND)}` printed output that is not a JSON array; run it by hand and confirm the installed spx version lists drafts as JSON",
+            ) from exc
+        if not isinstance(entries, list):
+            raise Blocked(
+                BlockReason.UNREADABLE_OUTPUT,
+                f"`{' '.join(DRAFT_LIST_COMMAND)}` printed no JSON array of drafts; run it by hand and confirm the installed spx version lists drafts as JSON",
+            )
+        listed.update(
+            entry[SpxField.PATH]
+            for entry in entries
+            if isinstance(entry, dict) and isinstance(entry.get(SpxField.PATH), str)
+        )
+    if str(draft) not in listed:
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"candidate is no Change Draft the draft store lists: {draft}; pass the absolute Draft path that retain-record returned",
+        )
+    if draft.is_symlink():
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"candidate is a link, not the Draft file the draft store holds: {draft}; pass the absolute Draft path that retain-record returned",
+        )
+    return draft
+
+
 def _draft_content(draft: pathlib.Path) -> str:
     """Read the candidate Draft exactly as stored at its absolute path."""
     if not draft.exists():
@@ -1018,8 +1074,8 @@ def _retained_content(
 def _read_candidate(
     context: _Context, request: Mapping[str, object]
 ) -> dict[str, object]:
-    draft = _draft_path(request)
-    _product_root(context, _checkout_root(request))
+    root = _product_root(context, _checkout_root(request))
+    draft = _listed_draft(context, root, _draft_path(request))
     content = _draft_content(draft)
     return {
         ResultField.PATH: str(draft),
@@ -1083,10 +1139,10 @@ def _tool_version(
 
 
 def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
-    draft = _draft_path(request)
     scope = _scope(request)
     expected = _candidate_sha256(request)
     root = _product_root(context, _checkout_root(request))
+    draft = _listed_draft(context, root, _draft_path(request))
     content = _draft_content(draft)
     if _sha256(content) != expected:
         raise Blocked(
@@ -1221,10 +1277,10 @@ def _finding_entries(
 
 
 def _reconcile(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
-    draft = _draft_path(request)
     scope = _scope(request)
     run_token = _run_token(request)
     root = _product_root(context, _checkout_root(request))
+    draft = _listed_draft(context, root, _draft_path(request))
     retained = _retained_content(context, root, scope, run_token)
     live = _draft_content(draft)
     if live != retained:

@@ -8,12 +8,13 @@ one worktree, and a failure part-way through a run — a candidate that changes,
 a payload SPX rejects, a request the runner refuses, and a candidate it cannot
 take.
 
-Each candidate is a Change Draft in a draft store outside the repository, the
-Draft of one Change named by its canonical issue reference. The runner reads
-the candidate at its absolute path and starts, appends to, reconciles, and
-finishes its run with the scope type ``file`` and that issue reference as the
-scope; the violating case is a run keyed by anything else, such as the
-candidate's path.
+Each candidate is a Change Draft that ``spx draft create`` created in the
+draft store, the Draft of one Change named by its canonical issue reference.
+The runner reads the candidate at its absolute path and starts, appends to,
+reconciles, and finishes its run with the scope type ``file`` and that issue
+reference as the scope; the violating cases are a run keyed by anything else,
+such as the candidate's path, and a candidate outside the draft store or
+linked into it, which the runner refuses before reading.
 
 Each subprocess invocation is observed for every file the runner process
 writes wherever the path lies — a fixed temporary path, the home directory, or
@@ -25,6 +26,7 @@ process under the same audit-hook observation.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Mapping
 from pathlib import Path
@@ -35,6 +37,7 @@ from outcomeeng_testing.harnesses.audit_change_run import (
     CAPTURED_CHANGE_RECORD,
     CHANGE_TEMPLATE,
     AuditWorkspace,
+    UNCONTAINED_CONDITIONS,
     CandidateCondition,
     EntryPointCall,
     RunnerCall,
@@ -58,6 +61,12 @@ ExitCode = runner.ExitCode
 SpxField = runner.SpxField
 PERMITTED_EXECUTABLES = frozenset({runner.SPX_EXECUTABLE, runner.GIT_EXECUTABLE})
 _RUN_COMMAND = (runner.SPX_EXECUTABLE, "verification", "run")
+#: How the runner refuses each uncontained candidate: a file outside the store is
+#: no Draft the store lists, and spx refuses to list a store that holds a link.
+_UNCONTAINED_REASONS = {
+    CandidateCondition.OUTSIDE_STORE: Reason.PATH_REJECTED,
+    CandidateCondition.LINKED_INTO_STORE: Reason.COMMAND_FAILED,
+}
 #: A repository-relative path a record names, resolved during each audit.
 _RECORD_REFERENCE = "spx/20-tasks.domain/tasks.md"
 
@@ -211,7 +220,6 @@ def test_every_run_command_of_an_audit_keys_the_run_by_the_issue_reference_and_r
             calls
         )
         assert Path(draft).is_absolute()
-        assert not Path(draft).is_relative_to(workspace.root)
         assert {"start", "input", "scope", "finding", "status", "render"} <= set(verbs)
         assert "finish" in verbs
         assert [_option(command, "--scope-type") for command in commands] == [
@@ -522,6 +530,47 @@ def test_an_audit_launched_from_another_directory_seals_its_run_in_the_named_roo
         assert changes.in_repository_outside_store == ()
         assert changes.in_runner_temporary_directory == ()
         assert changes.in_runner_home_directory == ()
+
+
+@pytest.mark.parametrize("condition", UNCONTAINED_CONDITIONS)
+@pytest.mark.parametrize(
+    "operation", (Operation.READ_CANDIDATE, Operation.START, Operation.RECONCILE)
+)
+def test_a_candidate_outside_the_draft_store_blocks_before_any_read_of_it(
+    condition: CandidateCondition, operation: object
+) -> None:
+    with audit_workspace() as workspace:
+        draft = workspace.place_in_condition(condition, CAPTURED_CHANGE_RECORD)
+        content = Path(draft).read_text(encoding=runner.TEXT_ENCODING)
+        extra: dict[str, object] = {}
+        if operation == Operation.START:
+            extra = {
+                Field.CANDIDATE_SHA256: hashlib.sha256(
+                    content.encode(runner.TEXT_ENCODING)
+                ).hexdigest()
+            }
+        if operation == Operation.RECONCILE:
+            extra = {Field.RUN_TOKEN: runner.NOT_STARTED}
+        before = workspace.snapshot()
+
+        blocked = workspace.invoke(
+            {**workspace.candidate_request(operation, draft), **extra}
+        )
+        changes = workspace.changes_since(before)
+
+        assert blocked.exit_code == ExitCode.BLOCKED
+        assert blocked.result[Result.REASON] == _UNCONTAINED_REASONS[condition]
+        assert draft in json.dumps(blocked.result)
+        assert content not in json_strings(blocked.result)
+        assert tuple(runner.DRAFT_LIST_COMMAND) in blocked.spawned_commands
+        assert [
+            command
+            for command in blocked.spawned_commands
+            if command[: len(_RUN_COMMAND)] == _RUN_COMMAND
+        ] == []
+        assert blocked.runner_writes == ()
+        assert changes.in_spx_store == ()
+        assert changes.in_repository_outside_store == ()
 
 
 @pytest.mark.parametrize("condition", tuple(CandidateCondition))

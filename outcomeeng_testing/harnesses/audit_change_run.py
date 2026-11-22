@@ -1,13 +1,15 @@
 """Workspace, invocation, and observation harness for the audit-change runner.
 
 Backs the ``[test]`` evidence that an audit-change run writes no file.
-Each workspace is a fresh Git repository in a temporary directory beside four
-initially empty directories: a draft store outside the repository, one the
-runner receives as its temporary directory, one it receives as its home
-directory, and one outside all three. The harness places whole-payload Change
-records into the draft store, each as the Draft of one Change named by its
-issue reference, and starts the shipped runner as a subprocess, with one
-request on stdin, under the process observer in ``audit_change_run_observer``. Every
+Each workspace is a fresh Git repository, whose ``.gitignore`` keeps the SPX
+store out of git, in a temporary directory beside three initially empty
+directories: one the runner receives as its temporary directory, one it
+receives as its home directory, and one outside both. The harness places
+whole-payload Change records into Drafts it creates through ``spx draft create
+--kind change`` in the repository's SPX draft store, each the Draft of one
+Change named by its issue reference, and starts the shipped runner as a
+subprocess, with one request on stdin, under the process observer in
+``audit_change_run_observer``. Every
 invocation therefore exposes what the runner printed, every file the runner
 process wrote wherever the path lies, and every process it started. Directory
 snapshots add what changed in the repository, the SPX store, and the runner's
@@ -120,6 +122,11 @@ MALFORMED_REQUEST_PROPERTY_REPLAY: Final = (
 )
 
 _CANDIDATE_DIRNAME: Final = "changes"
+#: Where ``spx draft create --kind change`` keeps a Change Draft under a checkout.
+_DRAFT_STORE_DIR: Final = Path(SPX_STORE_DIR) / "drafts" / "change"
+#: The ignore rule that keeps the SPX store out of git, as the draft store requires.
+_GITIGNORE: Final = ".gitignore"
+_SPX_STORE_IGNORE_RULE: Final = f"{SPX_STORE_DIR}/\n"
 #: The Change store whose issue references name the audited candidates.
 AUDITED_CHANGE_STORE: Final = "acme/changes"
 _FIXTURE_SUFFIX: Final = ".txt"
@@ -275,14 +282,22 @@ class CandidateCondition(StrEnum):
     DIRECTORY = "directory"
     UNREADABLE = "unreadable"
     WINDOWS_1252 = "windows-1252"
+    OUTSIDE_STORE = "outside-store"
+    LINKED_INTO_STORE = "linked-into-store"
+
+
+#: The conditions whose candidate lies outside the draft store or links into it.
+UNCONTAINED_CONDITIONS: Final = (
+    CandidateCondition.OUTSIDE_STORE,
+    CandidateCondition.LINKED_INTO_STORE,
+)
 
 
 @dataclass
 class AuditWorkspace:
-    """A Git repository, a draft store holding Change candidates, and the runner's own directories."""
+    """A Git repository whose SPX draft store holds Change candidates, and the runner's own directories."""
 
     root: Path
-    draft_store: Path
     runner_temporary_directory: Path
     runner_home_directory: Path
     outside_directory: Path
@@ -290,9 +305,9 @@ class AuditWorkspace:
     _issues: dict[str, str] = field(default_factory=dict)
 
     def path_for(self, source: Path) -> str:
-        """Return the absolute Draft path ``place`` gives ``source``, without placing it."""
+        """Return an absolute path in the draft store that holds no Draft of ``source``."""
         name = source.name.removesuffix(_FIXTURE_SUFFIX)
-        return str(self.draft_store / name)
+        return str(self.root.resolve() / _DRAFT_STORE_DIR / name)
 
     def issue(self, draft: str) -> str:
         """Return the canonical issue reference of the Change a candidate Draft records."""
@@ -300,10 +315,24 @@ class AuditWorkspace:
             draft, f"{AUDITED_CHANGE_STORE}#{len(self._issues) + 1}"
         )
 
+    def create_draft(self) -> Path:
+        """Create one empty Change Draft through ``spx draft create``; return its path."""
+        runner = load_runner()
+        completed = subprocess.run(  # noqa: S603
+            list(runner.DRAFT_CREATE_COMMAND),
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        created = json.loads(completed.stdout.splitlines()[-1])
+        return Path(created[runner.SpxField.PATH])
+
     def place(self, source: Path) -> str:
-        """Copy a whole-payload record into the draft store; return its absolute path."""
-        draft = self.path_for(source)
-        shutil.copyfile(source, draft)
+        """Copy a whole-payload record into a new Draft of the store; return its absolute path."""
+        target = self.create_draft()
+        shutil.copyfile(source, target)
+        draft = str(target)
         self.issue(draft)
         return draft
 
@@ -329,13 +358,28 @@ class AuditWorkspace:
             raise RuntimeError(
                 f"{source} carries no apostrophe to re-encode as Windows-1252"
             )
-        name = source.name.removesuffix(_FIXTURE_SUFFIX)
-        target = self.draft_store / f"{_WINDOWS_1252_PREFIX}{name}"
+        target = self.create_draft()
         target.write_bytes(
             text.replace(_TYPEWRITER_APOSTROPHE, _TYPOGRAPHIC_APOSTROPHE).encode(
                 _WINDOWS_1252_CODEC
             )
         )
+        return str(target)
+
+    def place_outside_store(self, source: Path) -> str:
+        """Copy a record to a regular file outside the draft store; return its path."""
+        target = self.outside_directory.resolve() / source.name.removesuffix(
+            _FIXTURE_SUFFIX
+        )
+        shutil.copyfile(source, target)
+        return str(target)
+
+    def place_linked_into_store(self, source: Path) -> str:
+        """Put a link to a record outside the store where the store holds a Draft."""
+        outside = Path(self.place_outside_store(source))
+        target = self.create_draft()
+        target.unlink()
+        target.symlink_to(outside)
         return str(target)
 
     def place_unreadable(self, source: Path) -> str:
@@ -363,6 +407,8 @@ class AuditWorkspace:
             CandidateCondition.DIRECTORY: self.place_directory,
             CandidateCondition.UNREADABLE: self.place_unreadable,
             CandidateCondition.WINDOWS_1252: self.place_windows_1252,
+            CandidateCondition.OUTSIDE_STORE: self.place_outside_store,
+            CandidateCondition.LINKED_INTO_STORE: self.place_linked_into_store,
         }
         return placements[condition](source)
 
@@ -519,7 +565,6 @@ def audit_workspace() -> Iterator[AuditWorkspace]:
         base = Path(temporary)
         workspace = AuditWorkspace(
             root=base / "repository",
-            draft_store=base / "drafts",
             runner_temporary_directory=base / "runner-temporary",
             runner_home_directory=base / "runner-home",
             outside_directory=base / "outside",
@@ -527,7 +572,6 @@ def audit_workspace() -> Iterator[AuditWorkspace]:
         )
         for directory in (
             workspace.root,
-            workspace.draft_store,
             workspace.runner_temporary_directory,
             workspace.runner_home_directory,
             workspace.outside_directory,
@@ -537,6 +581,9 @@ def audit_workspace() -> Iterator[AuditWorkspace]:
         subprocess.run(  # noqa: S603
             ["git", "init", "--quiet", str(workspace.root)],  # noqa: S607
             check=True,
+        )
+        (workspace.root / _GITIGNORE).write_text(
+            _SPX_STORE_IGNORE_RULE, encoding="utf-8"
         )
         yield workspace
 
