@@ -10,6 +10,13 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.9
+
+### Changed
+
+- **`author-change` publishes every record through one command that checks the form first.** `scripts/publish.py` runs the `change-standards` form check on the exact Draft and writes nothing while it fails. On a pass it writes the title, the body, and the Product, Parent, Predecessors and Base fields and the native blockers from the Draft, clearing each of them the Draft empties or leaves out. It leaves every other field, Priority, Value and Investment included, as the Change Store holds it, and writes Maturity and Lifecycle only when recording; recording a Child writes its Parent's stored Priority. The skill grants no `gh issue create` or `gh issue edit` of its own. A split's Parent clears its Base by publishing a Draft without `base`. Before this change, the skill checked the form and wrote the record in separate steps, so a publish could follow a failed check, and no documented write cleared a field.
+- **The form check reads no checkout for a Proposed Draft that holds only its Statement of Intent.** It judges such a Draft's `base` by its form alone, so `author-change` records a Proposed Change for another Product of the declared Change Store from any checkout. It takes that Product's head with `gh api repos/<owner>/<repo>/commits/<default> --jq .sha`. Before this change, the form check failed `draft-base` whenever the Base named no commit in the local checkout.
+
 ## 0.115.8
 
 ### Added

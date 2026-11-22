@@ -126,6 +126,36 @@ def write_draft(
     return draft
 
 
+def write_record(
+    directory: Path,
+    base: str,
+    body: str,
+    *,
+    maturity: str = "Proposed",
+    name: str = "record.md",
+) -> Path:
+    """Write a Draft at ``maturity`` on ``base`` whose body is ``body``, as a stored record composes."""
+    draft = directory / name
+    front = [
+        "---",
+        "title: The thing reads things",
+        "product: plugins",
+        f"maturity: {maturity}",
+        "lifecycle: Submitted",
+        "parent: null",
+        "predecessors: []",
+        "blockers: []",
+        f"base: {base}",
+        "priority: null",
+        "primary_value: null",
+        "investment: null",
+        "---",
+        "",
+    ]
+    draft.write_text("\n".join(front) + body, encoding="utf-8")
+    return draft
+
+
 @dataclass(frozen=True)
 class StoreStampRunner:
     """Answer the Change Store's edit-stamp read with ``stamp``; run every other command.

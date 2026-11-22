@@ -203,6 +203,12 @@ Each Transition takes a Change in the state its row requires and changes what it
 - draft-base: ALWAYS: the base of a Draft of a Leaf names the head of the default branch against which the Refiner wrote its Declarations.
 - overlay-root-headings: ALWAYS: in a repository whose `spx/local/changes.md` at the Base holds the line `- Repository-root headings: admitted`, a subsection for a file outside `spx/` takes the heading the created and no-tree rows of subsection-headings state, the diff lines the no-tree rows of diff-lines state, and the operations operation-kinds admits for a file of a Product with no Product Tree; in a repository with a Product Tree whose changes overlay holds no such line, a heading outside `spx/` fails subsection-headings.
 
+### Test.Compliance: publish and stored bodies
+
+- [publish-checked](tests/test_change_publish.compliance.l2.py): ALWAYS: a publish checks the form of the exact Draft it writes in the same run, and writes nothing to the Change Store when that check fails.
+- stored-body: ALWAYS: the form check judges a stored record's body as it judges a Draft's, and fails a body that holds no Statement of Intent with its Output, Why and Verification, such as a body that is only a link.
+- proposed-no-checkout: ALWAYS: the form check reads no checkout for a Proposed Draft that holds only its Statement of Intent, so a session records a Proposed Change for any Product of the declared Change Store from any checkout.
+
 ### Test.Mapping: github-store
 
 Where the Change Store is a GitHub repository, each part of a record has the one home its row names.
@@ -233,6 +239,7 @@ Where the Change Store is a GitHub repository, each part of a record has the one
 - github-one-holder: ALWAYS: the Provider keeps at most one assignee on a Change issue.
 - github-parent: ALWAYS: a Child lives in its Parent's Change Store, so the Parent number names the Parent's issue in that store.
 - github-limit: ALWAYS: the size limit of a GitHub Change Store is 65,536 characters of issue body.
+- [github-clear](tests/test_change_publish.compliance.l2.py): ALWAYS: a publish writes the title, Product, Parent, predecessors, blockers and base from the Draft, clearing each of them the Draft empties or leaves out, and leaves every other field as the Change Store holds it.
 
 ### Audit: record content
 

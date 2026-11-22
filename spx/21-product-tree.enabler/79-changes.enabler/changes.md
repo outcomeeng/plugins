@@ -21,6 +21,8 @@ CAN write, check, and audit every Change record in one form
 - [form-check-merged-base](tests/test_form_check_rows.compliance.l2.py): ALWAYS: for a Leaf whose Changeset has merged into the default branch, the form check reads each deletion, move or replacement at the Base the latest advance to Sliced recorded, and refuses no publish on a new base.
 - [form-check-linked-heading](tests/test_form_check_rows.compliance.l2.py): ALWAYS: the form check takes the slug of a Mapping or Evaluate subsection whose heading carries a slug link as that link's text, and accepts the infrastructure line keyed by that slug.
 - [form-check-scenario-steps](tests/test_form_check_rows.compliance.l2.py): ALWAYS: the form check reads every indented line opening with Given, When, Then or And that follows a `+` Scenario row as part of that row, and requires no slug of it.
+- [form-check-stored-body](tests/test_form_check_rows.compliance.l2.py): ALWAYS: the form check fails a stored record whose body is a link alone or lacks the Output, the Why or the Verification of its Statement of Intent, and passes one that holds all three.
+- [form-check-foreign-proposed](tests/test_form_check_rows.compliance.l2.py): ALWAYS: the form check passes a Proposed Draft of another Product that holds only its Statement of Intent, run against a checkout of a different repository.
 
 ### Audit: change-standards
 
@@ -48,6 +50,8 @@ CAN write, check, and audit every Change record in one form
 - author-publish: author-change records a Change, publishes a revision of its record, and splits a Leaf, each from a Change Draft, and writes each part of the record to its home in the GitHub issue, as the github-store Mapping of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states them.
 - author-trace: Before each publish at Framed or Sliced, author-change traces each result the Verification part of the Statement of Intent names to the Declarations line that carries it, and repairs the record for each result no line carries.
 - author-audit-dispatch: author-change dispatches change-auditor for a Sliced Leaf, with the issue reference of its record and the checkout root, and the holder advances the Leaf to Applicable only when the sealed run of that audit holds no finding at the current Base of the record.
+- author-publish-command: author-change routes every publish through one command that runs the form check on the exact Draft and writes to the Change Store only when it passes, writing the title, Product, Parent, predecessors, blockers and base from the Draft, clearing each of them the Draft empties or leaves out, and leaving every other field as the Change Store holds it; its SKILL.md names no other way to write a record.
+- author-foreign-proposed: author-change records a Proposed Change for another Product of the declared Change Store from a checkout of a different repository.
 
 ### Audit: audit-change
 
