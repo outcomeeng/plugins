@@ -65,7 +65,7 @@ def commit_tree_base(repo: pathlib.Path, overlay: str | None) -> str:
     return commit_base(repo, files)
 
 
-def judged_findings(
+def findings_at(
     repo: pathlib.Path,
     draft: pathlib.Path,
     heading: str,
@@ -74,7 +74,20 @@ def judged_findings(
     return [
         finding
         for finding in findings(repo, draft, capsys)
-        if finding["rule"] in JUDGED_RULES and finding["location"] == heading
+        if finding["location"] == heading
+    ]
+
+
+def judged_findings(
+    repo: pathlib.Path,
+    draft: pathlib.Path,
+    heading: str,
+    capsys: pytest.CaptureFixture[str],
+) -> list[dict[str, str]]:
+    return [
+        finding
+        for finding in findings_at(repo, draft, heading, capsys)
+        if finding["rule"] in JUDGED_RULES
     ]
 
 
@@ -88,7 +101,7 @@ def test_admitting_overlay_accepts_root_headings(
     repo = tmp_path / "repo"
     base = commit_tree_base(repo, ADMITTING_OVERLAY)
     draft = write_draft(tmp_path, base, INTENT, heading, payload)
-    assert judged_findings(repo, draft, heading, capsys) == []
+    assert findings_at(repo, draft, heading, capsys) == []
 
 
 OVERLAYS_WITHOUT_LINE = {"silent-overlay": SILENT_OVERLAY, "no-overlay": None}
