@@ -118,7 +118,7 @@ The sealed assertion-audit run `2026-10-17_01-48-01-824-32b1ebea83ce` of `spx/21
 
 ## The skill records no verification run, so its recording rows await an implementation `spx/21-product-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md` `record-as-judged` `consistency`
 
-`src/plugins/product-tree/skills/audit-tests/SKILL.md` runs no `spx verification run`, so its `record-as-judged` row declare recording behavior the shipped skill does not have. The Node is spec-malleable, so the declaration stands ahead of its implementation.
+`src/plugins/product-tree/skills/audit-tests/SKILL.md` runs no `spx verification run`, so its `record-as-judged` row declares recording behavior the shipped skill does not have. The Node is spec-malleable, so the declaration stands ahead of its implementation.
 
 **Why this is a separate larger concern.** Making `/audit-tests` record a sealed run, with its units and findings recorded as each judgment completes, rewrites the skill's verdict output and its wrapper's relay. That work lies outside the Frame of outcomeeng/changes#1078, which declares only the recording order.
 
