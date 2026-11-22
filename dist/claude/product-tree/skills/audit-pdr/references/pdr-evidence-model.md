@@ -109,11 +109,11 @@ The behavior the CAN RELY ON line names is a guarantee users can rely on. It mus
 
 <tag_validity>
 
-Derive the form from the canonical PDR template. A rule directly under `## Verification`, outside any group, awaits selection and receives the same clarity and falsifiability checks. The checks below apply to the declaration; authoring approval supplies no evidence result:
+Derive the form from the canonical PDR template. Every rule under `## Verification` stands under a typed group heading. The checks below apply to the declaration; authoring approval supplies no evidence result:
 
-1. **Declaration form** — the PDR opens with a GOVERNS paragraph, writes each mapping rule as its own `### Mapping: <slug>` subsection holding one sentence and a table, keeps each group to at most ten rules, and holds no text outside its opening, a rule, or a table. A violation is `declaration-form`.
+1. **Declaration form** — the PDR opens with a GOVERNS paragraph, places every rule under a typed group heading, writes each mapping rule as its own `### Test.Mapping: <slug>` subsection holding one sentence and a table, keeps each group to at most ten rules, and holds no text outside its opening, a rule, or a table. A violation is `declaration-form`.
 2. **No tag, one slug** — a rule carries no tag, because its group heading names its verification type, and its leading slug is its one name and repeats nowhere in the PDR. A tag on a rule, or a repeated slug, is `invalid-tag`.
-3. **Assertion-type fit** — a rule's assertion type, named by its group heading, fits the claim's quantifier per the `/test` router; a universal `ALWAYS`/`NEVER` claim in a `### Scenario` group is `assertion-type-mismatch`, since a single case cannot establish a universal.
+3. **Assertion-type fit** — a rule's assertion type, named by its group heading, fits the claim's quantifier per the `/test` router; a universal `ALWAYS`/`NEVER` claim in a `### Test.Scenario` group is `assertion-type-mismatch`, since a single case cannot establish a universal.
 
 A rule is sound only when it is verifiable (a test, eval, or audit skill can determine pass/fail) and specific (two independent reviewers would agree on the verdict); an unverifiable or vague rule cannot sit in any group.
 
@@ -122,16 +122,16 @@ A rule is sound only when it is verifiable (a test, eval, or audit skill can det
 ```markdown
 ## Verification
 
-### Property: contrast
+### Test.Property: contrast
 
 - contrast-floor: ALWAYS: all text/background color pairs maintain ΔL ≥ 0.80 contrast in all themes.
 - no-internal-ids: NEVER: expose internal database IDs in user-facing URLs.
 
-### Conformance: export
+### Test.Conformance: export
 
 - csv-format: ALWAYS: export files conform to RFC 4180 CSV format.
 
-### Audit
+### Audit: settings
 
 - theme-variants-selectable: ALWAYS: every theme variant is selectable from the settings surface.
 ```
@@ -153,7 +153,7 @@ A rule is sound only when it is verifiable (a test, eval, or audit skill can det
 
 **Fixing bad rules:**
 
-- "Follow accessibility best practices" → "wcag-aa: ALWAYS: all interactive components meet WCAG 2.1 Level AA", in a `### Compliance` group
-- "Be fast" → "response-latency: ALWAYS: API responses return within 200ms at p95 under normal load", in a `### Property` group
+- "Follow accessibility best practices" → "wcag-aa: ALWAYS: all interactive components meet WCAG 2.1 Level AA", in a `### Test.Compliance` group
+- "Be fast" → "response-latency: ALWAYS: API responses return within 200ms at p95 under normal load", in a `### Test.Property` group
 
 </tag_validity>

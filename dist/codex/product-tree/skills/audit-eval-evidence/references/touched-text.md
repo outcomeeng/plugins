@@ -20,7 +20,7 @@ git merge-base HEAD origin/HEAD
 git diff --unified=0 <base> -- <artifact-path>
 ```
 
-The inspected artifacts are the spec's `[eval]` assertions, `eval.toml`, the prompt, the cases, `history.jsonl`, the prompt template, and the producer artifact or selected producer section. The enclosing unit is the assertion with its tag and link in the spec, the table or key in `eval.toml`, the case record in `cases.jsonl`, the history row in `history.jsonl`, and the section or declaration in the prompt, template, or producer. An artifact absent at the base is touched in full. A diff that cannot be resolved makes every inspected artifact touched, and the verdict names the failed command.
+The inspected artifacts are the spec's Evaluate Assertions, `eval.toml`, the prompt, the cases, `history.jsonl`, the prompt template, and the producer artifact or selected producer section. The enclosing unit is the assertion with its tag and link in the spec, the table or key in `eval.toml`, the case record in `cases.jsonl`, the history row in `history.jsonl`, and the section or declaration in the prompt, template, or producer. An artifact absent at the base is touched in full. A diff that cannot be resolved makes every inspected artifact touched, and the verdict names the failed command.
 
 Invalidated text is:
 

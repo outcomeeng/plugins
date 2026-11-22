@@ -1,6 +1,6 @@
 <overview>
 
-Detailed evidence model for eval auditing. Read this before auditing any `[eval]` assertion or eval suite.
+Detailed evidence model for eval auditing. Read this before auditing any Evaluate Assertion or eval suite.
 
 Five properties define eval evidence: producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence. This reference provides the taxonomy and procedures for each.
 
@@ -81,7 +81,7 @@ Assertion alignment checks whether the suite proves the spec assertion, not an a
 
 Procedure:
 
-1. Read the `[eval]` assertion text.
+1. Read the Evaluate Assertion's sentence and case table.
 2. Read each case's scenario and expected verdict fields.
 3. Map every expected field to a claim in the assertion.
 4. Confirm negative cases target the assertion's failure mode.
@@ -157,6 +157,6 @@ Use these `rule` values in findings:
 | `assertion-alignment` | Expected verdict fields do not prove the assertion                     |
 | `falsifiability`      | No mutation to the producer changes the result                         |
 | `run-evidence`        | Passing run evidence is missing, stale, or operationally incomplete    |
-| `no-eval-assertions`  | Target spec carries no `[eval]` assertion, so no eval evidence applies |
+| `no-eval-assertions`  | Target spec carries no Evaluate Assertion, so no eval evidence applies |
 
 </rejection_categories>

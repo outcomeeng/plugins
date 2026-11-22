@@ -46,11 +46,13 @@ PDRs state atemporal product truth without historical context. No references to 
 
 Bind the required PDR path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. If the request carries no path, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all five property rows marked `FAIL`. Each row carries a `missing-target` finding with severity `blocking`, unit `input`, locations `["input"]`, evidence naming the empty input, and a message naming the required PDR path. Stop before context loading or artifact inspection.
 
-Use skill `product-tree:understand` when the live `<PRODUCT_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.pdr.md` beneath that marker's resolved absolute template directory, then use skill `product-tree:contextualize` on the directory containing the PDR. Derive the declaration form from that canonical template. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
+Use skill `product-tree:understand` when the live `<PRODUCT_TREE_FOUNDATION>` marker is absent or lacks `Template root`. Read `decisions/decision-name.pdr.md` beneath that marker's resolved absolute template directory. Derive the declaration form from that canonical template. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
 
-The product document used below is the one `/contextualize` loads in its product-level context step. Use that document's declared audience and interaction surfaces for content classification.
+Before any audit phase, load read-only, at the snapshot the checkout holds, the complete Walk to the Node that holds the PDR: every ancestor spec from the root, the product document included; at each level along the path, every sibling spec and each Decision Record indexed below the child the path continues through; every `ISSUES.md` along the path; the published contracts of the Node's immediate children; the Node's own Decision Records and spec, its Knowledge `index.md`, and its Outcome record. Then load, once, each decision a loaded spec or decision cites from another subtree. Judge the PDR as the subject and read every other loaded decision for awareness. Take as governing the PDR only a decision that governs it by Index, scope, or citation: one at a lower Index than the PDR in its own directory, one at a lower Index than the child the path continues through at an ancestor level, or one that a loaded spec or a governing record cites for it from another subtree. Run no command that fetches, rebases, or moves the checkout, so the audit changes no checkout state.
 
-Do not proceed without live `<PRODUCT_TREE_FOUNDATION>` and `<PRODUCT_TREE_CONTEXT>` markers for the PDR directory.
+The product document used below is the root product spec the Walk loads. Use that document's declared audience and interaction surfaces for content classification.
+
+Do not proceed without the live `<PRODUCT_TREE_FOUNDATION>` marker, the canonical PDR template, and the loaded Walk.
 
 </step>
 
@@ -101,15 +103,13 @@ A non-observable or unfalsifiable behavior is a `non-observable-property` findin
 
 Rules live under `## Verification`. Preserve Step 2's failed `tag-validity` row when the section is absent; an empty rule loop never clears that finding. If the section contains no rules, mark `tag-validity` as `FAIL` with `missing-verification-rules`.
 
-Check the declaration form the canonical template states. A PDR whose opening lacks a GOVERNS paragraph, whose mapping rule is not its own `### Mapping: <slug>` subsection holding one sentence and a table, whose group holds more than ten rules, or that holds text outside its opening, a rule, or a table is a `declaration-form` finding in `tag-validity`; mark the row `FAIL`, quote the offending text, and name the form it breaks.
-
-A rule directly under the section, outside any group, has the canonical authoring form and may coexist with groups. For every such rule, identify its subject, the observable condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in `property-quality`, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Select no evidence type during these checks.
+Check the declaration form the canonical template states. A PDR whose opening lacks a GOVERNS paragraph, that holds a rule under no typed group heading — `Test.Scenario`, `Test.Mapping: <slug>`, `Test.Conformance`, `Test.Property`, `Test.Compliance`, `Evaluate: <slug>`, `Probe`, or `Audit` — whose mapping rule is not its own `### Test.Mapping: <slug>` subsection holding one sentence and a table, whose group holds more than ten rules, or that holds text outside its opening, a rule, or a table is a `declaration-form` finding in `tag-validity`; mark the row `FAIL`, quote the offending text, and name the form it breaks.
 
 A rule carries no tag, because its group heading names its verification type and its leading slug is its one name. A rule that carries a tag, or whose slug repeats within the PDR, is an `invalid-tag` finding in `tag-validity`; mark the row `FAIL` and quote the rule.
 
-When a group heading names an assertion type, use skill `product-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to each rule's claim and its group's type. If the required reference cannot load, emit a `test-standards-unavailable` finding and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Reject a type whose required domain or oracle contradicts the claim as `assertion-type-mismatch`, citing the claim and the loaded criterion; do not choose among compatible types or require executable evidence for a declaration. Never invoke the mutating `/test` authoring workflow, select a replacement group, or change the PDR during this audit.
+When a `Test.` group heading names an assertion type, use skill `product-tree:test-evidence-standards` and load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to each rule's claim and its group's type. If the required reference cannot load, emit a `test-standards-unavailable` finding and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Reject a type whose required domain or oracle contradicts the claim as `assertion-type-mismatch`, citing the claim and the loaded criterion; do not choose among compatible types or require executable evidence for a declaration. Never invoke the mutating `/test` authoring workflow, select a replacement group, or change the PDR during this audit.
 
-Apply content classification, property quality, voice, and consistency to ungrouped and grouped declarations alike. Approval establishes declaration quality only; it supplies no evidence result, implementation claim, or Passing state for an ungrouped rule.
+Apply content classification, property quality, voice, and consistency to every rule. Approval establishes declaration quality only; it supplies no evidence result, implementation claim, or Passing state.
 
 </step>
 
@@ -213,7 +213,7 @@ How to avoid: Step 4 asks "Is the behavior the CAN RELY ON line names falsifiabl
 
 **Failure 3: Approved a universal claim tagged as a scenario**
 
-Claude saw the rule "csv-format: ALWAYS: every export conforms to RFC 4180." in a `### Scenario: export` group and approved it because the prose read like a concrete interaction. `ALWAYS` is a universal claim, and a single scenario cannot establish a claim about every case — the group should be `Mapping`, `Conformance`, `Property`, or `Compliance`. The mismatch is `assertion-type-mismatch`, not `invalid-tag`.
+Claude saw the rule "csv-format: ALWAYS: every export conforms to RFC 4180." in a `### Test.Scenario: export` group and approved it because the prose read like a concrete interaction. `ALWAYS` is a universal claim, and a single scenario cannot establish a claim about every case — the group should be `Test.Mapping`, `Test.Conformance`, `Test.Property`, or `Test.Compliance`. The mismatch is `assertion-type-mismatch`, not `invalid-tag`.
 
 How to avoid: Step 5 reads the quantifier first and separates a quantifier mismatch from a structural form problem.
 
@@ -232,7 +232,7 @@ The verdict is sound when:
 - Every PDR rule was judged with none skipped — content classification, property quality (observability, falsifiability, and stability), declaration form, tag absence, slug uniqueness and assertion-type fit, atemporal voice, and consistency (coverage-complete).
 - The verdict states an overall APPROVED/REJECTED, every property row carrying its determination, with no rule left unevaluated.
 - Each `blocking` finding lies on touched text, and every finding outside touched text appears as `filed` with its key, `baseRefEvidence`, and `issuesEntry`.
-- Each `blocking` finding is falsifiable: it names the location, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable, unfalsifiable, or unstable behavior, absent verification section or rules, the unverifiable rule, the broken declaration form, the tag or repeated slug, the mismatched assertion type, the temporal phrase, or the contradicted product document or ancestor PDR.
+- Each `blocking` finding is falsifiable: it names the location, the violated rule, and the evidence — the architecture content wrongly placed, the non-observable, unfalsifiable, or unstable behavior, absent verification section or rules, the the broken declaration form, a rule under no typed group heading, the tag or repeated slug, the mismatched assertion type, the temporal phrase, or the contradicted product document or ancestor PDR.
 - An absent or empty Verification section fails `tag-validity`; an unmet property-quality criterion fails `property-quality`. Neither condition can disappear through an empty iteration or receive an overall `APPROVED` verdict.
 - The same PDR yields the same verdict.
 

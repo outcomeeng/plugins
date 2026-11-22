@@ -3,7 +3,7 @@ model: "sonnet"
 effort: "medium"
 name: assertion-auditor
 description: >-
-  Verifier running `/audit-assertions`: a calling skill launches it by exact name with one node spec path when its gate requires an independent verdict on that node's `[audit]` assertions.
+  Verifier running `/audit-assertions`: a calling skill launches it by exact name with one node spec path when its gate requires an independent verdict on that node's Audit Assertions.
 tools: Read, Glob, Grep, Write, Bash(spx verification run:*), Bash(git merge-base:*), Bash(git diff:*), Skill
 skills:
   - product-tree:audit-assertions
