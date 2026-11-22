@@ -12,6 +12,16 @@ The Rust plugin composes foundational methodology with language-specific standar
 
 ## Assertions
 
+### Evaluate: [audit-row-count](evals/audit-row-count/eval.toml)
+
+author-rust-code receives a routed spec and reports the rows it treats as audit-routed, and the eval compares the reported count with the expected count.
+
+| Case          | Routed spec                                                                  | Audit rows |
+| ------------- | ---------------------------------------------------------------------------- | ---------- |
+| audit-heading | one slugged row under `### Audit`                                            | 1          |
+| ungrouped-row | one untagged slugged row directly under `## Assertions`                      | 0          |
+| tagged-row    | one slugged row directly under `## Assertions` that ends in an `[audit]` tag | 0          |
+
 ### Compliance
 
 - ALWAYS: the `audit-rust-{code|test|architecture}` skills carry no Rust-specific auditor agent, name no caller, and stay invocable on their own; `implementation-auditor`, `adr-auditor` and `test-evidence-auditor` compose them, and the author-context isolation an audit verdict requires binds the author context per [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) ([audit])
