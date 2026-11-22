@@ -18,7 +18,9 @@ remediation judgment for every non-healthy verdict.
 
 <workflow>
 
-1. Run `spx diagnose --manifest "${SKILL_DIR}/manifest.json"`.
+1. Run `spx diagnose --manifest "${SKILL_DIR}/manifest.json" --format json`.
+   The JSON report names each check, its verdict, and its bucket, which the
+   remediation items carry; the default text report names none of them.
 2. Preserve stdout, stderr, and the exit code exactly. Session identifiers,
    version strings, paths, marketplace names, plugin names, verdict names, and
    status values are identity values; report them verbatim.

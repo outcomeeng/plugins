@@ -19,6 +19,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 ### Changed
 
 - **Each `/diagnose` remediation item carries a severity.** The skill adds one remediation item per non-healthy check, naming that check, its verdict, and its bucket as the item's severity. When `spx diagnose` fails to start and yields no report, the skill relays the startup failure, its exit code, stdout, and stderr verbatim, and adds no remediation item. Before this change, the skill followed a startup failure with a direction to install or update `@outcomeeng/spx` to the manifest floor.
+- **`/diagnose` runs `spx diagnose` with `--format json` again.** The skill runs `spx diagnose --manifest "${SKILL_DIR}/manifest.json" --format json` and relays that JSON report verbatim, because each remediation item names its check, its verdict, and its bucket, which only the JSON report carries; the default text report shows a mark and a label per check. This reverses the 0.100.5 entry that dropped `--format` ahead of a retirement no `spx` decision record carries: `spx diagnose` keeps `--format` with text and JSON.
 
 ## 0.115.5
 
