@@ -14,7 +14,7 @@ The shipped artifact and its evidence still carry the old contract. `outcomeeng/
 
 **Related.** `outcomeeng/changes#123`, `outcomeeng/changes#122` and `outcomeeng/changes#192` carry the `spx diagnose` side of this move.
 
-## A not-applicable check's remediation item is unstated `src/plugins/product-tree/skills/diagnose/SKILL.md` `workflow step 4` `evidence`
+## A not-applicable check's remediation item is unstated `src/plugins/product-tree/skills/diagnose/SKILL.md` `workflow step 4` `consistency`
 
 **Evidence.** The diagnostic-remediation Evaluate subsection in `diagnostics.md` and step 4 of the shipped `diagnose` skill add one remediation item per non-healthy check, naming that check, its verdict and its bucket as the item's severity. A check in bucket `not-applicable` is neither healthy nor degraded, so a degraded report that also carries a `not-applicable` check leaves open whether that check gets an item of severity `not-applicable`. No case of the eval mixes a `not-applicable` check with a degraded one. The product-tree-review CI review raised this as a DEBT finding on https://github.com/outcomeeng/plugins/pull/782 at head `1a8d7be6f8c1182a4c386901fbeef4b90d48b51d`, and the Plugins Maintainer ruled it accepted.
 
