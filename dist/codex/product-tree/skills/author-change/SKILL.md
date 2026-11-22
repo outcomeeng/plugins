@@ -5,7 +5,7 @@ description: >-
   merging, or reframing an Outcome Engineering Change record, or when turning a
   request into one. NEVER use it to author a spec or review a code changeset.
 argument-hint: "<record | publish | split | merge | reframe> <intent, Draft path, or #N | owner/repo#N | issue-url>"
-allowed-tools: Read, Write, Edit, Grep, Glob, collaboration.spawn_agent, collaboration.wait_agent, Bash(git -C * rev-parse:*), Bash(git rev-parse:*), Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue create:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by/*:*), Bash(gh api repos/*/issues/* --jq .id), Bash(gh api user --jq .login), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(python3 "${SKILL_DIR}/scripts/check_form.py":*), Bash(id -un), Bash(hostname -s), Bash(printenv CODEX_THREAD_ID), request_user_input
+allowed-tools: Read, Write, Edit, Grep, Glob, collaboration.spawn_agent, collaboration.wait_agent, Bash(git -C * rev-parse:*), Bash(git rev-parse:*), Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue comment:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by/*:*), Bash(gh api repos/*/issues/* --jq .id), Bash(gh api user --jq .login), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(python3 "${SKILL_DIR}/scripts/check_form.py":*), Bash(python3 "${SKILL_DIR}/scripts/publish.py":*), Bash(gh api repos/*/commits/* --jq .sha), Bash(id -un), Bash(hostname -s), Bash(printenv CODEX_THREAD_ID), request_user_input
 ---
 
 <objective>
@@ -34,6 +34,8 @@ For a new Change, write the Draft from `${SKILL_DIR}/templates/leaf.md`, or `${S
 
 Fill every key under `record-keys`, `draft-lifecycle`, and `draft-base`: `base` is the full head commit of the default branch the Declarations read, from `git rev-parse origin/<default>` after a fetch. Write the Declarations under `<declarations>` of the standards, one subsection per artifact under `subsection-coverage`, checking every cited fact against the checkout under `facts-checked`. Name no Index for a new artifact; the Applier assigns it under `index-assignment`.
 
+A Proposed Change for another Product of the declared Change Store records from any checkout, under `proposed-no-checkout`: retain its Draft in this checkout, take its `base` from that Product's default branch with `gh api repos/<owner>/<repo>/commits/<default> --jq .sha`, and let it hold only its Statement of Intent, which the form check judges without reading this checkout.
+
 </draft>
 
 <form_check_gate>
@@ -44,7 +46,7 @@ Before every publish of a record below Applicable, and before every publish that
 python3 "${SKILL_DIR}/scripts/check_form.py" --root <checkout-root> --draft <draft-path> [--issue <owner/repo#N> --read-edited-at <read stamp>] [--published <composed-stored-draft>]
 ```
 
-Pass `--issue` and `--read-edited-at` for a publish that replaces a stored record, and `--published` for a Sliced record, the stored record composed into a payload file. Publish nothing while the check fails: repair each finding in the Draft, complete the sweep `${SKILL_DIR}/references/repair-sweep.md` states, and run the check again. An exit of 2 names the unusable argument or read; fix it and run again.
+Pass `--issue` and `--read-edited-at` for a publish that replaces a stored record, and `--published` for a Sliced record, the stored record composed into a payload file. Publish nothing while the check fails: repair each finding in the Draft, complete the sweep `${SKILL_DIR}/references/repair-sweep.md` states, and run the check again. An exit of 2 names the unusable argument or read; fix it and run again. The publish command of `<publish>` runs the same check on the exact Draft it writes, so a Draft changed after this check is checked again at the publish.
 
 Before each publish at Framed or Sliced, trace each result the Verification part of the Statement of Intent names to the Declarations line that carries it, and repair the Draft for each result no line carries. Keep the trace out of the record.
 
@@ -61,20 +63,24 @@ Before each publish at Framed or Sliced, trace each result the Verification part
 | `--root` a relative path                                                      | the form check's `unusable` result, exit 2                                                       | as expected |
 | the entrypoint copied to a skill directory with no `change-standards` sibling | `error: the form check is absent at <path>; reinstall the product-tree plugin` on stderr, exit 2 | as expected |
 
+`scripts/publish.py` runs the same form check, then writes through `gh`. The compliance test `spx/31-outcomeeng.enabler/32-changes.enabler/tests/test_change_publish.compliance.l2.py` covers it against a recording store: a Draft that fails the check writes nothing; a passing Draft writes the fields it holds and clears Parent and Predecessors when it leaves them out, and writes no Priority, Maturity or Lifecycle on a publish that replaces a record; recording writes Maturity and Lifecycle; and the native blockers follow the Draft.
+
 </testing>
 
 <publish>
 
-Write the Draft to the store in this order, under `<write_discipline>`, and record each write:
+Write the Draft to the store through the publish command, and through no other write:
 
-1. Run the option check of `<store_options>` for every field this publish writes.
-2. Re-read the record's edit stamp immediately before the body write under `github-race`; a stamp that differs from the read stamp stops the publish as failed under `stale-revision`.
-3. Create the issue, or edit its title and body, from the Draft: the title from `title`, the body from the Draft's `## Statement of Intent` line to its end, never the front matter.
-4. Write each field the publish changes to its home under `github-store`: Product, Parent, Predecessors, Base, and, for a Child, Priority; Maturity and Lifecycle only when recording. Clear the Base field when a split makes the record a Parent.
-5. Bring the native blockers to the Draft's `blockers`, adding each missing and removing each extra one.
-6. When recording, set the holder: add the assignee, then post the `claim` comment under `<transition_comment>` that records this session and worktree.
-7. Read the edit history under `<reads>`: restore a revision another writer wrote between the read and the write, and count the publish as failed, as `github-race` states.
-8. Read back the issue, its fields, and its blockers, and require each equal to the Draft.
+```bash
+python3 "${SKILL_DIR}/scripts/publish.py" --root <checkout-root> --draft <draft-path> --store <owner/repo> [--issue <owner/repo#N> --read-edited-at <read stamp>] [--published <composed-stored-draft>]
+```
+
+It runs the form check of `<form_check_gate>` on the exact Draft and writes nothing while the check fails, under `publish-checked`. On a pass it re-reads the edit stamp before the body write under `github-race`, creates the issue or edits its title and body from the Draft's `## Statement of Intent` line to its end, and writes the Product, Parent, Predecessors and Base fields and the native blockers from the Draft, clearing each of them the Draft empties or leaves out, under `github-clear`. It leaves every other field as the store holds it, and writes Maturity and Lifecycle only when recording. Its result names each write. Then, under `<write_discipline>`:
+
+1. Run the option check of `<store_options>` for each single-select field the publish writes, before running the command.
+2. When recording, set the holder: add the assignee, then post the `claim` comment under `<transition_comment>` that records this session and worktree.
+3. Read the edit history under `<reads>`. When another writer's revision landed between the read and the write, compose a Draft from that revision, publish it through the same command to restore it, and count the publish as failed, as `github-race` states.
+4. Read back the issue, its fields, and its blockers, and require each equal to the Draft.
 
 A publish that wrote the body of an Applicable record then makes the `lower` Transition to Sliced through `product-tree:manage-change`, with the reason that the body changed, under `audit-binding`.
 
@@ -88,9 +94,9 @@ For a Sliced Leaf, after a publish that writes its body and the readback, launch
 
 <operations>
 
-- `record`: draft a new Change at Proposed and publish it. A Change with no Parent records as Submitted for its Priority decision; a Child records as Available with its Parent's Priority.
+- `record`: draft a new Change at Proposed and publish it. A Change with no Parent records as Submitted for its Priority decision; a Child records as Available.
 - `publish`: revise a stored record from its Draft and publish it. Keep `predecessors` and `parent` as stored; `base` moves only with a body write under `base-on-body`.
-- `split`: below Applicable only, under `split`, record each Child from its own Draft with `parent` naming the source, then publish the source as a Parent: its body only the Statement of Intent, its Base cleared.
+- `split`: below Applicable only, under `split`, record each Child from its own Draft with `parent` naming the source, then publish the source as a Parent: its body only the Statement of Intent and its Draft without `base`, so the publish clears its Base.
 - `merge`: on the Operator's direction only, under `merge-direction`, append the absorbed Change to the survivor's `predecessors`, publish the survivor, and close the absorbed Change through `product-tree:manage-change` with `abandoned` and the survivor's reference, which closes the absorbed issue as a duplicate of the survivor's issue.
 - `reframe`: edit the record in place, publish it, and make the `lower` Transition to Proposed through `product-tree:manage-change`.
 

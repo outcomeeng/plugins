@@ -426,14 +426,23 @@ def merged_changeset(context: Context, issue: str | None) -> str | None:
     return commit if result.exit_code == 0 and commit else None
 
 
-def check_base(context: Context, base: str | None) -> str | None:
-    """Judge the Base; return it when it resolves."""
+def check_base(
+    context: Context, base: str | None, read_checkout: bool = True
+) -> str | None:
+    """Judge the Base; return it when it resolves.
+
+    With ``read_checkout`` false, as for a Proposed Draft that holds only its
+    Statement of Intent, the Base is judged by its form alone and no command
+    reads the checkout, so a Draft of another Product passes from any checkout.
+    """
     if base is None or not SHA_RE.match(base):
         context.add(
             Rule.DRAFT_BASE,
             "base",
             f"base is {base!r}; a Leaf's base is the full 40-hex head commit of the default branch",
         )
+        return None
+    if not read_checkout:
         return None
     if context.git("cat-file", "-e", f"{base}^{{commit}}").exit_code != 0:
         context.add(
@@ -1521,8 +1530,19 @@ def check(
         ) from exc
     draft = parse_draft(text)
     leaf = check_keys(context, draft, recorded=issue is not None)
-    base = check_base(context, scalar(draft.values.get("base", ""))) if leaf else None
     declarations = check_body(context, draft, leaf)
+    intent_only = (
+        scalar(draft.values.get("maturity", "")) == "Proposed" and declarations is None
+    )
+    base = (
+        check_base(
+            context,
+            scalar(draft.values.get("base", "")),
+            read_checkout=not intent_only,
+        )
+        if leaf
+        else None
+    )
     blockers = flow_list(draft.values.get("blockers", "")) or []
     old: Draft | None = None
     if published is not None and scalar(draft.values.get("maturity", "")) == "Sliced":
