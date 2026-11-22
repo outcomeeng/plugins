@@ -10,6 +10,15 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.7
+
+### Changed
+
+- **`/audit-specs` judges the 4.0 typed-heading form.** It reads each group heading under `## Assertions` (`Test.Scenario`, `Test.Mapping: <slug>`, `Test.Conformance`, `Test.Property`, `Test.Compliance`, `Evaluate: <slug>`, `Probe`, `Audit`) as the verification type of its rows, and approves an untagged row under any of them. A tag on a row, or a repeated slug, is `invalid-tag`; a row under no typed heading is `heading-mismatch`; a universal under `Test.Scenario` is `evidence-type-mismatch`; and a slug that links outside its heading type's directory, or a link on an `Audit` row, is the new `slug-link-mismatch`. The verdict's third row is `heading-fitness`. Before this change, the skill judged the 3.x claim-shape headings and tag routing, so a spec written from the shipped templates drew `heading-mismatch` for its `Audit` and `Evaluate` groups, and an untagged `Audit` row was rejected.
+- **`/audit-adr` and `/audit-pdr` record a rule under no typed group heading as `declaration-form`, and check the `### Test.Mapping: <slug>` mapping heading.** Before this change, both accepted a rule directly under `## Verification` as a draft awaiting selection, judged it with `invalid-draft-rule`, and expected the earlier `### Mapping: <slug>` heading, so a decision record written from the template failed `declaration-form` for its mapping group. `invalid-draft-rule` leaves both rule catalogs.
+- **`/audit-assertions` judges each row under an `Audit` heading by its leading slug, and `/audit-eval-evidence` maps each `### Evaluate: <slug>` subsection to its eval.** A unit key is `assertion:<slug>:<path>`. Before this change, the skills selected `[audit:{rule-slug}]` and `[eval]` tags, so neither found the Audit and Evaluate Assertions of a 4.0 spec.
+- **The spec, ADR, PDR, eval-evidence and assertion audits load their complete Walk read-only.** Each loads every ancestor spec, the siblings and lower-Index decisions along the path, every `ISSUES.md` on it, the target's children's contracts, its own records, Knowledge index and Outcome record, and each cited cross-subtree decision once, and runs no command that fetches, rebases or moves the checkout. Before this change, each loaded context through `/contextualize`, which runs `/sync-base` and can rebase the audited branch.
+
 ## 0.115.6
 
 ### Added
