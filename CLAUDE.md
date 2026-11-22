@@ -18,9 +18,8 @@ Read the Product Tree by methodology's Walk. Never invoke `product-tree:understa
 
 ## Oversight
 
-- An overseer checks each Position it oversees at least once an hour and at every wake of its mail wait: the session's state through `orca agent list --json`, what it last said through `orca agent read <session id>`, its context, its held Changes in the Change Store, and the mail it leaves unanswered. On a session held at a prompt, a held Change idle for an hour, or unanswered mail, it unblocks what lies in its scope and escalates the rest, and never only reports.
-- A session's context is the sum of `input_tokens`, `cache_read_input_tokens` and `cache_creation_input_tokens` in the last assistant turn of its newest transcript under `~/.claude/projects/`, in the directory named for its worktree path with each `/` written as `-`.
-- A Position past 600k tokens of context hands off at its next commit. Its overseer reads in the pane that the hand-off finished, then clears the session and has it resume through `orca terminal send`, never in a pane whose last prompt came from the Operator.
+- An overseer checks each Position it oversees at least once an hour and at every wake of its mail wait: the session's state through `orca agent list --json`, what it last said through `orca agent read <session id>`, its context, its held Changes in the Change Store, and the mail it leaves unanswered. It restarts a session held at a prompt of its harness, prompts a session that stopped mid-work, unblocks a held Change idle for an hour or unanswered mail where that lies in its scope, escalates the rest, and never only reports.
+- A Claude Code session's context is the sum of `input_tokens`, `cache_read_input_tokens` and `cache_creation_input_tokens` in the last assistant turn of the transcript `<session id>.jsonl` under `~/.claude/projects/`, where `spx worktree status` in its worktree names the session id.
 
 ## Departures from methodology
 
@@ -33,6 +32,12 @@ Read the Product Tree by methodology's Walk. Never invoke `product-tree:understa
 - spx writes no Audit File, so CI keeps each Audit entry without one on its pin.
 - Run no eval. Wherever a Node records eval evidence, or a row's verification type is Evaluate, the Advisor audits that row in place of the run: it judges each case of the eval against the producer's output, seals the verdict with `spx verification run` as for every Audit, and returns the run token. Write each eval as methodology states. A claim a Decision Record gives eval evidence stands on that audit, and no one reports a missing eval run as a finding.
 - In a repository whose guide states that no Node is Passing, where methodology requires a Node to stand Passing, the Node stands in for Passing when, on the default branch, each of its Test results passes in CI and the Advisor has sealed each of its Audit results `approved`. The stand-in lapses once the repository commits its `spx.status.json` claims.
+
+<until-control-position>
+
+- An overseer, in place of the Controller, has a Position past 600k tokens of context hand off at its next commit. It reads in the pane that the hand-off finished, then clears the session and has it resume through `orca terminal send`, never in a pane whose last prompt came from the Operator.
+
+</until-control-position>
 
 ## Asking
 
