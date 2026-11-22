@@ -80,3 +80,11 @@ The Compliance section holds eleven assertions, above the guideline of about sev
 ## The node names no declared generated-source relationship
 
 `changeset-coherence.md` and the shipped `src/plugins/product-tree/skills/audit-changeset-coherence/SKILL.md` require declared generated-source relationship evidence without naming `spx/local/generated-sources.toml` or citing [`spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/15-generated-attribution.pdr.md). The entry in `spx/31-outcomeeng.enabler/31-verification.enabler/ISSUES.md` carries the settlement condition.
+
+## The skill records no verification run, so its recording rows await an implementation `spx/21-product-tree.enabler/68-audit.enabler/32-changeset-coherence.enabler/changeset-coherence.md` `record-as-judged` `consistency`
+
+`src/plugins/product-tree/skills/audit-changeset-coherence/SKILL.md` runs no `spx verification run`, so its `record-as-judged` row declares recording behavior the shipped skill does not have. The Node is spec-malleable, so the declaration stands ahead of its implementation.
+
+**Why this is a separate larger concern.** Making `/audit-changeset-coherence` record a sealed run, with its units and findings recorded as each judgment completes, rewrites the skill's verdict output and the `changeset-coherence-auditor` wrapper's relay. That work lies outside the Frame of outcomeeng/changes#1079, which declares only the recording order.
+
+**Evidence**: current-head CI review of pull request 797, accepted by the Plugins Maintainer's ruling on head 6d5cca9591795a91366b0348a9ea52ed871b0dde.
