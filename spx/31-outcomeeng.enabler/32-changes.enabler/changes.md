@@ -13,7 +13,7 @@ CAN move a prioritized Output from proposal to applicable work without placing m
 
 ### Probe: merged record fix
 
-- merged-record-fix: a Leaf whose Changeset merged into the default branch, and whose record a later publish fixes, keeps the Operator's review of each part the fix leaves unchanged and closes Applied
+- [merged-record-fix](probes/merged-record-fix/probe.md): a Leaf whose Changeset merged into the default branch, and whose record a later publish fixes, keeps the Operator's review of each part the fix leaves unchanged and closes Applied
 
 ### Audit: Change skills
 

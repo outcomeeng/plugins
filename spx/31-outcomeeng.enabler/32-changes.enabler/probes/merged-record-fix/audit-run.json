@@ -1,0 +1,13 @@
+{
+  "runToken": "2026-11-22_01-38-27-586-f4f1c36add89",
+  "sealed": true,
+  "terminalStatus": "approved",
+  "findingCount": 0,
+  "findingCounts": {
+    "blocking": 0,
+    "debt": 0,
+    "filed": 0,
+    "stale": 0,
+    "total": 0
+  }
+}
