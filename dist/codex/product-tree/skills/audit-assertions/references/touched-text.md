@@ -22,7 +22,7 @@ git diff --unified=0 <base> -- <path>
 
 Run the second command once for the target spec and once for each subject path a finding's location lies in. The diff compares the base with the working tree, staged and unstaged changes included; a `<base>..HEAD` range is no endpoint, because it leaves those changes out.
 
-The enclosing unit is the whole assertion (its text and tag) for a line of the spec, the sentence in prose, and the declaration, rule, or section in a subject. A path absent at the base is touched in full. A diff that cannot be resolved makes the target spec and every subject touched in full, and the verdict names the failed command.
+The enclosing unit is the whole assertion (its slug and text) for a line of the spec, the sentence in prose, and the declaration, rule, or section in a subject. A path absent at the base is touched in full. A diff that cannot be resolved makes the target spec and every subject touched in full, and the verdict names the failed command.
 
 Invalidated text is:
 
@@ -42,7 +42,7 @@ Classify each finding by its `location`: a finding on touched text is recorded o
 
 <finding_key>
 
-A finding is identified by its key, `<unitId>:<rule>`, whose `unitId` is the unit key `assertion:<designator>:<path>` (the designator is the rule slug, or `ordinal-<n>` when pathless) and whose rule is the finding's catalog rule identifier. The key names the unit and rule and never a line number, so the same finding carries the same key in every run and on every head.
+A finding is identified by its key, `<unitId>:<rule>`, whose `unitId` is the unit key `assertion:<slug>:<path>` (the slug is the assertion's leading slug) and whose rule is the finding's catalog rule identifier. The key names the unit and rule and never a line number, so the same finding carries the same key in every run and on every head.
 
 </finding_key>
 

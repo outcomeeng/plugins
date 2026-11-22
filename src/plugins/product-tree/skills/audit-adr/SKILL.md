@@ -21,7 +21,7 @@ An ADR's content is architecture — technology choices, data structures, implem
 
 **ASSERTION TYPE MUST MATCH THE CLAIM.**
 
-Apply the canonical template's form. Rules directly under `## Verification`, outside any group, await selection and may coexist with groups; judge their specificity, structure, voice, and consistency. A rule carries no tag, because its group heading names its verification type and its leading slug is its one name. `/verify` selects the verification type, then `/test` selects a Testing rule's assertion type. A universal claim is never `scenario`; a tag on a rule, a repeated slug, or a quantifier mismatch is a finding. Approval judges declaration quality and establishes no evidence result or Passing state.
+Apply the canonical template's form. Every rule under `## Verification` stands under a typed group heading — `Test.Scenario`, `Test.Mapping: <slug>`, `Test.Conformance`, `Test.Property`, `Test.Compliance`, `Evaluate: <slug>`, `Probe`, or `Audit` — and a rule that stands under no such heading is a `declaration-form` finding. A rule carries no tag, because its group heading names its verification type and its leading slug is its one name. `/verify` selects the verification type, then `/test` selects a Testing rule's assertion type. A universal claim is never `scenario`; a tag on a rule, a repeated slug, or a quantifier mismatch is a finding. Approval judges declaration quality and establishes no evidence result or Passing state.
 
 **ATEMPORAL VOICE.**
 
@@ -51,11 +51,13 @@ Language-specific ADR concerns — testability-in-Verification (dependency injec
 
 Bind the required ADR path, preserving spaces within it: `$ARGUMENTS` supplies it when that argument is non-empty; when it is empty, the path is the one the request text carries, and the empty substitution binds nothing. If the request carries no path, run `git branch --show-current` for metadata and emit the `<verdict_format>` JSON with `target: ""`, `overall: "REJECTED"`, and all three native rows marked `FAIL`. Each row carries a `missing-target` finding with severity `blocking`, unit `input`, locations `["input"]`, `observed` naming the absent target, and `expected` and `message` naming the required ADR path. Stop before context loading or artifact inspection.
 
-When the live `<PRODUCT_TREE_FOUNDATION>` marker is absent or lacks `Template root`: Use skill `product-tree:understand`. Read `decisions/decision-name.adr.md` beneath that marker's resolved absolute template directory. The template remains owned by `/understand`. Then, on the directory containing the ADR: Use skill `product-tree:contextualize`. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
+When the live `<PRODUCT_TREE_FOUNDATION>` marker is absent or lacks `Template root`: Use skill `product-tree:understand`. Read `decisions/decision-name.adr.md` beneath that marker's resolved absolute template directory. The template remains owned by `/understand`. Run `git branch --show-current` to populate verdict metadata without granting broader shell authority.
+
+Before any audit phase, load read-only, at the snapshot the checkout holds, the complete Walk to the Node that holds the ADR: every ancestor spec from the root; at each level along the path, every sibling spec and each Decision Record indexed below the child the path continues through; every `ISSUES.md` along the path; the published contracts of the Node's immediate children; the Node's own Decision Records and spec, its Knowledge `index.md`, and its Outcome record. Then load, once, each decision a loaded spec or decision cites from another subtree. Judge the ADR as the subject and read every other loaded decision for awareness. Take as governing the ADR only a decision that governs it by Index, scope, or citation: one at a lower Index than the ADR in its own directory, one at a lower Index than the child the path continues through at an ancestor level, or one that a loaded spec or a governing record cites for it from another subtree. Run no command that fetches, rebases, or moves the checkout, so the audit changes no checkout state.
 
 The input is the ADR path alone. Derive its governing node from the containing directory, using canonical `spx/` for a product-root ADR. Resolve the committed changeset from the checkout as it stands: run `git merge-base HEAD origin/HEAD` for the base, then `git diff --name-only <base> HEAD` for the changed paths. Use that context with the ADR's governed declarations and linked implementation surfaces in Step 5b; no supplied language classification is required.
 
-Do not proceed without the canonical ADR template content and live `<PRODUCT_TREE_FOUNDATION>` and `<PRODUCT_TREE_CONTEXT>` markers.
+Do not proceed without the canonical ADR template content, the live `<PRODUCT_TREE_FOUNDATION>` marker, and the loaded Walk.
 
 </step>
 
@@ -75,11 +77,11 @@ Resolve the touched text of the ADR as `${CLAUDE_SKILL_DIR}/references/touched-t
 
 Use the canonical ADR template guidance loaded in Step 1 to derive the form in full — never from memory or a transcribed copy. A finding that contradicts the canonical template is unbacked: drop it rather than rejecting the ADR. If the template guidance cannot be loaded, reject with `template-missing` and name the blocked read.
 
-Verify the ADR opens with optional DEFINES lines and then the CONSTRAINS, TO, and SO THAT paragraph, writes each mapping rule as its own `### Mapping: <slug>` subsection holding one sentence and a table, keeps each group to at most ten rules, states its invariants as rules of a Property group, holds no text outside its opening, a rule, or a table, and has a `## Verification` section.
+Verify the ADR opens with optional DEFINES lines and then the CONSTRAINS, TO, and SO THAT paragraph, places every rule under a typed group heading, writes each mapping rule as its own `### Test.Mapping: <slug>` subsection holding one sentence and a table, keeps each group to at most ten rules, states its invariants as rules of a `Test.Property` group, holds no text outside its opening, a rule, or a table, and has a `## Verification` section.
 
 Verify the SO THAT line names a property of the build that the TO mechanism yields, never an audience and never a restatement of the mechanism.
 
-**No opening, or no Verification section → `blocking` — "missing-section." An opening, mapping subsection, group, or text that breaks the template form → `blocking` — "declaration-form." A SO THAT line that names an audience or restates the mechanism → `blocking` — "so-that-property."**
+**No opening, or no Verification section → `blocking` — "missing-section." An opening, mapping subsection, group, rule under no typed group heading, or text that breaks the template form → `blocking` — "declaration-form." A SO THAT line that names an audience or restates the mechanism → `blocking` — "so-that-property."**
 
 </step>
 
@@ -103,14 +105,12 @@ Check the opening and EVERY rule for temporal language:
 
 **Step 5: Per-rule tag validity and assertion-type fit**
 
-Read each rule's placement before judging it. A rule directly under `## Verification`, outside any group, has the canonical authoring form. For every such rule, identify its subject, the condition it constrains, and a concrete observation that would violate it. Reject a vague, ambiguous, or unfalsifiable rule with `invalid-draft-rule` in the `tag-validity` row, mark that row `FAIL`, and quote the rule with the missing or ambiguous criterion. For example, `ALWAYS: improve quality` fails because it names no observable condition. Check each draft rule against the decision statement and governing decisions; a contradiction also produces `invalid-draft-rule`, citing both conflicting declarations. Select no evidence type during these checks.
-
 A rule carries no tag, because its group heading names its verification type and its leading slug is its one name. When a group heading names an assertion type: Use skill `product-tree:test-evidence-standards`. Load its assertion-type litmus. Apply that reference and the loaded foundation's assertion-type definitions to each rule's claim and its group's type. If the required reference cannot load, emit a blocking `test-standards-unavailable` finding and a failed `tag-validity` row. Judge declaration compatibility only; evidence completeness belongs to evidence auditing. Never invoke the mutating `/test` authoring workflow, select a replacement group, or change the ADR during this audit.
 
 For each rule:
 
 1. It carries no tag and its leading slug repeats nowhere in the ADR.
-2. Under a group named for an assertion type, the declared type is compatible with the claim's quantifier and evidence shape under the loaded foundation and shared assertion-type litmus. A universal claim cannot sit in a `### Scenario` group. Reject a declared type whose required domain or oracle contradicts the claim, citing the claim and the loaded criterion; do not choose among compatible types or require executable evidence for a declaration.
+2. Under a `Test.` group heading, the assertion type it names is compatible with the claim's quantifier and evidence shape under the loaded foundation and shared assertion-type litmus. A universal claim cannot sit in a `### Test.Scenario` group. Reject a declared type whose required domain or oracle contradicts the claim, citing the claim and the loaded criterion; do not choose among compatible types or require executable evidence for a declaration.
 
 **A rule that carries a tag, or whose slug repeats within the ADR → `blocking` — "invalid-tag." An assertion type that contradicts the claim's shape → `blocking` — "assertion-type-mismatch."**
 
@@ -179,13 +179,15 @@ How to avoid: The ADR audit checks form — structure, voice, tag validity. Cont
 
 **Failure 2: Passed a universal rule tagged `scenario`**
 
-Claude saw a universal ALWAYS/NEVER rule in a `### Scenario` group and passed it because the group named one of the five assertion types. A scenario proves one case; it cannot establish a claim about every case, so the assertion ships unverified — phantom green. The quantifier mismatch is a deterministic error, not a matter of taste.
+Claude saw a universal ALWAYS/NEVER rule in a `### Test.Scenario` group and passed it because the group named one of the five assertion types. A scenario proves one case; it cannot establish a claim about every case, so the assertion ships unverified — phantom green. The quantifier mismatch is a deterministic error, not a matter of taste.
 
-How to avoid: Step 5 verifies the assertion type fits the claim's shape per the `/test` router. Reject a universal in a `### Scenario` group (and any type the router would not produce for the claim). The one line the audit does not cross is relitigating a choice the router leaves open between equally-valid types — that, and only that, is `/test`'s to decide.
+How to avoid: Step 5 verifies the assertion type fits the claim's shape per the `/test` router. Reject a universal in a `### Test.Scenario` group (and any type the router would not produce for the claim). The one line the audit does not cross is relitigating a choice the router leaves open between equally-valid types — that, and only that, is `/test`'s to decide.
 
-**Failure 3: Applied group requirements to authoring declarations**
+**Failure 3: Passed a rule that stands under no typed group heading**
 
-Claude rejected ungrouped authoring rules because the grouped-form requirement was applied before verification selection. Derive the form from the artifact and canonical template. Judge every draft rule, preserve the grouped-rule checks, and never interpret declaration approval as evidence completeness.
+Claude read a rule directly under `## Verification`, outside any group, and passed it as a draft awaiting selection. The settled decision-record form gives every rule a typed group heading, because the heading is the only place the rule's verification type is stated; a rule without one has no verification type a reader or an evidence author can act on.
+
+How to avoid: Step 3 places every rule under a typed group heading and records an ungrouped rule as `declaration-form`. Declaration approval still establishes no evidence result.
 
 </failure_modes>
 

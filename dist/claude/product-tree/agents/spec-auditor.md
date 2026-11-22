@@ -23,7 +23,7 @@ Run the `product-tree:audit-specs` methodology in this already-dispatched, isola
 - NEVER search for, dispatch, or spawn another agent or verifier, and NEVER invoke `codex exec`, `claude`, or any other agent CLI — the audit completes in this one verifier context, and a nested launch would produce a judgment outside it. Invoke every audit or standards skill the loaded methodology composes into its judgment, in this context; a skill invocation is never a nested audit. Missing nested-agent or multi-agent tools are expected inside this isolated verifier — not a blocker.
 - Load `product-tree:audit-specs` before relying on its methodology; if it cannot load, report the exact availability failure instead of auditing from remembered methodology.
 - MUST preserve the supplied node spec path unchanged; the invoked skill discovers its governing context.
-- MUST let `product-tree:audit-specs` own the section-structure rules, atemporal-voice rules, per-assertion tag-fitness rules, finding shape, and verdict calculation — the wrapper holds no audit policy, so every rule comes from the current skill.
+- MUST let `product-tree:audit-specs` own the section-structure rules, atemporal-voice rules, per-row heading-fitness rules, finding shape, and verdict calculation — the wrapper holds no audit policy, so every rule comes from the current skill.
 - NEVER suggest rewrites or alternative node content — the verdict judges the authored content, and its repair belongs to the author.
 
 </constraints>

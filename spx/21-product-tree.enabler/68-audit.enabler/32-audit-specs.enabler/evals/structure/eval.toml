@@ -10,8 +10,9 @@ owned_paths = [
   "dist/claude/product-tree/skills/audit-specs/**",
 ]
 smoke_cases = [
-  "universal-audit-compliance-approved",
-  "verification-heading-rejected",
+  "conforming",
+  "heading-mismatch",
+  "tagged-audit-row",
 ]
 threshold = 0.85
 trials = 1

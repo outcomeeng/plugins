@@ -2,7 +2,7 @@
 name: audit-eval-evidence
 description: >-
   Eval-evidence audit methodology — judges whether a spec node's eval suite
-  provides evidence its `[eval]` assertions are fulfilled, covering case
+  provides evidence its Evaluate Assertions are fulfilled, covering case
   quality, verdict schema fit, and producer coupling.
 argument-hint: "<spec-node-path>"
 allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git merge-base:*), Bash(git diff:*), Bash(git branch --show-current:*)
@@ -10,7 +10,7 @@ allowed-tools: Read, Grep, Glob, {{! tool('use_skill') !}}, Bash(git merge-base:
 
 <objective>
 
-A PASS, FAIL, or UNKNOWN verdict on a spec node's `[eval]` evidence against the eval-evidence model, with each finding on touched text naming the assertion or eval artifact, the failed property, and the evidentiary gap, and every other finding returned as `FILED`.
+A PASS, FAIL, or UNKNOWN verdict on the eval evidence of a spec node's Evaluate Assertions against the eval-evidence model, with each finding on touched text naming the assertion or eval artifact, the failed property, and the evidentiary gap, and every other finding returned as `FILED`.
 
 </objective>
 
@@ -37,31 +37,31 @@ Check the five evidence properties in strict order, producer coupling first: an 
 
 Read the evidence model before auditing: `${CLAUDE_SKILL_DIR}/references/evidence-model.md`
 
-Use skill `product-tree:contextualize` on the spec node whose eval evidence is being audited. This loads the spec's assertions, ancestor ADRs/PDRs, and hierarchy context.
+Before any audit phase, load read-only, at the snapshot the checkout holds, the complete Walk to the target spec node as the work: every ancestor spec from the root; at each level along the path, every sibling spec and each Decision Record indexed below the child the path continues through; every `ISSUES.md` along the path; the published contracts of the target's immediate children; the target's own Decision Records and spec, its Knowledge `index.md`, and its Outcome record. Then load, once, each decision a loaded spec or decision cites from another subtree. Run no command that fetches, rebases, or moves the checkout, so the audit changes no checkout state.
 
-Do not proceed without a `<PRODUCT_TREE_CONTEXT>` marker. Run `git branch --show-current` for branch metadata; use JSON `null` when unavailable, and preserve an empty string for a detached HEAD.
+Do not proceed without the loaded Walk. Run `git branch --show-current` for branch metadata; use JSON `null` when unavailable, and preserve an empty string for a detached HEAD.
 
 </step>
 
 <step name="map_assertions">
 
-**Step 2: Map `[eval]` assertions to eval artifacts**
+**Step 2: Map Evaluate Assertions to eval artifacts**
 
-Read the spec's Assertions section. For each `[eval]` assertion, extract:
+Read the spec's Assertions section. Each `### Evaluate: <slug>` subsection is one Evaluate Assertion: its heading, its one sentence, and its case table. For each, extract:
 
 | Field          | Extract                                                                                            |
 | -------------- | -------------------------------------------------------------------------------------------------- |
-| Assertion text | The claim being evaluated                                                                          |
-| Eval link      | Path from `([eval](path/to/eval.toml))`                                                            |
+| Assertion text | The subsection's sentence and case table                                                           |
+| Eval link      | Path the heading's slug links, `### Evaluate: [slug](evals/<slug>/eval.toml)`                      |
 | Eval directory | Directory containing `eval.toml`, prompt, and cases                                                |
 | Producer       | The skill, agent, classifier, script, or command the assertion claims emits the structured verdict |
 | Link status    | File exists or missing                                                                             |
 
 Attribute a missing eval definition to `gate-1-producer-coupling`, a missing prompt to `gate-1-producer-coupling`, missing cases to `gate-2-oracle-quality`, and missing history to `gate-5-run-evidence`. Mark that row `FAIL` and add a `REJECT` finding naming the assertion, missing path, and failed evidence property. Inspect the remaining available artifacts; mark any other property that the absence prevents inspecting `UNKNOWN` with a finding explaining the missing prerequisite. A known failure takes precedence over an unknown result for the same row.
 
-Skip `[test]`, `[audit:{rule-slug}]`, and the pathless `[audit]` that the foundation admits for a toolchain without slug support. They belong to their own evidence lanes.
+Skip every row under a `Test.`, `Probe`, or `Audit` group heading. Those rows belong to their own evidence lanes.
 
-When the target has no `[eval]` assertions, return `UNKNOWN` with all five gate rows `UNKNOWN`, each carrying an `INFO` finding with rule `no-eval-assertions` at the target spec explaining that no eval evidence is applicable. Preserve the target and established branch metadata; never imply that evidence was inspected.
+When the target has no Evaluate Assertion, return `UNKNOWN` with all five gate rows `UNKNOWN`, each carrying an `INFO` finding with rule `no-eval-assertions` at the target spec explaining that no eval evidence is applicable. Preserve the target and established branch metadata; never imply that evidence was inspected.
 
 </step>
 
@@ -131,7 +131,7 @@ Missing or stale run evidence is REJECT — "missing run evidence" or "stale run
 
 **Step 4: Issue verdict**
 
-Scan all findings across all `[eval]` assertions and classify each as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states: a finding on touched text keeps severity `REJECT`, and every other finding becomes `FILED`. If any assertion has a property failure on touched text: FAIL.
+Scan all findings across all Evaluate Assertions and classify each as `${CLAUDE_SKILL_DIR}/references/touched-text.md` states: a finding on touched text keeps severity `REJECT`, and every other finding becomes `FILED`. If any assertion has a property failure on touched text: FAIL.
 
 </step>
 
@@ -224,7 +224,7 @@ How to avoid: Step 3e separates operational failures from behavioral pass eviden
 
 The verdict is sound when:
 
-- Every `[eval]` assertion's suite was judged on all five evidence properties with none skipped — producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence.
+- Every Evaluate Assertion's suite was judged on all five evidence properties with none skipped — producer coupling, oracle independence, assertion alignment, falsifiability, and run evidence.
 - The verdict states an overall PASS/FAIL/UNKNOWN through the JSON `overall` field and every applicable gate row carries its determination.
 - Each REJECT finding lies on touched text and is falsifiable: it names the assertion or eval artifact, the failed evidence property, the evidentiary gap, and how the eval could pass while the assertion is unfulfilled; every finding outside touched text appears as `FILED` with its key, `baseRefEvidence`, and `issuesEntry`.
 - The same target, governing requirements, eval artifacts, and run evidence produce the same gate statuses and overall verdict.

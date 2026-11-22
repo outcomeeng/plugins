@@ -22,17 +22,16 @@ on a head that carries the current producer, with its rows committed to each
 **Evidence**: `product-tree:eval-evidence-auditor` findings `f-007`, `f-008`,
 `f-009` on head `a65659114b99767b90b4d920550fff5dc0824794` during Change #76, whose prototype boundary runs no eval.
 
-## Two tag-validity assertions rest on one case each under a 0.85 threshold
+## Two tag-validity behaviors each rest on one case under a 0.85 threshold
 
-The assertions for a bare mechanism tag on a compliance-type rule and for a
-universal claim tagged `scenario` each map to exactly one case
-(`compliance-type-bare-mechanism-tag-rejected`,
-`universal-scenario-tag-rejected`) in a seven-case suite whose threshold is
-0.85; 6/7 = 0.857 passes the suite, so either assertion can be unfulfilled while
-the suite passes. `history.jsonl` records sixteen rows with 6 of 7 passing and
+The `tag-validity` behaviors for a bare mechanism tag on a compliance rule and
+for a universal claim in a `Test.Scenario` group each rest on exactly one case
+(`bare-mechanism-tag-rejected`, `universal-scenario-group-rejected`) in a
+seven-case suite whose threshold is 0.85; 6/7 = 0.857 passes the suite, so
+either behavior can be unmet while the suite passes. `history.jsonl` records sixteen rows with 6 of 7 passing and
 `passed: true`.
 
-**Settlement condition**: each of the two assertions is backed by more than one
+**Settlement condition**: each of the two behaviors is backed by more than one
 case, or the suite threshold requires its case.
 
 **Evidence**: `product-tree:eval-evidence-auditor` finding `f-004` on head `a65659114b99767b90b4d920550fff5dc0824794`

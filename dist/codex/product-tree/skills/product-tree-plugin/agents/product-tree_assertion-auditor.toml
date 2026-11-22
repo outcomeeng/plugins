@@ -1,5 +1,5 @@
 name = "product-tree_assertion-auditor"
-description = "Verifier running `/audit-assertions`: a calling skill launches it by exact name with one node spec path when its gate requires an independent verdict on that node's `[audit]` assertions."
+description = "Verifier running `/audit-assertions`: a calling skill launches it by exact name with one node spec path when its gate requires an independent verdict on that node's Audit Assertions."
 model = "gpt-6.1-sol"
 model_reasoning_effort = "high"
 web_search = "disabled"
