@@ -74,6 +74,7 @@ class RecordingStore:
     """Answer the store's reads, record every command, and run ``git`` for real."""
 
     blocked_by: list[int] = field(default_factory=list)
+    fail_mutation: str | None = None
     calls: list[list[str]] = field(default_factory=list)
 
     def __call__(self, argv: Sequence[str], /, *, cwd: Path) -> object:
@@ -85,8 +86,10 @@ class RecordingStore:
         joined = " ".join(command)
         if command[1:3] == ["api", "graphql"]:
             answer: dict[str, object]
-            if "issueFields" in joined:
-                answer = {"data": {"organization": {"issueFields": {"nodes": FIELDS}}}}
+            if "mutation" in joined:
+                if self.fail_mutation is not None and self.fail_mutation in joined:
+                    return fc.CommandResult(1, "", f"{self.fail_mutation} refused")
+                answer = {"data": {}}
             elif "issueFieldValues" in joined:
                 priority = {"name": "Normal", "field": {"name": "Priority"}}
                 answer = {
@@ -96,8 +99,8 @@ class RecordingStore:
                         }
                     }
                 }
-            elif "mutation" in joined:
-                answer = {"data": {}}
+            elif "issueFields" in joined:
+                answer = {"data": {"organization": {"issueFields": {"nodes": FIELDS}}}}
             else:
                 answer = {
                     "data": {

@@ -147,3 +147,21 @@ def test_a_parents_draft_without_base_clears_the_base_field(
     )
     assert (code, result["status"]) == (0, "published")
     assert "F_base" in store.mutations("deleteIssueFieldValue")
+
+
+def test_a_blocker_outside_the_store_fails_before_any_write(
+    tmp_path: pathlib.Path,
+) -> None:
+    store = RecordingStore()
+    code, result = run_publish(
+        tmp_path, INTENT, store, issue=None, edits={"blockers": "[other/repo#5]"}
+    )
+    assert (code, result["status"]) == (1, "failed")
+    assert store.writes() == []
+
+
+def test_a_failed_recording_names_the_created_issue(tmp_path: pathlib.Path) -> None:
+    store = RecordingStore(fail_mutation="setIssueFieldValue")
+    code, result = run_publish(tmp_path, INTENT, store, issue=None)
+    assert (code, result["status"]) == (1, "failed")
+    assert result["issue"] == f"{STORE}#7"
