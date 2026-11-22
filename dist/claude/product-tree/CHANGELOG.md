@@ -24,8 +24,6 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **The change-standards form check accepts repository-root headings where the changes overlay admits them.** When the Base's `spx/local/changes.md` holds the line `- Repository-root headings: admitted`, the check judges a Declarations heading outside `spx/` as a path from the repository root and accepts the line edits, `new file`, `deleted file`, moves and replacements on that file, as for a file of a Product with no Product Tree. It reads the overlay at the Base, never the checkout's copy. Without the line, a repository with a Product Tree still fails such a heading with `subsection-headings`. Before this change, every repository whose Base held a Product Tree failed each heading outside `spx/`, whatever its overlay stated, so a methodology Change could publish no Declarations line for a file under `versions/`.
 
-||||||| parent of e172c2de80 (feat(product-tree): publish records through one checked command)
-
 ## 0.115.7
 
 ### Changed
