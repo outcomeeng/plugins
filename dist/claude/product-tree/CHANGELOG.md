@@ -10,6 +10,14 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.5
+
+### Changed
+
+- **Once a Changeset that references a Leaf has merged, `change-standards` reads the Leaf's record at the Base of its latest advance to Sliced.** Its `review-carry` rule carries the Operator's review forward to each part a later revision leaves unchanged, reading both revisions, each part's context and its governing Decision Records at that Base, and the Operator reviews each changed part the review binds. Its `audit-binding` rule has the audit read every Declarations line at that Base. Its `operator-bound-base` rule has the form check read each deletion, move or replacement there, so its failure on a new `base` refuses no publish. Before this change, the three rules read each part at each Base, so a record fix after the merge, which moves the Base past every `+` line, dropped the review of the unchanged parts.
+- **The `change-standards` form check reads a merged Leaf's deletions, moves and replacements at the Base of its stored Sliced record.** When a publish passes `--issue` and `--published` and the default branch holds a commit whose `Refs:` trailer names the issue as `owner/repo#N` or by its issue URL, the check reads each such operation at the Base of the `--published` Draft and raises no `operator-bound-base` finding for the new `base`. Before this change, the check read them at the new `base`, where the merged Changeset had already applied them, and failed the publish of every record fix after the merge whose new `base` changed a bound file.
+- **`/apply-change`'s Application check passes, once a Changeset that references the Change has merged, each line and each operation of the record that already stands on the default branch as the Change leaves it.** Before this change, the check read every line against the Base alone, so a further Changeset after a merged one failed on the lines the first one had already written.
+
 ## 0.115.4
 
 ### Changed

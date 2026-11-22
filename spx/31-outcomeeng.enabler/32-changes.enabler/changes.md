@@ -11,6 +11,10 @@ CAN move a prioritized Output from proposal to applicable work without placing m
 
 ## Assertions
 
+### Probe: merged record fix
+
+- merged-record-fix: a Leaf whose Changeset merged into the default branch, and whose record a later publish fixes, keeps the Operator's review of each part the fix leaves unchanged and closes Applied
+
 ### Audit: Change skills
 
 - skill-set: The author-change skill records, publishes, splits, merges, and reframes a Change; the manage-change skill makes every other Transition on one Change; the audit-change skill audits a record; the report-changes skill lists the open Changes; and the change-standards skill states the record they share.
