@@ -12,7 +12,7 @@ CAN maintain skills and thin agents as one canonical source while delivering nat
 
 ### Audit: naming and configuration
 
-- naming-relation: ALWAYS: published skills and agent definitions use the same distribution-owned naming relation: flat roles are `<plugin>_<unchanged-authored-role>` and native namespaced dispatch is `<plugin>:<authored-role>`, including authored roles that already begin with the plugin name, per [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md).
+- naming-relation: ALWAYS: published skills and agent definitions use the same distribution-owned naming relation: flat names are `<plugin>_<unchanged-authored-name>` and native namespaced dispatch is `<plugin>:<authored-name>`, including authored names that already begin with the plugin name, per [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md).
 - own-agent-guides: ALWAYS: generated instruction surfaces address only their own agent.
 - profile-configuration: ALWAYS: agent definitions, configuration examples, and descriptions derive their complete native configuration from the central Standard, Strong, Thorough, or Fast profile selected under [`spx/15-subagent-execution.pdr.md`](spx/15-subagent-execution.pdr.md); each harness keeps its own reasoning controls, and authored sources select profiles rather than independently selecting model and effort fields.
 
