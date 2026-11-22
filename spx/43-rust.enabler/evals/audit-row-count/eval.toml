@@ -1,0 +1,18 @@
+title = "rust-audit-row-count"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/rust"
+owned_paths = [
+  "spx/43-rust.enabler/rust.md",
+  "spx/43-rust.enabler/evals/audit-row-count/**",
+  "src/plugins/rust/skills/author-rust-code/**",
+  "dist/claude/rust/skills/author-rust-code/**",
+]
+smoke_cases = ["audit-heading", "tagged-row"]
+threshold = 1.0
+trials = 1
+
+[prompt_source]
+kind = "producer-file"
+producer = "dist/claude/rust/skills/author-rust-code/SKILL.md"
+template = "prompt.template.md"

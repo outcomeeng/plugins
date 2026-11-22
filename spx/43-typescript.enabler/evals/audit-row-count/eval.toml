@@ -1,0 +1,18 @@
+title = "typescript-audit-row-count"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/typescript"
+owned_paths = [
+  "spx/43-typescript.enabler/typescript.md",
+  "spx/43-typescript.enabler/evals/audit-row-count/**",
+  "src/plugins/typescript/skills/author-typescript-code/**",
+  "dist/claude/typescript/skills/author-typescript-code/**",
+]
+smoke_cases = ["audit-heading", "tagged-row"]
+threshold = 1.0
+trials = 1
+
+[prompt_source]
+kind = "producer-file"
+producer = "dist/claude/typescript/skills/author-typescript-code/SKILL.md"
+template = "prompt.template.md"

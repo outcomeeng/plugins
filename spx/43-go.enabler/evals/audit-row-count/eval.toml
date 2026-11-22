@@ -1,0 +1,18 @@
+title = "go-audit-row-count"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/go"
+owned_paths = [
+  "spx/43-go.enabler/go.md",
+  "spx/43-go.enabler/evals/audit-row-count/**",
+  "src/plugins/go/skills/author-go-code/**",
+  "dist/claude/go/skills/author-go-code/**",
+]
+smoke_cases = ["audit-heading", "tagged-row"]
+threshold = 1.0
+trials = 1
+
+[prompt_source]
+kind = "producer-file"
+producer = "dist/claude/go/skills/author-go-code/SKILL.md"
+template = "prompt.template.md"

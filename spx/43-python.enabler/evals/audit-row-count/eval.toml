@@ -1,0 +1,18 @@
+title = "python-audit-row-count"
+cases = "cases.jsonl"
+prompt = "prompt.md"
+plugin_dir = "dist/claude/python"
+owned_paths = [
+  "spx/43-python.enabler/python.md",
+  "spx/43-python.enabler/evals/audit-row-count/**",
+  "src/plugins/python/skills/author-python-code/**",
+  "dist/claude/python/skills/author-python-code/**",
+]
+smoke_cases = ["audit-heading", "tagged-row"]
+threshold = 1.0
+trials = 1
+
+[prompt_source]
+kind = "producer-file"
+producer = "dist/claude/python/skills/author-python-code/SKILL.md"
+template = "prompt.template.md"
