@@ -18,7 +18,9 @@ remediation judgment for every non-healthy verdict.
 
 <workflow>
 
-1. Run `spx diagnose --manifest "${SKILL_DIR}/manifest.json"`.
+1. Run `spx diagnose --manifest "${SKILL_DIR}/manifest.json" --format json`.
+   The JSON report names each check, its verdict, and its bucket, which the
+   remediation items carry; the default text report names none of them.
 2. Preserve stdout, stderr, and the exit code exactly. Session identifiers,
    version strings, paths, marketplace names, plugin names, verdict names, and
    status values are identity values; report them verbatim.
@@ -26,11 +28,12 @@ remediation judgment for every non-healthy verdict.
    recomputing the overall verdict.
 4. When the report's overall verdict is non-healthy, add remediation judgment
    grounded only in the report's per-check verdicts, readings, and remediation
-   fields.
+   fields: one remediation item per non-healthy check, naming that check, its
+   verdict, and its bucket as the item's severity.
 5. When the command cannot start, the `diagnose` subcommand is missing, the
    manifest is rejected, or the exit code is nonzero before a report is emitted,
-   report stdout, stderr, and the exit code verbatim, then direct the user to
-   install or update `@outcomeeng/spx` to the floor declared in the manifest.
+   relay the startup failure: stdout, stderr, and the exit code verbatim. Add no
+   remediation item, because no report carries a verdict to ground one.
 
 </workflow>
 
@@ -51,8 +54,8 @@ remediation judgment for every non-healthy verdict.
   match the `spx diagnose` output character for character.
 - Each remediation statement traces to a per-check verdict, reading, or
   remediation field of the report.
-- A startup failure appears with stdout, stderr, and exit code verbatim, followed
-  by the install-or-update direction.
+- A startup failure appears with stdout, stderr, and exit code verbatim, and with
+  no remediation item.
 - The skill body contains no check classification table and no overall-verdict
   fold.
 
