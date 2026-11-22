@@ -28,6 +28,8 @@ GITHUB_BODY_LIMIT: Final = 65_536
 TITLE_WORD_LIMIT: Final = 15
 INTENT_WORD_LIMIT: Final = 120
 NODE_BOUND: Final = 5
+CHANGES_OVERLAY: Final = "spx/local/changes.md"
+ROOT_HEADINGS_LINE: Final = "- Repository-root headings: admitted"
 
 
 class ExitCode(IntEnum):
@@ -716,6 +718,17 @@ def base_holds_product_tree(context: Context, base: str | None) -> bool:
     )
 
 
+def overlay_admits_root_headings(context: Context, base: str | None) -> bool:
+    """Whether the Base's changes overlay holds the line that admits repository-root headings.
+
+    The check reads the overlay at the Base alone, never the checkout's copy.
+    """
+    overlay = at_base(context, base, CHANGES_OVERLAY)
+    if overlay is None:
+        return False
+    return any(line.strip() == ROOT_HEADINGS_LINE for line in overlay.splitlines())
+
+
 def entry_marks_product_tree(context: Context, base: str, entry: str) -> bool:
     """Whether one ``ls-tree -z`` entry of the Base's ``spx/`` marks a Product Tree.
 
@@ -1330,6 +1343,7 @@ def check_declarations(
     if subsections is None:
         return []
     tree = base_holds_product_tree(context, base)
+    root_headings = tree and overlay_admits_root_headings(context, base)
     declared_new: set[str] = set()
     siblings: dict[tuple[str, str, str], str] = {}
     moved: dict[str, str] = {}
@@ -1346,7 +1360,8 @@ def check_declarations(
             and operation.kind in ("delete", "move", "replace")
             else base
         )
-        read_path = check_heading(context, sub, operation, op_base, tree, moved)
+        sub_tree = tree and not (root_headings and not sub.heading.startswith("spx/"))
+        read_path = check_heading(context, sub, operation, op_base, sub_tree, moved)
         check_new_artifact(context, sub, declared_new, siblings)
         if not is_new(sub.heading) and sub.preamble:
             context.add(
@@ -1367,7 +1382,7 @@ def check_declarations(
         if operation is None:
             continue
         operations.append((sub.heading, operation))
-        check_operation_kind(context, sub, operation, op_base, tree)
+        check_operation_kind(context, sub, operation, op_base, sub_tree)
         check_front_matter(context, sub, operation, op_base)
         if operation.kind in ("edit", "move", "create"):
             check_diff_lines(context, sub, operation, op_base, read_path)
