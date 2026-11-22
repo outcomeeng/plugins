@@ -1323,10 +1323,8 @@ def check_declarations(
     """Judge every Declarations subsection; return each heading with its operation.
 
     ``sliced_base`` is the Base of a Leaf whose Changeset has merged into the
-    default branch, as the latest advance to Sliced recorded it; every
-    operation, an edit's ``-`` and context lines included, is read there
-    instead of at ``base``, because the merged Changeset already rewrote the
-    lines at ``base``.
+    default branch, as the latest advance to Sliced recorded it; each deletion,
+    move, or replacement is read there instead of at ``base``.
     """
     subsections = split_subsections(context, lines)
     if subsections is None:
@@ -1341,7 +1339,13 @@ def check_declarations(
     node_count = 0
     for sub in subsections:
         operation = check_payload(context, sub)
-        op_base = sliced_base if sliced_base is not None else base
+        op_base = (
+            sliced_base
+            if sliced_base is not None
+            and operation is not None
+            and operation.kind in ("delete", "move", "replace")
+            else base
+        )
         read_path = check_heading(context, sub, operation, op_base, tree, moved)
         check_new_artifact(context, sub, declared_new, siblings)
         if not is_new(sub.heading) and sub.preamble:
