@@ -218,3 +218,28 @@ A fifth assertion belongs to the same prose-coupling class. The spec audit of th
 **Impact.** Passing couples to pinned wording while the claims receive no behavioral verdict, and the drift-gate assertion records history rather than permanent truth.
 
 **Settlement condition.** The verification form for pinned router prose is decided once, as the entry above states, and the four assertions and the operator-question assertion take that form in the same changeset; the drift-gate assertion states its rule atemporally.
+
+## The Codex registry names call the authored name a role `spx/21-product-tree.enabler/43-instruction-block.enabler/instruction-block.md` `registry-names` `consistency`
+
+**Evidence**: three places form each canonical subagent definition's name as
+`<plugin>_<unchanged-authored-role>`: the `registry-names` assertion of
+`instruction-block.md` (line 292), the router template
+`src/plugins/product-tree/skills/update-instruction-block/templates/instruction-block.md`
+(line 32), and the pinned requirement in
+`outcomeeng/distribution/instruction_block.py` (line 344). The
+prohibited-terminology table of
+[`spx/15-agent-terminology.pdr.md`](spx/15-agent-terminology.pdr.md) bars
+"role" for a named installed configuration and requires "subagent name" for its
+invocation identifier. The `naming-relation` row of
+`spx/18-plugin-build.enabler/plugin-build.md` reads
+`<plugin>_<unchanged-authored-name>`. The `product-tree-review` CI review on
+PR 787 raised this as a `DEBT` finding, and
+the Plugins Maintainer ruled it recorded here.
+
+**Impact**: the Codex router, its generator and its spec name the subagent
+name with the word the terminology decision reserves for a Role, and differ
+from the naming relation the plugin-build spec states.
+
+**Settlement condition**: the spec assertion, the template and
+`instruction_block.py` form the name as `<plugin>_<unchanged-authored-name>`,
+and the regenerated root guides and shipped trees carry it.

@@ -150,3 +150,24 @@ per Claude model; the additions to `profiles.py` leave `ClaudeModel` and
 
 **Settlement condition**: the test covers every effort-requiring model, so a
 model that accepts `effort=None` fails it.
+
+## The flat-name assertion calls the authored name a role `spx/18-plugin-build.enabler/54-conversion.enabler/21-agents.enabler/agents.md` `For all plugin and authored-role names` `consistency`
+
+**Evidence**: `agents.md` line 37 states the flat and namespaced names as
+`<plugin>_<unchanged-authored-role>` and `<plugin>:<authored-role>`, "including
+when the role begins with the plugin name". The prohibited-terminology table of
+[`spx/15-agent-terminology.pdr.md`](spx/15-agent-terminology.pdr.md) bars
+"role" for a named installed configuration and requires "subagent name" for its
+invocation identifier. The parent row `naming-relation` of
+`spx/18-plugin-build.enabler/plugin-build.md` reads
+`<plugin>_<unchanged-authored-name>` and `<plugin>:<authored-name>`. The
+`product-tree-review` CI review on PR 787 raised
+this as a `DEBT` finding, and the Plugins Maintainer ruled it recorded here.
+
+**Impact**: the child assertion and its parent name the same identifier in two
+words, and the child uses the word the terminology decision reserves for a
+Role.
+
+**Settlement condition**: `agents.md` names the identifier
+`<unchanged-authored-name>` and `<authored-name>` and says "name" where it says
+"role" for it.
