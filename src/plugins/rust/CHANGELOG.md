@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.11.3
+
+### Changed
+
+- **`/author-rust-code` counts the rows under an `### Audit` group heading as audit rows.** A rule's verification type stands in its group heading and an Audit row carries no tag, so the completion report's `Audit requirements` table lists each routed row under an `### Audit` heading, and a row outside every such heading counts as none, whether or not it ends in an `[audit]` tag. Before this change, the skill counted a row as audit-routed by its `([audit:{rule-slug}])` or `([audit])` tag.
+
 ## 0.11.2
 
 ### Changed
