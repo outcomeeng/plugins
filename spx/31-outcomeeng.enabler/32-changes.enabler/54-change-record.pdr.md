@@ -201,6 +201,7 @@ Each Transition takes a Change in the state its row requires and changes what it
 - one-home: NEVER: a metadata field stands in the body, or the Change Store holds a field in two places.
 - draft-lifecycle: ALWAYS: a Draft of a Change not yet recorded holds the Lifecycle that recording gives it.
 - draft-base: ALWAYS: the base of a Draft of a Leaf names the head of the default branch against which the Refiner wrote its Declarations.
+- overlay-root-headings: ALWAYS: in a repository whose `spx/local/changes.md` at the Base holds the line `- Repository-root headings: admitted`, a subsection for a file outside `spx/` takes the heading the created and no-tree rows of subsection-headings state, the diff lines the no-tree rows of diff-lines state, and the operations operation-kinds admits for a file of a Product with no Product Tree; in a repository with a Product Tree whose changes overlay holds no such line, a heading outside `spx/` fails subsection-headings.
 
 ### Test.Mapping: github-store
 
