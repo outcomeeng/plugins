@@ -6,7 +6,7 @@ lifecycle: <Submitted for a Change with no Parent, Available for a Child>
 parent: <owner/repo#N, or null>
 predecessors: []
 blockers: []
-priority: <null, or the Priority the Change Store holds; a publish leaves it as stored>
+priority: <null, or the Parent's Priority for a Child>
 primary_value: null
 investment: null
 ---

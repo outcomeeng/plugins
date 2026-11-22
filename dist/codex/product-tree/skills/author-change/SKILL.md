@@ -63,7 +63,7 @@ Before each publish at Framed or Sliced, trace each result the Verification part
 | `--root` a relative path                                                      | the form check's `unusable` result, exit 2                                                       | as expected |
 | the entrypoint copied to a skill directory with no `change-standards` sibling | `error: the form check is absent at <path>; reinstall the product-tree plugin` on stderr, exit 2 | as expected |
 
-`scripts/publish.py` runs the same form check, then writes through `gh`. A compliance test in the plugin's source repository covers it against a recording store: a Draft that fails the check writes nothing; a passing Draft writes the fields it holds and clears Parent and Predecessors when it leaves them out, and writes no Priority, Maturity or Lifecycle on a publish that replaces a record; recording writes Maturity and Lifecycle; and the native blockers follow the Draft.
+`scripts/publish.py` runs the same form check, then writes through `gh`. A compliance test in the plugin's source repository covers it against a recording store: a Draft that fails the check writes nothing; a passing Draft writes the fields it holds and clears Parent and Predecessors when it leaves them out, and writes no Priority, Maturity or Lifecycle on a publish that replaces a record; recording writes Maturity and Lifecycle, and recording a Child writes its Parent's Priority; a Parent's Draft without `base` clears the Base field; and the native blockers follow the Draft.
 
 </testing>
 
@@ -75,7 +75,7 @@ Write the Draft to the store through the publish command, and through no other w
 python3 "${SKILL_DIR}/scripts/publish.py" --root <checkout-root> --draft <draft-path> --store <owner/repo> [--issue <owner/repo#N> --read-edited-at <read stamp>] [--published <composed-stored-draft>]
 ```
 
-It runs the form check of `<form_check_gate>` on the exact Draft and writes nothing while the check fails, under `publish-checked`. On a pass it re-reads the edit stamp before the body write under `github-race`, creates the issue or edits its title and body from the Draft's `## Statement of Intent` line to its end, and writes the Product, Parent, Predecessors and Base fields and the native blockers from the Draft, clearing each of them the Draft empties or leaves out, under `github-clear`. It leaves every other field as the store holds it, and writes Maturity and Lifecycle only when recording. Its result names each write. Then, under `<write_discipline>`:
+It runs the form check of `<form_check_gate>` on the exact Draft and writes nothing while the check fails, under `publish-checked`. On a pass it re-reads the edit stamp before the body write under `github-race`, creates the issue or edits its title and body from the Draft's `## Statement of Intent` line to its end, and writes the Product, Parent, Predecessors and Base fields and the native blockers from the Draft, clearing each of them the Draft empties or leaves out, under `github-clear`. It leaves every other field as the store holds it, and writes Maturity and Lifecycle only when recording; recording a Child writes its Parent's stored Priority. Its result names each write. Then, under `<write_discipline>`:
 
 1. Run the option check of `<store_options>` for each single-select field the publish writes, before running the command.
 2. When recording, set the holder: add the assignee, then post the `claim` comment under `<transition_comment>` that records this session and worktree.
@@ -94,7 +94,7 @@ For a Sliced Leaf, after a publish that writes its body and the readback, launch
 
 <operations>
 
-- `record`: draft a new Change at Proposed and publish it. A Change with no Parent records as Submitted for its Priority decision; a Child records as Available.
+- `record`: draft a new Change at Proposed and publish it. A Change with no Parent records as Submitted for its Priority decision; a Child records as Available with its Parent's Priority.
 - `publish`: revise a stored record from its Draft and publish it. Keep `predecessors` and `parent` as stored; `base` moves only with a body write under `base-on-body`.
 - `split`: below Applicable only, under `split`, record each Child from its own Draft with `parent` naming the source, then publish the source as a Parent: its body only the Statement of Intent and its Draft without `base`, so the publish clears its Base.
 - `merge`: on the Operator's direction only, under `merge-direction`, append the absorbed Change to the survivor's `predecessors`, publish the survivor, and close the absorbed Change through `product-tree:manage-change` with `abandoned` and the survivor's reference, which closes the absorbed issue as a duplicate of the survivor's issue.

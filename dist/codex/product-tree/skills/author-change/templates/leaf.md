@@ -7,7 +7,7 @@ parent: <owner/repo#N, or null>
 predecessors: []
 blockers: []
 base: <full head commit of the default branch the Declarations read>
-priority: <null, or the Priority the Change Store holds; a publish leaves it as stored>
+priority: <null, or the Parent's Priority for a Child>
 primary_value: null
 investment: null
 ---
