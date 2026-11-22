@@ -112,6 +112,7 @@ The Declarations section holds one subsection per artifact, each a level-three h
 - `new-path-reference`: the Refiner names a new Node or Decision Record by the same path in every later subsection, `NN` included.
 - `no-index`: a record names no Index for a new Node or Decision Record.
 - `new-sibling-names`: two new siblings in one Change never share a slug and a kind.
+- `overlay-root-headings`: in a repository whose `spx/local/changes.md` at the Base holds the line `- Repository-root headings: admitted`, a subsection for a file outside `spx/` takes the heading the rows above state for a file of a Product with no Product Tree, the diff lines `diff-lines` states for such a file, and the operations `operation-kinds` admits for it; in a repository with a Product Tree whose changes overlay holds no such line, a heading outside `spx/` fails `subsection-headings`.
 
 `payloads`: below its heading and any `Depends on:` and `Precedes:` lines, a subsection holds one payload of one of these kinds:
 

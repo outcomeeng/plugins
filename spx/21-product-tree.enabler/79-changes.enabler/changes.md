@@ -14,6 +14,7 @@ CAN write, check, and audit every Change record in one form
 ### Test.Compliance: form check tree
 
 - [form-check-tree](tests/test_form_check_tree.compliance.l2.py): ALWAYS: the form check treats a repository as having a Product Tree exactly when the tree of the record's Base holds, directly under `spx/`, a root Product spec, which is a `{slug}.spec.md` whose front matter holds `kind: product` or a `{slug}.product.md` of the 3.x grammar, or an indexed Node directory, which is an index, a hyphen, a slug and a Node kind suffix, `.enabler` or `.outcome` of the 3.x grammar or `.product`, `.substrate`, `.capability`, `.domain`, `.interface`, `.surface` or `.variant` of the 4.0 grammar; it judges every Declarations heading as a path from the repository root when the Base holds neither, and reads no directory of the checkout for this.
+- [form-check-overlay-headings](tests/test_form_check_overlay_headings.compliance.l2.py): ALWAYS: when the Base's `spx/local/changes.md` holds the line `- Repository-root headings: admitted`, the form check judges a Declarations heading outside `spx/` as a path from the repository root and accepts the labelled diff lines and the `new file`, `deleted file`, move, and replacement operations the no-tree rows admit for that file; without the line, it fails that heading with `subsection-headings`.
 
 ### Test.Compliance: form check rows
 
