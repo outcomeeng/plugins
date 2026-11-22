@@ -92,6 +92,7 @@ class Store:
         self.root = root
         self.runner = runner
         self.writes: list[str] = []
+        self.created: str | None = None
 
     def gh(self, *argv: str) -> str:
         result = self.runner(["gh", *argv], cwd=self.root)
@@ -246,14 +247,13 @@ def write_text(
         shutil.rmtree(scratch, ignore_errors=True)
 
 
-def write_fields(
-    fc: ModuleType, store: Store, values: dict[str, str], number: int, recording: bool
-) -> None:
-    """Write the fields and blockers a publish owns, clearing each the Draft empties or leaves out."""
-    issue_id = store.issue(number)["id"]
+def plan_fields(
+    fc: ModuleType, store: Store, values: dict[str, str], recording: bool
+) -> tuple[dict[str, str | None], dict[str, Any], list[int]]:
+    """Resolve every field value, option, Parent and blocker before any write."""
     fields = store.fields()
     parent = number_of(fc.scalar(values.get("parent", "")), store.repo)
-    wanted = {
+    wanted: dict[str, str | None] = {
         "Product": fc.scalar(values.get("product", "")),
         "Parent": str(parent) if parent is not None else None,
         "Predecessors": ", ".join(fc.flow_list(values.get("predecessors", "")) or [])
@@ -269,14 +269,30 @@ def write_fields(
         field = fields.get(name)
         if field is None:
             raise PublishError(f"the organization holds no issue field {name}")
-        if value:
-            store.set_field(issue_id, field, value)
-        elif not recording:
-            store.clear_field(issue_id, field)
+        options = {option["name"] for option in field.get("options", [])}
+        if value and "options" in field and value not in options:
+            raise PublishError(f"the field {name} offers no option {value!r}")
     blockers = [
         number_of(ref, store.repo) or 0
         for ref in fc.flow_list(values.get("blockers", "")) or []
     ]
+    return wanted, fields, blockers
+
+
+def write_fields(
+    store: Store,
+    number: int,
+    plan: tuple[dict[str, str | None], dict[str, Any], list[int]],
+    recording: bool,
+) -> None:
+    """Write the planned fields and blockers, clearing each the Draft empties or leaves out."""
+    wanted, fields, blockers = plan
+    issue_id = store.issue(number)["id"]
+    for name, value in wanted.items():
+        if value:
+            store.set_field(issue_id, fields[name], value)
+        elif not recording:
+            store.clear_field(issue_id, fields[name])
     store.sync_blockers(number, blockers)
 
 
@@ -288,8 +304,12 @@ def write_record(
     read_edited_at: str | None,
 ) -> str:
     """Write the Draft's title, body, fields and blockers; return the issue reference."""
+    recording = issue is None
+    plan = plan_fields(fc, store, draft.values, recording)
     number = write_text(fc, store, draft, issue, read_edited_at)
-    write_fields(fc, store, draft.values, number, recording=issue is None)
+    if recording:
+        store.created = f"{store.repo}#{number}"
+    write_fields(store, number, plan, recording)
     return f"{store.repo}#{number}"
 
 
@@ -313,7 +333,14 @@ def publish(
     try:
         reference = write_record(fc, store, draft, issue, read_edited_at)
     except PublishError as exc:
-        return 1, {"status": "failed", "detail": str(exc), "writes": store.writes}
+        failed: dict[str, object] = {
+            "status": "failed",
+            "detail": str(exc),
+            "writes": store.writes,
+        }
+        if store.created is not None:
+            failed["issue"] = store.created
+        return 1, failed
     return 0, {"status": "published", "issue": reference, "writes": store.writes}
 
 
