@@ -35,7 +35,7 @@ CAN eliminate malformed architecture decisions before they accumulate
 
 | Case                                       | Mutation of the baseline ADR                                                                                          | Then                                         |
 | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| well-formed-adr-passes                     | none                                                                                                                  | `approved`                                   |
+| well-formed-adr-passes                     | none                                                                                                                  | `approved`, with no finding                  |
 | missing-verification-section               | delete the `## Verification` line and every line below it                                                             | `rejected` with a `missing-section` finding  |
 | missing-opening-decision-statement         | delete the CONSTRAINS, TO and SO THAT lines                                                                           | `rejected` with a `missing-section` finding  |
 | rationale-and-invariants-sections-rejected | insert `## Rationale` and the line `The fallback keeps capture working when the model fails.` above `## Verification` | `rejected` with a `declaration-form` finding |
@@ -47,7 +47,7 @@ CAN eliminate malformed architecture decisions before they accumulate
 
 | Case                       | Mutation of the baseline ADR                                                                                                          | Then                                       |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| atemporal-adr-passes       | none                                                                                                                                  | `approved`                                 |
+| atemporal-adr-passes       | none                                                                                                                                  | `approved`, with no finding                |
 | temporal-opening-statement | append `, which replaced the earlier regular-expression parser` to the TO line                                                        | `rejected` with a `temporal-voice` finding |
 | temporal-verification-rule | replace `the deterministic fallback produces` in the `fallback-task` row with `since the outage, the deterministic fallback produces` | `rejected` with a `temporal-voice` finding |
 
@@ -57,7 +57,7 @@ CAN eliminate malformed architecture decisions before they accumulate
 
 | Case                                  | Mutation of the baseline ADR                                                                                                                   | Then                                                 |
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| valid-form-passes                     | none                                                                                                                                           | `approved`                                           |
+| valid-form-passes                     | none                                                                                                                                           | `approved`, with no finding                          |
 | audit-tag-on-compliance-rule-rejected | append a space and `([audit])` to the `fallback-task` row                                                                                      | `rejected` with an `invalid-tag` finding             |
 | bare-mechanism-tag-rejected           | append a space and `([test])` to the `fallback-task` row                                                                                       | `rejected` with an `invalid-tag` finding             |
 | eval-tag-on-audit-rule-rejected       | append the heading `### Audit: messages` and the row `- fallback-label: A task the fallback creates carries the label Uninterpreted. ([eval])` | `rejected` with an `invalid-tag` finding             |
