@@ -63,7 +63,7 @@ Before each publish at Framed or Sliced, trace each result the Verification part
 | `--root` a relative path                                                      | the form check's `unusable` result, exit 2                                                       | as expected |
 | the entrypoint copied to a skill directory with no `change-standards` sibling | `error: the form check is absent at <path>; reinstall the product-tree plugin` on stderr, exit 2 | as expected |
 
-`scripts/publish.py` runs the same form check, then writes through `gh`. The compliance test `spx/31-outcomeeng.enabler/32-changes.enabler/tests/test_change_publish.compliance.l2.py` covers it against a recording store: a Draft that fails the check writes nothing; a passing Draft writes the fields it holds and clears Parent and Predecessors when it leaves them out, and writes no Priority, Maturity or Lifecycle on a publish that replaces a record; recording writes Maturity and Lifecycle; and the native blockers follow the Draft.
+`scripts/publish.py` runs the same form check, then writes through `gh`. A compliance test in the plugin's source repository covers it against a recording store: a Draft that fails the check writes nothing; a passing Draft writes the fields it holds and clears Parent and Predecessors when it leaves them out, and writes no Priority, Maturity or Lifecycle on a publish that replaces a record; recording writes Maturity and Lifecycle; and the native blockers follow the Draft.
 
 </testing>
 
