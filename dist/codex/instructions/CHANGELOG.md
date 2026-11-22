@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.22.9
+
+### Changed
+
+- **`/audit-skill`, `/audit-subagent` and the `/author-skill` auditor template record each unit and finding as it is judged.** `/audit-skill` adds each changed file's unit as soon as that file's judgment completes, then that file's findings, before it judges the next file. `/audit-subagent` adds each governing declaration's unit as soon as it reads the declaration, and the definition unit, then its findings, as soon as the definition's judgment completes. An audit authored from `templates/auditor-skill.md` adds its root unit as soon as the run starts and each child unit and its findings as soon as that unit's judgment completes. Before this change, each recorded every unit and finding in one batch after all judgment ended, which the run-journal decision forbids.
+
 ## 0.22.8
 
 ### Changed
