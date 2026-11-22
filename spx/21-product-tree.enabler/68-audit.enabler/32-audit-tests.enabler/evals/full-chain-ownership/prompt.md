@@ -60,7 +60,7 @@ Do not proceed without live `<PRODUCT_TREE_FOUNDATION>` and `<PRODUCT_TREE_CONTE
 
 **Step 2: Map assertions to test files**
 
-Read the spec's Assertions section. Only assertions carrying `[test]` evidence enter this audit. Skip assertions tagged `[eval]`, `[audit:{rule-slug}]`, or the pathless `[audit]` that the foundation admits for a toolchain without slug support; their evidence belongs to other verification workflows.
+Read the spec's Assertions section. Only the rows under a `Test.` group heading and each `Test.Mapping:` subsection enter this audit. Skip every row under an `Audit` or `Probe` heading and every `Evaluate:` subsection; their evidence belongs to other verification workflows.
 
 For each included assertion, extract:
 
@@ -68,7 +68,7 @@ For each included assertion, extract:
 | -------------- | -------------------------------------------------------- |
 | Assertion text | The claim being tested                                   |
 | Assertion type | Scenario / Mapping / Conformance / Property / Compliance |
-| Test link      | Path from `([test](path))`                               |
+| Test link      | Path the slug links, `[slug](tests/...)`                 |
 | Link status    | File exists or missing                                   |
 
 **Missing test file = finding** with rule `missing-test-file` against the missing path. Record it and continue to next assertion.
@@ -152,7 +152,7 @@ If codebase imports exist, classify using this coupling taxonomy:
 
 Coupling means exercising executable **behavior**, never reading a document's content. A test whose "subject" is an authored prose or documentation artifact — a skill body, a spec body, a prompt, any text the product authors and maintains — that the test reads and asserts substrings of is NOT behavioral coupling, even when that artifact is the thing the assertion names. The text passes whatever it literally contains; no code runs. This holds full-chain: a harness that exposes the authored path as a constant, or a reader function that performs the read inside test infrastructure, does not convert a prose assertion into behavioral coupling — follow the read to its source and classify by what is ultimately exercised.
 
-**A test whose evidence is reading an authored prose or documentation body and asserting on its content → REJECT with rule `prose-coupling`.** The claim verifies that prose was authored, not that code behaves; its verification type belongs in `[eval]` (a graded judgment over a producer's structured verdict) or `[audit]` (a semantic constraint), and the spec assertion is retagged accordingly. Reading an authored *source-code* file for a structural lint that exercises a rule is not prose-coupling; the discriminator is whether the subject is authored prose/documentation or executable behavior.
+**A test whose evidence is reading an authored prose or documentation body and asserting on its content → REJECT with rule `prose-coupling`.** The claim verifies that prose was authored, not that code behaves; its verification type is Evaluate (a graded judgment over a producer's structured verdict) or Audit (a semantic constraint), and the spec assertion moves under that type's heading. Reading an authored *source-code* file for a structural lint that exercises a rule is not prose-coupling; the discriminator is whether the subject is authored prose/documentation or executable behavior.
 
 </step>
 
@@ -269,7 +269,7 @@ Validate its output against that skill's declared verdict contract: output shape
 
 Merge each valid result's findings into the matching rows by `name` — append, never replace — and derive their statuses under `<verdict_format>`. A composed finding keeps the rule identifier from the rule catalog of the invoked `audit-<lang>-test` skill and is keyed `<file>:<that identifier>`; composed findings sharing a key join into one finding whose `locations` list holds each of their locations. Merge its evidence-chain entries and coverage traces with the shared inspection, preserving every inspected artifact and assertion without duplicate entries. A composed rejection remains a rejection in the merged result. When a required `audit-<lang>-test` skill is absent or unavailable, mark `gate-1-assertion` as `FAIL` and append a `REJECT` finding there naming the missing skill, property and rule `language-composition`, and remediation target `skill-installation`; never approve incomplete coverage.
 
-A language audit returns a third shape when its own scope step finds that every subject it was given is a retired path with no current `[test]` assertion and no current evidence-chain owner: `{"status": "NOT_APPLICABLE", "subjects": [...], "explanation": "..."}`, carrying no rows and no findings. Treat it as neither a pass nor a failure of that language's concerns. Record the language, reported subjects, and explanation as one `metadata.not_applicable` entry, compose the remaining languages normally, and decide the overall verdict from the rows that do exist. When every language in scope returns `NOT_APPLICABLE` and no language-neutral finding was raised, emit that same shape rather than an approval, because no evidence was judged.
+A language audit returns a third shape when its own scope step finds that every subject it was given is a retired path with no current Test assertion and no current evidence-chain owner: `{"status": "NOT_APPLICABLE", "subjects": [...], "explanation": "..."}`, carrying no rows and no findings. Treat it as neither a pass nor a failure of that language's concerns. Record the language, reported subjects, and explanation as one `metadata.not_applicable` entry, compose the remaining languages normally, and decide the overall verdict from the rows that do exist. When every language in scope returns `NOT_APPLICABLE` and no language-neutral finding was raised, emit that same shape rather than an approval, because no evidence was judged.
 
 </step>
 
