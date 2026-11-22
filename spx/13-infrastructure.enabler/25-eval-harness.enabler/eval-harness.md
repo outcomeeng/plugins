@@ -1,65 +1,134 @@
+---
+id: 01a1e1d3-9613-7094-b04a-20716a8f5df5
+---
+
 # Eval Harness
 
 PROVIDES a generic Python evaluation runner — the `outcomeeng_evals` package — that replays curated case sets through Claude Code skills and grades structured verdicts against expected fields
 SO THAT spec assertions about LLM-driven skill behavior across any project consuming this marketplace
-CAN carry `[eval]` evidence bounded by per-eval expected-verdict structures declared in each case file, governed by the lane declaration in [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md), and gated by pass@k thresholds
+CAN carry eval evidence bounded by per-eval expected-verdict structures declared in each case file, and gated by pass@k thresholds
 
 ## Assertions
 
-### Conformance
+### Test.Conformance: eval definitions
 
-- ALWAYS: each per-eval directory declares its contract through an `eval.toml` carrying `title`, `cases`, `prompt`, optional `threshold`, optional `trials`, and optional `model` defaulting to `sonnet`; `model = "inherit"` is rejected because eval evidence must not depend on the interactive session model, and the loader resolves `cases` and `prompt` paths relative to the TOML file's directory ([test](tests/test_definition.conformance.l1.py))
-- ALWAYS: producer-coupled skill evals declare `prompt_source.kind = "producer-file"` for one whole skill or `prompt_source.kind = "producer-section"` for one named step, with a repository-relative producer path and an eval-directory-relative prompt template, so `outcomeeng-evals materialize-prompts` derives `prompt.md` from the complete producer or selected concern rather than a hand-copied simulation, per [spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md](spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md) ([test](tests/test_producer_prompt.conformance.l1.py))
-- ALWAYS: a composed-skill eval declares `prompt_source.kind = "producer-files"` with a non-empty, ordered, duplicate-free set of repository-relative whole-producer paths, and prompt materialization path-labels every complete producer in that order ([test](tests/test_producer_files_prompt.conformance.l1.py))
-- ALWAYS: each `eval.toml` may declare CI-selection metadata — `plugin_dir`, `owned_paths`, `smoke_cases`, and `ci_policy` — so workflow planning selects the correct plugin runtime and narrows PR runs to affected suites and canary cases without changing local full-suite execution ([test](tests/test_definition.conformance.l1.py))
-- ALWAYS: an `owned_paths` entry loads when its body matches the source-owned path alphabet and its only glob is a trailing `/**` ([test](tests/test_definition.conformance.l1.py))
-- ALWAYS: the owned-path alphabet excludes every character the standard library reports as glob magic — evidence drawn from the alphabet proves only that the loader honors it, never that the alphabet is right, so an oracle outside the harness pins the contract the alphabet must keep ([test](tests/test_definition.conformance.l1.py))
-- ALWAYS: the `outcomeeng-evals` CLI exposes `materialize-prompts`, which walks eval definitions under a root, writes generated prompts by default, and supports `--check` for drift detection without modifying files ([test](tests/test_producer_prompt.conformance.l1.py))
-- ALWAYS: link-integrity validation accepts an `[eval](path)` link in marketplace spec markdown only when it resolves to an existing `eval.toml` file under a sibling `evals/{rule}/` directory ([test](tests/test_link_integrity.conformance.l1.py))
-- ALWAYS: link-integrity validation accepts a `[test](path)` link in marketplace spec markdown only when it resolves to an existing pytest collectable (filename starts with `test_`, suffix `.py`) under a sibling `tests/` directory ([test](tests/test_link_integrity.conformance.l1.py))
+- [eval-toml-contract](tests/test_definition.conformance.l1.py): Each per-eval directory declares its contract through an `eval.toml` carrying `title`, `cases`, `prompt`, optional `threshold`, optional `trials`, and optional `model` defaulting to `sonnet`; `model = "inherit"` is rejected because eval evidence must not depend on the interactive session model, and the loader resolves `cases` and `prompt` paths relative to the TOML file's directory, as [the eval definition schema](contracts/eval-definition.schema.json) declares
+- producer-prompt-source: Producer-coupled skill evals declare `prompt_source.kind = "producer-file"` for one whole skill or `prompt_source.kind = "producer-section"` for one named step, with a repository-relative producer path and an eval-directory-relative prompt template, so `outcomeeng-evals materialize-prompts` derives `prompt.md` from the complete producer or selected concern rather than a hand-copied simulation, per [spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md](spx/13-infrastructure.enabler/25-eval-harness.enabler/57-producer-coupled-skill-evals.adr.md), with the `prompt_source` table [the eval definition schema](contracts/eval-definition.schema.json) declares
+- producer-files-source: A composed-skill eval declares `prompt_source.kind = "producer-files"` with a non-empty, ordered, duplicate-free set of repository-relative whole-producer paths, and prompt materialization path-labels every complete producer in that order, with the `prompt_source` table [the eval definition schema](contracts/eval-definition.schema.json) declares
+- [ci-selection-metadata](tests/test_definition.conformance.l1.py): Each `eval.toml` may declare CI-selection metadata — `plugin_dir`, `owned_paths`, `smoke_cases`, and `ci_policy` — so workflow planning selects the plugin the agent loads and narrows PR runs to affected suites and canary cases without changing local full-suite execution, with the types [the eval definition schema](contracts/eval-definition.schema.json) declares
+- [owned-path-load](tests/test_definition.conformance.l1.py): An `owned_paths` entry loads when its body matches the source-owned path alphabet and its only glob is a trailing `/**`, by the `owned_paths` pattern [the eval definition schema](contracts/eval-definition.schema.json) declares
 
-### Mappings
+### Test.Compliance: definitions, prompts and links
 
-- ALWAYS: the `run` CLI appends a format-instruction suffix to every rendered prompt before passing it to the model — the suffix declares the grader's two-step JSON-parse contract so the model's structured-output behavior matches what the grader accepts ([test](tests/test_cli.mapping.l1.py))
-- ALWAYS: suite-level pass rate gates an exit-0 result against a configurable threshold whose default sits next to the case set — CI consumes the exit code, not transcript text ([test](tests/test_run_exit.mapping.l1.py))
-- ALWAYS: the `run` CLI rejects a `--workers` value outside the range `[1, 16]` with a usage error — the upper bound caps concurrent `claude` subprocesses so a misconfigured worker count cannot fork-burst the Claude API, per [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) ([test](tests/test_cli.mapping.l1.py))
-- ALWAYS: the `run` CLI accepts repeatable `--case-id` selectors and runs only the named cases in case-file order, rejecting any selector that does not resolve to a case in the suite ([test](tests/test_cli.mapping.l1.py))
-- ALWAYS: the `outcomeeng-evals` Click group exposes the `run`, `history`, `view`, `discover`, `plan`, `ci`, and `materialize-prompts` subcommand names ([test](tests/test_cli.mapping.l1.py))
-- Version-1 history rows both without and with additive ceiling fields map to complete rendered summaries, and the additive fields retain schema version 1 ([test](tests/test_cli.mapping.l1.py))
-- ALWAYS: CI planning maps PR changed paths to suites through each eval's `owned_paths`, runs `smoke_cases` for owned-path changes, runs full suites for eval-definition or harness changes, skips unrelated PR changes, and runs all non-manual suites in full mode ([test](tests/test_cli.mapping.l1.py))
+- owned-path-alphabet: ALWAYS: the owned-path alphabet excludes every character the standard library reports as glob magic — evidence drawn from the alphabet proves only that the loader honors it, never that the alphabet is right, so an oracle outside the harness pins the contract the alphabet must keep
+- materialize-prompts: ALWAYS: the `outcomeeng-evals` CLI exposes `materialize-prompts`, which walks eval definitions under a root, writes generated prompts by default, and supports `--check` for drift detection without modifying files
+- eval-link-integrity: ALWAYS: link-integrity validation accepts an eval link in marketplace spec markdown only when it resolves to an existing `eval.toml` file under a sibling `evals/{rule}/` directory
+- test-link-integrity: ALWAYS: link-integrity validation accepts a test link in marketplace spec markdown only when it resolves to an existing pytest collectable (filename starts with `test_`, suffix `.py`) under a sibling `tests/` directory
 
-### Properties
+### Test.Property: run output
 
-- NEVER: an `owned_paths` entry carries any character outside that alphabet — the rejected domain is the alphabet's open complement rather than an enumerable set of globs ([test](tests/test_definition.property.l1.py))
-- ALWAYS: producer-derived prompt materialization changes when any selected whole producer changes ([test](tests/test_producer_prompt.property.l1.py))
+- format-suffix: For every prompt that any trial of any case renders, the `run` CLI passes the model that prompt followed by the format-instruction suffix, which declares the grader's two-step JSON-parse contract, so the model's structured-output behavior matches what the grader accepts
+- run-exit: For every suite pass rate and every threshold the eval definition declares, whose default sits next to the case set, the run exits 0 when the pass rate is at or above the threshold and exits non-zero when it is below, so CI consumes the exit code rather than transcript text
 
-### Compliance
+### Test.Compliance: worker bound
 
-- ALWAYS: each eval case is a JSONL record carrying an `id`, an input payload, and the expected structural verdict fields — the case file is the durable ground truth for the assertion that links to it ([test](tests/test_eval_harness.compliance.l1.py))
-- ALWAYS: the prompt renderer substitutes `{case_id}` and `{input_json}` in a single forward pass, and passes any other `{token}` through as literal text — an identifier-shaped `{token}` that is not a recognized placeholder produces a stderr warning, so a template typo surfaces at render time rather than only as a downstream grading failure ([test](tests/test_eval_harness.compliance.l1.py))
-- ALWAYS: the runner invokes Claude Code through `claude [--bare] --print --output-format json --no-session-persistence --settings '{"advisorModel":""}' --model <model> --plugin-dir <plugin-path>`, reads the assistant message from the parsed JSON envelope, and disables the Advisor server tool at this single model-process boundary so automated eval cost and model identity never inherit a developer's advisor configuration. The operator determines the auth mode by the secrets already provisioned in the inherited environment: when `ANTHROPIC_API_KEY` is set to a non-empty value the runner passes `--bare`, and when `ANTHROPIC_API_KEY` is unset or empty the runner omits `--bare` and preserves the inherited environment, including `CLAUDE_CODE_OAUTH_TOKEN` when present. Callers may force the flag on or off by passing `bare=True` or `bare=False` to the constructor for direct test coverage and explicit embedding use, but the default runner behavior follows the inherited environment ([test](tests/test_runner.compliance.l1.py))
-- ALWAYS: agents use the provisioned authentication mode as found and do not ask the operator to add, remove, or switch authentication secrets for an eval run ([audit])
-- ALWAYS: the subprocess environment passed to `claude` strips the `CLAUDECODE` marker before invocation — nested calls from inside a Claude Code session must run as ordinary print-mode subprocesses, not as guarded interactive sessions ([test](tests/test_runner.compliance.l1.py))
-- ALWAYS: graders parse the assistant response as a single JSON document — `json.loads()` on the raw response first, then a single retry on the response with one surrounding markdown code fence (no language tag or the `json` tag) stripped — and compare against each case's expected structural fields by recursive subset matching; prose interpretation never participates in the pass/fail decision ([test](tests/test_eval_harness.compliance.l1.py))
-- ALWAYS: graders treat the sentinel strings `#string`, `#notnull`, and `#present` at expected-value positions as type/presence matchers — `#string` matches when actual is a string, `#notnull` matches when actual is not null, `#present` matches any value (including null). The convention follows Karate's `#`-prefixed placeholder syntax and lets cases pin a field as "present and of type X" without specifying its value, useful when the agent's emission is variable but the schema requires the field ([test](tests/test_eval_harness.compliance.l1.py))
-- ALWAYS: each case is replayed `k >= 1` trials and counted as passing when the per-case threshold is met (default majority of trials) — non-determinism is bounded by pass@k ([test](tests/test_eval_harness.compliance.l1.py))
-- ALWAYS: every case outcome carries `trial_pass_count`, `trial_count`, and `trial_pass_rate`, and the suite-level `trial_stability` block reports `mean_trial_pass_rate`, `stddev_trial_pass_rate` (null when fewer than two cases), and `min`/`max` pass rates — single-shot conclusions are never the only signal when `k > 1` ([test](tests/test_report.compliance.l1.py))
-- ALWAYS: a `workers >= 1` knob parallelizes case execution through a bounded thread pool, and outcomes follow case-file order regardless of thread finish order — interleaving is invisible to downstream consumers ([test](tests/test_eval_harness.compliance.l1.py))
-- ALWAYS: repository-local eval execution is exposed through Just recipes — `just eval`, `just eval-case`, and `just eval-node` — that wrap `uv run outcomeeng-evals run`, run node suites serially, read `plugin_dir` and `model` from each `eval.toml` unless `PLUGIN_DIR` or `EVAL_MODEL` overrides them, default to `model = "sonnet"`, `MAX_BUDGET_USD=0.75`, `WORKERS=1`, and `TIMEOUT_SECONDS=180`, and print the expanded command before execution so model and cost-affecting settings are visible ([test](tests/test_eval_just_recipes.compliance.l1.py))
-- ALWAYS: every trial captures observability metadata — `duration_ms`, `total_cost_usd`, `input_tokens`, `output_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`, `num_turns`, `stop_reason` — parsed from the claude JSON envelope; missing fields surface as `null` rather than fabricated zeros ([test](tests/test_runner.compliance.l1.py))
-- ALWAYS: every suite run serializes a JSON results document under each eval's `runs/{timestamp}.json` carrying a `schema_version`, the selected `model`, the configured per-trial `max_budget_usd` and `timeout_seconds`, the suite summary, a `cost_summary` aggregating trial-level cost, duration, and token counts — including the prompt-cache read and creation token totals — and per-case input, expectations, trial prompts, raw responses, parsed verdict JSON, grade reasons, and trial metadata — failed cases remain inspectable without rerunning the LLM, and the configured ceilings plus cache-token totals make cost and duration behavior interpretable without reconstructing invocation settings ([test](tests/test_report.compliance.l1.py))
-- ALWAYS: the JSON results document is the authoritative artifact for downstream tooling; the sibling HTML viewer reads the same JSON payload (embedded in a `<script type="application/json">` tag for `file://` opens) and adds no fields beyond what the JSON contains ([test](tests/test_report.compliance.l1.py))
-- ALWAYS: every suite run appends one summary row to the per-eval `history.jsonl` carrying timestamp, schema version, git SHA, selected model, configured per-trial `max_budget_usd` and `timeout_seconds`, suite verdict, pass rate, case counts, total cost, total duration, the aggregate input, output, prompt-cache read, and prompt-cache creation token counts, and the run's transcript path — the configured ceilings distinguish completed observations from budget- and timeout-censored failures, and the cache-token aggregates make the prompt-cache hit rate a durable trend signal; the file is the durable trend record ([test](tests/test_history.compliance.l1.py))
-- ALWAYS: developer-machine eval runs produce local `history.jsonl` appends that contributors restore before committing unrelated changes, while CI workflows own canonical baseline appends when wired ([audit])
-- NEVER: the eval workflow declares a `pull_request`, `push`, or `schedule` trigger — `workflow_dispatch` is its only trigger, so CI starts an eval only when an operator dispatches it ([test](tests/test_eval_workflow_triggers.compliance.l1.py))
-- ALWAYS: the eval workflow's dispatch inputs and runtime fallbacks for `max_budget_usd` and `timeout_seconds` take the defaults `outcomeeng_evals.settings` declares — a dispatched run spends no more than a local run by default ([test](tests/test_eval_workflow_defaults.compliance.l1.py))
-- ALWAYS: every eval case carries at least two structurally coupled expectations — one on a verdict-level attribute (e.g., `status="rejected"`) and one on a finding-level attribute (e.g., `rule="X" present="true"`) — paired so that a hallucinated verdict status without a matching finding, or a matching finding without the correct verdict status, fails the case ([audit])
-- NEVER: spawn long-lived `claude` subprocesses or polling loops; each case is a single bounded invocation per [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md) ([audit])
-- NEVER: grade a case by interpreting free-form LLM prose; structural verdict fields are the only source of pass/fail signal ([audit])
-- NEVER: write eval cases that depend on the audited skill running over network or credentialed services without the `l3` level token; case level is the runner's escalation gate ([audit])
-- NEVER: change the `schema_version` of the JSON results document or history row without an incompatible contract change and a corresponding consumer migration; additive fields retain the current version so older artifacts remain readable by tolerant consumers ([audit])
-- NEVER: accept a `must_contain` expectation that is satisfied by a single rule-name attribute without a coupled verdict-status check; a single-attribute match is non-discriminating because a hallucinated finding mentioning the rule name passes it trivially ([audit])
-- NEVER: rely on a sentinel matcher (`#string`, `#notnull`, `#present`) as the only finding-level discriminator — sentinels assert presence and type, not value, so a hallucinated finding matching the sentinel passes trivially; pair every sentinel with at least one coupled discriminating field — `severity` or `concern` — that pins a specific value, in the same spirit as the single-attribute rule above ([audit])
-- NEVER: load a case whose expectation contains a list longer than `MAX_EXPECTED_LIST_LENGTH` — `is_subset` matches expected lists against actual lists in O(expected × actual) time, so the loader rejects an oversized expectation with a clear error rather than running slowly ([test](tests/test_eval_harness.compliance.l1.py))
-- NEVER: commit a `runs/` directory under any `evals/{rule}/` — full transcripts are per-developer ephemeral artifacts; `history.jsonl` is the shared trend record ([audit])
-- NEVER: place test-only fakes inside a shipped runtime package — runtime imports must not pull in test infrastructure ([audit])
+- workers-range: NEVER: the `run` CLI accepts a `--workers` value outside the range `[1, 16]` — it rejects every such value with a usage error, and the upper bound caps concurrent `claude` subprocesses so a misconfigured worker count cannot fork-burst the Claude API, per [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md)
+
+### Test.Mapping: [case-selection](tests/test_cli.mapping.l1.py)
+
+The `run` CLI accepts repeatable `--case-id` selectors and runs only the named cases in case-file order, and it rejects a selector that resolves to no case in the suite.
+
+| Case               | Selectors                                     | Result                                       |
+| ------------------ | --------------------------------------------- | -------------------------------------------- |
+| one-selector       | one `--case-id` naming a case of the suite    | only that case runs                          |
+| repeated-selectors | several `--case-id` selectors in any order    | only the named cases run, in case-file order |
+| unknown-selector   | a `--case-id` that names no case of the suite | the run is rejected                          |
+
+### Test.Mapping: [subcommand-names](tests/test_cli.mapping.l1.py)
+
+The `outcomeeng-evals` Click group exposes exactly these subcommand names in its help listing.
+
+| Case                | Subcommand            |
+| ------------------- | --------------------- |
+| run                 | `run`                 |
+| history             | `history`             |
+| view                | `view`                |
+| discover            | `discover`            |
+| plan                | `plan`                |
+| ci                  | `ci`                  |
+| materialize-prompts | `materialize-prompts` |
+
+### Test.Mapping: [history-row-versions](tests/test_cli.mapping.l1.py)
+
+The `history` subcommand renders a complete summary for every version-1 history row, and the additive ceiling fields retain schema version 1.
+
+| Case             | History row                                         | Rendered summary                      |
+| ---------------- | --------------------------------------------------- | ------------------------------------- |
+| without-ceilings | a version-1 row without the additive ceiling fields | complete                              |
+| with-ceilings    | a version-1 row with the additive ceiling fields    | complete, and the row reads version 1 |
+
+### Test.Mapping: [ci-planning](tests/test_cli.mapping.l1.py)
+
+CI planning maps the changed paths of a PR to suites through each eval's `owned_paths`, and full mode runs every suite whose `ci_policy` is not manual.
+
+| Case                       | Change                                             | Plan                                 |
+| -------------------------- | -------------------------------------------------- | ------------------------------------ |
+| owned-path-change          | a path an eval's `owned_paths` holds               | that suite's `smoke_cases`           |
+| renamed-owned-path         | a rename onto a path an eval's `owned_paths` holds | that suite's `smoke_cases`           |
+| harness-after-owned-path   | an owned path, then a harness path, in one PR      | the full suite                       |
+| harness-change             | a path of the eval harness                         | the full suite                       |
+| copied-harness-path        | a copy onto a path of the eval harness             | the full suite                       |
+| test-harness-change        | a test harness of the eval harness                 | the full suite                       |
+| test-generator-change      | a test generator of the eval harness               | the full suite                       |
+| absolute-definition-change | an eval definition named by its absolute path      | the full suite                       |
+| definition-change          | an eval definition                                 | the full suite                       |
+| unrelated-change           | a path no eval owns and no harness holds           | no suite                             |
+| full-mode                  | full mode, with one manual and one automatic eval  | the automatic eval's full suite only |
+
+### Test.Property: owned paths and prompts
+
+- [owned-path-complement](tests/test_definition.property.l1.py): An `owned_paths` entry never carries a character outside that alphabet — the rejected domain is the alphabet's open complement rather than an enumerable set of globs
+- producer-change-detection: Producer-derived prompt materialization changes when any selected whole producer changes
+
+### Test.Compliance: cases and grading
+
+- case-record: ALWAYS: each eval case is a JSONL record carrying an `id`, an input payload, and the expected structural verdict fields — the case file is the durable ground truth for the assertion that links to it, under the eval lane [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md) declares
+- placeholder-render: ALWAYS: the prompt renderer substitutes `{case_id}` and `{input_json}` in a single forward pass, and passes any other `{token}` through as literal text — an identifier-shaped `{token}` that is not a recognized placeholder produces a stderr warning, so a template typo surfaces at render time rather than only as a downstream grading failure
+- json-grading: ALWAYS: graders parse the assistant response as a single JSON document — `json.loads()` on the raw response first, then a single retry on the response with one surrounding markdown code fence (no language tag or the `json` tag) stripped — and compare against each case's expected structural fields by recursive subset matching; prose interpretation never participates in the pass/fail decision
+- sentinel-matchers: ALWAYS: graders treat the sentinel strings `#string`, `#notnull`, and `#present` at expected-value positions as type/presence matchers — `#string` matches when actual is a string, `#notnull` matches when actual is not null, `#present` matches any value (including null) — so a case pins a field as present and of a type without specifying its value
+- pass-at-k: ALWAYS: each case is replayed `k >= 1` trials and counted as passing when the per-case threshold is met (default majority of trials) — non-determinism is bounded by pass@k
+- ordered-workers: ALWAYS: a `workers >= 1` knob parallelizes case execution through a bounded thread pool, and outcomes follow case-file order regardless of thread finish order — interleaving is invisible to downstream consumers
+- expected-list-bound: NEVER: the loader loads a case whose expectation contains a list longer than `MAX_EXPECTED_LIST_LENGTH` — `is_subset` matches expected lists against actual lists in O(expected × actual) time, so the loader rejects an oversized expectation with a clear error rather than running slowly
+
+### Test.Compliance: runner and records
+
+- [claude-invocation](tests/test_runner.compliance.l1.py): ALWAYS: the runner invokes Claude Code through `claude [--bare] --print --output-format json --no-session-persistence --settings '{"advisorModel":""}' --model <model> --plugin-dir <plugin-path>`, reads the assistant message from the parsed JSON envelope, and disables the Advisor server tool at this single model-process boundary; it passes `--bare` when `ANTHROPIC_API_KEY` is set to a non-empty value, and otherwise omits `--bare` and preserves the inherited environment, including `CLAUDE_CODE_OAUTH_TOKEN` when present; a caller forces the flag on or off by passing `bare=True` or `bare=False` to the constructor
+- [claudecode-stripped](tests/test_runner.compliance.l1.py): ALWAYS: the subprocess environment passed to `claude` strips the `CLAUDECODE` marker before invocation — nested calls from inside a Claude Code session run as ordinary print-mode subprocesses, not as guarded interactive sessions
+- [trial-metadata](tests/test_runner.compliance.l1.py): ALWAYS: every trial captures observability metadata — `duration_ms`, `total_cost_usd`, `input_tokens`, `output_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens`, `num_turns`, `stop_reason` — parsed from the claude JSON envelope; missing fields surface as `null` rather than fabricated zeros
+- [trial-stability](tests/test_report.compliance.l1.py): ALWAYS: every case outcome carries `trial_pass_count`, `trial_count`, and `trial_pass_rate`, and the suite-level `trial_stability` block reports `mean_trial_pass_rate`, `stddev_trial_pass_rate` (null when fewer than two cases), and `min`/`max` pass rates — single-shot conclusions are never the only signal when `k > 1`
+- [results-document](tests/test_report.compliance.l1.py): ALWAYS: every suite run serializes a JSON results document under each eval's `runs/{timestamp}.json` carrying a `schema_version`, the selected `model`, the configured per-trial `max_budget_usd` and `timeout_seconds`, the suite summary, a `cost_summary` aggregating trial-level cost, duration, and token counts — including the prompt-cache read and creation token totals — and per-case input, expectations, trial prompts, raw responses, parsed verdict JSON, grade reasons, and trial metadata, so failed cases remain inspectable without rerunning the LLM
+- [json-authoritative](tests/test_report.compliance.l1.py): ALWAYS: the JSON results document is the authoritative artifact for downstream tooling; the sibling HTML viewer reads the same JSON payload (embedded in a `<script type="application/json">` tag for `file://` opens) and adds no fields beyond what the JSON contains
+- [history-row](tests/test_history.compliance.l1.py): ALWAYS: every suite run appends one summary row to the per-eval `history.jsonl` carrying timestamp, schema version, git SHA, selected model, configured per-trial `max_budget_usd` and `timeout_seconds`, suite verdict, pass rate, case counts, total cost, total duration, the aggregate input, output, prompt-cache read, and prompt-cache creation token counts, and the run's transcript path; the file is the durable trend record
+
+### Test.Compliance: execution surfaces
+
+- just-recipes: ALWAYS: repository-local eval execution is exposed through Just recipes — `just eval`, `just eval-case`, and `just eval-node` — that wrap `uv run outcomeeng-evals run`, run node suites serially, read `plugin_dir` and `model` from each `eval.toml` unless `PLUGIN_DIR` or `EVAL_MODEL` overrides them, default to `model = "sonnet"`, `MAX_BUDGET_USD=0.75`, `WORKERS=1`, and `TIMEOUT_SECONDS=180`, and print the expanded command before execution so model and cost-affecting settings are visible
+- dispatch-only-trigger: NEVER: the eval workflow declares a `pull_request`, `push`, or `schedule` trigger — `workflow_dispatch` is its only trigger, so CI starts an eval only when an operator dispatches it
+- dispatch-defaults: ALWAYS: the eval workflow's dispatch inputs and runtime fallbacks for `max_budget_usd` and `timeout_seconds` take the defaults `outcomeeng_evals.settings` declares — a dispatched run spends no more than a local run by default
+
+### Audit: authoring and execution
+
+- auth-as-found: Agents use the provisioned authentication mode as found and do not ask the operator to add, remove, or switch authentication secrets for an eval run.
+- local-history-restore: Developer-machine eval runs produce local `history.jsonl` appends that contributors restore before committing unrelated changes, while CI workflows own canonical baseline appends when wired.
+- coupled-expectations: Every eval case of a producer whose output carries findings carries at least two structurally coupled expectations — one on a verdict-level attribute (e.g., `status="rejected"`) and one on a finding-level attribute (e.g., `rule="X" present="true"`) — paired so that a hallucinated verdict status without a matching finding, or a matching finding without the correct verdict status, fails the case.
+- bounded-invocation: No eval spawns a long-lived `claude` subprocess or a polling loop; each case is a single bounded invocation per [`spx/13-plugin-and-runtime-conventions.adr.md`](spx/13-plugin-and-runtime-conventions.adr.md).
+- no-prose-grading: No grader grades a case by interpreting free-form LLM prose; structural verdict fields are the only source of pass/fail signal.
+- run-gating: Eval cases spend networked, credentialed model calls, so an eval run starts only on a developer machine through the Just recipes or by dispatching the eval workflow.
+
+### Audit: artifacts and packaging
+
+- schema-version-stable: The `schema_version` of the JSON results document or history row changes only with an incompatible contract change and a corresponding consumer migration; additive fields retain the current version so older artifacts remain readable by tolerant consumers.
+- coupled-must-contain: No `must_contain` expectation is satisfied by a single rule-name attribute without a coupled verdict-status check; a single-attribute match is non-discriminating because a hallucinated finding mentioning the rule name passes it trivially.
+- sentinel-paired: No case relies on a sentinel matcher (`#string`, `#notnull`, `#present`) as its only finding-level discriminator; every sentinel pairs with at least one coupled discriminating field — `severity` or `concern` — that pins a specific value.
+- no-runs-directory: No `runs/` directory under any `evals/{rule}/` is committed — full transcripts are per-developer ephemeral artifacts; `history.jsonl` is the shared trend record.
+- no-runtime-fakes: No shipped runtime package holds a test-only fake — runtime imports never pull in test infrastructure.
