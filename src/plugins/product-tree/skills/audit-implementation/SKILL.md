@@ -56,12 +56,17 @@ Run these stages in order. Each names what holds before the next begins, and
    selection from the run's sealed start input, never from a retyped list or a
    re-run of the resolver. Every resolved path enters the inventory — claimed by
    a concern or left to another auditor — and a unit enters planned, without a
-   status.
+   status. Record each classified gap, accounting record, and `missing-skill`
+   unit as soon as it is classified, per `<coverage_model>`.
 5. **Inspect.** Read each subject body completely from the resolved
    `base..head` scope, re-issuing a truncated or partial read in bounded
    ranges until the body is complete, per the subject-body constraint.
-6. **Record.** Hold each unit planned until its concern returns a final result,
-   classify each returned finding per the touched-text reference, then persist per `<coverage_model>`. NEVER accept a finding raised before stage 3 loaded that concern's standards and overlays — withdraw it.
+6. **Record each concern as it returns.** A concern's units stay planned until
+   that concern returns a final result. As soon as it returns, classify each
+   returned finding per the touched-text reference, record that concern's
+   path-scoped units, then its findings on touched text, per `<coverage_model>`,
+   before consuming another concern's result, so no unit or finding waits for
+   the judgment of a later concern. NEVER accept a finding raised before stage 3 loaded that concern's standards and overlays — withdraw it.
 7. **Reconcile, then finish.** Run the bundled reconciler; `finish` is
    reachable only from its zero exit:
 
@@ -229,8 +234,9 @@ preserves its result. NEVER place two journal mutations in a parallel tool
 group, multi-call batch, shell background group, or concurrently executing
 concern — parallel writes race sequence assignment and produce a sealed
 projection whose event prefix is neither strictly increasing nor contiguous.
-Parallel concern analysis emits no SPX commands; queue each concern's completed
-results and persist them one at a time. Render only after `finish` exits
+Parallel concern analysis emits no SPX commands; record each concern's results
+as soon as it returns, one command at a time, before consuming the result of a
+concern that returned later. Render only after `finish` exits
 successfully.
 
 Read `${CLAUDE_SKILL_DIR}/references/run-payloads.md` before writing the first scope or finding payload: it carries the scope, accounting-record, and finding payload JSON, the idempotency key forms, and the payload-file rules. Those rules bind every command that follows:
@@ -293,13 +299,13 @@ or by accounting records.
 Each expected unit carries the scope payload in `${CLAUDE_SKILL_DIR}/references/run-payloads.md`: one resolved path as its `subject` — inspected by a concern, or accounted for as unclaimed; a `missing-skill` unit names the absent skill as `<plugin>:<audit>` instead — with `recordedByRunDriver` present on every unit so a missing-skill, unsupported, or accounting unit still identifies its recorder, `expectedProducer` naming the concern skill expected to cover it or the run-driver identity for an accounting record, and `producerProvenance` only where a concern skill executed. A concern's completion is every expected path unit carrying `coverageStatus: audited`; its finding count is the count of accepted finding rows for those path-scoped units.
 
 - Plan the complete inventory before invoking any concern skill. NEVER mark a planned unit `audited`.
-- Queue each unit only once its coverage status is settled: immediately for a classified gap or accounting record, or after its concern finishes for an executed producer.
+- Record each unit as soon as its coverage status is settled, and only then: immediately for a classified gap, accounting record, or `missing-skill` unit, or as soon as its concern returns for an executed producer.
 - NEVER append a preliminary required unit before its final coverage status is known — every accepted required uncovered event rejects the terminal rollup permanently.
 - A concern skill returns its result to the run driver and never writes SPX state itself.
-- After a concern returns, queue one path-scoped row per inspected path, carrying a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`. NEVER record fewer rows than the concern returned paths, and NEVER collapse several inspected paths into one representative row — the recorded subject set is the evidence that the inspection happened, so a reduced set is an unverifiable claim.
-- Queue that concern's complete scope rows BEFORE any of its findings. A finding is recorded against coverage already accepted, never in place of it; recording a row only where a finding landed states the findings as the coverage.
-- Queue each returned finding on touched text after those scope rows, associated with its matching path-scoped unit. A finding outside touched text is queued nowhere: it is returned as `filed` under `<verdict_format>`.
-- Persist queued units one `spx -C '{repository-root}' verification run scope add` command at a time, ordered by the order each kind first appears in the selection, then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation and stopping at the first nonzero exit, other than the one rerun on an absent-payload diagnostic that the payload rules allow.
+- As soon as a concern returns, record one path-scoped row per inspected path, carrying a stable path-scoped unit id, the exact path in `subject`, and `coverageStatus: audited`. NEVER record fewer rows than the concern returned paths, and NEVER collapse several inspected paths into one representative row — the recorded subject set is the evidence that the inspection happened, so a reduced set is an unverifiable claim.
+- Record that concern's complete scope rows BEFORE any of its findings. A finding is recorded against coverage already accepted, never in place of it; recording a row only where a finding landed states the findings as the coverage.
+- Record each returned finding on touched text right after those scope rows, associated with its matching path-scoped unit, before consuming another concern's result. A finding outside touched text is recorded nowhere: it is returned as `filed` under `<verdict_format>`.
+- Record each unit with its own `spx -C '{repository-root}' verification run scope add` command, one at a time, in the order its coverage status settles; when several concerns return together, take them in the order each kind first appears in the selection, then concern order `code`, `tests`, `architecture`, preserving each command result before the next mutation and stopping at the first nonzero exit, other than the one rerun on an absent-payload diagnostic that the payload rules allow.
 - Derive the concern's finding count from the accepted finding rows; NEVER emit a custom count SPX discards.
 - A concern returning no complete result for a required unit MUST name the failed operation or absent prerequisite. When it names neither, drive the concern to a final result rather than recording a non-audited status.
 - NEVER manufacture a completed result from Claude's own inspection in place of a concern result.

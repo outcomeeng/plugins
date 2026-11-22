@@ -10,6 +10,13 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.12
+
+### Changed
+
+- **`audit-assertions` records each Audit Assertion's unit and findings as soon as its judgment completes.** The skill adds the root unit right after the run starts and resolves touched text before judging. For each selected assertion in document order, it adds the child unit and that assertion's findings on touched text before it reads the next assertion's subject. Before this change, a Record step after the Judge step added every unit and finding in one batch, so the run showed nothing until judgment ended.
+- **`audit-implementation` records each concern's results as soon as that concern returns.** Classified gaps, accounting records and `missing-skill` units are recorded as soon as they are classified. Each concern's path-scoped units, then its findings on touched text, are recorded before the run driver consumes another concern's result. Before this change, the skill queued every result and persisted the queue after judgment.
+
 ## 0.115.11
 
 ### Changed
@@ -26,6 +33,8 @@ An entry is written by the changeset that ships the change. A later changeset ad
 ### Requires
 
 - spx with `spx draft create --kind <kind>` and `spx draft list --kind <kind>`, as spx 0.10.0 ships them.
+
+||||||| parent of 421c2c1ca4 (feat(product-tree): record audit results as judged)
 
 ## 0.115.9
 
