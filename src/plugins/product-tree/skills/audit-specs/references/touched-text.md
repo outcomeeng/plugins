@@ -20,12 +20,12 @@ git merge-base HEAD origin/HEAD
 git diff --unified=0 <base> -- <node-spec-file-path>
 ```
 
-The enclosing unit is the sentence in prose, the whole assertion (its text, tag, and heading placement) for an assertion line, and the opening clause set for a kind statement. A spec absent at the base is touched in full. A diff that cannot be resolved makes the whole spec touched, and the verdict names the failed command.
+The enclosing unit is the sentence in prose, the whole row (its slug, its text, and the group heading it stands under) for a row line, and the opening clause set for a kind statement. A spec absent at the base is touched in full. A diff that cannot be resolved makes the whole spec touched, and the verdict names the failed command.
 
 Invalidated text is:
 
 - text that cites, quotes, restates, or depends on changed text and now disagrees with it;
-- a rule a changed line newly violates elsewhere in the spec, such as a tag placed under a heading the edit moved it away from;
+- a rule a changed line newly violates elsewhere in the spec, such as a row whose claim no longer fits the type of the group heading the edit placed it under;
 - generated output whose source changed.
 
 A touched sentence that only cites an already-defective passage leaves the finding standing, against the passage.

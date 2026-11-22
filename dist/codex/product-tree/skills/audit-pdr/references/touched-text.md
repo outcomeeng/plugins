@@ -20,12 +20,12 @@ git merge-base HEAD origin/HEAD
 git diff --unified=0 <base> -- <pdr-file-path>
 ```
 
-The enclosing unit is the sentence in prose, the whole property for a line under Product properties, the whole rule (its text, tag, and subsection placement) for a rule line under `## Verification`, and the opening decision statement for a line within it. A PDR absent at the base is touched in full. A diff that cannot be resolved makes the whole PDR touched, and the verdict names the failed command.
+The enclosing unit is the sentence in prose, the whole property for a line under Product properties, the whole rule (its slug, its text, and the group heading it stands under) for a rule line under `## Verification`, and the opening decision statement for a line within it. A PDR absent at the base is touched in full. A diff that cannot be resolved makes the whole PDR touched, and the verdict names the failed command.
 
 Invalidated text is:
 
 - text that cites, quotes, restates, or depends on changed text and now disagrees with it;
-- a rule a changed line newly violates elsewhere in the PDR, such as a tag left under a subsection the edit moved its rule away from;
+- a rule a changed line newly violates elsewhere in the PDR, such as a rule whose claim no longer fits the type of the group heading the edit placed it under;
 - generated output whose source changed.
 
 A touched sentence that only cites an already-defective passage leaves the finding standing, against the passage. A finding that the PDR contradicts the product document or an ancestor PDR lies on touched text when the changed PDR text is one side of the contradiction.
