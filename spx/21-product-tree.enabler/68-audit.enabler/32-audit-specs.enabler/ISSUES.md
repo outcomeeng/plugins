@@ -1,14 +1,8 @@
 # Issues: Audit Specs
 
-## Three declared eval suites are unbuilt; their four scenarios carry interim `[audit]` tags
-
-The `voice`, `tag-validity`, and `prose-coupling` suites were declared and never authored. Their four scenarios — temporal language → `temporal-voice`; bare, missing, or multiple tags → `invalid-tag`; a universal `[test]` claim tagged `scenario` → `evidence-type-mismatch`; a `[test]` tag on a prose-content claim → `prose-coupling` — carry `[audit]` as an explicit interim so no evidence link dangles. Their real verification type is evaluate: `/audit-specs` is an LLM-driven producer emitting a structured verdict a deterministic grader scores, which [`spx/15-spec-coverage.adr.md`](spx/15-spec-coverage.adr.md) routes to the eval lane. The interim tag was an operator decision (2026-09-07) taken with the pushback recorded that it weakens declared evidence to match implementation state.
-
-**Resolution shape.** Either fold the four scenarios into the existing `evals/structure` suite as additional cases (one prompt, one history, one producer coupling; the suite may be renamed from `structure` to a name covering all four categories) and re-point the four links, or author the three suites as declared. Then run `just eval-node spx/21-product-tree.enabler/68-audit.enabler/32-audit-specs.enabler` at the default budget, commit the fresh `history.jsonl` rows, and restore `[eval](…)` tags. Do it after the verification-run migration (`outcomeeng/changes#327`) rewrites the producer's verdict contract, so run evidence is paid for once.
-
 ## The `structure` prompt re-materializes on every producer edit
 
-`evals/structure/eval.toml` embeds `src/plugins/product-tree/skills/audit-specs/SKILL.md` verbatim through `prompt.template.md`, so every producer edit re-materializes `prompt.md` and leaves the committed `history.jsonl` rows scoring prompt content the suite no longer carries. Refresh run evidence in the same pass as the suite work above.
+`evals/structure/eval.toml` embeds `src/plugins/product-tree/skills/audit-specs/SKILL.md` verbatim through `prompt.template.md`, so every producer edit re-materializes `prompt.md` and leaves the committed `history.jsonl` rows scoring prompt content the suite no longer carries.
 
 ## Rename `/audit-specs` to `/audit-spec`
 
@@ -74,15 +68,3 @@ The assertions state the sealed-run verdict model: the audit run's terminal stat
 **Settlement condition.** outcomeeng/changes#513 rewrites the skill and wrapper onto one `spx verification run` over the spec file scope and migrates the producer-coupled eval expectations, under an unchanged semantic verdict model.
 
 **Evidence**: current-head CI review of pull request 671.
-
-## The spec audit judges the previous spec template form `src/plugins/product-tree/skills/audit-specs/SKILL.md` `group headings and tag routing` `consistency`
-
-`src/plugins/product-tree/skills/audit-specs/SKILL.md` names the plural group headings `### Scenarios`, `### Mappings`, `### Conformance`, `### Properties`, and `### Compliance`, reports a verification-type heading such as `### Test`, `### Eval`, or `### Audit` as `heading-mismatch`, and treats a routed assertion as one that carries its tag. The spec templates write `### Mapping: <slug>`, `### <assertion type>: <subject>`, `### Eval: <slug>`, `### Probe`, and `### Audit`, and a spec rule carries no tag until its evidence exists. A spec written from the templates therefore draws `heading-mismatch` for its `### Eval:` and `### Audit` subsections.
-
-The same previous form stands in the `align`, `audit-assertions`, `verify`, and `author` skills of the product-tree plugin.
-
-**Why this is a separate larger concern.** The fix edits five skill surfaces. Each takes the `skill-auditor` gate and a plugin bump. The `audit-specs` producer is embedded verbatim in this node's `evals/structure` prompt, so an edit re-materializes the prompt and invalidates the committed run history, and the group-heading and tag side of `/verify` and the foundation grammar belongs to the Change that carries the grammar, outcomeeng/changes#904.
-
-**Settlement condition.** The five skills describe the template form and the rule-tag rule, `/audit-specs` reports no `heading-mismatch` for a spec written from the shipped templates, and this node's `evals/structure` suite passes on a head that carries the amended producer.
-
-**Evidence**: current-head CI review of pull request 734, head `2bdb0e1b90542c7434ccee972dedde2135bc4302`.
