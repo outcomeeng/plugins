@@ -34,7 +34,6 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - spx with `spx draft create --kind <kind>` and `spx draft list --kind <kind>`, as spx 0.10.0 ships them.
 
-||||||| parent of 421c2c1ca4 (feat(product-tree): record audit results as judged)
 ## 0.115.9
 
 ### Changed
