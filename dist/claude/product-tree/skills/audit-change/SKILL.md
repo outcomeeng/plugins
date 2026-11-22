@@ -18,8 +18,8 @@ A verdict on one stored Change Leaf against `product-tree:change-standards` and 
 
 <constraints>
 
-- NEVER mutate product content, the Change, its comments, or its fields. The audit writes request files in the session scratch directory and nothing else; the runner retains one Change Draft through `spx change draft create` and appends the audit's own SPX run journal.
-- NEVER write a copy of the record: the runner composes the Change Draft and pipes it to SPX, so the retained Draft holds the store's bytes.
+- NEVER mutate product content, the Change, its comments, or its fields. The audit writes request files in the session scratch directory and nothing else; the runner retains one Change Draft in the file `spx draft create --kind change` creates in the draft store every worktree shares, and appends the audit's own SPX run journal.
+- NEVER write a copy of the record: the runner composes the Change Draft and writes it to the file SPX creates, so the retained Draft holds the store's bytes.
 - ALWAYS reach the store, the checkout at a commit, and the SPX run journal through the bundled runner, `python3 "${CLAUDE_SKILL_DIR}/scripts/audit_change_run.py"`, each invocation its own command with its stdin redirected from one request file, never chained or piped. Read a file outside the checkout only when the Statement of Intent's Verification part names it, with the read tools.
 - ALWAYS judge against `product-tree:change-standards` and the Decision Records the runner returns; the standards own the record rules, this skill owns the audit procedure.
 - ALWAYS record every finding with severity `blocking`: every finding blocks under `audit-before-applicable`, and the audit at close passes only when it found nothing.
@@ -49,31 +49,31 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/audit_change_run.py" < "<request-file>"
 
 Copy the scratch directory the harness names into each request path character for character. When a file-write result reports a path that the scratch directory does not contain by whole path components, stop before the command that reads that file and return `BLOCKED` naming the reported path. Pass each path to its command exactly as the file-write result reports it, written out literally, never retyped from memory. Issue one invocation per request, serially, and never remove a request file. When a command reports its request file absent, run it once more with the path copied from the file-write result; on a second failure return `BLOCKED` naming the run token.
 
-| `operation`           | Request fields                                                        | `ok` result fields                                                     |
-| --------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `tool-version`        | none                                                                  | `toolVersion`                                                          |
-| `retain-record`       | `issue`, `root`                                                       | `issue`, `path`, `sha256`, `maturity`, `lifecycle`, `base`, `editedAt` |
-| `read-relations`      | `issue`                                                               | `issue`, `product`, `parent`, `children`, `absorbers`                  |
-| `read-at`             | `path`, `root`, `ref`                                                 | `ref`, `path`, `present`, `content`                                    |
-| `governing-decisions` | `path`, `root`, `ref`                                                 | `ref`, `path`, `decisions`                                             |
-| `resolve-reference`   | `path`, `root`                                                        | `path`, `resolution`                                                   |
-| `read-candidate`      | `path`, `root`                                                        | `path`, `sha256`, `content`                                            |
-| `start`               | `path`, `root`, `candidateSha256`                                     | `runToken`, `path`, `sha256`                                           |
-| `add-scope`           | `path`, `root`, `runToken`, `payload`                                 | `runToken`, `idempotencyKey`, `sequence`, `idempotent`                 |
-| `add-finding`         | `path`, `root`, `runToken`, `payload`                                 | `runToken`, `idempotencyKey`, `sequence`, `idempotent`                 |
-| `reconcile`           | `path`, `root`, `runToken`                                            | `runToken`, `runStatus`, `scopeUnits`, `findings`                      |
-| `finish`              | `path`, `root`, `runToken`, `terminalStatus` (`approved`, `rejected`) | `runToken`, `run`, `findings`, `renderCommand`                         |
-| `read-published`      | `issue`                                                               | `issue`, `body`                                                        |
-| `read-authority`      | `issue`                                                               | `issue`, `events`                                                      |
+| `operation`           | Request fields                                                                 | `ok` result fields                                                                |
+| --------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `tool-version`        | none                                                                           | `toolVersion`                                                                     |
+| `retain-record`       | `issue`, `root`                                                                | `issue`, `draftId`, `path`, `sha256`, `maturity`, `lifecycle`, `base`, `editedAt` |
+| `read-relations`      | `issue`                                                                        | `issue`, `product`, `parent`, `children`, `absorbers`                             |
+| `read-at`             | `path`, `root`, `ref`                                                          | `ref`, `path`, `present`, `content`                                               |
+| `governing-decisions` | `path`, `root`, `ref`                                                          | `ref`, `path`, `decisions`                                                        |
+| `resolve-reference`   | `path`, `root`                                                                 | `path`, `resolution`                                                              |
+| `read-candidate`      | `path`, `issue`, `root`                                                        | `path`, `sha256`, `content`                                                       |
+| `start`               | `path`, `issue`, `root`, `candidateSha256`                                     | `runToken`, `path`, `sha256`                                                      |
+| `add-scope`           | `path`, `issue`, `root`, `runToken`, `payload`                                 | `runToken`, `idempotencyKey`, `sequence`, `idempotent`                            |
+| `add-finding`         | `path`, `issue`, `root`, `runToken`, `payload`                                 | `runToken`, `idempotencyKey`, `sequence`, `idempotent`                            |
+| `reconcile`           | `path`, `issue`, `root`, `runToken`                                            | `runToken`, `runStatus`, `scopeUnits`, `findings`                                 |
+| `finish`              | `path`, `issue`, `root`, `runToken`, `terminalStatus` (`approved`, `rejected`) | `runToken`, `run`, `findings`, `renderCommand`                                    |
+| `read-published`      | `issue`                                                                        | `issue`, `body`                                                                   |
+| `read-authority`      | `issue`                                                                        | `issue`, `events`                                                                 |
 
-`retain-record` composes the record's Change Draft from each part's home in the store, pipes it to `spx change draft create` from `root`, and returns the retained Draft's `path` under `root` and its `sha256`. `read-at` returns a file as the commit `ref` names holds it, `present: false` and empty `content` when the commit holds none. `governing-decisions` lists the Decision Records in each directory from `spx/` down to the path at `ref`. `read-relations` returns the issues whose Parent value names the issue as `children`, reading them through the store's filter on the `Parent` field in pages of 100 up to 10 pages, and returns as `absorbers` the issue the named issue's duplicate link names, or none when the issue is not closed as a duplicate, and blocks with `unreadable-output` naming both stores when that link names an issue of another repository than the store. Every result carries `operation` and `status`; `status: blocked` carries `reason`, `detail`, and `runToken`, and exits nonzero. A blocked reason is one of `invalid-request`, `path-rejected`, `candidate-missing`, `candidate-unreadable`, `candidate-changed`, `retained-input-mismatch`, `command-failed` (with `command`, `payloadSource`, `payloadKey`, `exitCode`, and `stderr`), `unreadable-output`, and `page-bound-reached` (with `bound`). The runner keys a scope unit by its `unitId` and a finding by `<unitId>:<rule>`; one unit carries one finding per rule, naming every location.
+`retain-record` composes the record's Change Draft from each part's home in the store, creates the Draft's one file with `spx draft create --kind change` from `root`, writes the Draft to the absolute path that command returns, and returns the Draft's `draftId`, its absolute `path`, and its `sha256`. `read-candidate`, `start`, `add-scope`, `add-finding`, `reconcile`, and `finish` take that absolute `path` as the candidate and `issue` as the run's scope: the runner reads the candidate at the path, which `read-candidate`, `start`, and `reconcile` accept only when `spx draft list --kind change --all` from `root` lists it and it is no link, and keys the run by the scope type `file` and the scope `issue`, the scope `product-tree:manage-change` reads the audit from. `read-at`, `governing-decisions`, and `resolve-reference` take a `path` relative to `root`. `read-at` returns a file as the commit `ref` names holds it, `present: false` and empty `content` when the commit holds none. `governing-decisions` lists the Decision Records in each directory from `spx/` down to the path at `ref`. `read-relations` returns the issues whose Parent value names the issue as `children`, reading them through the store's filter on the `Parent` field in pages of 100 up to 10 pages, and returns as `absorbers` the issue the named issue's duplicate link names, or none when the issue is not closed as a duplicate, and blocks with `unreadable-output` naming both stores when that link names an issue of another repository than the store. Every result carries `operation` and `status`; `status: blocked` carries `reason`, `detail`, and `runToken`, and exits nonzero. A blocked reason is one of `invalid-request`, `path-rejected`, `candidate-missing`, `candidate-unreadable`, `candidate-changed`, `retained-input-mismatch`, `command-failed` (with `command`, `payloadSource`, `payloadKey`, `exitCode`, and `stderr`), `unreadable-output`, and `page-bound-reached` (with `bound`). The runner keys a scope unit by its `unitId` and a finding by `<unitId>:<rule>`; one unit carries one finding per rule, naming every location.
 
 </runner_contract>
 
 <execution_sequence>
 
-1. **Retain the record.** Request `read-relations` with `issue`. A record with a Child is a Parent: return `BLOCKED` with the Prerequisite shape naming the Children, since only a Leaf is audited. Request `retain-record` with `issue` and take its `path` as the candidate `path`. Take the mode from `maturity`: `Sliced` audits before Applicable, `Applicable` audits at close, and any other Maturity returns `BLOCKED` naming it.
-2. **Read the record.** Request `read-candidate` with `path` and judge the `content` it returns. Require its `sha256` to equal the `retain-record` `sha256`; a difference returns `BLOCKED` naming both digests. Request `start` with that `sha256` as `candidateSha256` and keep the `runToken`.
+1. **Retain the record.** Request `read-relations` with `issue`. A record with a Child is a Parent: return `BLOCKED` with the Prerequisite shape naming the Children, since only a Leaf is audited. Request `retain-record` with `issue` and take its absolute `path` as the candidate `path`; pass that `path` and `issue` unchanged on every request over the candidate. Take the mode from `maturity`: `Sliced` audits before Applicable, `Applicable` audits at close, and any other Maturity returns `BLOCKED` naming it.
+2. **Read the record.** Request `read-candidate` with `path` and `issue` and judge the `content` it returns. Require its `sha256` to equal the `retain-record` `sha256`; a difference returns `BLOCKED` naming both digests. Request `start` with that `sha256` as `candidateSha256` and keep the `runToken`.
 3. **Load the rules.** Use skill `product-tree:change-standards`.
 4. **Enumerate.** One root unit for the record, and one child unit per Declarations subsection, by its heading path in record order; at close, one more child unit `verification` for the Statement of Intent's Verification part. A Leaf whose Declarations hold `none` and its reason has the root unit alone, plus `verification` at close.
 5. **Judge before Applicable.** For each subsection, request `governing-decisions` with the heading path, or for a new artifact its parent directory, at `ref` the record's `base`, and `read-at` for each Decision Record it lists, for the Node's spec at the Base, and for each Decision Record a loaded spec or Decision Record cites by a tree-absolute path. Read each Decision Record as the record's own Declarations change it. Judge every line of the subsection against every rule of those Decision Records under `audit-before-applicable`, and the subsection against `subsection-coverage`, `depends-on-prerequisites`, `precedes-siblings`, `operator-answers` as far as the record shows, and `no-person`. Record one finding per violated rule per unit, its `rule` the violated rule's slug.
@@ -86,7 +86,7 @@ Copy the scratch directory the harness names into each request path character fo
 
 <persistence_contract>
 
-A scope payload has this shape. The root's `unitId` is `change:root:<path>` and omits `parentUnitId`; a child's is `change:<heading-path or verification>:<path>`, with the root's `unitId` as `parentUnitId`.
+A scope payload has this shape. The root's `unitId` is `change:root:<issue>` and omits `parentUnitId`; a child's is `change:<heading-path or verification>:<issue>`, with the root's `unitId` as `parentUnitId`.
 
 ```json
 {
@@ -94,11 +94,11 @@ A scope payload has this shape. The root's `unitId` is `change:root:<path>` and 
   "parentUnitId": "<root-unit-key-for-a-child-only>",
   "auditClass": "coordination",
   "auditKind": "change",
-  "subject": "<path>",
+  "subject": "<issue>",
   "coverageRequirement": "required",
   "coverageStatus": "audited",
   "priorContext": {
-    "changedFilePartition": "<path>",
+    "changedFilePartition": "<issue>",
     "concernPartition": "<record, a heading path, or verification>"
   },
   "expectedProducer": {

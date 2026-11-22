@@ -1,29 +1,32 @@
 """Replay harness for the audit-change runner's ``retain-record`` operation.
 
 Backs the ``[test]`` evidence that the operation composes a Change Draft from
-the store, retains it through one ``spx change draft create`` command that
-reads the Draft on stdin from the Product's checkout root, and blocks with a
-declared reason when the retained Draft differs or a command fails.
+the store, creates the Draft's one file through one ``spx draft create --kind
+change`` command run from the Product's checkout root, writes the composed
+Draft to the absolute path that command returns, and blocks with a declared
+reason when the retained Draft differs or a command fails.
 
 The runner reaches the store and SPX only through its injected command seam,
-so the harness passes the runner's entry point a collaborator in place of the
-real process boundary, under two ``/test`` Stage 5 exceptions. As an
-interaction-protocol recording collaborator it records every command the
-runner starts with its working directory and stdin, answers each store query
-with a replayed answer, and plays the SPX draft store: it retains the text it
-receives on stdin in a file under the checkout root and reports that file's
-path, as the store does. As a failure-simulation controlled runner it retains
-other content than it received, answers with the failure a command returned,
-or raises the ``OSError`` the process boundary raises when a command cannot be
+and writes the Draft only through its injected writer seam, so the harness
+passes the runner's entry point a collaborator in place of each, under two
+``/test`` Stage 5 exceptions. As an interaction-protocol recording
+collaborator it records every command the runner starts with its working
+directory and stdin, answers each store query with a replayed answer, and
+plays the SPX draft store: it creates one empty Draft file under the checkout
+root and reports the Draft's identifier and absolute path, as the store does;
+the writer writes the bytes it receives to the path it is given. As a
+failure-simulation controlled runner the writer writes other content than it
+received, or the command seam answers with the failure a command returned or
+raises the ``OSError`` the process boundary raises when a command cannot be
 started. ``git`` commands run for real against a fresh repository in a
 temporary directory. No call reaches the network.
 
 Every replayed store answer is an inert fixture file under
 ``outcomeeng_testing/fixtures/audit_change_record``, written with an invented
 record because the Change store is private and this repository is public.
-``spx-failure.json`` holds the exit status and standard error ``spx change
-draft create`` returned for a repository whose draft store git does not
-ignore, captured from spx 0.10.0 with the repository path replaced by
+``spx-failure.json`` holds the exit status and standard error ``spx draft
+create --kind change`` returned for a repository whose draft store git does
+not ignore, captured from spx 0.10.0 with the repository path replaced by
 ``<ROOT>``; recapture it when the spx version the gate pins prints other text
 for that failure.
 
@@ -65,6 +68,8 @@ RECORD_ANSWER: Final = _FIXTURES_DIR / "record.json"
 BLOCKERS_ANSWER: Final = _FIXTURES_DIR / "blockers.json"
 _SPX_FAILURE: Final = _FIXTURES_DIR / "spx-failure.json"
 _DRAFT_SUFFIX: Final = ".md"
+#: Where the played draft store creates a Change Draft under the checkout root.
+_DRAFT_STORE_DIR: Final = Path(SPX_STORE_DIR) / "drafts" / "change"
 
 #: The invented Change identity every request names.
 RECORD_ISSUE: Final = REPLAYED_ISSUE
@@ -81,7 +86,7 @@ class StoreCondition(StrEnum):
 
 
 class DraftStoreCondition(StrEnum):
-    """How the SPX draft store answers ``spx change draft create``."""
+    """How the SPX draft store answers ``spx draft create --kind change``."""
 
     RETAINING = "retaining"
     ALTERING = "altering"
@@ -109,6 +114,14 @@ class CommandCall:
 
 
 @dataclass(frozen=True)
+class CreatedDraft:
+    """The Draft file the played draft store created and reported."""
+
+    draft_id: str
+    path: Path
+
+
+@dataclass(frozen=True)
 class RecordObservation:
     """What one ``retain-record`` request did."""
 
@@ -118,8 +131,11 @@ class RecordObservation:
     root: Path
     #: Every command the runner started, in order.
     calls: tuple[CommandCall, ...]
-    #: The content of every file in the draft store, keyed by its path under
-    #: the checkout root.
+    #: Every Draft file the played draft store created, in order.
+    created_drafts: tuple[CreatedDraft, ...]
+    #: The bytes the runner handed its writer, keyed by the absolute path.
+    written: Mapping[str, bytes]
+    #: The content of every file in the draft store, keyed by its absolute path.
     retained_drafts: Mapping[str, str]
 
     @property
@@ -188,6 +204,8 @@ class _Boundary:
         self._draft_store = draft_store
         self._store_answers = [_one_line(RECORD_ANSWER), _one_line(BLOCKERS_ANSWER)]
         self.calls: list[CommandCall] = []
+        self.created: list[CreatedDraft] = []
+        self.written: dict[str, bytes] = {}
 
     def __call__(
         self, argv: Sequence[str], /, *, cwd: Path, stdin: str | None
@@ -196,8 +214,15 @@ class _Boundary:
         if argv[0] == _runner.GH_EXECUTABLE:
             return self._store_answer()
         if tuple(argv) == _runner.DRAFT_CREATE_COMMAND:
-            return self._draft_answer(cwd, stdin)
+            return self._draft_answer(cwd)
         return _runner.run_subprocess(argv, cwd=cwd, stdin=stdin)
+
+    def write(self, path: Path, data: bytes, /) -> None:
+        """Write the Draft as the filesystem does, or altered under ``ALTERING``."""
+        self.written[str(path)] = data
+        if self._draft_store is DraftStoreCondition.ALTERING:
+            data += CANDIDATE_EDIT.encode(_runner.TEXT_ENCODING)
+        path.write_bytes(data)
 
     def _store_answer(self) -> object:
         if self._store is StoreCondition.UNRUNNABLE:
@@ -207,29 +232,31 @@ class _Boundary:
             return _runner.CommandResult(failure.exit_code, "", failure.stderr)
         return _runner.CommandResult(0, self._store_answers.pop(0), "")
 
-    def _draft_answer(self, cwd: Path, stdin: str | None) -> object:
+    def _draft_answer(self, cwd: Path) -> object:
         if self._draft_store is DraftStoreCondition.UNRUNNABLE:
             raise _unrunnable(_runner.SPX_EXECUTABLE)
         if self._draft_store is DraftStoreCondition.FAILING:
             failure = recorded_spx_failure()
             return _runner.CommandResult(failure.exit_code, "", failure.stderr)
-        received = "" if stdin is None else stdin
-        if self._draft_store is DraftStoreCondition.ALTERING:
-            received += CANDIDATE_EDIT
-        relative = Path(SPX_STORE_DIR) / f"{uuid.uuid4()}{_DRAFT_SUFFIX}"
-        target = cwd / relative
+        draft_id = str(uuid.uuid4())
+        target = (cwd / _DRAFT_STORE_DIR / f"{draft_id}{_DRAFT_SUFFIX}").resolve()
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(received.encode(_runner.TEXT_ENCODING))
-        answer = json.dumps({_runner.SpxField.RELATIVE_PATH: relative.as_posix()})
+        target.touch()
+        self.created.append(CreatedDraft(draft_id=draft_id, path=target))
+        answer = json.dumps(
+            {
+                "kind": _runner.CHANGE_DRAFT_KIND,
+                _runner.SpxField.DRAFT_ID: draft_id,
+                _runner.SpxField.PATH: str(target),
+            }
+        )
         return _runner.CommandResult(0, answer, "")
 
 
 def _retained_drafts(root: Path) -> dict[str, str]:
-    store = root / SPX_STORE_DIR
+    store = root / _DRAFT_STORE_DIR
     return {
-        path.relative_to(root).as_posix(): path.read_bytes().decode(
-            _runner.TEXT_ENCODING
-        )
+        str(path.resolve()): path.read_bytes().decode(_runner.TEXT_ENCODING)
         for path in sorted(store.rglob(f"*{_DRAFT_SUFFIX}"))
     }
 
@@ -251,12 +278,19 @@ def retain_record(
         )
         sink = io.StringIO()
         exit_code = int(
-            _runner.main(stdin=io.StringIO(request), stdout=sink, runner=boundary)
+            _runner.main(
+                stdin=io.StringIO(request),
+                stdout=sink,
+                runner=boundary,
+                writer=boundary.write,
+            )
         )
         return RecordObservation(
             exit_code=exit_code,
             stdout=sink.getvalue(),
             root=workspace.root,
             calls=tuple(boundary.calls),
+            created_drafts=tuple(boundary.created),
+            written=dict(boundary.written),
             retained_drafts=_retained_drafts(workspace.root),
         )

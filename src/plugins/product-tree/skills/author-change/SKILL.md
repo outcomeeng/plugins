@@ -5,7 +5,7 @@ description: >-
   merging, or reframing an Outcome Engineering Change record, or when turning a
   request into one. NEVER use it to author a spec or review a code changeset.
 argument-hint: "<record | publish | split | merge | reframe> <intent, Draft path, or #N | owner/repo#N | issue-url>"
-allowed-tools: Read, Write, Edit, Grep, Glob, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} Bash(git -C * rev-parse:*), Bash(git rev-parse:*), Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue comment:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by/*:*), Bash(gh api repos/*/issues/* --jq .id), Bash(gh api user --jq .login), Bash(spx change draft create:*), Bash(spx change draft list:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/check_form.py":*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/publish.py":*), Bash(gh api repos/*/commits/* --jq .sha), Bash(id -un), Bash(hostname -s),{!% if target == 'claude' %!} Bash(printenv CLAUDE_CODE_SESSION_ID),{!% else %!} Bash(printenv CODEX_THREAD_ID),{!% endif %!} {{! tool('ask_user') !}}
+allowed-tools: Read, Write, Edit, Grep, Glob, {{! tool('use_skill') !}},{!% if target == 'claude' %!} Agent,{!% else %!} {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} Bash(git -C * rev-parse:*), Bash(git rev-parse:*), Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue comment:*), Bash(gh api graphql:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by:*), Bash(gh api repos/*/issues/*/dependencies/blocked_by/*:*), Bash(gh api repos/*/issues/* --jq .id), Bash(gh api user --jq .login), Bash(spx draft create --kind change), Bash(spx draft list --kind change:*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/check_form.py":*), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/publish.py":*), Bash(gh api repos/*/commits/* --jq .sha), Bash(id -un), Bash(hostname -s),{!% if target == 'claude' %!} Bash(printenv CLAUDE_CODE_SESSION_ID),{!% else %!} Bash(printenv CODEX_THREAD_ID),{!% endif %!} {{! tool('ask_user') !}}
 ---
 
 <objective>
@@ -16,7 +16,7 @@ One Change record in the declared Change Store, written from a Change Draft that
 
 - Use skill `product-tree:change-standards`. Its rules govern every Draft and publish by their slugs; read its `references/github-store.md` for every store read and write.
 - Read `spx/local/changes.md` for the Change Store and the Product.
-- Every record starts from a Change Draft in the Product's checkout. Keep conversation text, transcripts, and audit bookkeeping out of the Draft under `no-person`.
+- Every record starts from a Change Draft in the spx draft store every worktree shares, which outlives the session and the worktree that wrote it. Keep conversation text, transcripts, and audit bookkeeping out of the Draft under `no-person`.
 - Ask only about a choice that changes a Declarations line and that the request, the Product Tree, and the repository leave open, one question at a time through the structured-question tool. Every answer the Operator gives reaches a Declarations line under `operator-answers`. Use skill `product-tree:interview` for an open choice of scope, failure behavior, dependency, evidence, or rollout.
 - Use skill `product-tree:manage-change`. It makes every Transition the steps below name; this skill writes no Maturity or Lifecycle after recording.
 
@@ -30,11 +30,11 @@ Read `$ARGUMENTS` as the operation, one of `record`, `publish`, `split`, `merge`
 
 <draft>
 
-For a new Change, write the Draft from `${CLAUDE_SKILL_DIR}/templates/leaf.md`, or `${CLAUDE_SKILL_DIR}/templates/parent.md` for a Parent, to a payload file in the scratch directory the harness names for the session, and retain it with `spx change draft create --input stdin < <payload-file>`; take the returned absolute `path` and edit only that file. For a stored record, compose its Draft under the composition rule of `<reads>` in `references/github-store.md`, keeping the stored record's `lastEditedAt`, or its `createdAt` when it carries none, as the read stamp. For resumption, find the Draft with `spx change draft list`. NEVER delete a Draft.
+Create every Change Draft with `spx draft create --kind change`, which names the Draft's one file before any Draft text exists, and write and edit the Draft only at the absolute `path` that command returns. For a new Change, write the Draft from `${CLAUDE_SKILL_DIR}/templates/leaf.md`, or `${CLAUDE_SKILL_DIR}/templates/parent.md` for a Parent, to that path with the file-write tool. For a stored record, write there its Draft composed under the composition rule of `<reads>` in `references/github-store.md`, keeping the stored record's `lastEditedAt`, or its `createdAt` when it carries none, as the read stamp. Pass no Draft text on standard input and write no payload file for a Draft; a command reads the Draft from its path. For resumption, find the Draft with `spx draft list --kind change`. NEVER delete a Draft.
 
 Fill every key under `record-keys`, `draft-lifecycle`, and `draft-base`: `base` is the full head commit of the default branch the Declarations read, from `git rev-parse origin/<default>` after a fetch. Write the Declarations under `<declarations>` of the standards, one subsection per artifact under `subsection-coverage`, checking every cited fact against the checkout under `facts-checked`. Name no Index for a new artifact; the Applier assigns it under `index-assignment`.
 
-A Proposed Change for another Product of the declared Change Store records from any checkout, under `proposed-no-checkout`: retain its Draft in this checkout, take its `base` from that Product's default branch with `gh api repos/<owner>/<repo>/commits/<default> --jq .sha`, and let it hold only its Statement of Intent, which the form check judges without reading this checkout.
+A Proposed Change for another Product of the declared Change Store records from any checkout, under `proposed-no-checkout`: create its Draft from this checkout under `<draft>`, take its `base` from that Product's default branch with `gh api repos/<owner>/<repo>/commits/<default> --jq .sha`, and let it hold only its Statement of Intent, which the form check judges without reading this checkout.
 
 </draft>
 
@@ -46,7 +46,7 @@ Before every publish of a record below Applicable, and before every publish that
 python3 "${CLAUDE_SKILL_DIR}/scripts/check_form.py" --root <checkout-root> --draft <draft-path> [--issue <owner/repo#N> --read-edited-at <read stamp>] [--published <composed-stored-draft>]
 ```
 
-Pass `--issue` and `--read-edited-at` for a publish that replaces a stored record, and `--published` for a Sliced record, the stored record composed into a payload file. Publish nothing while the check fails: repair each finding in the Draft, complete the sweep `${CLAUDE_SKILL_DIR}/references/repair-sweep.md` states, and run the check again. An exit of 2 names the unusable argument or read; fix it and run again. The publish command of `<publish>` runs the same check on the exact Draft it writes, so a Draft changed after this check is checked again at the publish.
+Pass `--issue` and `--read-edited-at` for a publish that replaces a stored record, and `--published` for a Sliced record, the stored record composed into its own Draft under `<draft>`. Publish nothing while the check fails: repair each finding in the Draft, complete the sweep `${CLAUDE_SKILL_DIR}/references/repair-sweep.md` states, and run the check again. An exit of 2 names the unusable argument or read; fix it and run again. The publish command of `<publish>` runs the same check on the exact Draft it writes, so a Draft changed after this check is checked again at the publish.
 
 Before each publish at Framed or Sliced, trace each result the Verification part of the Statement of Intent names to the Declarations line that carries it, and repair the Draft for each result no line carries. Keep the trace out of the record.
 

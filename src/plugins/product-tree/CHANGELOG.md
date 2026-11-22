@@ -10,6 +10,17 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.10
+
+### Changed
+
+- **`author-change` keeps every Change Draft in the spx draft store every worktree shares.** The skill creates each Draft with `spx draft create --kind change`, writes and edits it only at the absolute path that command returns, and finds a Draft to resume with `spx draft list --kind change`. It writes no payload file for a Draft and passes no Draft text on standard input. Before this change, the skill retained a Draft through `spx change draft create --input stdin`, which spx 0.10.0 no longer ships, and kept it in one worktree's store.
+- **The `audit-change` runner keys each run by the audited Change.** `retain-record` creates the Draft's file with `spx draft create --kind change`, writes the composed record there, and returns the Draft's `draftId`, its absolute `path`, and its `sha256`. `read-candidate`, `start`, `add-scope`, `add-finding`, `reconcile`, and `finish` take that absolute `path` and the Change's `issue`, and start, append to, reconcile, and finish the run with `--scope-type file --scope <owner>/<repo>#<N>`, the scope `manage-change` reads the audit from. `read-candidate`, `start`, and `reconcile` accept only a candidate that `spx draft list --kind change --all` lists and that is no link, and block any other path. Before this change, the runner piped the Draft to `spx change draft create` and keyed the run by the Draft's path, so `manage-change` found no run under the Change's reference.
+
+### Requires
+
+- spx with `spx draft create --kind <kind>` and `spx draft list --kind <kind>`, as spx 0.10.0 ships them.
+
 ## 0.115.9
 
 ### Changed

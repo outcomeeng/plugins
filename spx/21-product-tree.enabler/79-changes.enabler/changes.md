@@ -52,6 +52,7 @@ CAN write, check, and audit every Change record in one form
 - author-audit-dispatch: author-change dispatches change-auditor for a Sliced Leaf, with the issue reference of its record and the checkout root, and the holder advances the Leaf to Applicable only when the sealed run of that audit holds no finding at the current Base of the record.
 - author-publish-command: author-change routes every publish through one command that runs the form check on the exact Draft and writes to the Change Store only when it passes, writing the title, Product, Parent, predecessors, blockers and base from the Draft, clearing each of them the Draft empties or leaves out, and leaving every other field as the Change Store holds it; its SKILL.md names no other way to write a record.
 - author-foreign-proposed: author-change records a Proposed Change for another Product of the declared Change Store from a checkout of a different repository.
+- author-draft-store: author-change creates each Change Draft through `spx draft create --kind change`, which names the Draft's one file before any Draft text exists, writes and edits the Draft only at the absolute path that command returns, passes no Draft text on standard input and writes no payload file, finds a Draft to resume through `spx draft list --kind change`, and never deletes a Draft.
 
 ### Audit: audit-change
 
@@ -59,6 +60,7 @@ CAN write, check, and audit every Change record in one form
 - audit-close: audit-change audits the default branch against the record of a Leaf before the Leaf closes Applied, as audit-at-close of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states it.
 - audit-auditor: The change-auditor definition fronts audit-change, takes the issue reference of the record and the checkout root as its task message, and returns a blocked result for any other task message.
 - audit-retention: NEVER: the session that runs audit-change writes a copy of the record it audits; the runner of audit-change retains the record's Change Draft, and the session writes only runner request files.
+- draft-command-retired: NEVER: a Change skill, the runner of audit-change, or the change-auditor definition invokes `spx change draft`.
 
 ### Audit: manage-change
 

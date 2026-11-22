@@ -1,12 +1,15 @@
 """Workspace, invocation, and observation harness for the audit-change runner.
 
 Backs the ``[test]`` evidence that an audit-change run writes no file.
-Each workspace is a fresh Git repository in a temporary directory beside three
-initially empty directories: one the runner receives as its temporary
-directory, one it receives as its home directory, and one outside both that
-holds link targets. The harness places whole-payload Change records into the
-repository and starts the shipped runner as a subprocess, with one request on
-stdin, under the process observer in ``audit_change_run_observer``. Every
+Each workspace is a fresh Git repository, whose ``.gitignore`` keeps the SPX
+store out of git, in a temporary directory beside three initially empty
+directories: one the runner receives as its temporary directory, one it
+receives as its home directory, and one outside both. The harness places
+whole-payload Change records into Drafts it creates through ``spx draft create
+--kind change`` in the repository's SPX draft store, each the Draft of one
+Change named by its issue reference, and starts the shipped runner as a
+subprocess, with one request on stdin, under the process observer in
+``audit_change_run_observer``. Every
 invocation therefore exposes what the runner printed, every file the runner
 process wrote wherever the path lies, and every process it started. Directory
 snapshots add what changed in the repository, the SPX store, and the runner's
@@ -44,7 +47,7 @@ import threading
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import chdir, contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from tempfile import TemporaryDirectory, mkstemp
@@ -119,6 +122,13 @@ MALFORMED_REQUEST_PROPERTY_REPLAY: Final = (
 )
 
 _CANDIDATE_DIRNAME: Final = "changes"
+#: Where ``spx draft create --kind change`` keeps a Change Draft under a checkout.
+_DRAFT_STORE_DIR: Final = Path(SPX_STORE_DIR) / "drafts" / "change"
+#: The ignore rule that keeps the SPX store out of git, as the draft store requires.
+_GITIGNORE: Final = ".gitignore"
+_SPX_STORE_IGNORE_RULE: Final = f"{SPX_STORE_DIR}/\n"
+#: The Change store whose issue references name the audited candidates.
+AUDITED_CHANGE_STORE: Final = "acme/changes"
 _FIXTURE_SUFFIX: Final = ".txt"
 _TEMPORARY_DIRECTORY_VARIABLES: Final = ("TMPDIR", "TMP", "TEMP")
 # The GitHub CLI records a device identifier under its state directory on its
@@ -271,28 +281,66 @@ class CandidateCondition(StrEnum):
     ABSENT = "absent"
     DIRECTORY = "directory"
     UNREADABLE = "unreadable"
-    LINKED_OUTSIDE = "linked-outside"
     WINDOWS_1252 = "windows-1252"
+    OUTSIDE_STORE = "outside-store"
+    LINKED_INTO_STORE = "linked-into-store"
+
+
+#: The conditions whose candidate lies outside the draft store or links into it.
+UNCONTAINED_CONDITIONS: Final = (
+    CandidateCondition.OUTSIDE_STORE,
+    CandidateCondition.LINKED_INTO_STORE,
+)
 
 
 @dataclass
 class AuditWorkspace:
-    """A Git repository holding Change candidates, and the runner's own directories."""
+    """A Git repository whose SPX draft store holds Change candidates, and the runner's own directories."""
 
     root: Path
     runner_temporary_directory: Path
     runner_home_directory: Path
     outside_directory: Path
     observation_directory: Path
+    _issues: dict[str, str] = field(default_factory=dict)
 
     def path_for(self, source: Path) -> str:
-        """Return the relative path ``place`` gives ``source``, without placing it."""
+        """Return an absolute path in the draft store that holds no Draft of ``source``."""
         name = source.name.removesuffix(_FIXTURE_SUFFIX)
-        return (Path(_CANDIDATE_DIRNAME) / name).as_posix()
+        return str(self.root.resolve() / _DRAFT_STORE_DIR / name)
+
+    def issue(self, draft: str) -> str:
+        """Return the canonical issue reference of the Change a candidate Draft records."""
+        return self._issues.setdefault(
+            draft, f"{AUDITED_CHANGE_STORE}#{len(self._issues) + 1}"
+        )
+
+    def create_draft(self) -> Path:
+        """Create one empty Change Draft through ``spx draft create``; return its path."""
+        runner = load_runner()
+        completed = subprocess.run(  # noqa: S603
+            list(runner.DRAFT_CREATE_COMMAND),
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        created = json.loads(completed.stdout.splitlines()[-1])
+        return Path(created[runner.SpxField.PATH])
 
     def place(self, source: Path) -> str:
-        """Copy a whole-payload record into the repository; return its relative path."""
-        relative = self.path_for(source)
+        """Copy a whole-payload record into a new Draft of the store; return its absolute path."""
+        target = self.create_draft()
+        shutil.copyfile(source, target)
+        draft = str(target)
+        self.issue(draft)
+        return draft
+
+    def place_record(self, source: Path) -> str:
+        """Copy a file into the repository; return its repository-relative path."""
+        relative = (
+            Path(_CANDIDATE_DIRNAME) / source.name.removesuffix(_FIXTURE_SUFFIX)
+        ).as_posix()
         target = self.root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
@@ -303,53 +351,54 @@ class AuditWorkspace:
 
         The UTF-8 record's apostrophes become typographic apostrophes and the
         text is encoded in Windows-1252, so the placed candidate is the same
-        record in bytes that are not UTF-8 text. Return its relative path.
+        record in bytes that are not UTF-8 text. Return its absolute path.
         """
         text = source.read_text(encoding="utf-8")
         if _TYPEWRITER_APOSTROPHE not in text:
             raise RuntimeError(
                 f"{source} carries no apostrophe to re-encode as Windows-1252"
             )
-        name = source.name.removesuffix(_FIXTURE_SUFFIX)
-        relative = (
-            Path(_CANDIDATE_DIRNAME) / f"{_WINDOWS_1252_PREFIX}{name}"
-        ).as_posix()
-        target = self.root / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
+        target = self.create_draft()
         target.write_bytes(
             text.replace(_TYPEWRITER_APOSTROPHE, _TYPOGRAPHIC_APOSTROPHE).encode(
                 _WINDOWS_1252_CODEC
             )
         )
-        return relative
+        return str(target)
 
-    def place_link_outside(self, source: Path) -> str:
-        """Copy a record outside the repository and link a candidate path to it."""
-        relative = self.path_for(source)
-        outside = self.outside_directory / Path(relative).name
-        shutil.copyfile(source, outside)
-        link = self.root / relative
-        link.parent.mkdir(parents=True, exist_ok=True)
-        link.symlink_to(outside)
-        return relative
+    def place_outside_store(self, source: Path) -> str:
+        """Copy a record to a regular file outside the draft store; return its path."""
+        target = self.outside_directory.resolve() / source.name.removesuffix(
+            _FIXTURE_SUFFIX
+        )
+        shutil.copyfile(source, target)
+        return str(target)
+
+    def place_linked_into_store(self, source: Path) -> str:
+        """Put a link to a record outside the store where the store holds a Draft."""
+        outside = Path(self.place_outside_store(source))
+        target = self.create_draft()
+        target.unlink()
+        target.symlink_to(outside)
+        return str(target)
 
     def place_unreadable(self, source: Path) -> str:
-        """Copy a record into the repository with no permission to read it."""
-        relative = self.place(source)
-        target = self.root / relative
+        """Copy a record into the draft store with no permission to read it."""
+        draft = self.place(source)
+        target = Path(draft)
         target.chmod(_NO_PERMISSIONS)
         if os.access(target, os.R_OK):
             raise RuntimeError(
                 f"this user can read {target} with no permissions; "
                 "an unreadable candidate cannot be placed"
             )
-        return relative
+        return draft
 
     def place_directory(self, source: Path) -> str:
         """Create a directory where ``place`` would put ``source``."""
-        relative = self.path_for(source)
-        (self.root / relative).mkdir(parents=True)
-        return relative
+        draft = self.path_for(source)
+        Path(draft).mkdir(parents=True)
+        return draft
 
     def place_in_condition(self, condition: CandidateCondition, source: Path) -> str:
         """Put ``source`` at a candidate path in ``condition``; return the path."""
@@ -357,43 +406,47 @@ class AuditWorkspace:
             CandidateCondition.ABSENT: self.path_for,
             CandidateCondition.DIRECTORY: self.place_directory,
             CandidateCondition.UNREADABLE: self.place_unreadable,
-            CandidateCondition.LINKED_OUTSIDE: self.place_link_outside,
             CandidateCondition.WINDOWS_1252: self.place_windows_1252,
+            CandidateCondition.OUTSIDE_STORE: self.place_outside_store,
+            CandidateCondition.LINKED_INTO_STORE: self.place_linked_into_store,
         }
         return placements[condition](source)
 
-    def edit(self, relative: str) -> None:
+    def edit(self, draft: str) -> None:
         """Change a placed candidate's content, as another session editing it would."""
         encoding = load_runner().TEXT_ENCODING
-        with (self.root / relative).open("a", encoding=encoding) as handle:
+        with Path(draft).open("a", encoding=encoding) as handle:
             handle.write(CANDIDATE_EDIT)
 
-    def content(self, relative: str) -> str:
+    def content(self, draft: str) -> str:
         """Return a placed candidate's current content exactly as stored."""
-        return (self.root / relative).read_bytes().decode(load_runner().TEXT_ENCODING)
+        return Path(draft).read_bytes().decode(load_runner().TEXT_ENCODING)
 
-    def start_run(self, relative: str) -> StartedRun:
+    def candidate_request(self, operation: object, draft: str) -> dict[str, object]:
+        """Return the fields every request over the candidate ``draft`` carries."""
+        fields = load_runner().RequestField
+        return {
+            fields.OPERATION: operation,
+            fields.PATH: draft,
+            fields.ISSUE: self.issue(draft),
+            fields.ROOT: str(self.root),
+        }
+
+    def start_run(self, draft: str) -> StartedRun:
         """Read a placed candidate and start a run over the content that read returned.
 
         Both calls are returned as observed; a read that returns no digest
         starts nothing the runner accepts, and the start call shows that.
         """
         runner = load_runner()
-        field = runner.RequestField
         operation = runner.Operation
-        read = self.invoke(
-            {
-                field.OPERATION: operation.READ_CANDIDATE,
-                field.PATH: relative,
-                field.ROOT: str(self.root),
-            }
-        )
+        read = self.invoke(self.candidate_request(operation.READ_CANDIDATE, draft))
         started = self.invoke(
             {
-                field.OPERATION: operation.START,
-                field.PATH: relative,
-                field.ROOT: str(self.root),
-                field.CANDIDATE_SHA256: read.result.get(runner.ResultField.SHA256),
+                **self.candidate_request(operation.START, draft),
+                runner.RequestField.CANDIDATE_SHA256: read.result.get(
+                    runner.ResultField.SHA256
+                ),
             }
         )
         return StartedRun(read=read, started=started)
@@ -528,6 +581,9 @@ def audit_workspace() -> Iterator[AuditWorkspace]:
         subprocess.run(  # noqa: S603
             ["git", "init", "--quiet", str(workspace.root)],  # noqa: S607
             check=True,
+        )
+        (workspace.root / _GITIGNORE).write_text(
+            _SPX_STORE_IGNORE_RULE, encoding="utf-8"
         )
         yield workspace
 
