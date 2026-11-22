@@ -86,7 +86,7 @@ PDR_PATH_GLOB: Final = f"{PRODUCT_TREE_ROOT_GLOB}/*.pdr.md"
 SPEC_PATH_GLOB: Final = f"{PRODUCT_TREE_ROOT_GLOB}/*.spec.md"
 SUBAGENT_PATH_GLOB: Final = f"{GLOB_ANY_SEGMENTS}/agents/*.md"
 PROSE_PATH_GLOB: Final = f"docs/{GLOB_ANY_SEGMENTS}/*.md"
-CHANGE_DRAFT_PATH_GLOB: Final = f"{GLOB_ANY_SEGMENTS}/change-drafts/*.md"
+CHANGE_DRAFT_PATH_GLOB: Final = f"{GLOB_ANY_SEGMENTS}/drafts/change/*.md"
 FOUNDATION_SKILL_NAME: Final = "understand"
 
 

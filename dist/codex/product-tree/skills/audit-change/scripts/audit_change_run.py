@@ -2,11 +2,12 @@
 
 The runner reads one JSON request object on stdin, performs the requested file
 or ``spx verification run`` operation from the Product's checkout root, and writes one
-JSON result object on stdout. It writes no file: the SPX run journal and the
-Change Draft ``retain-record`` retains through ``spx`` are the only state that
-persists between requests, and every request names the candidate path and run
-token it acts on, so audits of different candidates started from one worktree
-share nothing but the stores SPX keys by run and by draft.
+JSON result object on stdout. It writes no file other than the Change Draft
+``retain-record`` fills at the path ``spx draft create`` names: the SPX run
+journal and that Draft are the only state that persists between requests, and
+every request names the Draft path, the Change, and the run token it acts on,
+so audits of different Changes started from one worktree share nothing but the
+stores SPX keys by run and by draft.
 
 Every invocation writes exactly one result, and every result carries
 ``operation`` and ``status``. ``operation`` is the listed operation the request
@@ -32,8 +33,7 @@ anywhere and every process it starts:
 - a candidate edited before ``start``, and after it before ``reconcile``;
 - a scope payload SPX rejects, which blocks with SPX's exit code and stderr;
 - a request that is not UTF-8 text;
-- a candidate that is absent, a directory, unreadable, linked outside the
-  repository, or Windows-1252 text;
+- a candidate that is absent, a directory, unreadable, or Windows-1252 text;
 - for each operation that takes a ``runToken``, a request naming a started
   run with fields its operation does not take, which blocks with that
   operation and run token;
@@ -44,8 +44,10 @@ anywhere and every process it starts:
   unlisted operation; a missing field or one the operation does not take; a
   ``path``, ``candidateSha256``, ``runToken``, or ``terminalStatus`` that is
   not a non-empty string; a path, ``runToken``, or payload ``unitId`` carrying
-  a NUL character or text with no UTF-8 encoding; an absolute,
-  parent-traversing, or unnormalized candidate path; a payload that is not an
+  a NUL character or text with no UTF-8 encoding; a relative,
+  parent-traversing, or unnormalized candidate path; an absolute,
+  parent-traversing, or unnormalized record path; an ``issue`` that is not a
+  canonical issue reference; a payload that is not an
   object with a non-empty ``unitId``; a finding rule that is not a lowercase
   hyphenated ID; and an unlisted terminal status. Each blocks on stdout.
 
@@ -58,25 +60,29 @@ no comment, a read that ends before the bound returns every event, and a connect
 the bound with ``page-bound-reached`` naming it.
 
 Every operation that names a candidate or a record path takes the Product's
-checkout root as ``root``, an absolute path: ``read-candidate``, ``start``,
-``add-scope``, ``add-finding``, ``reconcile``, and ``finish`` resolve the
-candidate path under that root and run their ``git`` and ``spx`` commands with
-that root as the working directory, and ``resolve-reference`` resolves the path
-a record names under it, whatever checkout holds the draft or runs the audit.
-A request without ``root``, or one whose ``root`` is no repository checkout
-root, blocks naming it, and the containment check of the path stays against
-that root.
+checkout root as ``root``, an absolute path, and runs its ``git`` and ``spx``
+commands with that root as the working directory. ``read-candidate``,
+``start``, ``add-scope``, ``add-finding``, ``reconcile``, and ``finish`` read
+the candidate at the absolute Draft path the request names, and key the run by
+the scope type ``file`` and the scope the request's ``issue`` names, the
+canonical ``owner/repo#N`` reference of the audited Change. ``read-at``,
+``governing-decisions``, and ``resolve-reference`` resolve the path a record
+names under ``root``, whatever checkout runs the audit. A request without
+``root``, or one whose ``root`` is no repository checkout root, blocks naming
+it, and the containment check of each record path stays against that root.
 
 ``retain-record`` starts ``gh`` twice, for the record and for its blockers,
-composes the Change Draft from each part's home in the store, and pipes that
-Draft to one ``spx change draft create`` command run from ``root``. It returns
-the path SPX retained the Draft at, under ``root``, and the Draft's digest, so
-no session copies the record. A retained Draft that differs from the composed
-one blocks with ``retained-input-mismatch``. It is tested in this process over
-replayed store answers and a draft store in a temporary directory: the Draft
-SPX receives carries the stored title, body, and field values, a store that
-retains other content blocks, and a failed or unrunnable ``gh`` or ``spx``
-command blocks with ``command-failed``.
+composes the Change Draft from each part's home in the store, creates the
+Draft's one file through one ``spx draft create --kind change`` command run
+from ``root``, and writes the composed Draft to the absolute path that command
+returns, passing no Draft text on standard input. It returns the Draft's
+identifier, its absolute path, and its digest, so no session copies the
+record. A retained Draft that differs from the composed one blocks with
+``retained-input-mismatch``. It is tested in this process over replayed store
+answers and a draft store in a temporary directory: the Draft written carries
+the stored title, body, and field values, a store that holds other content
+blocks, and a failed or unrunnable ``gh`` or ``spx`` command blocks with
+``command-failed``.
 
 ``read-published`` starts ``gh`` once and returns the issue's published body,
 the empty string when the store holds none.
@@ -165,6 +171,7 @@ class ResultField(StrEnum):
     EXIT_CODE = "exitCode"
     STDERR = "stderr"
     RETAINED_SHA256 = "retainedSha256"
+    DRAFT_ID = "draftId"
     LIVE_SHA256 = "liveSha256"
     ISSUE = "issue"
     EVENTS = "events"
@@ -259,7 +266,8 @@ class SpxField(StrEnum):
     COVERAGE_STATUS = "coverageStatus"
     RULE = "rule"
     SEVERITY = "severity"
-    RELATIVE_PATH = "relativePath"
+    DRAFT_ID = "draftId"
+    PATH = "path"
 
 
 class StoreField(StrEnum):
@@ -316,14 +324,16 @@ GIT_EXECUTABLE: Final = "git"
 _GIT_TOPLEVEL: Final = (GIT_EXECUTABLE, "rev-parse", "--show-toplevel")
 _SPX_VERSION: Final = (SPX_EXECUTABLE, "--version")
 _RUN_COMMAND: Final = (SPX_EXECUTABLE, "verification", "run")
-#: The command that retains the Draft it reads on stdin in the SPX draft store.
+#: The Draft kind of a Change Draft in the SPX draft store.
+CHANGE_DRAFT_KIND: Final = "change"
+#: The command that creates one empty Change Draft file in the SPX draft store
+#: every worktree shares and reports its identifier and absolute path.
 DRAFT_CREATE_COMMAND: Final = (
     SPX_EXECUTABLE,
-    "change",
     "draft",
     "create",
-    "--input",
-    PAYLOAD_FROM_STDIN,
+    "--kind",
+    CHANGE_DRAFT_KIND,
 )
 GH_EXECUTABLE: Final = "gh"
 _GRAPHQL: Final = (GH_EXECUTABLE, "api", "graphql")
@@ -382,40 +392,24 @@ ISSUE_IDENTITY_PATTERN: Final = re.compile(
 )
 
 #: The fields each operation's request carries besides ``operation``.
+#: The fields every request over a candidate Draft carries: the Draft's
+#: absolute path, the audited Change, and the Product's checkout root.
+_CANDIDATE_FIELDS: Final = frozenset(
+    {RequestField.PATH, RequestField.ISSUE, RequestField.ROOT}
+)
+
 REQUIRED_FIELDS: Final[Mapping[Operation, frozenset[RequestField]]] = {
-    Operation.READ_CANDIDATE: frozenset({RequestField.PATH, RequestField.ROOT}),
+    Operation.READ_CANDIDATE: _CANDIDATE_FIELDS,
     Operation.RESOLVE_REFERENCE: frozenset({RequestField.PATH, RequestField.ROOT}),
     Operation.TOOL_VERSION: frozenset(),
-    Operation.START: frozenset(
-        {RequestField.PATH, RequestField.ROOT, RequestField.CANDIDATE_SHA256}
-    ),
-    Operation.ADD_SCOPE: frozenset(
-        {
-            RequestField.PATH,
-            RequestField.ROOT,
-            RequestField.RUN_TOKEN,
-            RequestField.PAYLOAD,
-        }
-    ),
-    Operation.ADD_FINDING: frozenset(
-        {
-            RequestField.PATH,
-            RequestField.ROOT,
-            RequestField.RUN_TOKEN,
-            RequestField.PAYLOAD,
-        }
-    ),
-    Operation.RECONCILE: frozenset(
-        {RequestField.PATH, RequestField.ROOT, RequestField.RUN_TOKEN}
-    ),
-    Operation.FINISH: frozenset(
-        {
-            RequestField.PATH,
-            RequestField.ROOT,
-            RequestField.RUN_TOKEN,
-            RequestField.TERMINAL_STATUS,
-        }
-    ),
+    Operation.START: _CANDIDATE_FIELDS | {RequestField.CANDIDATE_SHA256},
+    Operation.ADD_SCOPE: _CANDIDATE_FIELDS
+    | {RequestField.RUN_TOKEN, RequestField.PAYLOAD},
+    Operation.ADD_FINDING: _CANDIDATE_FIELDS
+    | {RequestField.RUN_TOKEN, RequestField.PAYLOAD},
+    Operation.RECONCILE: _CANDIDATE_FIELDS | {RequestField.RUN_TOKEN},
+    Operation.FINISH: _CANDIDATE_FIELDS
+    | {RequestField.RUN_TOKEN, RequestField.TERMINAL_STATUS},
     Operation.READ_AUTHORITY: frozenset({RequestField.ISSUE}),
     Operation.READ_PUBLISHED: frozenset({RequestField.ISSUE}),
     Operation.READ_RELATIONS: frozenset({RequestField.ISSUE}),
@@ -444,6 +438,17 @@ class CommandRunner(Protocol):
     def __call__(
         self, argv: Sequence[str], /, *, cwd: pathlib.Path, stdin: str | None
     ) -> CommandResult: ...
+
+
+class DraftWriter(Protocol):
+    """Write the composed Draft's bytes to the file SPX created for it."""
+
+    def __call__(self, path: pathlib.Path, data: bytes, /) -> None: ...
+
+
+def write_draft(path: pathlib.Path, data: bytes, /) -> None:
+    """Replace the content of the Draft file at ``path`` with ``data``."""
+    path.write_bytes(data)
 
 
 def run_subprocess(
@@ -512,6 +517,7 @@ class Blocked(Exception):
 class _Context:
     runner: CommandRunner
     cwd: pathlib.Path
+    writer: DraftWriter = write_draft
 
 
 def _sha256(text: str) -> str:
@@ -693,8 +699,36 @@ def _normalized_path(value: str) -> str:
     return value
 
 
-def _candidate_path(request: Mapping[str, object]) -> str:
+def _record_path(request: Mapping[str, object]) -> str:
     return _normalized_path(_string(request, RequestField.PATH))
+
+
+def _draft_path(request: Mapping[str, object]) -> pathlib.Path:
+    """Return the absolute, normalized Draft path a request names, or block."""
+    value = _string(request, RequestField.PATH)
+    defect = _system_text_defect(value)
+    if defect is not None:
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"path {defect}: {value!r}; pass the absolute Draft path of printable UTF-8 text that retain-record returned",
+        )
+    pure = pathlib.PurePosixPath(value)
+    if not pure.is_absolute():
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"path is not absolute: {value}; pass the absolute Draft path that retain-record returned",
+        )
+    if ".." in pure.parts or str(pure) != value:
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"path is not normalized: {value}; pass the absolute Draft path exactly as retain-record returned it",
+        )
+    return pathlib.Path(value)
+
+
+def _scope(request: Mapping[str, object]) -> str:
+    """Return the canonical issue reference that scopes a run."""
+    return "{}/{}#{}".format(*_issue_identity(request))
 
 
 def _reference_path(request: Mapping[str, object]) -> str:
@@ -806,34 +840,47 @@ def _issue_identity(request: Mapping[str, object]) -> tuple[str, str, str]:
 _REQUEST_CHECKS: Final[
     Mapping[Operation, tuple[Callable[[Mapping[str, object]], object], ...]]
 ] = {
-    Operation.READ_CANDIDATE: (_candidate_path, _checkout_root),
+    Operation.READ_CANDIDATE: (_draft_path, _issue_identity, _checkout_root),
     Operation.RESOLVE_REFERENCE: (_reference_path, _checkout_root),
     Operation.TOOL_VERSION: (),
-    Operation.START: (_candidate_path, _checkout_root, _candidate_sha256),
+    Operation.START: (
+        _draft_path,
+        _issue_identity,
+        _checkout_root,
+        _candidate_sha256,
+    ),
     Operation.ADD_SCOPE: (
-        _candidate_path,
+        _draft_path,
+        _issue_identity,
         _checkout_root,
         _run_token,
         _unit_id,
         _payload_text,
     ),
     Operation.ADD_FINDING: (
-        _candidate_path,
+        _draft_path,
+        _issue_identity,
         _checkout_root,
         _run_token,
         _unit_id,
         _finding_rule,
         _payload_text,
     ),
-    Operation.RECONCILE: (_candidate_path, _checkout_root, _run_token),
-    Operation.FINISH: (_candidate_path, _checkout_root, _run_token, _terminal_status),
+    Operation.RECONCILE: (_draft_path, _issue_identity, _checkout_root, _run_token),
+    Operation.FINISH: (
+        _draft_path,
+        _issue_identity,
+        _checkout_root,
+        _run_token,
+        _terminal_status,
+    ),
     Operation.READ_AUTHORITY: (_issue_identity,),
     Operation.READ_PUBLISHED: (_issue_identity,),
     Operation.READ_RELATIONS: (_issue_identity,),
     Operation.RETAIN_RECORD: (_issue_identity, _checkout_root),
-    Operation.READ_AT: (_candidate_path, _checkout_root, lambda request: _ref(request)),
+    Operation.READ_AT: (_record_path, _checkout_root, lambda request: _ref(request)),
     Operation.GOVERNING_DECISIONS: (
-        _candidate_path,
+        _record_path,
         _checkout_root,
         lambda request: _ref(request),
     ),
@@ -886,46 +933,40 @@ def _within(root: pathlib.Path, path: pathlib.Path, named: str) -> bool:
         ) from exc
 
 
-def _live_content(root: pathlib.Path, relative: str) -> str:
-    """Read the candidate exactly as stored, refusing a path that escapes the root."""
-    candidate = root / relative
-    if not _within(root, candidate, relative):
-        raise Blocked(
-            BlockReason.PATH_REJECTED,
-            f"path resolves outside the repository: {relative}; pass a path that stays inside the repository and is not a link leaving it",
-        )
-    if not candidate.exists():
+def _draft_content(draft: pathlib.Path) -> str:
+    """Read the candidate Draft exactly as stored at its absolute path."""
+    if not draft.exists():
         raise Blocked(
             BlockReason.CANDIDATE_MISSING,
-            f"candidate is absent: {relative}; pass the repository-relative path of an existing file",
+            f"candidate is absent: {draft}; pass the absolute Draft path that retain-record returned",
         )
-    if not candidate.is_file():
+    if not draft.is_file():
         raise Blocked(
             BlockReason.PATH_REJECTED,
-            f"candidate is not a regular file: {relative}; pass the path of a file, not a directory or special file",
+            f"candidate is not a regular file: {draft}; pass the path of a file, not a directory or special file",
         )
     try:
-        stored = candidate.read_bytes()
+        stored = draft.read_bytes()
     except FileNotFoundError as exc:
         raise Blocked(
             BlockReason.CANDIDATE_MISSING,
-            f"candidate is absent: {relative}; pass the repository-relative path of an existing file",
+            f"candidate is absent: {draft}; pass the absolute Draft path that retain-record returned",
         ) from exc
     except OSError as exc:
         raise Blocked(
             BlockReason.CANDIDATE_UNREADABLE,
-            f"candidate cannot be read: {relative}: {exc.strerror or exc}; fix the file's read permission and repeat the request",
+            f"candidate cannot be read: {draft}: {exc.strerror or exc}; fix the file's read permission and repeat the request",
         ) from exc
     try:
         return stored.decode(TEXT_ENCODING)
     except UnicodeDecodeError as exc:
         raise Blocked(
             BlockReason.PATH_REJECTED,
-            f"candidate is not UTF-8 text: {relative}; save the file as UTF-8 text and repeat the request",
+            f"candidate is not UTF-8 text: {draft}; save the file as UTF-8 text and repeat the request",
         ) from exc
 
 
-def _run_argv(verb: Sequence[str], relative: str, run_token: str) -> list[str]:
+def _run_argv(verb: Sequence[str], scope: str, run_token: str) -> list[str]:
     return [
         *_RUN_COMMAND,
         *verb,
@@ -934,36 +975,36 @@ def _run_argv(verb: Sequence[str], relative: str, run_token: str) -> list[str]:
         "--scope-type",
         SCOPE_TYPE,
         "--scope",
-        relative,
+        scope,
         "--run",
         run_token,
     ]
 
 
-def render_argv(relative: str, run_token: str) -> list[str]:
+def render_argv(scope: str, run_token: str) -> list[str]:
     """Return the command that reproduces the complete rendered projection."""
-    return _run_argv(("render",), relative, run_token)
+    return _run_argv(("render",), scope, run_token)
 
 
 def _run_json(
     context: _Context,
     root: pathlib.Path,
     verb: Sequence[str],
-    relative: str,
+    scope: str,
     run_token: str,
 ) -> dict[str, object]:
     stdout = _command(
-        context, _run_argv(verb, relative, run_token), cwd=root, run_token=run_token
+        context, _run_argv(verb, scope, run_token), cwd=root, run_token=run_token
     )
     return _json_lines(
-        stdout, argv=_run_argv(verb, relative, run_token), run_token=run_token
+        stdout, argv=_run_argv(verb, scope, run_token), run_token=run_token
     )[-1]
 
 
 def _retained_content(
-    context: _Context, root: pathlib.Path, relative: str, run_token: str
+    context: _Context, root: pathlib.Path, scope: str, run_token: str
 ) -> str:
-    replay = _run_json(context, root, ("input",), relative, run_token)
+    replay = _run_json(context, root, ("input",), scope, run_token)
     content = replay.get(SpxField.CONTENT)
     if not isinstance(content, str):
         raise Blocked(
@@ -977,10 +1018,11 @@ def _retained_content(
 def _read_candidate(
     context: _Context, request: Mapping[str, object]
 ) -> dict[str, object]:
-    relative = _candidate_path(request)
-    content = _live_content(_product_root(context, _checkout_root(request)), relative)
+    draft = _draft_path(request)
+    _product_root(context, _checkout_root(request))
+    content = _draft_content(draft)
     return {
-        ResultField.PATH: relative,
+        ResultField.PATH: str(draft),
         ResultField.SHA256: _sha256(content),
         ResultField.CONTENT: content,
     }
@@ -994,7 +1036,9 @@ def _product_root(context: _Context, named: pathlib.Path) -> pathlib.Path:
             f"root is not a directory: {named}; pass the absolute path of the Product's checkout root",
         )
     try:
-        top = _repository_root(_Context(runner=context.runner, cwd=named))
+        top = _repository_root(
+            _Context(runner=context.runner, cwd=named, writer=context.writer)
+        )
     except Blocked as exc:
         raise Blocked(
             BlockReason.PATH_REJECTED,
@@ -1039,10 +1083,11 @@ def _tool_version(
 
 
 def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
-    relative = _candidate_path(request)
+    draft = _draft_path(request)
+    scope = _scope(request)
     expected = _candidate_sha256(request)
     root = _product_root(context, _checkout_root(request))
-    content = _live_content(root, relative)
+    content = _draft_content(draft)
     if _sha256(content) != expected:
         raise Blocked(
             BlockReason.CANDIDATE_CHANGED,
@@ -1060,9 +1105,9 @@ def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object
         "--scope-type",
         SCOPE_TYPE,
         "--scope",
-        relative,
+        scope,
         "--input",
-        relative,
+        str(draft),
     ]
     lines = _json_lines(_command(context, argv, cwd=root), argv=argv)
     run_token = next(
@@ -1082,7 +1127,7 @@ def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object
             "run token; confirm the installed spx version supports the run "
             "`start` verb",
         )
-    retained = _retained_content(context, root, relative, run_token)
+    retained = _retained_content(context, root, scope, run_token)
     if retained != content:
         raise Blocked(
             BlockReason.RETAINED_INPUT_MISMATCH,
@@ -1095,7 +1140,7 @@ def _start(context: _Context, request: Mapping[str, object]) -> dict[str, object
         )
     return {
         ResultField.RUN_TOKEN: run_token,
-        ResultField.PATH: relative,
+        ResultField.PATH: str(draft),
         ResultField.SHA256: _sha256(content),
     }
 
@@ -1107,10 +1152,10 @@ def _append(
     noun: str,
     idempotency_key: str,
 ) -> dict[str, object]:
-    relative = _candidate_path(request)
+    scope = _scope(request)
     run_token = _run_token(request)
     argv = [
-        *_run_argv((noun, "add"), relative, run_token),
+        *_run_argv((noun, "add"), scope, run_token),
         "--idempotency-key",
         idempotency_key,
         "--payload",
@@ -1176,11 +1221,12 @@ def _finding_entries(
 
 
 def _reconcile(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
-    relative = _candidate_path(request)
+    draft = _draft_path(request)
+    scope = _scope(request)
     run_token = _run_token(request)
     root = _product_root(context, _checkout_root(request))
-    retained = _retained_content(context, root, relative, run_token)
-    live = _live_content(root, relative)
+    retained = _retained_content(context, root, scope, run_token)
+    live = _draft_content(draft)
     if live != retained:
         raise Blocked(
             BlockReason.CANDIDATE_CHANGED,
@@ -1190,8 +1236,8 @@ def _reconcile(context: _Context, request: Mapping[str, object]) -> dict[str, ob
                 ResultField.LIVE_SHA256: _sha256(live),
             },
         )
-    run_status = _run_json(context, root, ("status",), relative, run_token)
-    projection = _run_json(context, root, ("render",), relative, run_token)
+    run_status = _run_json(context, root, ("status",), scope, run_token)
+    projection = _run_json(context, root, ("render",), scope, run_token)
     units = projection.get(SpxField.AUDIT_SCOPE_UNITS)
     if not isinstance(units, list) or not all(isinstance(unit, dict) for unit in units):
         raise Blocked(
@@ -1228,17 +1274,17 @@ def _reconcile(context: _Context, request: Mapping[str, object]) -> dict[str, ob
 
 
 def _finish(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
-    relative = _candidate_path(request)
+    scope = _scope(request)
     run_token = _run_token(request)
     terminal = _terminal_status(request)
     root = _product_root(context, _checkout_root(request))
     finish_argv = [
-        *_run_argv(("finish",), relative, run_token),
+        *_run_argv(("finish",), scope, run_token),
         "--terminal-status",
         terminal,
     ]
     _command(context, finish_argv, cwd=root)
-    projection = _run_json(context, root, ("render",), relative, run_token)
+    projection = _run_json(context, root, ("render",), scope, run_token)
     return {
         ResultField.RUN_TOKEN: run_token,
         ResultField.RUN: {
@@ -1249,7 +1295,7 @@ def _finish(context: _Context, request: Mapping[str, object]) -> dict[str, objec
         ResultField.FINDINGS: [
             payload for _seq, payload in _finding_entries(projection)
         ],
-        ResultField.RENDER_COMMAND: shlex.join(render_argv(relative, run_token)),
+        ResultField.RENDER_COMMAND: shlex.join(render_argv(scope, run_token)),
     }
 
 
@@ -1647,31 +1693,49 @@ def _blocker_references(
     return references
 
 
-def _retained_draft_path(context: _Context, root: pathlib.Path, draft: str) -> str:
-    """Retain ``draft`` through SPX and return its path under ``root``, or block."""
-    reported = _json_lines(
-        _command(context, DRAFT_CREATE_COMMAND, cwd=root, stdin=draft),
+def _created_draft(context: _Context, root: pathlib.Path) -> tuple[str, pathlib.Path]:
+    """Create one empty Change Draft through SPX; return its identifier and absolute path."""
+    created = _json_lines(
+        _command(context, DRAFT_CREATE_COMMAND, cwd=root),
         argv=DRAFT_CREATE_COMMAND,
-    )[-1].get(SpxField.RELATIVE_PATH)
-    if not isinstance(reported, str) or not reported:
+    )[-1]
+    draft_id = created.get(SpxField.DRAFT_ID)
+    reported = created.get(SpxField.PATH)
+    if (
+        not isinstance(draft_id, str)
+        or not draft_id
+        or not isinstance(reported, str)
+        or not pathlib.PurePosixPath(reported).is_absolute()
+    ):
         raise Blocked(
             BlockReason.UNREADABLE_OUTPUT,
-            f"`{' '.join(DRAFT_CREATE_COMMAND)}` printed no {SpxField.RELATIVE_PATH} "
-            "string; run it by hand and confirm the installed spx version "
-            "reports the retained draft's path",
+            f"`{' '.join(DRAFT_CREATE_COMMAND)}` printed no {SpxField.DRAFT_ID} "
+            f"string and absolute {SpxField.PATH}; run it by hand and confirm "
+            "the installed spx version reports the created Draft's identifier "
+            "and absolute path",
         )
-    relative = _normalized_path(reported)
-    retained = _live_content(root, relative)
+    return draft_id, pathlib.Path(reported)
+
+
+def _written_draft(context: _Context, path: pathlib.Path, draft: str) -> None:
+    """Write ``draft`` to the file SPX created, then require it to read back unchanged."""
+    try:
+        context.writer(path, draft.encode(TEXT_ENCODING))
+    except OSError as exc:
+        raise Blocked(
+            BlockReason.PATH_REJECTED,
+            f"the Draft file SPX created cannot be written: {path}: {exc.strerror or exc}; fix the draft store's write permission and repeat retain-record",
+        ) from exc
+    retained = _draft_content(path)
     if retained != draft:
         raise Blocked(
             BlockReason.RETAINED_INPUT_MISMATCH,
-            f"the Draft SPX retained at {relative} differs from the Draft the runner composed; repeat retain-record, and report this block when it repeats",
+            f"the Draft at {path} differs from the Draft the runner composed; repeat retain-record, and report this block when it repeats",
             evidence={
                 ResultField.RETAINED_SHA256: _sha256(retained),
                 ResultField.SHA256: _sha256(draft),
             },
         )
-    return relative
 
 
 def _retain_record(
@@ -1679,9 +1743,10 @@ def _retain_record(
 ) -> dict[str, object]:
     """Compose the Change Draft of the named issue and retain it through SPX.
 
-    The Draft is composed from each part's home in the store and piped to
-    ``spx change draft create``, so the record reaches the SPX draft store
-    without a copy any session writes.
+    The Draft is composed from each part's home in the store and written to
+    the one file ``spx draft create --kind change`` creates in the draft store
+    every worktree shares, so the record reaches that store without a copy any
+    session writes.
     """
     owner, repository, number = _issue_identity(request)
     root = _product_root(context, _checkout_root(request))
@@ -1736,9 +1801,12 @@ def _retain_record(
             lines.append(f"{key}: {_yaml_scalar(value)}")
     body = str(node[StoreField.BODY]).replace("\r\n", "\n")
     draft = "\n".join([*lines, "---", "", body.rstrip("\n"), ""])
+    draft_id, path = _created_draft(context, root)
+    _written_draft(context, path, draft)
     return {
         ResultField.ISSUE: request[RequestField.ISSUE],
-        ResultField.PATH: _retained_draft_path(context, root, draft),
+        ResultField.DRAFT_ID: draft_id,
+        ResultField.PATH: str(path),
         ResultField.SHA256: _sha256(draft),
         ResultField.MATURITY: record["maturity"],
         ResultField.LIFECYCLE: record["lifecycle"],
@@ -1764,7 +1832,7 @@ def _ref(request: Mapping[str, object]) -> str:
 
 def _read_at(context: _Context, request: Mapping[str, object]) -> dict[str, object]:
     """Return one file as the named commit holds it, with whether it is present."""
-    relative = _candidate_path(request)
+    relative = _record_path(request)
     root = _product_root(context, _checkout_root(request))
     ref = _ref(request)
     argv = [GIT_EXECUTABLE, "cat-file", "-e", f"{ref}:{relative}"]
@@ -1786,7 +1854,7 @@ def _governing_decisions(
     context: _Context, request: Mapping[str, object]
 ) -> dict[str, object]:
     """List the Decision Records at each directory from ``spx/`` down to the path."""
-    relative = _candidate_path(request)
+    relative = _record_path(request)
     root = _product_root(context, _checkout_root(request))
     ref = _ref(request)
     parts = pathlib.PurePosixPath(relative).parts
@@ -1890,7 +1958,11 @@ def _blocked_result(
 
 
 def execute(
-    request_text: str, *, cwd: pathlib.Path, runner: CommandRunner
+    request_text: str,
+    *,
+    cwd: pathlib.Path,
+    runner: CommandRunner,
+    writer: DraftWriter = write_draft,
 ) -> tuple[ExitCode, dict[str, object]]:
     """Perform one request and return its exit code and result object.
 
@@ -1905,7 +1977,9 @@ def execute(
         request_token = _request_token(request)
         operation = _named_operation(request)
         validated = validate_request(request)
-        values = _HANDLERS[validated](_Context(runner=runner, cwd=cwd), request)
+        values = _HANDLERS[validated](
+            _Context(runner=runner, cwd=cwd, writer=writer), request
+        )
     except Blocked as blocked:
         return _blocked_result(operation, blocked, request_token)
     return ExitCode.OK, {
@@ -1944,6 +2018,7 @@ def main(
     stdin: TextIO | None = None,
     stdout: TextIO | None = None,
     runner: CommandRunner = run_subprocess,
+    writer: DraftWriter = write_draft,
 ) -> int:
     """Read one request on stdin, write one result on stdout."""
     sink = sys.stdout if stdout is None else stdout
@@ -1968,7 +2043,9 @@ def main(
             NOT_STARTED,
         )
     else:
-        code, result = execute(request_text, cwd=pathlib.Path(), runner=runner)
+        code, result = execute(
+            request_text, cwd=pathlib.Path(), runner=runner, writer=writer
+        )
     code, text = _serialized(code, result)
     sink.write(text)
     sink.write("\n")

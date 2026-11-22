@@ -1,4 +1,4 @@
-"""Compliance evidence: an audit-change run writes no file.
+"""Compliance evidence: an audit-change run writes no file and keys its run by the audited Change.
 
 Every request passes to the shipped runner on stdin and every result returns on
 stdout; the SPX run journal is the only store the audit leaves behind. The
@@ -7,6 +7,13 @@ rendered projection far larger than a result, two audits started at once from
 one worktree, and a failure part-way through a run — a candidate that changes,
 a payload SPX rejects, a request the runner refuses, and a candidate it cannot
 take.
+
+Each candidate is a Change Draft in a draft store outside the repository, the
+Draft of one Change named by its canonical issue reference. The runner reads
+the candidate at its absolute path and starts, appends to, reconciles, and
+finishes its run with the scope type ``file`` and that issue reference as the
+scope; the violating case is a run keyed by anything else, such as the
+candidate's path.
 
 Each subprocess invocation is observed for every file the runner process
 writes wherever the path lies — a fixed temporary path, the home directory, or
@@ -50,26 +57,29 @@ Terminal = runner.TerminalStatus
 ExitCode = runner.ExitCode
 SpxField = runner.SpxField
 PERMITTED_EXECUTABLES = frozenset({runner.SPX_EXECUTABLE, runner.GIT_EXECUTABLE})
+_RUN_COMMAND = (runner.SPX_EXECUTABLE, "verification", "run")
+#: A repository-relative path a record names, resolved during each audit.
+_RECORD_REFERENCE = "spx/20-tasks.domain/tasks.md"
 
 
-def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall]:
-    """Drive every runner operation of one rejected audit over ``relative``.
+def _complete_audit(workspace: AuditWorkspace, draft: str) -> list[RunnerCall]:
+    """Drive every runner operation of one rejected audit over the candidate ``draft``.
 
     The first two calls read the candidate and start the run.
     """
-    opened = workspace.start_run(relative)
+    opened = workspace.start_run(draft)
     run_token = opened.run_token
     resolved = workspace.invoke(
         {
             Field.OPERATION: Operation.RESOLVE_REFERENCE,
-            Field.PATH: relative,
+            Field.PATH: _RECORD_REFERENCE,
             Field.ROOT: str(workspace.root),
         }
     )
     versioned = workspace.invoke({Field.OPERATION: Operation.TOOL_VERSION})
     calls = [opened.read, opened.started, resolved, versioned]
     payloads = audit_payloads(
-        subject=relative,
+        subject=workspace.issue(draft),
         content=str(opened.read.result[Result.CONTENT]),
         tool_version=str(versioned.result[Result.TOOL_VERSION]),
     )
@@ -77,9 +87,7 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
         calls.append(
             workspace.invoke(
                 {
-                    Field.OPERATION: Operation.ADD_SCOPE,
-                    Field.PATH: relative,
-                    Field.ROOT: str(workspace.root),
+                    **workspace.candidate_request(Operation.ADD_SCOPE, draft),
                     Field.RUN_TOKEN: run_token,
                     Field.PAYLOAD: scope,
                 }
@@ -89,9 +97,7 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
         calls.append(
             workspace.invoke(
                 {
-                    Field.OPERATION: Operation.ADD_FINDING,
-                    Field.PATH: relative,
-                    Field.ROOT: str(workspace.root),
+                    **workspace.candidate_request(Operation.ADD_FINDING, draft),
                     Field.RUN_TOKEN: run_token,
                     Field.PAYLOAD: finding,
                 }
@@ -100,9 +106,7 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
     calls.append(
         workspace.invoke(
             {
-                Field.OPERATION: Operation.RECONCILE,
-                Field.PATH: relative,
-                Field.ROOT: str(workspace.root),
+                **workspace.candidate_request(Operation.RECONCILE, draft),
                 Field.RUN_TOKEN: run_token,
             }
         )
@@ -110,9 +114,7 @@ def _complete_audit(workspace: AuditWorkspace, relative: str) -> list[RunnerCall
     calls.append(
         workspace.invoke(
             {
-                Field.OPERATION: Operation.FINISH,
-                Field.PATH: relative,
-                Field.ROOT: str(workspace.root),
+                **workspace.candidate_request(Operation.FINISH, draft),
                 Field.RUN_TOKEN: run_token,
                 Field.TERMINAL_STATUS: Terminal.REJECTED,
             }
@@ -125,14 +127,27 @@ def _started_executables(calls: list[RunnerCall]) -> set[str]:
     return {command[0] for call in calls for command in call.spawned_commands}
 
 
+def _run_commands(calls: list[RunnerCall]) -> list[tuple[str, ...]]:
+    return [
+        command
+        for call in calls
+        for command in call.spawned_commands
+        if command[: len(_RUN_COMMAND)] == _RUN_COMMAND
+    ]
+
+
+def _option(command: tuple[str, ...], name: str) -> str:
+    return command[command.index(name) + 1]
+
+
 def test_a_complete_audit_writes_no_file_and_its_journal_reproduces_the_projection() -> (
     None
 ):
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        draft = workspace.place(CAPTURED_CHANGE_RECORD)
         before = workspace.snapshot()
 
-        calls = _complete_audit(workspace, relative)
+        calls = _complete_audit(workspace, draft)
         changes = workspace.changes_since(before)
 
         assert [call.result[Result.STATUS] for call in calls] == [Status.OK] * len(
@@ -177,8 +192,40 @@ def test_a_complete_audit_writes_no_file_and_its_journal_reproduces_the_projecti
         assert isinstance(run_fields, dict)
         assert run_fields
         assert {field: projection[field] for field in run_fields} == run_fields
-        assert workspace.content(relative) in json_strings(projection)
-        assert workspace.content(relative) not in json_strings(run_fields)
+        assert workspace.content(draft) in json_strings(projection)
+        assert workspace.content(draft) not in json_strings(run_fields)
+
+
+def test_every_run_command_of_an_audit_keys_the_run_by_the_issue_reference_and_reads_the_draft_path() -> (
+    None
+):
+    with audit_workspace() as workspace:
+        draft = workspace.place(CAPTURED_CHANGE_RECORD)
+        issue = workspace.issue(draft)
+
+        calls = _complete_audit(workspace, draft)
+        commands = _run_commands(calls)
+        verbs = [command[len(_RUN_COMMAND)] for command in commands]
+
+        assert [call.result[Result.STATUS] for call in calls] == [Status.OK] * len(
+            calls
+        )
+        assert Path(draft).is_absolute()
+        assert not Path(draft).is_relative_to(workspace.root)
+        assert {"start", "input", "scope", "finding", "status", "render"} <= set(verbs)
+        assert "finish" in verbs
+        assert [_option(command, "--scope-type") for command in commands] == [
+            "file"
+        ] * len(commands)
+        assert [_option(command, "--scope") for command in commands] == [issue] * len(
+            commands
+        )
+        (start,) = (command for command in commands if command[3] == "start")
+        assert _option(start, "--input") == draft
+        assert calls[0].result[Result.PATH] == draft
+        assert calls[0].result[Result.CONTENT] == workspace.content(draft)
+        assert issue in str(calls[-1].result[Result.RENDER_COMMAND])
+        assert draft not in str(calls[-1].result[Result.RENDER_COMMAND])
 
 
 def test_two_audits_started_at_once_from_one_worktree_each_read_only_their_own_candidate() -> (
@@ -192,17 +239,17 @@ def test_two_audits_started_at_once_from_one_worktree_each_read_only_their_own_c
         before = workspace.snapshot()
 
         audits = run_in_parallel(
-            lambda relative: _complete_audit(workspace, relative), candidates
+            lambda draft: _complete_audit(workspace, draft), candidates
         )
         changes = workspace.changes_since(before)
 
-        for relative, calls in zip(candidates, audits, strict=True):
+        for draft, calls in zip(candidates, audits, strict=True):
             assert [call.result[Result.STATUS] for call in calls] == [Status.OK] * len(
                 calls
             )
             assert [call.runner_writes for call in calls] == [()] * len(calls)
             assert _started_executables(calls) <= PERMITTED_EXECUTABLES
-            assert calls[0].result[Result.CONTENT] == workspace.content(relative)
+            assert calls[0].result[Result.CONTENT] == workspace.content(draft)
             run_fields = calls[-1].result[Result.RUN]
             assert isinstance(run_fields, dict)
             assert run_fields[SpxField.RUN_TOKEN] == calls[1].result[Result.RUN_TOKEN]
@@ -219,22 +266,16 @@ def test_a_candidate_edited_before_the_run_starts_blocks_without_a_run_or_a_file
     None
 ):
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        draft = workspace.place(CAPTURED_CHANGE_RECORD)
         read = workspace.invoke(
-            {
-                Field.OPERATION: Operation.READ_CANDIDATE,
-                Field.PATH: relative,
-                Field.ROOT: str(workspace.root),
-            }
+            workspace.candidate_request(Operation.READ_CANDIDATE, draft)
         )
-        workspace.edit(relative)
+        workspace.edit(draft)
         before = workspace.snapshot()
 
         started = workspace.invoke(
             {
-                Field.OPERATION: Operation.START,
-                Field.PATH: relative,
-                Field.ROOT: str(workspace.root),
+                **workspace.candidate_request(Operation.START, draft),
                 Field.CANDIDATE_SHA256: read.result[Result.SHA256],
             }
         )
@@ -255,16 +296,14 @@ def test_a_candidate_edited_during_the_run_blocks_reconciliation_without_a_file(
     None
 ):
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
-        opened = workspace.start_run(relative)
-        workspace.edit(relative)
+        draft = workspace.place(CAPTURED_CHANGE_RECORD)
+        opened = workspace.start_run(draft)
+        workspace.edit(draft)
         before = workspace.snapshot()
 
         reconciled = workspace.invoke(
             {
-                Field.OPERATION: Operation.RECONCILE,
-                Field.PATH: relative,
-                Field.ROOT: str(workspace.root),
+                **workspace.candidate_request(Operation.RECONCILE, draft),
                 Field.RUN_TOKEN: opened.run_token,
             }
         )
@@ -282,16 +321,14 @@ def test_a_candidate_edited_during_the_run_blocks_reconciliation_without_a_file(
 
 def test_a_payload_spx_rejects_blocks_with_its_command_diagnostic_and_no_file() -> None:
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
-        opened = workspace.start_run(relative)
+        draft = workspace.place(CAPTURED_CHANGE_RECORD)
+        opened = workspace.start_run(draft)
         before = workspace.snapshot()
-        payload = {SpxField.UNIT_ID: relative}
+        payload = {SpxField.UNIT_ID: draft}
 
         rejected = workspace.invoke(
             {
-                Field.OPERATION: Operation.ADD_SCOPE,
-                Field.PATH: relative,
-                Field.ROOT: str(workspace.root),
+                **workspace.candidate_request(Operation.ADD_SCOPE, draft),
                 Field.RUN_TOKEN: opened.run_token,
                 Field.PAYLOAD: payload,
             }
@@ -301,7 +338,7 @@ def test_a_payload_spx_rejects_blocks_with_its_command_diagnostic_and_no_file() 
         assert rejected.exit_code == ExitCode.BLOCKED
         assert rejected.result[Result.REASON] == Reason.COMMAND_FAILED
         assert rejected.result[Result.RUN_TOKEN] == opened.run_token
-        assert rejected.result[Result.PAYLOAD_KEY] == relative
+        assert rejected.result[Result.PAYLOAD_KEY] == draft
         assert rejected.result[Result.EXIT_CODE] != 0
         assert rejected.result[Result.STDERR]
         assert runner.SPX_EXECUTABLE in _started_executables([rejected])
@@ -346,15 +383,11 @@ def test_a_generated_request_text_the_runner_cannot_parse_as_one_json_object_blo
 
 def test_a_request_that_is_not_utf8_text_blocks_on_stdout_without_a_file() -> None:
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        draft = workspace.place(CAPTURED_CHANGE_RECORD)
         before = workspace.snapshot()
 
         blocked = workspace.invoke_utf16(
-            {
-                Field.OPERATION: Operation.READ_CANDIDATE,
-                Field.PATH: relative,
-                Field.ROOT: str(workspace.root),
-            }
+            workspace.candidate_request(Operation.READ_CANDIDATE, draft)
         )
         changes = workspace.changes_since(before)
 
@@ -371,7 +404,7 @@ def test_a_reference_resolution_naming_no_root_blocks_naming_the_root_without_a_
     None
 ):
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        relative = workspace.place_record(CAPTURED_CHANGE_RECORD)
         before = workspace.snapshot()
 
         blocked = workspace.invoke(
@@ -394,7 +427,7 @@ def test_a_reference_resolution_whose_root_is_inside_a_checkout_blocks_naming_th
     None
 ):
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        relative = workspace.place_record(CAPTURED_CHANGE_RECORD)
         inside = workspace.root / Path(relative).parent
         before = workspace.snapshot()
 
@@ -422,7 +455,7 @@ def test_a_reference_resolution_whose_root_is_no_repository_blocks_naming_the_ro
     None
 ):
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        relative = workspace.place_record(CAPTURED_CHANGE_RECORD)
         outside = workspace.outside_directory
         before = workspace.snapshot()
 
@@ -450,23 +483,17 @@ def test_an_audit_launched_from_another_directory_seals_its_run_in_the_named_roo
     None
 ):
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
+        draft = workspace.place(CAPTURED_CHANGE_RECORD)
         launched_from = workspace.outside_directory
         before = workspace.snapshot()
 
         read = workspace.invoke(
-            {
-                Field.OPERATION: Operation.READ_CANDIDATE,
-                Field.PATH: relative,
-                Field.ROOT: str(workspace.root),
-            },
+            workspace.candidate_request(Operation.READ_CANDIDATE, draft),
             launched_from=launched_from,
         )
         started = workspace.invoke(
             {
-                Field.OPERATION: Operation.START,
-                Field.PATH: relative,
-                Field.ROOT: str(workspace.root),
+                **workspace.candidate_request(Operation.START, draft),
                 Field.CANDIDATE_SHA256: read.result[Result.SHA256],
             },
             launched_from=launched_from,
@@ -474,9 +501,7 @@ def test_an_audit_launched_from_another_directory_seals_its_run_in_the_named_roo
         run_token = started.result[Result.RUN_TOKEN]
         finished = workspace.invoke(
             {
-                Field.OPERATION: Operation.FINISH,
-                Field.PATH: relative,
-                Field.ROOT: str(workspace.root),
+                **workspace.candidate_request(Operation.FINISH, draft),
                 Field.RUN_TOKEN: run_token,
                 Field.TERMINAL_STATUS: Terminal.REJECTED,
             },
@@ -485,7 +510,7 @@ def test_an_audit_launched_from_another_directory_seals_its_run_in_the_named_roo
         changes = workspace.changes_since(before)
 
         assert read.result[Result.STATUS] == Status.OK
-        assert read.result[Result.CONTENT] == workspace.content(relative)
+        assert read.result[Result.CONTENT] == workspace.content(draft)
         assert started.result[Result.STATUS] == Status.OK
         assert finished.result[Result.STATUS] == Status.OK
         run_fields = finished.result[Result.RUN]
@@ -504,15 +529,11 @@ def test_a_candidate_the_runner_cannot_take_blocks_on_stdout_without_a_file(
     condition: CandidateCondition,
 ) -> None:
     with audit_workspace() as workspace:
-        relative = workspace.place_in_condition(condition, CAPTURED_CHANGE_RECORD)
+        draft = workspace.place_in_condition(condition, CAPTURED_CHANGE_RECORD)
         before = workspace.snapshot()
 
         blocked = workspace.invoke(
-            {
-                Field.OPERATION: Operation.READ_CANDIDATE,
-                Field.PATH: relative,
-                Field.ROOT: str(workspace.root),
-            }
+            workspace.candidate_request(Operation.READ_CANDIDATE, draft)
         )
         changes = workspace.changes_since(before)
 
@@ -537,8 +558,8 @@ def test_a_refused_request_naming_a_started_run_blocks_with_its_run_token_and_no
     operation: object,
 ) -> None:
     with audit_workspace() as workspace:
-        relative = workspace.place(CAPTURED_CHANGE_RECORD)
-        run_token = workspace.start_run(relative).run_token
+        draft = workspace.place(CAPTURED_CHANGE_RECORD)
+        run_token = workspace.start_run(draft).run_token
         before = workspace.snapshot()
 
         # Every request field, so the request carries fields its operation
@@ -546,9 +567,7 @@ def test_a_refused_request_naming_a_started_run_blocks_with_its_run_token_and_no
         blocked = workspace.invoke(
             {
                 **dict.fromkeys(Field),
-                Field.OPERATION: operation,
-                Field.PATH: relative,
-                Field.ROOT: str(workspace.root),
+                **workspace.candidate_request(operation, draft),
                 Field.RUN_TOKEN: run_token,
             }
         )

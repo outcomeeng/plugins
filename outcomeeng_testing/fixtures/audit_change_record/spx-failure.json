@@ -1,4 +1,4 @@
 {
   "exitCode": 1,
-  "stderr": "Change draft create failed at <ROOT>/.spx/worktree/change-drafts/b0ed4cc4-f407-4c60-a2ed-5ec730d926a1.md: visible-to-git\n"
+  "stderr": "Draft create failed (visible-to-git) at <ROOT>/.spx/drafts/change/01a20381-062f-7a27-b0c3-054a9a069409.md\n"
 }

@@ -5,8 +5,10 @@ JSON object that names one listed operation, carries exactly the fields that
 operation takes, and gives each field its declared form: ``path``,
 ``candidateSha256``, ``runToken``, and ``terminalStatus`` are non-empty strings;
 a path, a ``runToken``, and a payload ``unitId`` carry no NUL character and no
-text without a UTF-8 encoding; every operation except ``resolve-reference``
-names a normalized repository-relative candidate path; a payload is an object
+text without a UTF-8 encoding; every operation over a candidate Draft names
+the Draft's normalized absolute path, ``read-at`` and ``governing-decisions``
+name a normalized repository-relative record path; an ``issue`` is a canonical
+issue reference; a payload is an object
 with a non-empty ``unitId``; a finding ``rule`` is a lowercase hyphenated ID;
 ``terminalStatus`` is a listed terminal status.
 
@@ -114,7 +116,7 @@ def _text_without_system_form(runner: ModuleType) -> st.SearchStrategy[str]:
     )
 
 
-def _unfit_candidate_paths() -> st.SearchStrategy[str]:
+def _unfit_record_paths() -> st.SearchStrategy[str]:
     """Paths that are absolute, parent-traversing, or unnormalized."""
     segments = st.lists(
         st.text(alphabet=_SEGMENT_ALPHABET, min_size=1), min_size=1, max_size=4
@@ -129,6 +131,26 @@ def _unfit_candidate_paths() -> st.SearchStrategy[str]:
 
     rooted = segments.map(lambda parts: _PATH_SEPARATOR + _PATH_SEPARATOR.join(parts))
     return st.one_of(with_unfit_segment(), rooted)
+
+
+def _unfit_draft_paths() -> st.SearchStrategy[str]:
+    """Paths that are relative, or absolute with a parent, current, or empty segment."""
+    segments = st.lists(
+        st.text(alphabet=_SEGMENT_ALPHABET, min_size=1), min_size=1, max_size=4
+    )
+
+    @st.composite
+    def rooted_with_unfit_segment(draw: st.DrawFn) -> str:
+        parts = draw(segments)
+        unfit = draw(st.sampled_from(_UNFIT_SEGMENTS))
+        # An empty segment first would read as a second leading separator,
+        # which POSIX leaves to the implementation rather than collapsing.
+        lowest = 1 if unfit == "" else 0
+        index = draw(st.integers(min_value=lowest, max_value=len(parts)))
+        joined = _PATH_SEPARATOR.join([*parts[:index], unfit, *parts[index:]])
+        return _PATH_SEPARATOR + joined
+
+    return st.one_of(_relative_paths(), rooted_with_unfit_segment())
 
 
 def _relative_paths() -> st.SearchStrategy[str]:
@@ -200,8 +222,10 @@ def _malformed_values(
     fields = runner.RequestField
     if field == fields.PATH:
         paths = st.one_of(_not_non_empty_strings(), _text_without_system_form(runner))
+        if fields.ISSUE in runner.REQUIRED_FIELDS[operation]:
+            return st.one_of(paths, _unfit_draft_paths())
         if operation != runner.Operation.RESOLVE_REFERENCE:
-            paths = st.one_of(paths, _unfit_candidate_paths())
+            return st.one_of(paths, _unfit_record_paths())
         return paths
     if field == fields.RUN_TOKEN:
         return st.one_of(_not_non_empty_strings(), _text_without_system_form(runner))

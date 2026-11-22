@@ -311,7 +311,7 @@
               "md"
             ],
             "path_globs": [
-              "**/change-drafts/*.md"
+              "**/drafts/change/*.md"
             ],
             "filenames": []
           },

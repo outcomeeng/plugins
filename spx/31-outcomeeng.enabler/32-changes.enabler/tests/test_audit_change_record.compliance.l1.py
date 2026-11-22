@@ -2,13 +2,14 @@
 
 The rule is the spec assertion for the ``audit-change`` runner's
 ``retain-record`` operation: it composes the Change Draft of the named issue
-from each part's home in the store, retains it through one ``spx change draft
-create`` command that reads the Draft on stdin with the Product's checkout
-root as the working directory, and returns the retained Draft's path under
-that root and its digest. The violating cases are the ones the assertion
-names: a draft store that retains other content than the Draft it received
-blocks with ``retained-input-mismatch``, and a store or ``spx`` command that
-fails or cannot start blocks with ``command-failed``. The store answers come
+from each part's home in the store, creates the Draft's one file through one
+``spx draft create --kind change`` command with the Product's checkout root
+as the working directory, writes the composed Draft to the absolute path that
+command returns, passing no Draft text on standard input, and returns the
+retained Draft's identifier, its absolute path, and its digest. The violating
+cases are the ones the assertion names: a retained Draft that differs from
+the composed one blocks with ``retained-input-mismatch``, and a store or
+``spx`` command that fails or cannot start blocks with ``command-failed``. The store answers come
 from replayed fixture files and the failures from recorded command results,
 so no record is chosen here and no call reaches the network.
 """
@@ -36,9 +37,7 @@ Reason = runner.BlockReason
 ExitCode = runner.ExitCode
 
 
-def test_a_record_is_retained_through_one_spx_command_that_reads_the_composed_draft_on_stdin() -> (
-    None
-):
+def test_a_record_is_written_to_the_one_draft_file_spx_draft_create_names() -> None:
     observed = retain_record()
 
     assert observed.exit_code == ExitCode.OK
@@ -46,14 +45,24 @@ def test_a_record_is_retained_through_one_spx_command_that_reads_the_composed_dr
     assert observed.result[Result.STATUS] == Status.OK
     assert observed.result[Result.ISSUE] == RECORD_ISSUE
     (create,) = observed.calls_of(runner.SPX_EXECUTABLE)
-    assert create.argv == runner.DRAFT_CREATE_COMMAND
-    assert create.cwd.resolve() == observed.root.resolve()
-    assert create.stdin is not None
-    assert observed.retained_drafts == {observed.result[Result.PATH]: create.stdin}
-    assert (
-        observed.result[Result.SHA256]
-        == hashlib.sha256(create.stdin.encode(runner.TEXT_ENCODING)).hexdigest()
+    assert create.argv == (
+        runner.SPX_EXECUTABLE,
+        "draft",
+        "create",
+        "--kind",
+        "change",
     )
+    assert create.cwd.resolve() == observed.root.resolve()
+    assert create.stdin is None
+    (created,) = observed.created_drafts
+    assert observed.result[Result.DRAFT_ID] == created.draft_id
+    assert observed.result[Result.PATH] == str(created.path)
+    assert created.path.is_absolute()
+    (written,) = observed.written.values()
+    draft = written.decode(runner.TEXT_ENCODING)
+    assert observed.written == {str(created.path): written}
+    assert observed.retained_drafts == {str(created.path): draft}
+    assert observed.result[Result.SHA256] == hashlib.sha256(written).hexdigest()
 
 
 def test_the_retained_draft_carries_the_title_body_and_field_values_the_store_holds() -> (
@@ -63,9 +72,8 @@ def test_the_retained_draft_carries_the_title_body_and_field_values_the_store_ho
 
     observed = retain_record()
 
-    (create,) = observed.calls_of(runner.SPX_EXECUTABLE)
-    assert create.stdin is not None
-    front_matter, _, body = create.stdin.partition(record.body.rstrip())
+    (draft,) = observed.retained_drafts.values()
+    front_matter, _, body = draft.partition(record.body.rstrip())
     assert body.strip() == ""
     assert record.title in front_matter
     for value in record.field_values.values():
@@ -85,6 +93,7 @@ def test_a_draft_store_that_retains_other_content_blocks_as_retained_input_misma
     assert observed.result[Result.REASON] == Reason.RETAINED_INPUT_MISMATCH
     assert observed.result[Result.RETAINED_SHA256] != observed.result[Result.SHA256]
     assert Result.PATH not in observed.result
+    assert Result.DRAFT_ID not in observed.result
 
 
 def test_a_failed_spx_command_blocks_as_command_failed_with_its_diagnostic() -> None:
