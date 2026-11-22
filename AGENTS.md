@@ -16,6 +16,12 @@ Every other skill is out because it does not work for methodology 4.0, and that 
 
 Read the Product Tree by methodology's Walk. Never invoke `product-tree:understand` or `product-tree:contextualize`.
 
+## Oversight
+
+- An overseer checks each Position it oversees at least once an hour and at every wake of its mail wait: the session's state through `orca agent list --json`, what it last said through `orca agent read <session id>`, its context, its held Changes in the Change Store, and the mail it leaves unanswered. On a session held at a prompt, a held Change idle for an hour, or unanswered mail, it unblocks what lies in its scope and escalates the rest, and never only reports.
+- A session's context is the sum of `input_tokens`, `cache_read_input_tokens` and `cache_creation_input_tokens` in the last assistant turn of its newest transcript under `~/.claude/projects/`, in the directory named for its worktree path with each `/` written as `-`.
+- A Position past 600k tokens of context hands off at its next commit. Its overseer reads in the pane that the hand-off finished, then clears the session and has it resume through `orca terminal send`, never in a pane whose last prompt came from the Operator.
+
 ## Departures from methodology
 
 - You write every artifact and every repair yourself. You launch no subagent.
