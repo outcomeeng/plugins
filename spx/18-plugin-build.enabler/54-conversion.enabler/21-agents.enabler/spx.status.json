@@ -1,0 +1,20 @@
+{
+  "state": "specified",
+  "malleability": "spec",
+  "verification": {
+    "test": {
+      "tests/test_agents.compliance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_agents.mapping.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_profiles.mapping.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_profiles.property.l1.py": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

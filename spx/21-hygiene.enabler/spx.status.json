@@ -1,0 +1,19 @@
+{
+  "state": "specified",
+  "malleability": "implementation",
+  "verification": {
+    "test": {
+      "tests/test_hygiene.compliance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_hygiene.property.l1.py": {
+        "verdict": "not-run"
+      }
+    },
+    "evidence": {
+      "test": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

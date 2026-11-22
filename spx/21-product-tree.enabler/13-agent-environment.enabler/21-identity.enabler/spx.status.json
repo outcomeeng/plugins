@@ -1,0 +1,17 @@
+{
+  "state": "specified",
+  "malleability": "spec",
+  "verification": {
+    "test": {
+      "tests/test_identity.mapping.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_identity.property.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_identity.scenario.l1.py": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

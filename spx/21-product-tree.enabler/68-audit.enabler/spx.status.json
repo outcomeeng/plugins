@@ -1,0 +1,11 @@
+{
+  "state": "declared",
+  "malleability": "spec",
+  "verification": {
+    "audit": {
+      "implementation-audit-repository-root": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

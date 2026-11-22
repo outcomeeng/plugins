@@ -1,0 +1,11 @@
+{
+  "state": "declared",
+  "malleability": "implementation",
+  "verification": {
+    "audit": {
+      "codex-skill-loading": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

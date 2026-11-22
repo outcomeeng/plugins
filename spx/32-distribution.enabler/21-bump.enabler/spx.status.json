@@ -1,0 +1,28 @@
+{
+  "state": "specified",
+  "malleability": "implementation",
+  "verification": {
+    "test": {
+      "tests/test_bump.compliance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_bump.conformance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_bump.mapping.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_bump.property.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_bump.scenario.l1.py": {
+        "verdict": "not-run"
+      }
+    },
+    "evidence": {
+      "test": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

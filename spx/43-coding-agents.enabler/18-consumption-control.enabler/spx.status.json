@@ -1,0 +1,47 @@
+{
+  "state": "specified",
+  "malleability": "spec",
+  "verification": {
+    "test": {
+      "tests/test_accounting.property.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_alerts.mapping.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_collection.compliance.l2.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_configuration.property.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_context.property.l2.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_detector.compliance.l2.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_installation.compliance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_installation.compliance.l3.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_lock.compliance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_reports.compliance.l2.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_retention.compliance.l2.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_signals.property.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_standalone.compliance.l2.py": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

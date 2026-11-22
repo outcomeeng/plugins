@@ -1,0 +1,52 @@
+{
+  "state": "specified",
+  "malleability": "implementation",
+  "verification": {
+    "test": {
+      "tests/test_cli.mapping.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_definition.conformance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_definition.property.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_eval-harness.compliance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_eval-just-recipes.compliance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_eval-workflow-defaults.compliance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_eval-workflow-triggers.compliance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_history.compliance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_producer-files-prompt.conformance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_producer-prompt.conformance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_producer-prompt.property.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_report.compliance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_runner.compliance.l1.py": {
+        "verdict": "not-run"
+      }
+    },
+    "evidence": {
+      "test": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "state": "declared",
+  "malleability": "spec",
+  "verification": {
+    "audit": {
+      "skill-audit-absolute-target": {
+        "verdict": "not-run"
+      },
+      "skill-audit-repository-root": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

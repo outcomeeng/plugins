@@ -1,0 +1,11 @@
+{
+  "state": "declared",
+  "malleability": "spec",
+  "verification": {
+    "audit": {
+      "{rule-slug}": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

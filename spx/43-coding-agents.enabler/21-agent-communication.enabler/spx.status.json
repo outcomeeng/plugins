@@ -1,0 +1,11 @@
+{
+  "state": "specified",
+  "malleability": "spec",
+  "verification": {
+    "test": {
+      "tests/test_doorbell.property.l1.py": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "state": "specified",
+  "malleability": "spec",
+  "verification": {
+    "test": {
+      "tests/test_manifest.conformance.l1.py": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

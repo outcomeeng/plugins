@@ -1,0 +1,28 @@
+{
+  "state": "specified",
+  "malleability": "implementation",
+  "verification": {
+    "test": {
+      "tests/test_gate.compliance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_gate.conformance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_gate.property.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_gate.scenario.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_gate.scenario.l2.py": {
+        "verdict": "not-run"
+      }
+    },
+    "evidence": {
+      "test": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

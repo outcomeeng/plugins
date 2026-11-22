@@ -1,0 +1,16 @@
+{
+  "state": "specified",
+  "malleability": "spec",
+  "verification": {
+    "test": {
+      "tests/test_direction.mapping.l1.py": {
+        "verdict": "not-run"
+      }
+    },
+    "audit": {
+      "relaunch-write-paths": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

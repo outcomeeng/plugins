@@ -1,0 +1,22 @@
+{
+  "state": "specified",
+  "malleability": "implementation",
+  "verification": {
+    "test": {
+      "tests/test_installation.compliance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_installation.conformance.l1.py": {
+        "verdict": "not-run"
+      },
+      "tests/test_installation.mapping.l1.py": {
+        "verdict": "not-run"
+      }
+    },
+    "evidence": {
+      "test": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}

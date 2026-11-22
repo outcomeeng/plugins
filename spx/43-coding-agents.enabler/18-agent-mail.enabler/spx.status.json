@@ -1,0 +1,17 @@
+{
+  "state": "declared",
+  "malleability": "spec",
+  "verification": {
+    "audit": {
+      "acknowledgement-semantics": {
+        "verdict": "not-run"
+      },
+      "read-semantics": {
+        "verdict": "not-run"
+      },
+      "repository-documented": {
+        "verdict": "not-run"
+      }
+    }
+  }
+}
