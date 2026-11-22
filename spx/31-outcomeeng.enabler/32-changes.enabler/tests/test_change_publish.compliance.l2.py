@@ -108,5 +108,6 @@ def test_a_publish_brings_the_blockers_to_the_draft(tmp_path: pathlib.Path) -> N
     run_publish(tmp_path, INTENT, store, edits={"blockers": f"[{STORE}#5]"})
     posts = [call for call in store.writes() if "POST" in call]
     deletes = [call for call in store.writes() if "DELETE" in call]
-    assert len(posts) == 1 and len(deletes) == 1
+    assert len(posts) == 1
+    assert len(deletes) == 1
     assert deletes[0][2].endswith("/blocked_by/9006")

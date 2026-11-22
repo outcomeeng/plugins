@@ -190,68 +190,61 @@ def number_of(reference: str | None, repo: str) -> int | None:
     return int(number)
 
 
-def write_record(
+def write_text(
     fc: ModuleType,
     store: Store,
     draft: Any,
     issue: str | None,
     read_edited_at: str | None,
-) -> str:
-    """Write the Draft's title, body, fields and blockers; return the issue reference."""
-    values = draft.values
-    body_text = draft.body
-    body = body_text[body_text.index("## Statement of Intent") :]
-    title = fc.scalar(values.get("title", "")) or ""
+) -> int:
+    """Create the issue or edit its title and body from the Draft; return its number."""
+    body = draft.body[draft.body.index("## Statement of Intent") :]
+    title = fc.scalar(draft.values.get("title", "")) or ""
     scratch = pathlib.Path(tempfile.mkdtemp(prefix="publish-"))
     try:
         body_file = scratch / "body.md"
         body_file.write_text(body, encoding="utf-8")
+        text_args = [
+            "--repo",
+            store.repo,
+            "--title",
+            title,
+            "--body-file",
+            str(body_file),
+        ]
         if issue is None:
-            url = store.gh(
-                "issue",
-                "create",
-                "--repo",
-                store.repo,
-                "--title",
-                title,
-                "--body-file",
-                str(body_file),
-            ).strip()
-            number = int(url.rstrip("/").rsplit("/", 1)[-1])
+            url = store.gh("issue", "create", *text_args).strip()
             store.writes.append("create issue")
-        else:
-            number = number_of(issue, store.repo) or 0
-            node = store.issue(number)
-            stamp = node.get("lastEditedAt") or node.get("createdAt")
-            if stamp != read_edited_at:
-                raise PublishError(
-                    f"the stored revision was edited at {stamp}, after the read at {read_edited_at}; read the record again and redo the publish"
-                )
-            store.gh(
-                "issue",
-                "edit",
-                str(number),
-                "--repo",
-                store.repo,
-                "--title",
-                title,
-                "--body-file",
-                str(body_file),
+            return int(url.rstrip("/").rsplit("/", 1)[-1])
+        number = number_of(issue, store.repo) or 0
+        node = store.issue(number)
+        stamp = node.get("lastEditedAt") or node.get("createdAt")
+        if stamp != read_edited_at:
+            raise PublishError(
+                f"the stored revision was edited at {stamp}, after the read at {read_edited_at}; read the record again and redo the publish"
             )
-            store.writes.append("edit title and body")
+        store.gh("issue", "edit", str(number), *text_args)
+        store.writes.append("edit title and body")
+        return number
     finally:
         shutil.rmtree(scratch, ignore_errors=True)
+
+
+def write_fields(
+    fc: ModuleType, store: Store, values: dict[str, str], number: int, recording: bool
+) -> None:
+    """Write the fields and blockers a publish owns, clearing each the Draft empties or leaves out."""
     issue_id = store.issue(number)["id"]
     fields = store.fields()
     parent = number_of(fc.scalar(values.get("parent", "")), store.repo)
-    predecessors = fc.flow_list(values.get("predecessors", "")) or []
     wanted = {
         "Product": fc.scalar(values.get("product", "")),
         "Parent": str(parent) if parent is not None else None,
-        "Predecessors": ", ".join(predecessors) or None,
+        "Predecessors": ", ".join(fc.flow_list(values.get("predecessors", "")) or [])
+        or None,
         "Base": fc.scalar(values.get("base", "")),
     }
-    if issue is None:
+    if recording:
         wanted["Maturity"] = fc.scalar(values.get("maturity", ""))
         wanted["Lifecycle"] = fc.scalar(values.get("lifecycle", ""))
     for name, value in wanted.items():
@@ -260,13 +253,25 @@ def write_record(
             raise PublishError(f"the organization holds no issue field {name}")
         if value:
             store.set_field(issue_id, field, value)
-        elif issue is not None:
+        elif not recording:
             store.clear_field(issue_id, field)
     blockers = [
         number_of(ref, store.repo) or 0
         for ref in fc.flow_list(values.get("blockers", "")) or []
     ]
     store.sync_blockers(number, blockers)
+
+
+def write_record(
+    fc: ModuleType,
+    store: Store,
+    draft: Any,
+    issue: str | None,
+    read_edited_at: str | None,
+) -> str:
+    """Write the Draft's title, body, fields and blockers; return the issue reference."""
+    number = write_text(fc, store, draft, issue, read_edited_at)
+    write_fields(fc, store, draft.values, number, recording=issue is None)
     return f"{store.repo}#{number}"
 
 
