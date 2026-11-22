@@ -6,6 +6,17 @@ CAN be verified for correctness before changes reach the main branch, with the t
 
 ## Assertions
 
+### Test.Compliance: status claims
+
+- claims-committed: ALWAYS: every output Node directory under `spx/` tracks the `spx.status.json` that `spx spec status --update` writes, per [`spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`](spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md).
+- claims-checked: ALWAYS: the CI gate fails when `spx spec status --update --check` on the gate's head reports a committed claim under `spx/` that differs from the projection, per [`spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`](spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md).
+- failing-node: ALWAYS: the CI gate fails when a Node the committed claims derive is Failing, per [`spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`](spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md).
+- l3-entries: ALWAYS: a committed claim holds `not-run` for the entry of each L3 test, as the gate's own run projects it, so a Node whose Malleability requires an L3 result stays Specified in every committed claim, and `just test-l3` writes no claim, per [`spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`](spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md).
+
+### Audit: status claims
+
+- claims-writer: NEVER: a status claim reaches a commit from a writer other than `spx spec status --update`, per [`spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`](spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md).
+
 ### Scenarios
 
 - Given a pinned `outcomeeng/spx` checkout without the corpus directory, when a test asks the harness for the corpus, then the run fails naming the missing path and neither passes nor skips, per [`spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md`](spx/13-infrastructure.enabler/21-test-infrastructure.enabler/15-ci-gate.adr.md) ([test](tests/test_spx_fixture_corpus.scenario.l1.py))

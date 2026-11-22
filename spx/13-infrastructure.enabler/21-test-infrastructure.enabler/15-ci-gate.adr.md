@@ -27,6 +27,17 @@ SO THAT every change that reaches `main` passes the deterministic full gate
 - spx-build: ALWAYS: the workflow checks out `outcomeeng/spx` at the commit `SPX_COMMIT` pins, installs its dependencies from its lockfile, runs its `build` script, and puts its `bin/spx.js` entry on `PATH` as `spx`, and it declares no `SPX_VERSION` variable
 - spx-commit-form: ALWAYS: `SPX_COMMIT` is a full 40-character commit SHA of the `outcomeeng/spx` `main` branch whose build reports a version at or above the declared floor, and the pin carries no registry-update annotation
 
+### Test.Compliance: status claims
+
+- claims-committed: ALWAYS: every output Node directory under `spx/` tracks the `spx.status.json` that `spx spec status --update` writes.
+- claims-checked: ALWAYS: the gate fails when `spx spec status --update --check` on the gate's head reports a committed claim under `spx/` that differs from the projection.
+- failing-node: ALWAYS: the gate fails when a Node the committed claims derive is Failing.
+- l3-entries: ALWAYS: a committed claim holds `not-run` for the entry of each L3 test, as the gate's own run projects it, so a Node whose Malleability requires an L3 result stays Specified in every committed claim, and `just test-l3` writes no claim.
+
+### Audit: status claims
+
+- claims-writer: NEVER: a status claim reaches a commit from a writer other than `spx spec status --update`.
+
 ### Audit: pins and releases
 
 - codex-pin: ALWAYS: in every changeset that changes the CI workflow file, the codex-cli version the workflow pins equals the codex-cli version the maintainers' development host runs, and the pin carries no registry-update annotation
