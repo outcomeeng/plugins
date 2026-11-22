@@ -3,10 +3,11 @@
 Covers ``form-check-merged-base``, ``form-check-linked-heading`` and
 ``form-check-scenario-steps`` in ``../changes.md``. Once the default branch
 holds a commit whose ``Refs:`` trailer names the Leaf's issue, the check reads
-each deletion, move and replacement at the Base of the stored Sliced record and
-refuses no publish on a new base. A commit whose trailer names no issue or
-another issue, a commit that names the issue only in prose, and a stored Base
-that resolves to no commit leave the ``operator-bound-base`` failure standing.
+each deletion, move, replacement and edit at the Base of the stored Sliced
+record and refuses no publish on a new base. A commit whose trailer names no
+issue or another issue, a commit that names the issue only in prose, and a
+stored Base that resolves to no commit leave the ``operator-bound-base``
+failure standing, and an unmerged edit keeps its ``diff-lines`` failure.
 A Mapping heading whose subject is a slug link names that slug, so the
 infrastructure line keyed by the slug satisfies the check. The indented
 Given, When, Then and And lines after a ``+`` Scenario row belong to that row, so
@@ -165,6 +166,16 @@ OPERATIONS = {
         move_record,
     ),
     "replace": (["```markdown", *REPLACED_TEXT.splitlines(), "```"], replace_record),
+    "edit": (
+        [
+            "```diff",
+            "  # Reading",
+            "- The thing reads one thing.",
+            "+ The thing reads every thing.",
+            "```",
+        ],
+        replace_record,
+    ),
 }
 
 
@@ -270,3 +281,20 @@ def test_merged_leaf_with_an_unresolvable_stored_base_keeps_the_failure(
     )
     rules = [f["rule"] for f in record_findings(tmp_path, capsys, draft, extra)]
     assert "operator-bound-base" in rules
+
+
+def test_merged_leaf_reads_an_edit_at_the_sliced_base(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    draft, extra = merged_record_fix(
+        tmp_path, "edit", f"spec: change reading\n\nRefs: {ISSUE}"
+    )
+    assert record_findings(tmp_path, capsys, draft, extra) == []
+
+
+def test_unmerged_leaf_reads_an_edit_at_the_new_base(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    draft, extra = merged_record_fix(tmp_path, "edit", "spec: change reading")
+    rules = [f["rule"] for f in record_findings(tmp_path, capsys, draft, extra)]
+    assert "diff-lines" in rules
