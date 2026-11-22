@@ -115,3 +115,11 @@ The sealed assertion-audit run `2026-10-17_01-48-01-824-32b1ebea83ce` of `spx/21
 - `positive-pattern-remediation-absent` (debt): assertion 20 of `spx/21-product-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md:123` requires the verdict to name a library origin, a production-owned constant, or a generator when bare literals are rejected. `src/plugins/product-tree/skills/audit-tests/SKILL.md` and `test-evidence-standards` never direct the verdict to name one; the only remediation passage, `SKILL.md:55`, names remediation targets for rejected bindings and not for rejected literals. Finding key `assertion:ordinal-20:spx/21-product-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md:positive-pattern-remediation-absent`. Run `2026-10-17_01-48-01-824-32b1ebea83ce`.
 
 **Settlement condition**: the skill and `test-evidence-standards` state the numeric and string allowlist and apply the literal rule at testability, coupling, falsifiability, and rejection, and direct a rejection of bare literals to name a library origin, a production-owned constant, or a generator, and a skill audit and an assertion audit approve.
+
+## The skill records no verification run, so its recording rows await an implementation `spx/21-product-tree.enabler/68-audit.enabler/32-audit-tests.enabler/audit-tests.md` `record-as-judged` `consistency`
+
+`src/plugins/product-tree/skills/audit-tests/SKILL.md` runs no `spx verification run`, so its `record-as-judged` row declare recording behavior the shipped skill does not have. The Node is spec-malleable, so the declaration stands ahead of its implementation.
+
+**Why this is a separate larger concern.** Making `/audit-tests` record a sealed run, with its units and findings recorded as each judgment completes, rewrites the skill's verdict output and its wrapper's relay. That work lies outside the Frame of outcomeeng/changes#1078, which declares only the recording order.
+
+**Evidence**: current-head CI review of pull request 795, accepted by the Plugins Maintainer's ruling on head 88129601345b18d1255bfde7174dd336ab1d4cba.
