@@ -40,7 +40,10 @@ FIELDS: Final = [
     {
         "id": "F_lifecycle",
         "name": "Lifecycle",
-        "options": [{"id": "O_submitted", "name": "Submitted"}],
+        "options": [
+            {"id": "O_submitted", "name": "Submitted"},
+            {"id": "O_available", "name": "Available"},
+        ],
     },
     {
         "id": "F_priority",
@@ -84,6 +87,15 @@ class RecordingStore:
             answer: dict[str, object]
             if "issueFields" in joined:
                 answer = {"data": {"organization": {"issueFields": {"nodes": FIELDS}}}}
+            elif "issueFieldValues" in joined:
+                priority = {"name": "Normal", "field": {"name": "Priority"}}
+                answer = {
+                    "data": {
+                        "repository": {
+                            "issue": {"issueFieldValues": {"nodes": [priority]}}
+                        }
+                    }
+                }
             elif "mutation" in joined:
                 answer = {"data": {}}
             else:

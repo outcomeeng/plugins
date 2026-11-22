@@ -111,3 +111,39 @@ def test_a_publish_brings_the_blockers_to_the_draft(tmp_path: pathlib.Path) -> N
     assert len(posts) == 1
     assert len(deletes) == 1
     assert deletes[0][2].endswith("/blocked_by/9006")
+
+
+def test_recording_a_child_writes_its_parents_priority(
+    tmp_path: pathlib.Path,
+) -> None:
+    store = RecordingStore()
+    code, _ = run_publish(
+        tmp_path,
+        INTENT,
+        store,
+        issue=None,
+        edits={"parent": f"{STORE}#26", "lifecycle": "Available"},
+    )
+    priority_writes = [
+        call
+        for call in store.writes()
+        if "f=F_priority" in call and "v=O_normal" in call
+    ]
+    assert code == 0
+    assert len(priority_writes) == 1
+
+
+def test_a_parents_draft_without_base_clears_the_base_field(
+    tmp_path: pathlib.Path,
+) -> None:
+    store = RecordingStore()
+    repo = tmp_path / "repo"
+    commit_base(repo, FILES)
+    draft = write_record(tmp_path, "a" * 40, INTENT)
+    text = draft.read_text(encoding="utf-8")
+    draft.write_text(re.sub(r"^base: .*\n", "", text, flags=re.M), encoding="utf-8")
+    code, result = load_publish().publish(
+        repo, draft, STORE, f"{STORE}#7", STAMP, None, store
+    )
+    assert (code, result["status"]) == (0, "published")
+    assert "F_base" in store.mutations("deleteIssueFieldValue")
