@@ -49,7 +49,7 @@ PRODUCER_PROMPT_PROPERTY_EXAMPLES = 30
 PRODUCER_PROMPT_PROPERTY_REPLAY_PATH = (
     "just test "
     "spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/"
-    "test_producer_prompt.property.l1.py"
+    "test_producer-prompt.property.l1.py"
 )
 
 
