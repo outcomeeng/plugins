@@ -29,6 +29,7 @@ from outcomeeng_testing.harnesses.form_check import (
     findings,
     git,
     write_draft,
+    write_record,
 )
 
 NODE = "spx/21-thing.capability"
@@ -270,3 +271,67 @@ def test_merged_leaf_with_an_unresolvable_stored_base_keeps_the_failure(
     )
     rules = [f["rule"] for f in record_findings(tmp_path, capsys, draft, extra)]
     assert "operator-bound-base" in rules
+
+
+INTENT_BODY = {
+    "output": "- Output: The thing reads things.",
+    "why": "- Why: Readers need things.",
+    "verification": "- Verification: Test: a test reads a thing.",
+}
+
+
+def stored_body(parts: tuple[str, ...]) -> str:
+    """Return a stored body whose Statement of Intent holds ``parts``."""
+    lines = ["## Statement of Intent", "", *(INTENT_BODY[part] for part in parts), ""]
+    return "\n".join(lines)
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "https://artifacts.outcome.engineering/a/someDesignPage\n",
+        stored_body(("why", "verification")),
+        stored_body(("output", "verification")),
+        stored_body(("output", "why")),
+    ],
+)
+def test_stored_body_without_its_statement_of_intent_fails(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str], body: str
+) -> None:
+    base = commit_base(tmp_path / "repo", BASE_FILES)
+    record = write_record(tmp_path, base, body)
+    rules = {f["rule"] for f in findings(tmp_path / "repo", record, capsys)}
+    assert rules & {"record-body", "statement-of-intent"}
+
+
+def test_stored_body_with_its_statement_of_intent_passes(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    base = commit_base(tmp_path / "repo", BASE_FILES)
+    record = write_record(
+        tmp_path, base, stored_body(("output", "why", "verification"))
+    )
+    rules = {f["rule"] for f in findings(tmp_path / "repo", record, capsys)}
+    assert not rules & {"record-body", "statement-of-intent"}
+
+
+FOREIGN_BASE = "b" * 40
+
+
+def test_foreign_proposed_intent_only_draft_reads_no_checkout(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    commit_base(tmp_path / "repo", BASE_FILES)
+    record = write_record(
+        tmp_path, FOREIGN_BASE, stored_body(("output", "why", "verification"))
+    )
+    assert findings(tmp_path / "repo", record, capsys) == []
+
+
+def test_foreign_draft_with_declarations_keeps_draft_base(
+    tmp_path: pathlib.Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    commit_base(tmp_path / "repo", BASE_FILES)
+    draft = write_draft(tmp_path, FOREIGN_BASE, INTENT, NODE, MULTI_LINE_SCENARIO)
+    rules = [f["rule"] for f in findings(tmp_path / "repo", draft, capsys)]
+    assert "draft-base" in rules
