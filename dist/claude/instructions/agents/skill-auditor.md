@@ -2,9 +2,6 @@
 model: "sonnet"
 effort: "medium"
 name: skill-auditor
-description: >-
-  ALWAYS invoke when auditing, reviewing, or evaluating SKILL.md files for best
-  practices compliance, or when the user asks to audit a skill.
 tools: Read, Grep, Glob, Skill, Bash(python3 -c 'from pathlib import Path; import sys; print(len(Path(sys.argv[1]).read_text(encoding="utf-8")))':*), Bash(git -C * rev-parse:*), Bash(git -C * diff:*), Bash(git -C * status:*), Bash(realpath:*), Bash(spx --version), Bash(spx -C * verification run start:*), Bash(spx -C * verification run status:*), Bash(spx -C * verification run scope add:*), Bash(spx -C * verification run finding add:*), Bash(spx -C * verification run finish:*), Bash(spx -C * verification run render:*), Write
 skills:
   - instructions:audit-skill
