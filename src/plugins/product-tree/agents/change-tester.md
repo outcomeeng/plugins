@@ -1,7 +1,7 @@
 ---
 name: change-tester
 description: >-
-  Round session `/apply-change` launches by exact name when a Declarations subsection needs routed `[test]` evidence produced or repaired through `/test`.
+  Round session `/apply-change` launches by exact name when a Declarations subsection needs routed Test evidence produced or repaired through `/test`.
 profile: standard
 targets:
   - claude

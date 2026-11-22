@@ -158,7 +158,7 @@ User responds with "we'll figure it out later" or "just make it work for the com
 
 Why it failed: Claude treated an answer as a resolution because the user gave one, without testing whether the answer decided anything.
 
-How to avoid: "We'll figure it out later" is pushback bait. Ask a concrete follow-up: "What's the common case? Describe one user who hits this." Force specificity. If the user does not know, record it as an open decision with a `([audit:{rule-slug}])` tag, not as a resolved assertion.
+How to avoid: "We'll figure it out later" is pushback bait. Ask a concrete follow-up: "What's the common case? Describe one user who hits this." Force specificity. If the user does not know, record it as an open question, not as a resolved assertion.
 
 **Failure 3: Losing coverage state in long conversations**
 

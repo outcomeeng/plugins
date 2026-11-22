@@ -35,7 +35,7 @@ Review the whole diff bundle against the whole taxonomy. The full diff bundle is
 Before raising findings, enumerate the review surface:
 
 1. Every changed file in every emitted diff-bundle section.
-2. Every touched spec assertion and its linked `[test]`, `[eval]`, or `[audit]` evidence visible from the loaded context.
+2. Every touched spec assertion and its evidence visible from the loaded context: the test file or eval rule its slug links, or, for an Audit row, its own statement.
 3. Every changed test or eval case and the source contract it claims to exercise.
 4. Every changed implementation file and the governing spec, ADR, or PDR it must satisfy.
 5. Consumers of changed truth: every unchanged consumer of a changed governing declaration — a file that cites the changed decision or spec by full path, a rendering or generated output the repository's declared generated-source relations derive from it, a consumer or language specialization the loaded governance names, or a sibling specialization governed by a changed superset rule. Discover these through read-only search bounded to those declared relationships; never through an unbounded repository-wide semantic search.

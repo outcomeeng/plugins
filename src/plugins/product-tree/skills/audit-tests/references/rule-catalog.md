@@ -26,7 +26,7 @@ Severity in the tables below labels the defect on touched text. A finding whose 
 
 | Identifier                  | Severity | Rule                                                                                                          | Stated in                                                                              |
 | --------------------------- | -------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `missing-test-file`         | REJECT   | Every `[test]` link of an included assertion resolves to an existing file.                                    | `audit_workflow` Step 2                                                                |
+| `missing-test-file`         | REJECT   | Every test-file link of an included assertion's slug resolves to an existing file.                            | `audit_workflow` Step 2                                                                |
 | `incomplete-evidence-chain` | REJECT   | Every import of the evidence chain resolves, and every inventoried artifact is read and classified by role.   | `audit_workflow` Step 2b                                                               |
 | `untestable-source`         | REJECT   | The governed production source exposes the boundary, seam, or injection point the assertion's behavior needs. | `product-tree:test-evidence-standards` `<assertion_design_record>`, production subject |
 

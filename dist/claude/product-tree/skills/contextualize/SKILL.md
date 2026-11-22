@@ -24,7 +24,7 @@ A `<PRODUCT_TREE_CONTEXT target="...">` marker carrying a structured context man
 - Explicit full-path ADR/PDR citations in loaded specs and decision records must be read before the context marker is emitted; notes never add cited decisions.
 - A context-grounded answer requires the matching `<PRODUCT_TREE_CONTEXT target="...">` marker. Loading this skill or reading a pre-compaction summary supplies no context.
 - Context loading reads the checkout as it stands. It never runs `/sync-base`, fetches, rebases, or otherwise moves the checkout, so the context it reports describes the head it found.
-- Test files are not read here. The node target spec or product-root product document already exposes inline `[test](tests/...)` links; list those links and the applicable `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
+- Test files are not read here. The node target spec or product-root product document already links each Test Assertion's slug to its test file under `tests/`; list those links and the applicable `tests/` directory state, then leave test-body inspection to `/test`, `/audit-tests`, or `/apply`.
 - **Always use canonical full paths** from `spx/` for targets and references. The product-root target is exactly `spx/`; a node target begins with `spx/` and contains only node-directory segments. Never refer to nodes, ADRs, or PDRs by bare name or numeric prefix; sibling numbers repeat under different parents and decision files cannot be found without their parent path.
   - Wrong: `/contextualize 32-parser.capability`
   - Right: `/contextualize spx/{path-to-node}`

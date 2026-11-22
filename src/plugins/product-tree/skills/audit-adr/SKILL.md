@@ -177,7 +177,7 @@ Claude flagged "uses PostgreSQL with row-level locking" as architecture content 
 
 How to avoid: The ADR audit checks form — structure, voice, tag validity. Content classification is the PDR audit's concern only.
 
-**Failure 2: Passed a universal rule tagged `scenario`**
+**Failure 2: Passed a universal rule under a `### Test.Scenario` heading**
 
 Claude saw a universal ALWAYS/NEVER rule in a `### Test.Scenario` group and passed it because the group named one of the five assertion types. A scenario proves one case; it cannot establish a claim about every case, so the assertion ships unverified — phantom green. The quantifier mismatch is a deterministic error, not a matter of taste.
 
