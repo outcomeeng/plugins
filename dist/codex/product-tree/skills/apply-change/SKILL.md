@@ -91,7 +91,7 @@ Run every check against the current default branch plus the effects of the Chang
 - A file or Node a `deleted file` header names is present and reads as the Base holds it; a deleted Node's branch holds exactly the Nodes, Decision Records, contract files, and Outcome records it holds at the Base, each reading as the Base holds it.
 - A file or Node a move names is present at its `rename from` path and absent at its `rename to` path, and reads as the Base holds it; a moved Node's branch passes the deleted-Node test.
 - A replaced file reads on the default branch as the Base holds it.
-- The current record is the one the audit judged, and, where the Operator's review binds an operation, the one the Operator reviewed or one that review carries forward to under `review-carry`.
+- The current record is the one the audit judged, and, where the review of the Operator, or of the delegate of the advance to Sliced, binds an operation, the one that review read or one it carries forward to under `review-carry`.
 - A `-` slug, alone or first in a replace, is present.
 - The Malleability of each Node at the Base reads the same on the default branch.
 - Each Node an infrastructure line names stands on the default branch with State Passing, or a blocking Change builds it.
