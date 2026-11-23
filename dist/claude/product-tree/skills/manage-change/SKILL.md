@@ -3,9 +3,8 @@ name: manage-change
 description: >-
   ALWAYS invoke this skill when claiming, releasing, submitting, advancing,
   lowering, closing Applied, or closing Abandoned a Change in the declared
-  Change Store, or when recording a decision to work on a Submitted Change.
-  NEVER assign a Change, write its Maturity or Lifecycle, or close its issue by
-  hand.
+  Change Store, or recording a decision to work on a Submitted Change. NEVER
+  assign a Change, write its Maturity or Lifecycle, or close its issue by hand.
 argument-hint: "<claim|release|submit|advance|lower|applied|abandoned|work> <#N | owner/repo#N | issue-url> [Maturity] [reason | survivor]"
 arguments: transition reference
 allowed-tools: Read, Write, Glob, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(gh api repos/*/issues/*/dependencies/blocked_by --method GET -F per_page=100), Bash(git status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git ls-remote --heads origin:*), Bash(git worktree list --porcelain), Bash(git rev-parse:*), Bash(git merge-base --is-ancestor:*), Bash(git push -u origin HEAD:*), Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(spx spec status:*), Bash(spx verification run render:*), Bash(spx verification run input:*), Bash(id -un), Bash(hostname -s), Bash(printenv CLAUDE_CODE_SESSION_ID), Agent, Skill
