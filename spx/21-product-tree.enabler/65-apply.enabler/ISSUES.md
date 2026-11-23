@@ -75,3 +75,11 @@ The `sealed-run-verdict` assertion in `apply.md` and the `/apply` gate steps rea
 **Impact.** The row stays true, because the Operator may still review, but it omits the delegate, so the spec reads narrower than the decision that governs it.
 
 **Settlement condition.** The `decision-line-repair` row names the review of the Operator, or of the delegate of the advance to Sliced, as the decision does.
+
+## `sync-before-verification` syncs before every verification step `spx/21-product-tree.enabler/65-apply.enabler/apply.md` `sync-before-verification` `consistency`
+
+**Evidence.** The current-head CI review of pull request 804, at head `745efa7c9232f4b572c8f20c3f2aa4deb0963359`, raised a `BLOCKING` `consistency` finding. [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md), as outcomeeng/changes#600 amends it, replaces `sync-before-verify` with `sync-timing`, `pickup-sync`, `named-reason-sync` and `no-own-account-sync`. `apply.md` row `sync-before-verification` still has the apply lifecycle invoke `/sync-base` before every deterministic verification command and every Verifier dispatch, and treat a `stale-base` block as no verdict.
+
+**Deferral reason.** This is a separate larger concern. Parent outcomeeng/changes#265 splits the rule across its Children: outcomeeng/changes#600 changes the decisions, and outcomeeng/changes#608 brings the apply and change-execution Nodes and their skills to them. 608 restates this row, removes the `/apply` skill's per-step sync and its stale-base handling, and carries the audit and review that work needs. Restating the row in 600 would move one of 608's lines into another Change and leave the `/apply` skill contradicting its own spec.
+
+**Settlement condition.** outcomeeng/changes#608 closes Applied with `sync-before-verification` restated to sync at pickup or for a named reason only, recording the latest `/sync-base` result.
