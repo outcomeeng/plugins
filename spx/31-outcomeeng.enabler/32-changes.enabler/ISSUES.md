@@ -106,3 +106,13 @@ Evidence: methodology 4.0 `refinement/refinement.md`, "Who advances and lowers a
 Impact: a record fix after a merge that edits a row the merged Changeset rewrote fails `diff-lines` at the new Base.
 
 Settlement condition: the PDR line and the `form-check-merged-base` row read every operation at the Sliced Base, and the form check follows.
+
+## An applied Leaf that merges no Changeset has no log key for its audit at close
+
+Defect class: `consistency`.
+
+Evidence: methodology 4.0 `application/application.md`, "Transition log", reads: "An applied Transition of a Leaf that merges no Changeset holds no `changeset` key and names the Verification Run of its audit at close in its place." `log-extras` in [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) adds only `changeset` to an applied Transition of a Leaf, and `log-closed` admits no other key. change-standards' `log-extras` and github-store.md's `<transition_comment>` name only `changeset`, and manage-change step 6 posts the `applied` comment "with `changeset` for a Leaf". On 2026-11-23 a Leaf whose Declarations hold `none` closed Applied in the plugins Change Store on an approved audit at close. Its holder named that run under the key `verification_run`, which no rule states.
+
+Impact: each holder of such a Leaf picks its own key for the run, or breaks `log-closed` to name it, so no reader finds the run of an applied close that merged no Changeset under one key.
+
+Settlement condition: `log-extras` names the key that carries the Verification Run of the audit at close for an applied Leaf that merges no Changeset, and change-standards, github-store.md and manage-change write and read that key.
