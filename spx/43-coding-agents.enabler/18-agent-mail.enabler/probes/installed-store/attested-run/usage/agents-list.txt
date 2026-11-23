@@ -1,0 +1,12 @@
+List agents registered in a project
+
+Usage: am agents list [OPTIONS] [PROJECT_KEY]
+
+Arguments:
+  [PROJECT_KEY]  Project key (slug or human_key / absolute path). Positional alternative to -p/--project; defaults to the current directory when both are omitted (GH#209)
+
+Options:
+  -p, --project <PROJECT_KEY>  Project key (slug or human_key / absolute path)
+      --format <FORMAT>        Output format: table, json, or toon (default: auto-detect)
+      --json                   Output JSON (shorthand for --format json)
+  -h, --help                   Print help

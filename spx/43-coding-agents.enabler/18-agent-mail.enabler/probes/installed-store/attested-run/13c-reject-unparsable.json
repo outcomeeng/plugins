@@ -1,0 +1,17 @@
+{
+  "step": "13c-reject-unparsable",
+  "startedUtc": "2026-11-23T07:37:28.115779+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo",
+  "request": {
+    "text": "{not json"
+  },
+  "exitCode": 2,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "unknown",
+    "status": "invalid-schema",
+    "detail": "Parsing request from stdin failed: JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1). Supply one complete JSON object on stdin."
+  },
+  "stderr": ""
+}

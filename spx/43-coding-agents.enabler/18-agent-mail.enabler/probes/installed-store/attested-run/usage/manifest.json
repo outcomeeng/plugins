@@ -7,6 +7,10 @@
       "command": "am agents register --help",
       "exitCode": 0
     },
+    "agents-list": {
+      "command": "am agents list --help",
+      "exitCode": 0
+    },
     "mail-send": {
       "command": "am mail send --help",
       "exitCode": 0

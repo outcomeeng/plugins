@@ -1,21 +1,41 @@
 [
   {
-    "name": "SilverOtter",
+    "name": "AmberHeron",
     "program": "claude-code",
-    "model": "opus",
-    "task_description": "fixture capture",
-    "inception_ts": "2026-11-23T07:03:22.819884Z",
-    "last_active_ts": "2026-11-23T07:03:22.819884Z",
+    "model": "opus-5-5",
+    "task_description": "installed-store probe",
+    "inception_ts": "2026-11-23T07:37:19.996915Z",
+    "last_active_ts": "2026-11-23T07:37:19.996915Z",
     "contact_policy": "auto"
   },
   {
-    "name": "GoldenFinch",
+    "name": "SilverOtter",
     "program": "claude-code",
-    "model": "opus",
-    "task_description": "fixture capture",
-    "inception_ts": "2026-11-23T07:03:22.555804Z",
-    "last_active_ts": "2026-11-23T07:03:22.555804Z",
+    "model": "opus-5-5",
+    "task_description": "installed-store probe",
+    "inception_ts": "2026-11-23T07:37:19.781627Z",
+    "last_active_ts": "2026-11-23T07:37:19.781627Z",
     "contact_policy": "auto",
-    "display_name": "Capture Sender"
+    "display_name": "Store Recipient Two"
+  },
+  {
+    "name": "SilverFinch",
+    "program": "claude-code",
+    "model": "opus-5-5",
+    "task_description": "installed-store probe",
+    "inception_ts": "2026-11-23T07:37:19.565293Z",
+    "last_active_ts": "2026-11-23T07:37:19.565293Z",
+    "contact_policy": "auto",
+    "display_name": "Store Recipient"
+  },
+  {
+    "name": "CopperFinch",
+    "program": "claude-code",
+    "model": "opus-5-5",
+    "task_description": "installed-store probe",
+    "inception_ts": "2026-11-23T07:37:19.388043Z",
+    "last_active_ts": "2026-11-23T07:37:19.388043Z",
+    "contact_policy": "auto",
+    "display_name": "Store Sender"
   }
 ]

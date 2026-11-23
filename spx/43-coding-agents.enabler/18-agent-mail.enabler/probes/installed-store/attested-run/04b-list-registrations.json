@@ -1,0 +1,83 @@
+{
+  "step": "04b-list-registrations",
+  "startedUtc": "2026-11-23T07:37:20.060751+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo",
+  "request": {
+    "schemaVersion": 1,
+    "operation": "registrations",
+    "arguments": {}
+  },
+  "exitCode": 0,
+  "result": {
+    "schemaVersion": 1,
+    "operation": "registrations",
+    "status": "succeeded",
+    "commandExitCode": 0,
+    "projectKey": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo/.git",
+    "response": {
+      "listing": [
+        {
+          "name": "AmberHeron",
+          "program": "claude-code",
+          "model": "opus-5-5",
+          "task_description": "installed-store probe",
+          "inception_ts": "2026-11-23T07:37:19.996915Z",
+          "last_active_ts": "2026-11-23T07:37:19.996915Z",
+          "contact_policy": "auto"
+        },
+        {
+          "name": "SilverOtter",
+          "program": "claude-code",
+          "model": "opus-5-5",
+          "task_description": "installed-store probe",
+          "inception_ts": "2026-11-23T07:37:19.781627Z",
+          "last_active_ts": "2026-11-23T07:37:19.781627Z",
+          "contact_policy": "auto",
+          "display_name": "Store Recipient Two"
+        },
+        {
+          "name": "SilverFinch",
+          "program": "claude-code",
+          "model": "opus-5-5",
+          "task_description": "installed-store probe",
+          "inception_ts": "2026-11-23T07:37:19.565293Z",
+          "last_active_ts": "2026-11-23T07:37:19.565293Z",
+          "contact_policy": "auto",
+          "display_name": "Store Recipient"
+        },
+        {
+          "name": "CopperFinch",
+          "program": "claude-code",
+          "model": "opus-5-5",
+          "task_description": "installed-store probe",
+          "inception_ts": "2026-11-23T07:37:19.388043Z",
+          "last_active_ts": "2026-11-23T07:37:19.388043Z",
+          "contact_policy": "auto",
+          "display_name": "Store Sender"
+        }
+      ]
+    },
+    "data": {
+      "registrations": [
+        {
+          "agent": "AmberHeron",
+          "displayName": null
+        },
+        {
+          "agent": "SilverOtter",
+          "displayName": "Store Recipient Two"
+        },
+        {
+          "agent": "SilverFinch",
+          "displayName": "Store Recipient"
+        },
+        {
+          "agent": "CopperFinch",
+          "displayName": "Store Sender"
+        }
+      ]
+    }
+  },
+  "stderr": ""
+}
