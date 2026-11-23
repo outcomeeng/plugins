@@ -20,6 +20,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 - **An advance takes an Available Change.** `manage-change` advances a Change to Framed or Sliced while it stands Available, and `submit` takes a Change that waits for the decision whether it is worked on. A Refiner no longer submits a Change for an advance.
 - **Every Change records as Submitted, a Child included, with no Priority.** `author-change` and its templates record a Child as `Submitted` for its own Priority decision. `publish.py` no longer copies the Parent's Priority onto a recorded Child, and the form check fails a recording Draft whose `lifecycle` is not `Submitted` under `draft-lifecycle`. `change-standards` states the new `lifecycle`, `priority`, `submit` and `advance` rows and the `work-decision` rule.
+- **`report-changes` shows a Submitted Proposed Child as waiting for its Priority.** A Submitted Change at Proposed reports `waiting: Priority` whether or not it has a Parent. Before this change, a Child reported `waiting: the Operator's next move`, which hid its pending Priority decision.
 
 ## 0.115.16
 

@@ -835,7 +835,7 @@ def waiting_state(
     checks_pending: bool,
 ) -> list[str]:
     if change.lifecycle == "Submitted":
-        if change.maturity == "Proposed" and change.parent is None:
+        if change.maturity == "Proposed":
             return [Waiting.PRIORITY]
         return [Waiting.OPERATOR]
     if change.lifecycle == "Claimed":
