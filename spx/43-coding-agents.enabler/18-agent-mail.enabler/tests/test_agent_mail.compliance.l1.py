@@ -256,6 +256,44 @@ def test_registration_result_carries_no_token() -> None:
     run_generated_identities(assert_case)
 
 
+def test_registrations_result_carries_no_token() -> None:
+    def assert_case(
+        module: ModuleType, agent: str, program: str, model: str, project_key: str
+    ) -> None:
+        token = cast(
+            dict[str, object], store_response_payload(module, module.Operation.REGISTER)
+        )[module.STORE_REGISTRATION_TOKEN_FIELD]
+        listing = cast(
+            list[dict[str, object]],
+            store_response_payload(module, module.Operation.REGISTRATIONS),
+        )
+        variant = [
+            {**entry, module.STORE_REGISTRATION_TOKEN_FIELD: token} for entry in listing
+        ]
+        runner = common_dir_seeded_runner(
+            module,
+            project_key,
+            module.CommandResult(0, json.dumps(variant), ""),
+        )
+
+        result = module.execute(
+            module.operation_request(module.Operation.REGISTRATIONS), runner
+        )
+
+        response = cast(dict[str, object], result[module.RESPONSE_FIELD])
+        entries = cast(list[dict[str, object]], response[module.STORE_LISTING_FIELD])
+        assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+        assert [entry[module.STORE_NAME_FIELD] for entry in entries] == [
+            entry[module.STORE_NAME_FIELD] for entry in listing
+        ]
+        assert all(
+            module.STORE_REGISTRATION_TOKEN_FIELD not in entry for entry in entries
+        )
+        assert cast(str, token) not in json.dumps(result)
+
+    run_generated_identities(assert_case)
+
+
 def test_operations_reach_no_program_outside_the_adapters_own_commands() -> None:
     module = load_agent_mail()
 

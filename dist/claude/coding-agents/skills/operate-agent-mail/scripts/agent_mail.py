@@ -1418,12 +1418,25 @@ def _failure_result(
     return validate_operation_result(result)
 
 
-def _scrubbed(payload: dict[str, object]) -> dict[str, object]:
+def _without_token(entry: dict[str, object]) -> dict[str, object]:
     return {
         key: value
-        for key, value in payload.items()
+        for key, value in entry.items()
         if key != STORE_REGISTRATION_TOKEN_FIELD
     }
+
+
+def _scrubbed(payload: dict[str, object]) -> dict[str, object]:
+    """The store's response with the registration token removed from the
+    response itself and from every entry of an agent listing it carries."""
+    scrubbed = _without_token(payload)
+    listing = scrubbed.get(STORE_LISTING_FIELD)
+    if isinstance(listing, list):
+        scrubbed[STORE_LISTING_FIELD] = [
+            _without_token(entry) if isinstance(entry, dict) else entry
+            for entry in listing
+        ]
+    return scrubbed
 
 
 def _registration(entry: object, location: str) -> dict[str, object]:
