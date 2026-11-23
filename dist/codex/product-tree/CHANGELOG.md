@@ -15,6 +15,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 ### Changed
 
 - **`merging-standards` takes deterministic results from CI first, and syncs only for a named reason.** Where the transport runs CI on the pushed head, a verification push gets CI's deterministic run before `VERIFICATION_READINESS`, without presenting the head to hosted review or integration. That run supplies validate and test, so a local run need not repeat them. A transport that binds no such push keeps local deterministic verification. A session syncs with its base once at pickup, and after that only for a named reason that `<base_sync>` lists. A Verifier dispatch, a deterministic command, or context loading never syncs on its own account. A behind-base head is no reason to sync, and a result on such a head is never withheld from a gate for that reason alone. `MERGE_READINESS` reads the base for a conflict, a protection or transport requirement, or a base change the work must take in, and no longer requires a rebase onto the current tip.
+- **`manage-pr` reads the base read-only on each pass.** It syncs only for a conflict, an unmet protection or transport requirement, or a named reason. Before, it rebased whenever the branch fell behind. `/merge`'s direct-push step names the fast-forward a direct push requires as its reason to sync.
 
 ## 0.115.13
 
