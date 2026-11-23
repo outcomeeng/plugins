@@ -90,15 +90,6 @@ class RecordingStore:
                 if self.fail_mutation is not None and self.fail_mutation in joined:
                     return fc.CommandResult(1, "", f"{self.fail_mutation} refused")
                 answer = {"data": {}}
-            elif "issueFieldValues" in joined:
-                priority = {"name": "Normal", "field": {"name": "Priority"}}
-                answer = {
-                    "data": {
-                        "repository": {
-                            "issue": {"issueFieldValues": {"nodes": [priority]}}
-                        }
-                    }
-                }
             elif "issueFields" in joined:
                 answer = {"data": {"organization": {"issueFields": {"nodes": FIELDS}}}}
             else:

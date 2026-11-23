@@ -3,15 +3,16 @@ name: manage-change
 description: >-
   ALWAYS invoke this skill when claiming, releasing, submitting, advancing,
   lowering, closing Applied, or closing Abandoned a Change in the declared
-  Change Store. NEVER assign a Change, write its Maturity or Lifecycle, or close
-  its issue by hand.
-argument-hint: "<claim|release|submit|advance|lower|applied|abandoned> <#N | owner/repo#N | issue-url> [Maturity] [reason | survivor]"
+  Change Store, or when recording a decision to work on a Submitted Change.
+  NEVER assign a Change, write its Maturity or Lifecycle, or close its issue by
+  hand.
+argument-hint: "<claim|release|submit|advance|lower|applied|abandoned|work> <#N | owner/repo#N | issue-url> [Maturity] [reason | survivor]"
 arguments: transition reference
 allowed-tools: Read, Write, Glob, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(gh api repos/*/issues/*/dependencies/blocked_by --method GET -F per_page=100), Bash(git status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git ls-remote --heads origin:*), Bash(git worktree list --porcelain), Bash(git rev-parse:*), Bash(git merge-base --is-ancestor:*), Bash(git push -u origin HEAD:*), Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(spx spec status:*), Bash(spx verification run render:*), Bash(spx verification run input:*), Bash(id -un), Bash(hostname -s),{!% if target == 'claude' %!} Bash(printenv CLAUDE_CODE_SESSION_ID), Agent,{!% else %!} Bash(printenv CODEX_THREAD_ID), {{! tool('spawn_agent') !}}, {{! tool('wait_agent') !}},{!% endif %!} {{! tool('use_skill') !}}
 ---
 
 <objective>
-One Transition made on one Change in the declared Change Store — its Transition comment the newest comment, every field it changes written to its home, and the complete state read back — or a refusal naming the state or the actor the Transition requires, with nothing written.
+One Transition made on one Change in the declared Change Store — its Transition comment the newest comment, every field it changes written to its home, and the complete state read back — or one decision to work on a Submitted Change recorded as its Lifecycle `Available`, or a refusal naming the state or the actor the move requires, with nothing written.
 </objective>
 
 <required_reading>
@@ -26,14 +27,14 @@ Use skill `product-tree:sync-base`. It brings the claimed branch current, in ste
 
 <intake>
 
-Take `$transition` as one of `claim`, `release`, `submit`, `advance`, `lower`, `applied`, and `abandoned`; any other value, an empty one included, is refused naming the seven, with nothing read. Take `$reference` as `#N`, `owner/repo#N`, or an issue URL; any other form is refused naming the three. `advance` takes a target Maturity as its next token, and an `advance` to Applicable then takes the run token of the record's sealed audit run; `lower` takes a target Maturity and then its reason, the rest of the arguments; a missing or unknown Maturity, or a `lower` without a reason, is refused naming what it lacks. `claim` takes an optional absolute worktree root to claim for, which must hold no `.` or `..` segment; without it, the claim is for this session's worktree. `abandoned` takes an optional survivor reference, in one of the three forms, when a merge absorbs the Change; a survivor in another store than the declared one is refused naming both. No other Transition takes a further token.
+Take `$transition` as one of the seven Transitions `claim`, `release`, `submit`, `advance`, `lower`, `applied`, and `abandoned`, or as `work`, the record of a decision to work on a Submitted Change, which is no Transition and runs `<work_decision>` in place of `<workflow>`; any other value, an empty one included, is refused naming the eight, with nothing read. Take `$reference` as `#N`, `owner/repo#N`, or an issue URL; any other form is refused naming the three. `advance` takes a target Maturity as its next token, and an `advance` to Applicable then takes the run token of the record's sealed audit run; `lower` takes a target Maturity and then its reason, the rest of the arguments; a missing or unknown Maturity, or a `lower` without a reason, is refused naming what it lacks. `claim` takes an optional absolute worktree root to claim for, which must hold no `.` or `..` segment; without it, the claim is for this session's worktree. `abandoned` takes an optional survivor reference, in one of the three forms, when a merge absorbs the Change; a survivor in another store than the declared one is refused naming both. No other Transition, and not `work`, takes a further token.
 
 </intake>
 
 <workflow>
 
 1. **Read the Change.** Resolve the store under `<store_binding>` and read the issue, its fields, its comments, and its blockers under `<reads>`. Resolve the current login with `gh api user --jq .login`, the session id with `{!% if target == 'claude' %!}printenv CLAUDE_CODE_SESSION_ID{!% else %!}printenv CODEX_THREAD_ID{!% endif %!}`, the user and host with `id -un` and `hostname -s`, and the worktree with `git rev-parse --show-toplevel`. Derive the Change's type under `change-type` from the store's Parent values under `<reads>`. This session holds the Change when the issue's one assignee is the current login and the newest `claim` comment's `worktree` is this worktree; a session restart keeps the Claim under `claim-kept`, so the `session` may differ.
-2. **Check the state.** Refuse the Transition, naming the state found, unless the Change stands in the state its `transitions` row requires: `claim` an open Available Change with no assignee; `release` a Change this session holds; `submit` an Available Change this session holds; `advance` a Submitted Change that meets the condition of each Maturity up to the target under `maturity-ready`, or a Sliced Leaf this session holds that meets the Applicable condition; `lower` a Framed, Sliced, or Applicable Change whose target is lower than its Maturity; `applied` and `abandoned` an open Change. A closed issue, or a Lifecycle of Applied or Abandoned, refuses every Transition under `terminal`.
+2. **Check the state.** Refuse the Transition, naming the state found, unless the Change stands in the state its `transitions` row requires: `claim` an open Available Change with no assignee; `release` a Change this session holds; `submit` an Available Change this session holds; `advance` an Available Change that meets the condition of each Maturity up to the target under `maturity-ready`, or a Sliced Leaf this session holds that meets the Applicable condition; `lower` a Framed, Sliced, or Applicable Change whose target is lower than its Maturity; `applied` and `abandoned` an open Change. A closed issue, or a Lifecycle of Applied or Abandoned, refuses every Transition under `terminal`.
 3. **Check the actor.** Refuse the Transition, naming the actor `transition-actor` names, unless that actor makes it:
    - `claim`: any session.
    - `release` and `submit`: this session as holder.
@@ -72,6 +73,20 @@ Take `$transition` as one of `claim`, `release`, `submit`, `advance`, `lower`, `
 
 </workflow>
 
+<work_decision>
+
+`work` records a decision of the Operator, or of a delegate, to work on a Submitted Change, under `work-decision` of `product-tree:change-standards`. It is no Transition.
+
+1. **Read the Change** as step 1 of `<workflow>` states.
+2. **Check the state.** Refuse, naming the state found, unless the issue is open and its Lifecycle reads `Submitted`.
+3. **Check the actor.** Refuse, naming the Operator or a delegate as the actor the decision requires, unless the decision comes as the Operator's explicit direction, given in this conversation or in an order from the Operator, or this session is a delegate whose authorization in the grant record, read as `<delegate_grant>` states, names the decision to work on a Change of the Change's Product, or of every Product of the Change Store.
+4. **Write.** Run the option check of `<store_options>` on Lifecycle, then write Lifecycle `Available`. Keep the assignee, and post no Transition comment.
+5. **Read back** under `<write_discipline>`: Lifecycle reads `Available`, every other field and the assignee list are unchanged, and the newest Transition comment is the one that stood before.
+
+A decision against the Change is no `work`: it is the `abandoned` Transition, on the Operator's direction.
+
+</work_decision>
+
 <delegate_grant>
 
 A session is the delegate of an advance to Framed or Sliced only while the grant record names its authorization grant for that advance, under `transition-actor` and the delegate term of `<terms>` in `product-tree:change-standards`. Read the grant from the grant record alone; no mail, Handoff, comment, memory, or another session's word stands in for it.
@@ -87,7 +102,7 @@ Refuse the advance, naming the actor `transition-actor` names, for a session tha
 
 <result>
 
-Return the issue URL, the Transition, the readback values verbatim, and the comment's YAML block. A refusal returns the Transition, the state or the actor it required, the state found, and no write.
+Return the issue URL, the Transition or `work`, the readback values verbatim, and, for a Transition, the comment's YAML block. A refusal returns the Transition or `work`, the state or the actor it required, the state found, and no write.
 
 </result>
 
@@ -107,6 +122,7 @@ Return the issue URL, the Transition, the readback values verbatim, and the comm
 - Each Transition posted exactly one comment, a YAML block with the keys `log-keys` names and only the extra its row admits.
 - No write reached a Maturity, Lifecycle, Value, or Investment field whose options differ from the values the standards name.
 - The issue carries at most one assignee, and the readback shows every written field at its target and every other field unchanged.
+- A `work` ran only on an open Submitted Change, on the direction of the Operator or of a delegate, wrote Lifecycle `Available` alone, kept the assignee, and posted no comment.
 - A release pushed only the Change's own work branch, or no branch and `branch: none` for a Change with no work branch of its own, and left the worktree detached; a claim brought the newest Handoff's branch into this worktree.
 
 </success_criteria>
