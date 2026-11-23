@@ -1,0 +1,21 @@
+[
+  {
+    "name": "SilverOtter",
+    "program": "claude-code",
+    "model": "opus",
+    "task_description": "fixture capture",
+    "inception_ts": "2026-11-23T07:03:22.819884Z",
+    "last_active_ts": "2026-11-23T07:03:22.819884Z",
+    "contact_policy": "auto"
+  },
+  {
+    "name": "GoldenFinch",
+    "program": "claude-code",
+    "model": "opus",
+    "task_description": "fixture capture",
+    "inception_ts": "2026-11-23T07:03:22.555804Z",
+    "last_active_ts": "2026-11-23T07:03:22.555804Z",
+    "contact_policy": "auto",
+    "display_name": "Capture Sender"
+  }
+]

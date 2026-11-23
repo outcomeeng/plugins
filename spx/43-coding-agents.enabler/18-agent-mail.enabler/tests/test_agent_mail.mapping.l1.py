@@ -123,6 +123,9 @@ def test_agent_mail_operation_mappings() -> None:
                         )
                         in argv
                     )
+        elif operation is module.Operation.REGISTRATIONS:
+            assert reading.positionals == ()
+            assert module.AGENT_OPTION not in reading.options_seen
         else:
             if operation in (module.Operation.READ, module.Operation.ACKNOWLEDGE):
                 assert reading.positionals == (str(arguments[module.MESSAGE_ID_FIELD]),)
@@ -162,6 +165,21 @@ def test_agent_mail_operation_mappings() -> None:
         if operation in (module.Operation.READ, module.Operation.ACKNOWLEDGE):
             assert response[module.OUTPUT_FIELD] == payload
             assert data[module.MESSAGE_ID_FIELD] == arguments[module.MESSAGE_ID_FIELD]
+            return
+        if operation is module.Operation.REGISTRATIONS:
+            listing = cast(list[dict[str, object]], payload)
+            assert response == {module.STORE_LISTING_FIELD: listing}
+            assert data == {
+                module.REGISTRATIONS_FIELD: [
+                    {
+                        module.AGENT_FIELD: entry[module.STORE_NAME_FIELD],
+                        module.DISPLAY_NAME_FIELD: entry.get(
+                            module.STORE_DISPLAY_NAME_FIELD
+                        ),
+                    }
+                    for entry in listing
+                ]
+            }
             return
         store = cast(dict[str, object], payload)
         if operation is module.Operation.WAIT:

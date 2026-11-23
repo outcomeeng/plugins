@@ -626,7 +626,9 @@ def test_a_text_argument_carrying_a_nul_byte_never_reaches_a_store_command() -> 
         module: ModuleType, request: dict[str, object], project_key: str
     ) -> None:
         tainted = nul_tainted_requests(module, request)
-        assert tainted
+        # A request with no arguments, the bare registrations listing, carries
+        # no text a NUL byte could ride in.
+        assert tainted or not request[module.ARGUMENTS_FIELD]
         for variant in tainted:
             runner = common_dir_seeded_runner(module, project_key)
             result = module.execute(variant, runner)
