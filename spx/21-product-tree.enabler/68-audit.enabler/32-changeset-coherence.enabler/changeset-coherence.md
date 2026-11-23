@@ -55,6 +55,7 @@ Handed one already-collected evidence packet for an exact committed changeset by
 
 ### Audit: wrapper and policy
 
+- record-as-judged: ALWAYS: `/audit-changeset-coherence` records the root unit as soon as the run starts, each review unit as soon as the review-unit sequence fixes its position and its own judgment completes, and each finding as soon as it is raised and its unit is recorded, so no unit or finding waits for the judgment of a later unit
 - thin-wrapper: ALWAYS: the configured Auditor is a thin read-only wrapper whose policy lives in the audit skill and whose result is the run token, the run file, and the rendered projection, or a blocked diagnostic when spx refuses a recorded payload or the finish
 - policy-in-skill: NEVER: a plugin-side helper, tracked file, rendered comment, or wrapper prompt becomes the source of coherence-verdict policy — the policy lives in the audit skill
 - caller-independent: ALWAYS: `/audit-changeset-coherence` names no caller and stays invocable on its own; the Author's agent session produces a verdict by dispatching the audit to a separate Verifier's agent session rather than grading its own work in place, per [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md)

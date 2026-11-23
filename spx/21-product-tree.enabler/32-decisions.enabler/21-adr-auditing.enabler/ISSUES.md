@@ -83,3 +83,11 @@ The assertions state the sealed-run verdict model: the audit run's terminal stat
 **Settlement condition.** outcomeeng/changes#513 rewrites the skill and wrapper onto one `spx verification run` over the ADR file scope and migrates the producer-coupled eval expectations, under an unchanged semantic verdict model.
 
 **Evidence**: current-head CI review of pull request 671.
+
+## The skill records no verification run, so its recording rows await an implementation `spx/21-product-tree.enabler/32-decisions.enabler/21-adr-auditing.enabler/adr-auditing.md` `record-as-judged` `consistency`
+
+`src/plugins/product-tree/skills/audit-adr/SKILL.md` runs no `spx verification run`, so its `run-recording` row and its `record-as-judged` row declare recording behavior the shipped skill does not have. The Node is spec-malleable, so the declaration stands ahead of its implementation.
+
+**Why this is a separate larger concern.** Making `/audit-adr` record a sealed run, with its units and findings recorded as each judgment completes, rewrites the skill's verdict output and the `adr-auditor` wrapper's relay. That work lies outside the Frame of outcomeeng/changes#1079, which declares only the recording order.
+
+**Evidence**: current-head CI review of pull request 797, accepted by the Plugins Maintainer's ruling on head 6d5cca9591795a91366b0348a9ea52ed871b0dde.
