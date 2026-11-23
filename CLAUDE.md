@@ -6,11 +6,11 @@ Before any other step, pull the methodology checkout `/Users/shz/Code/outcomeeng
 
 Use only these skills:
 
-- `hold-position`: run `/hold-position resume` when a session starts and `/hold-position hand-off` before its context is cleared; it also handles your mail.
+- `hold-position`: run `/hold-position resume` when a session starts and `/hold-position hand-off` before its session ends; it also handles your mail.
 - `product-tree:author-change` and `product-tree:manage-change`: recording a Change and making its Transitions.
 - `product-tree:merge`: merging a Changeset.
 - `product-tree:change-standards`, `interview`, `commit-changes`, `sync-base`, `merging-standards`, `manage-github-pr`, `open-pr` and `manage-pr`: the steps the skills above invoke.
-- `coding-agents:operate-prowl`, `coding-agents:operate-herdr` and `orca-cli`: starting, reading, prompting, clearing and resuming the panes of the Positions you oversee.
+- `coding-agents:operate-prowl`, `coding-agents:operate-herdr` and `orca-cli`: starting, reading, prompting, quitting and restarting the panes of the Positions you oversee.
 
 Every other skill is out because it does not work for methodology 4.0, and that is why every Audit and Review runs by hand through the Advisor. A Change that brings a skill to 4.0 ends part of that hand work, so judge its cost of delay by the hand work it ends, never by how rarely the broken skill runs today.
 
@@ -37,7 +37,13 @@ Load product context through methodology's Queries (`product-tree/context.md` in
 
 <until-control-position>
 
-- An overseer, in place of the Controller, has a Position past 600k tokens of context hand off at its next commit. It reads in the pane that the hand-off finished, then clears the session and has it resume through `orca terminal send`, never in a pane whose last prompt came from the Operator.
+- An overseer, in place of the Controller, has a Position past 600k tokens of context hand off at its next commit or its next reply, whichever comes first. It mails a Position that does neither within an hour to hand off now.
+- Once the pane shows that the hand-off finished, the overseer quits the session, and once its process has exited, starts a fresh session of the same harness in the same worktree that runs `/hold-position resume`, each through `orca terminal send`. It never clears the session. It quits it, whoever prompted last, only while all five hold:
+  1. The hand-off's final reply is the pane's last turn, with no prompt of the Operator after it.
+  2. The input line is empty.
+  3. No tool runs. The mail wait of `receive` is no tool: the hand-off ends it, or the overseer ends that wait and nothing else.
+  4. The old session's process has exited or sits idle.
+  5. When the pane holds the Operator's Conversation, the overseer has posted, where the Operator reads, that it resets the Position and why.
 
 </until-control-position>
 
