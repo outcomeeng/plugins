@@ -67,3 +67,11 @@ The `sealed-run-verdict` assertion in `apply.md` and the `/apply` gate steps rea
 **Settlement condition.** outcomeeng/changes#513 rewrites the `audit-adr`, `audit-tests` and `audit-eval-evidence` skills and their wrappers onto one `spx verification run` each, under an unchanged semantic verdict model. The sibling entries in `spx/21-product-tree.enabler/32-decisions.enabler/21-adr-auditing.enabler/ISSUES.md`, `spx/21-product-tree.enabler/68-audit.enabler/32-audit-tests.enabler/ISSUES.md` and `spx/21-product-tree.enabler/68-audit.enabler/32-audit-eval-evidence.enabler/ISSUES.md` settle under the same change.
 
 **Evidence**: current-head CI review of pull request 671.
+
+## `decision-line-repair` names only the Operator's review
+
+**Evidence.** The `decision-line-repair` row of [`apply.md`](apply.md) returns the Change to Sliced "for the Operator's review". Since outcomeeng/changes#635, `review-carry` and `maturity-actor` of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) give that review to the Operator or to the delegate of the advance to Sliced. The `/apply` skill line under the row names both, after the Plugins Maintainer's ruling on PR #803.
+
+**Impact.** The row stays true, because the Operator may still review, but it omits the delegate, so the spec reads narrower than the decision that governs it.
+
+**Settlement condition.** The Change that brings `/apply` to methodology 4.0 words the row as the decision does, naming the review of the Operator or of the delegate of the advance to Sliced. Changing it within outcomeeng/changes#635 would reopen a judgment that Change's record does not hold.
