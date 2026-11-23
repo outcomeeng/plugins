@@ -4,6 +4,8 @@ CONSTRAINS the derivation of the Context Subgraph that context loading reads for
 TO the structured output of `spx spec context show --json`, with `/contextualize` deriving the same members, views, and order from the tree itself where the consuming floor's output does not give them
 SO THAT the completeness, order, and determinism of each Context Subgraph are properties of tested code wherever a published SPX release provides them
 
+## Verification
+
 ### Audit: derivation
 
 - cli-derivation: ALWAYS: where the consuming floor is a published SPX release whose `spx spec context show --json` output gives a target's Work Context in its Routine and its Authoring mode, each member at its view, `/contextualize` derives the Context Subgraph from that output and enumerates no member by agent-executed globbing.
