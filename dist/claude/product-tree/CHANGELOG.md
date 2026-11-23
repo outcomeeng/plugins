@@ -14,7 +14,7 @@ An entry is written by the changeset that ships the change. A later changeset ad
 
 ### Fixed
 
-- **A `manage-change` release pushes only the Change's own work branch.** The Change's own work branch is the branch its newest Handoff names, or the work branch `work/change-<N>` the release commits the Change's uncommitted work on. A Change with no work branch of its own takes no push, and its Handoff holds `branch: none` and the head of the default branch, also when the worktree is attached to a branch that carries another Change's work. Before this change, a release pushed the attached branch and named it in the Handoff, which could hand the next holder another Change's branch. `change-standards` states the same rule for the Handoff's `branch` line.
+- **A `manage-change` release pushes only the Change's own work branch.** The Change's own work branch is the branch its newest Handoff names, or the work branch `work/change-<N>` the release cuts from the head of the default branch to commit the Change's uncommitted work on. The release stops and reports, writing nothing, when that work does not apply on the default branch, when `work/change-<N>` already exists, or when the own work branch exists outside the checkout while the session holds uncommitted work of the Change. A Change with no work branch of its own takes no push, and its Handoff holds `branch: none` and the head of the default branch, also when the worktree is attached to a branch that carries another Change's work. Before this change, a release pushed the attached branch and named it in the Handoff, which could hand the next holder another Change's branch. `change-standards` states the same rule for the Handoff's `branch` line.
 
 ## 0.115.14
 

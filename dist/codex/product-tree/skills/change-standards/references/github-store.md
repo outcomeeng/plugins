@@ -118,7 +118,7 @@ handoff:
   ]
 ```
 
-The Change's own work branch is the branch its newest Handoff names or the work branch the releasing session commits its work on, never a branch the worktree is attached to for another Change. `branch`, `head`, and `next` are required; `completed`, `blockers`, and `hazards` appear when they hold an entry. An applied Transition of a Leaf adds `changeset: <owner/repo>@<merge commit SHA>`. No other key, no prose outside `reason`, no party on whose behalf the holder acts, and no words of the Operator appear in the block. Resolve `session` from the harness's session variable, `machine` from `id -un` and `hostname -s`, and `worktree` from `git rev-parse --show-toplevel`.
+The Change's own work branch is the branch its newest Handoff names, or the work branch the releasing session cuts from the head of the default branch to commit its work on, and holds no commit of another Change; a branch the worktree is attached to for another Change is never it. `branch`, `head`, and `next` are required; `completed`, `blockers`, and `hazards` appear when they hold an entry. An applied Transition of a Leaf adds `changeset: <owner/repo>@<merge commit SHA>`. No other key, no prose outside `reason`, no party on whose behalf the holder acts, and no words of the Operator appear in the block. Resolve `session` from the harness's session variable, `machine` from `id -un` and `hostname -s`, and `worktree` from `git rev-parse --show-toplevel`.
 
 </transition_comment>
 
