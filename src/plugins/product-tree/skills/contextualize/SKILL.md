@@ -83,7 +83,7 @@ The read order is total and byte-identical for the same tree contents, target, a
 4. Members that share an Index follow in slug order.
 5. Each cited Decision Record follows in the order of its first citation in the order so far, then each linked contract file in the order of its first link, then each pinned implementation file in path order.
 
-The active root harness instruction file `{{! file('root_guide') !}}`, each on-path subdirectory `{{! file('root_guide') !}}` in path order from the root, and the local overlays under `spx/local/` are enumerated as sets apart from the read order. A `CLAUDE.md` or `AGENTS.md` directly inside the `spx/` directory is no instruction input.
+The active root harness instruction file `{{! file('root_guide') !}}`, each on-path subdirectory `{{! file('root_guide') !}}` in path order from the root, and the local overlays under `spx/local/` are enumerated as sets apart from the read order. A `{{! file('root_guide') !}}` directly inside the `spx/` directory is no instruction input.
 
 </read_order>
 
