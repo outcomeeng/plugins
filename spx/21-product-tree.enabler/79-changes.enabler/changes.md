@@ -72,3 +72,9 @@ CAN write, check, and audit every Change record in one form
 - manage-store: manage-change writes each field a Transition changes to its home in the GitHub issue, as the github-store Mapping of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states it, and keeps at most one assignee on the issue.
 - store-options: author-change and manage-change write to the Maturity, Lifecycle, Value, and Investment fields of a GitHub Change Store only the values record-keys of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) names for maturity, lifecycle, primary_value, and investment, and stop with a blocked result naming the field when its options differ from those values.
 - manage-only: NEVER: a claim-change, release-change, close-change, or confirm-change skill exists beside manage-change.
+
+### Audit: release handoff
+
+- release-own-branch: manage-change pushes on a release only the Change's own work branch, which is the branch the Change's newest Handoff names or the work branch the releasing session commits the Change's uncommitted work on, and names that branch in the Handoff.
+- release-no-branch: NEVER: manage-change pushes a branch on the release of a Change that has no work branch of its own, also from a worktree attached to a branch that carries another Change's work; the Handoff of that release holds `branch: none` and the head of the default branch.
+- standards-release-branch: change-standards states that the Handoff of a release names the Change's own pushed work branch, or `none` with the head of the default branch when the Change has no work branch of its own.
