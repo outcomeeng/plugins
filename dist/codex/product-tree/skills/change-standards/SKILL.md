@@ -229,7 +229,7 @@ Transition log:
 
 - `log-block`: every Transition posts one comment holding one fenced YAML block and nothing else, and the comment's time is the Transition's time.
 - `log-keys`: the block holds `transition`, the move; `maturity`, the Change's Maturity at the move as the Change Store spells it; `harness`, the token the Provider assigns to the agent harness; `session`, the harness's session id; `machine`, the user and the short host name as `user@host`; and `worktree`, the absolute path of the worktree the session works in.
-- `log-position`: the block can also hold `position`, the Position the holder holds, as its one optional key.
+- `log-position`: the block can also hold `position`, the Position of the agent that makes the Transition, as its one optional key.
 - `log-extras`: a lower adds `reason`; a release adds `handoff` with at least the branch, the head commit, and the next subsection; an applied Transition of a Leaf adds `changeset` with its merge commit.
 - `log-closed`: the block holds no other key and no prose outside `reason`.
 - `log-no-authority`: nobody reads authority from a Transition comment, and no party on whose behalf the holder acts and no words of the Operator appear in it.
