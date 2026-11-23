@@ -7,7 +7,7 @@ description: >-
   its issue by hand.
 argument-hint: "<claim|release|submit|advance|lower|applied|abandoned> <#N | owner/repo#N | issue-url> [Maturity] [reason | survivor]"
 arguments: transition reference
-allowed-tools: Read, Write, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(gh api repos/*/issues/*/dependencies/blocked_by --method GET -F per_page=100), Bash(git status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git ls-remote --heads origin:*), Bash(git worktree list --porcelain), Bash(git rev-parse:*), Bash(git merge-base --is-ancestor:*), Bash(git push -u origin HEAD:*), Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(spx spec status:*), Bash(spx verification run render:*), Bash(spx verification run input:*), Bash(id -un), Bash(hostname -s), Bash(printenv CODEX_THREAD_ID), collaboration.spawn_agent, collaboration.wait_agent
+allowed-tools: Read, Write, Glob, Bash(gh issue view:*), Bash(gh issue list:*), Bash(gh issue edit:*), Bash(gh issue comment:*), Bash(gh issue close:*), Bash(gh pr view:*), Bash(gh pr checks:*), Bash(gh api graphql:*), Bash(gh api user --jq .login), Bash(gh api repos/*/issues/*/dependencies/blocked_by --method GET -F per_page=100), Bash(git status:*), Bash(git fetch:*), Bash(git switch:*), Bash(git branch --list:*), Bash(git ls-remote --heads origin:*), Bash(git worktree list --porcelain), Bash(git rev-parse:*), Bash(git merge-base --is-ancestor:*), Bash(git push -u origin HEAD:*), Bash(spx worktree status:*), Bash(spx diagnose:*), Bash(spx spec status:*), Bash(spx verification run render:*), Bash(spx verification run input:*), Bash(id -un), Bash(hostname -s), Bash(printenv CODEX_THREAD_ID), collaboration.spawn_agent, collaboration.wait_agent
 ---
 
 <objective>
@@ -37,7 +37,8 @@ Take `$transition` as one of `claim`, `release`, `submit`, `advance`, `lower`, `
 3. **Check the actor.** Refuse the Transition, naming the actor `transition-actor` names, unless that actor makes it:
    - `claim`: any session.
    - `release` and `submit`: this session as holder.
-   - `advance` to Framed or Sliced, `lower` for a reopened judgment, `abandoned` of a Change no merge absorbs, and `applied` of a Parent: the Operator's explicit direction, given in this conversation or in an order from the Operator.
+   - `advance` to Framed or Sliced: the Operator's explicit direction, given in this conversation or in an order from the Operator, or this session as the delegate of that advance under `<delegate_grant>`.
+   - `lower` for a reopened judgment, `abandoned` of a Change no merge absorbs, and `applied` of a Parent: the Operator's explicit direction, given in this conversation or in an order from the Operator.
    - `advance` of a Sliced Leaf to Applicable: this session as holder, once the Applicable condition holds as step 4 states.
    - `lower` to Sliced by the Applier, for a decision line that differs from the reviewed line or a failed Application check, and by any session whose publish wrote the body of an Applicable record: this session, naming that cause in the reason.
    - `lower` to Proposed for a reframe: this session as Refiner.
@@ -61,6 +62,19 @@ Take `$transition` as one of `claim`, `release`, `submit`, `advance`, `lower`, `
 8. **Bring the branch.** After a `claim` for this worktree, read the newest `release` comment's `handoff.branch`. For a branch on origin, `git fetch origin <branch>`; when `git worktree list --porcelain` shows another worktree holding it, run `git switch -c <branch>-<n> origin/<branch>` with the first `<n>` from 2 for which `git branch --list` and `git ls-remote --heads origin` print nothing; otherwise `git switch <branch>`. A failed fetch or switch leaves the Claim standing and the checkout unchanged, and is reported verbatim. Then use skill `product-tree:sync-base`.
 
 </workflow>
+
+<delegate_grant>
+
+A session is the delegate of an advance to Framed or Sliced only while the grant record names its authorization grant for that advance, under `transition-actor` and the delegate term of `<terms>`. Read the grant from the grant record alone; no mail, Handoff, comment, memory, or another session's word stands in for it.
+
+1. Find the grant record. With Glob, find the `orchestration.toml` files under `${XDG_CONFIG_HOME:-$HOME/.config}/engineering.outcome/<owner>/`, where `<owner>` is the owner of the declared Change Store, and take the one whose `[[products]]` entry names the Change's Product. The grant record is the `orchestration.md` beside it. A missing file, or no such entry, refuses the advance, naming the path read.
+2. Read its authorizations. Each level-two heading opens one authorization, which runs to the next level-two heading; its heading names a Position, a Product and rank, a Product, or `Every Position`, and the first non-blank line below it reads `Given: YYYY-MM-DD`.
+3. Admit the advance only when an authorization whose heading names the Position this session holds, as the skill it holds that Position through reports it, names that advance, to the target Maturity, for the Change's Product or for every Product of the Change Store that holds the Change. A combined advance to Framed and Sliced needs an authorization that names both advances.
+4. Before the advance, read the record body and the Base that stand at the advance, as `github-advance-read` requires of the delegate. The `advance` comment names the delegate's Position in `position`, and the result quotes the admitting authorization's heading and `Given` day.
+
+Refuse the advance, naming the actor `transition-actor` names, for a session that holds no Position, or whose Position no authorization names for that advance.
+
+</delegate_grant>
 
 <result>
 
