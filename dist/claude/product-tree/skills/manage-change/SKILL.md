@@ -18,7 +18,7 @@ One Transition made on one Change in the declared Change Store — its Transitio
 
 Use skill `product-tree:change-standards`. Its `<transitions>` table, `transition-actor`, and `<github_store>` rules govern every step below by their slugs. Read its `references/github-store.md` for every read and write, the Transition comment, and the write discipline.
 
-Use skill `product-tree:commit-changes`. It commits the uncommitted session-owned work a `release` carries, in step 5.
+Use skill `product-tree:commit-changes`. It commits the uncommitted session-owned work a `release` carries, in step 5, with the Change's `<owner>/<repo>#<N>` as its work item reference, so each commit's `Refs:` footer carries the Change's reference.
 
 Use skill `product-tree:sync-base`. It brings the claimed branch current, in step 8.
 
@@ -49,7 +49,16 @@ Take `$transition` as one of `claim`, `release`, `submit`, `advance`, `lower`, `
    - For `applied` of a Leaf, require every part of `leaf-applied`. Take the merge commit from the newest `release` comment's `handoff`, or from the pull request this session merged, with `gh pr view <pr> --json state,mergeCommit`; run `git fetch origin <default>` and require `git merge-base --is-ancestor <merge-commit> origin/<default>` to exit zero. Require each Node the Declarations name to hold every result its Malleability requires under `spx spec status --format json`, and every Declarations line to stand on the default branch. Require the audit at close: launch `product-tree:change-auditor` once through the native subagent capability with the task message `<owner>/<repo>#<N> <absolute checkout root>`, and close only when its sealed run is `approved` with no finding. A failed condition refuses the Transition, naming the part that failed.
    - For `applied` of a Parent, require every Child closed under `<reads>`.
    - Before any write to Maturity or Lifecycle, run the option check of `<store_options>`; a field whose options differ stops the Transition naming the field.
-5. **Prepare the checkout.** For a `claim` for another worktree, the comment's `worktree` is that root, and this step and step 8 leave every checkout as it is. For a `claim` for this worktree, run `spx worktree status` as a read-only check and require this session's `SessionStart` claim on the worktree; record no claim by hand. For `release`, run `git status --short --branch`: commit uncommitted session-owned work through `product-tree:commit-changes`, on the work branch `work/change-<N>` when the checkout is detached or on the default branch; push the branch with `git push -u origin HEAD:refs/heads/<branch>` and require the local and origin tips equal; run the preflight checks `spx/local/merging.md` declares, then `git switch --detach`, and the post-cleanup checks it declares. The live worktree claim stays with the session; never release it.
+5. **Prepare the checkout.** For a `claim` for another worktree, the comment's `worktree` is that root, and this step and step 8 leave every checkout as it is. For a `claim` for this worktree, run `spx worktree status` as a read-only check and require this session's `SessionStart` claim on the worktree; record no claim by hand. For `release`, run `git status --short --branch`, then `git fetch origin <default>` and `git log --format='%H%n%B%x00' origin/<default>..HEAD`, which lists the commits the checkout holds ahead of the default branch with their messages. A commit carries a Change's reference when its message names `<owner>/<repo>#<N>` of the declared Change Store, or `#<N>` when the checkout's `origin` is the Change Store's own repository. Take the first case that holds:
+   - **The checkout is attached to a branch, at least one commit is ahead, and every commit ahead carries this Change's reference.** That branch is the Change's own work branch, also when no Handoff names it, as on a first release or on the `<branch>-<n>` step 8 brought. Commit uncommitted session-owned work of the Change on it through `product-tree:commit-changes` with the work item reference `<owner>/<repo>#<N>`, push it with `git push -u origin HEAD:refs/heads/<branch>`, and require the local and origin tips equal. The Handoff names that branch and its head.
+   - **No commit is ahead, or a commit ahead carries another Change's reference.** The branch the checkout holds, or its detached commit, is never the Change's own work branch. The Handoff branch is the branch the newest `release` comment's `handoff.branch` names, when it names one other than `none`, and it is the own work branch when it exists. Take the first sub-case that holds:
+     - **A Handoff branch exists and the session holds uncommitted work of the Change.** Stop before any write and report the Handoff branch, the branch or commit the checkout holds, and the uncommitted paths.
+     - **A Handoff branch exists and the session holds no uncommitted work of the Change.** Push nothing. The Handoff names that branch and its head on origin.
+     - **No Handoff branch exists and the session holds uncommitted work of the Change.** Run `git switch -c work/change-<N> origin/<default>`, which carries the uncommitted work onto a branch cut from the head of the default branch that holds no commit of another Change. When `git branch --list` or `git ls-remote --heads origin` already shows `work/change-<N>`, or the switch refuses because the work does not apply on the default branch, stop before any write and report the branch, the uncommitted paths and the refusal verbatim. Commit the work through `product-tree:commit-changes` with the work item reference `<owner>/<repo>#<N>`, push the branch as above, and name it and its head in the Handoff.
+     - **No Handoff branch exists and the session holds no uncommitted work of the Change.** Push no branch, also when the checkout is attached to a branch that carries another Change's work. The Handoff holds `branch: none` and the head of the default branch.
+   - **Otherwise** a commit ahead carries no Change's reference, or the checkout is detached at commits that all carry this Change's reference. Stop before any push and any write, and name each such commit by its full SHA and subject.
+
+   Then run the preflight checks `spx/local/merging.md` declares, `git switch --detach`, and the post-cleanup checks it declares. The live worktree claim stays with the session; never release it.
 6. **Write in order**, under `<write_discipline>`:
    - `claim`: add the assignee, then post the `claim` comment.
    - `release`: post the `release` comment with its `handoff`, remove the assignee, then write Lifecycle Available when it reads Submitted.
@@ -86,6 +95,8 @@ Return the issue URL, the Transition, the readback values verbatim, and the comm
 
 **The assignee stood in for the holding session.** Claude treated the assignee as proof that this session held the Change while a second session of the same account worked in another worktree. One account runs several sessions, so the newest `claim` comment's worktree names the session's place; the assignee alone names only the account.
 
+**A release pushed another Change's branch.** Claude released a Change from a worktree attached to a branch that carried another Change's work, pushed that branch, and named it in the Handoff, so the next holder took the wrong branch. The attached branch is the Change's own work branch only when every commit it holds ahead of the default branch carries this Change's reference; a Change with no work branch of its own takes no push and `branch: none`.
+
 **A partial Transition was repaired by guessing.** Claude's Lifecycle write failed after the comment landed, and Claude re-ran a later step to make the state look complete. Stop at the failed write, report the completed writes and the observed state, and leave the partial state visible.
 
 </failure_modes>
@@ -96,6 +107,6 @@ Return the issue URL, the Transition, the readback values verbatim, and the comm
 - Each Transition posted exactly one comment, a YAML block with the keys `log-keys` names and only the extra its row admits.
 - No write reached a Maturity, Lifecycle, Value, or Investment field whose options differ from the values the standards name.
 - The issue carries at most one assignee, and the readback shows every written field at its target and every other field unchanged.
-- A release left the work branch pushed and the worktree detached from it, and a claim brought the newest Handoff's branch into this worktree.
+- A release pushed only the Change's own work branch, or no branch and `branch: none` for a Change with no work branch of its own, and left the worktree detached; a claim brought the newest Handoff's branch into this worktree.
 
 </success_criteria>

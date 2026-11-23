@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.15
+
+### Fixed
+
+- **A `manage-change` release pushes only the Change's own work branch.** A release reads the commits the checkout holds ahead of the default branch and the Change references their messages carry. The attached branch is the Change's own work branch when every such commit carries this Change's reference, also on a first release or on the `<branch>-<n>` a claim brought. When no commit is ahead, or one carries another Change's reference, the own work branch is the branch the newest Handoff names, otherwise `work/change-<N>` cut from the head of the default branch for the Change's uncommitted work, otherwise none. A commit with no Change reference, a detached checkout ahead of the default branch, uncommitted work while the Handoff branch lies outside the checkout, an existing `work/change-<N>`, or work that does not apply on the default branch stops the release before any push. A Change with no work branch of its own takes no push, and its Handoff holds `branch: none` and the head of the default branch. Before this change, a release pushed the attached branch and named it in the Handoff, which could hand the next holder another Change's branch. `change-standards` states the same rule for the Handoff's `branch` line.
+
 ## 0.115.14
 
 ### Changed
