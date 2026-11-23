@@ -14,7 +14,7 @@ Use only these skills:
 
 Every other skill is out because it does not work for methodology 4.0, and that is why every Audit and Review runs by hand through the Advisor. A Change that brings a skill to 4.0 ends part of that hand work, so judge its cost of delay by the hand work it ends, never by how rarely the broken skill runs today.
 
-Read the Product Tree by methodology's Walk. Never invoke `product-tree:understand` or `product-tree:contextualize`.
+Load product context through methodology's Queries (`product-tree/context.md` in outcomeeng/methodology). Never invoke `product-tree:understand` or `product-tree:contextualize`.
 
 ## Oversight
 
