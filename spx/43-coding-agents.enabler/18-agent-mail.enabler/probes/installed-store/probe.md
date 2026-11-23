@@ -10,7 +10,7 @@ An operator relying on the agent-mail adapter expects every operation to reach t
 
 - The installed native `am` is the build under test. The run records the build as the installed CLI reports it: the path of the executable the adapter invokes, `am --version`, and `am capabilities`. The pin is the version string the CLI reports, because the CLI reports no source commit; a run that finds a source commit in the CLI's output records it with the version.
 - The store is isolated by project key only: a scratch mail project whose key the adapter resolves from a scratch Git repository outside the repository under test, a writable store, and no foreign records under that key. The installed `am` ignores environment overrides of its store, so the run writes to the installed store under the scratch project key and touches no record under any other key.
-- Three positions with distinct stable names exist: a sender, a recipient, and a second recipient. Each registers through the adapter with its own label.
+- Three positions with distinct stable names exist: a sender, a recipient, and a second recipient. Each registers through the adapter with its own label. A fourth stable name, an observer, registers with no label.
 - The adapter runs from the sources of the committed head under test, through `python3 "${CLAUDE_SKILL_DIR}/scripts/agent_mail.py" run` for each request operation, with each request written to a scratch file and submitted through the input redirect.
 - No step constructs a raw `am` command except the observation steps that record the build and capture usage text.
 
@@ -19,18 +19,21 @@ An operator relying on the agent-mail adapter expects every operation to reach t
 1. Record the build: the path of the executable the adapter invokes, its `am --version` output, and its `am capabilities` version and schema, and record whether the CLI reports a source commit.
 2. Capture the usage text of every store command the adapter builds an argument vector for, from the installed `am`, and retain each as a fixture naming the tool and the build recorded in step 1.
 3. Register the sender, the recipient, and the second recipient through the adapter's register operation, each with a label. Record that each result is `succeeded` and that the adapter accepted every argument it passed.
-4. Send one record from the sender to the recipient with an acknowledgement required, one record with an acknowledgement required whose correlation lies outside the store's thread alphabet, and one record to the second recipient. Record that each is `succeeded`, that the store assigned an id, and that the outside-alphabet correlation round-trips through the stored thread id.
-5. List the recipient's records without options. Record the argument vector, that the store accepted it, that every listed record is unread, the response shape each record carries, and that each record sent with an acknowledgement required reads back with `ackRequired` true.
-6. List the recipient's records with the all-records option, with bodies, and with a limit. Record that the store accepted each vector and that the response shape parses.
-7. Wait for the recipient with an `afterId` below the first sent id and a short timeout. Record the `received` outcome. Wait again with an `afterId` equal to the last sent id and record the `timeout` outcome.
-8. List the recipient's records unjudged, then again, and record that neither listing, nor either wait, changed any record's read state.
-9. Read the first record as the recipient through the adapter's read operation. Record that the store accepted the vector, that the read state of that record changed for the recipient, and that the store's acknowledgement listing for the recipient shows that record still pending.
-10. Acknowledge the second record as the recipient through the adapter's acknowledge operation. Record that the store accepted the vector and that the store's acknowledgement listing for the recipient shows that record acknowledged.
-11. List the recipient's records unjudged and with the all-records option. Record that the read record and the acknowledged record leave the unjudged listing and remain in the complete listing, and that a record whose acknowledgement status is owed or given reads back with `ackRequired` true.
-12. Submit a request carrying a text argument with a NUL byte, a correlation whose written thread id exceeds 128 characters, and a request that does not parse. Record that each is rejected before any store command runs, with the versioned result shape.
-13. Retain the request, the adapter result, and the store's raw response for every step as structured output beside this file, with the fixtures from step 2.
+4. Register the observer through the register operation with no label, then list the registrations through the adapter's registrations operation. Record the argument vector, that the store accepted it, that the result is `succeeded`, that it lists the sender, the recipient, the second recipient, and the observer, each with the label it registered and the observer's label `null`, and that the store's raw listing writes the label of each labelled registration and none for the observer. Retain the store's raw listing as the agent-listing response fixture.
+5. Send one record from the sender to the recipient with an acknowledgement required, one record with an acknowledgement required whose correlation lies outside the store's thread alphabet, and one record to the second recipient. Record that each is `succeeded`, that the store assigned an id, and that the outside-alphabet correlation round-trips through the stored thread id.
+6. List the recipient's records without options. Record the argument vector, that the store accepted it, that every listed record is unread, the response shape each record carries, and that each record sent with an acknowledgement required reads back with `ackRequired` true.
+7. List the recipient's records with the all-records option, with bodies, and with a limit. Record that the store accepted each vector and that the response shape parses.
+8. Wait for the recipient with an `afterId` below the first sent id and a short timeout. Record the `received` outcome. Wait again with an `afterId` equal to the last sent id and record the `timeout` outcome.
+9. List the recipient's records unjudged, then again, and record that neither listing, nor either wait, changed any record's read state.
+10. Read the first record as the recipient through the adapter's read operation. Record that the store accepted the vector, that the read state of that record changed for the recipient, and that the store's acknowledgement listing for the recipient shows that record still pending.
+11. Acknowledge the second record as the recipient through the adapter's acknowledge operation. Record that the store accepted the vector and that the store's acknowledgement listing for the recipient shows that record acknowledged.
+12. List the recipient's records unjudged and with the all-records option. Record that the read record and the acknowledged record leave the unjudged listing and remain in the complete listing, and that a record whose acknowledgement status is owed or given reads back with `ackRequired` true.
+13. Submit a request carrying a text argument with a NUL byte, a correlation whose written thread id exceeds 128 characters, and a request that does not parse. Record that each is rejected before any store command runs, with the versioned result shape.
+14. Retain the request, the adapter result, and the store's raw response for every step as structured output beside this file, with the fixtures from steps 2 and 4.
 
 ## Attested run
+
+The run below predates step 4, so it attests no registrations listing, and the agent-listing fixtures await the next attested run.
 
 - Date: 2026-10-25
 - Subject: the adapter at `src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py` and the doorbell script at committed head `02b557b2a3dae8a9131e66a34abb948cb577672c`, run from a scratch Git repository, with every request written to a scratch file and submitted through the input redirect.
