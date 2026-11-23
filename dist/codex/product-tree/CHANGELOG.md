@@ -10,6 +10,17 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.17
+
+### Added
+
+- **`manage-change` records the decision to work on a Submitted Change.** `/manage-change work <reference>` writes Lifecycle `Available` on an open Submitted Change, keeps its assignee, and posts no Transition comment, since the decision is no Transition. It acts only on the Operator's own words in the session's conversation, or for a delegate whose grant names the decision, and no mail, Handoff, or comment stands in for either. A decision against the Change remains the `abandoned` Transition.
+
+### Changed
+
+- **An advance takes an Available Change.** `manage-change` advances a Change to Framed or Sliced while it stands Available, and `submit` takes a Change that waits for the decision whether it is worked on. A Refiner no longer submits a Change for an advance.
+- **Every Change records as Submitted, a Child included, with no Priority.** `author-change` and its templates record a Child as `Submitted` for its own Priority decision. `publish.py` no longer copies the Parent's Priority onto a recorded Child, and the form check fails a recording Draft whose `lifecycle` is not `Submitted` under `draft-lifecycle`. `change-standards` states the new `lifecycle`, `priority`, `submit` and `advance` rows and the `work-decision` rule.
+
 ## 0.115.16
 
 ### Changed
