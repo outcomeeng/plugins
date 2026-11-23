@@ -75,3 +75,13 @@ The `sealed-run-verdict` assertion in `apply.md` and the `/apply` gate steps rea
 **Impact.** The row stays true, because the Operator may still review, but it omits the delegate, so the spec reads narrower than the decision that governs it.
 
 **Settlement condition.** The `decision-line-repair` row names the review of the Operator, or of the delegate of the advance to Sliced, as the decision does.
+
+## `sync-before-verification` syncs before every verification step `spx/21-product-tree.enabler/65-apply.enabler/apply.md` `sync-before-verification` `consistency`
+
+**Evidence:** `apply.md` row `sync-before-verification` has the apply lifecycle invoke `/sync-base` before every deterministic verification command and every Verifier dispatch, and treat a Verifier's `stale-base` block as no verdict. That contradicts `no-own-account-sync` of [`spx/15-merging.pdr.md`](spx/15-merging.pdr.md), under which no deterministic verification command and no Verifier dispatch runs `/sync-base` on its own account, and `sync-timing`, under which a session syncs at pickup or for a named reason only. The current-head CI review of pull request 804, at head `745efa7c9232f4b572c8f20c3f2aa4deb0963359`, raised it as a `BLOCKING` `consistency` finding.
+
+**Impact:** A reader of the apply Node finds a per-step sync that its governing decision forbids. Each sync on a behind-base head takes in base changes the work has not judged and reopens evidence the work already holds.
+
+**Separate larger concern:** The row states what the `/apply` skill does, and the skill's per-step sync and its `stale-base` handling stand in its workflow and references. Restating the row alone would leave the skill contradicting its own spec. The fix spans the Node's spec, its skill and their verification, which reach beyond the decision text that changed.
+
+**Settlement condition:** `sync-before-verification` has the apply lifecycle run `/sync-base` only at pickup or for a named reason, and record the result of the latest run in the readiness record.
