@@ -10,6 +10,20 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.16
+
+### Changed
+
+- **`contextualize` loads the Work Context of methodology 4.0 in a named mode.** The caller names Routine or Authoring, and a call that names none takes Authoring. Both modes load these members:
+  - the Product spec and every ancestor spec at Complete;
+  - each lower-Index sibling spec at Declaration;
+  - every governing Decision Record at Complete, where an ancestor level keeps only the records indexed below the child the path continues through, plus cited records;
+  - every `ISSUES.md` on the path;
+  - the target spec with its Outcome record and Knowledge `index.md`;
+  - linked contract files and pinned implementation files.
+
+  Routine lists same-Index and higher-Index siblings without reading them. Authoring adds the immediate children at Declaration and those siblings at Opening. The manifest lists every member in one total read order with its view, and names the mode, the derivation and the methodology source and version from `spx config show --json`. A repository that declares a methodology before 4.0 keeps the 3.x walk. Before this change, the skill read every ancestor Decision Record and each lower-index sibling spec whole, and named no mode or view.
+
 ## 0.115.15
 
 ### Fixed
