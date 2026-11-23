@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.13
+
+### Changed
+
+- **`manage-change` makes an advance to Framed or Sliced for the delegate of that advance.** A Position whose authorization grant in the grant record names the advance, for the Change's Product or for every Product of the Change Store, makes it beside the Operator. `manage-change` finds the grant record, the `orchestration.md` beside the store owner's `orchestration.toml` under `${XDG_CONFIG_HOME:-$HOME/.config}/engineering.outcome/`, reads the grant from it alone, and refuses every other Position. `change-standards` states the delegate term and gives the delegate of an advance the judgment at Framed and the review before Sliced, and the Operator alone keeps the lowering for a reopened judgment, the Abandoned close, and the Parent's Applied close.
+
 ## 0.115.12
 
 ### Changed

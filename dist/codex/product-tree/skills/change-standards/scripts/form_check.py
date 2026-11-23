@@ -1508,7 +1508,7 @@ def check_store(
                     context.add(
                         Rule.OPERATOR_BOUND_BASE,
                         heading,
-                        f"the new base changes {heading}, which the Operator's review binds; the former base {old_base} {'no longer resolves' if unresolved else 'reads it differently'}",
+                        f"the new base changes {heading}, which the review before the advance to Sliced binds; the former base {old_base} {'no longer resolves' if unresolved else 'reads it differently'}",
                     )
 
 
