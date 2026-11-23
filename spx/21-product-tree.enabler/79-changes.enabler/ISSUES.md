@@ -47,3 +47,11 @@
 **Impact.** A publish that writes the body can record a Base older than the default branch's head. Every later review and audit then judges the Declarations against a commit that is no longer the head they were written against.
 
 **Settlement condition.** The form check reports `draft-base` on a publish that writes the body when its `base` differs from the head of the fetched default branch, and admits it when the two agree.
+
+## A release from a detached checkout stops where release-own-branch states no case `spx/21-product-tree.enabler/79-changes.enabler/changes.md` `release-own-branch` `consistency`
+
+**Evidence:** The CI review of https://github.com/outcomeeng/plugins/pull/809 at head `b21883278d56af338d8d3952465adbed6cb4c251` raised a `DEBT` finding in category consistency. Step 5 of `manage-change` stops a release, before any push, when "the checkout is detached at commits that all carry this Change's reference". `release-own-branch` splits only "the branch the checkout holds" by the commits ahead of the default branch, and it states no case for a detached checkout, which holds no branch. The Plugins Maintainer accepted the finding: the stop pushes nothing, so it keeps the row's "only" and the NEVER of `release-no-branch`. Stating the detached input in the row reopens the Frame the Methodology Director settled for outcomeeng/changes#826.
+
+**Impact:** The Audit of `release-own-branch` cannot tell whether a release from a detached checkout should stop or push, so it would not catch a skill that pushes there.
+
+**Settlement condition:** `release-own-branch` states what a release does from a detached checkout whose commits ahead of the default branch all carry this Change's reference, and step 5 of `manage-change` does what the row states.
