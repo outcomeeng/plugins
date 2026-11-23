@@ -103,7 +103,7 @@ A lower adds `reason: <one sentence>`. A release adds:
 
 ```yaml
 handoff:
-  branch: <pushed work branch, or none>
+  branch: <the Change's own pushed work branch, or none when the Change has no work branch of its own>
   head: <full head commit SHA of that branch, or of the default branch for none>
   next: <the path of the next Declarations subsection, or the next Refinement step>
   completed: [<the path of each completed subsection>]
@@ -118,7 +118,7 @@ handoff:
   ]
 ```
 
-`branch`, `head`, and `next` are required; `completed`, `blockers`, and `hazards` appear when they hold an entry. An applied Transition of a Leaf adds `changeset: <owner/repo>@<merge commit SHA>`. No other key, no prose outside `reason`, no party on whose behalf the holder acts, and no words of the Operator appear in the block. Resolve `session` from the harness's session variable, `machine` from `id -un` and `hostname -s`, and `worktree` from `git rev-parse --show-toplevel`.
+The Change's own work branch is the branch its newest Handoff names or the work branch the releasing session commits its work on, never a branch the worktree is attached to for another Change. `branch`, `head`, and `next` are required; `completed`, `blockers`, and `hazards` appear when they hold an entry. An applied Transition of a Leaf adds `changeset: <owner/repo>@<merge commit SHA>`. No other key, no prose outside `reason`, no party on whose behalf the holder acts, and no words of the Operator appear in the block. Resolve `session` from the harness's session variable, `machine` from `id -un` and `hostname -s`, and `worktree` from `git rev-parse --show-toplevel`.
 
 </transition_comment>
 

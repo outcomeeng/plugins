@@ -234,7 +234,7 @@ Transition log:
 - `log-closed`: the block holds no other key and no prose outside `reason`.
 - `log-no-authority`: nobody reads authority from a Transition comment, and no party on whose behalf the holder acts and no words of the Operator appear in it.
 
-A Handoff is the latest continuation a holder persists: the active branch or Changeset, its head commit, the completed Declarations subsections, the next subsection, blockers, and hazards, each subsection by its path. It holds only what the next holder cannot derive quickly from the Change, the Product Tree, the repository, and the Changeset history.
+A Handoff is the latest continuation a holder persists: the Change's own pushed work branch or Changeset, or `none` with the head of the default branch when the Change has no work branch of its own, its head commit, the completed Declarations subsections, the next subsection, blockers, and hazards, each subsection by its path. It holds only what the next holder cannot derive quickly from the Change, the Product Tree, the repository, and the Changeset history.
 
 </transitions>
 
