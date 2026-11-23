@@ -45,8 +45,13 @@ CAN write, check, and audit every Change record in one form
 - form-check-rules: The form check fails a Draft for each breach of these rules of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md), and names the slug of the rule each finding breaks: record-keys, record-body, statement-of-intent, subsection-headings, payloads, headers, diff-lines, body-lines-only, no-tag, plain-slug, table-case, front-matter-block, no-index, depends-on-form, precedes-form, new-path-reference, move-reads, one-payload, fence, no-mode, operation-kinds, spec-deletion, one-subsection-per-file, new-sibling-names, slug-rename, path-naming, infrastructure-line, replaced-assertion, infrastructure-form, infrastructure-exists, spec-node-none, none-leaf, one-product, draft-lifecycle, draft-base, size-limit, stale-revision, operator-bound-base, and one-home.
 - form-check-reads-only: NEVER: the form check writes a file or the Change Store.
 
+### Audit: change-standards on the decision to work
+
+- standards-work-decision: change-standards states that the record of a decision to work on a Submitted Change writes its Lifecycle Available and keeps its holder, and is no Transition, as work-decision of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states it.
+
 ### Audit: author-change
 
+- author-record-submitted: author-change records every Change, a Child included, as Submitted, and writes no Priority, Value, or Investment at recording, as record-keys of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states it.
 - author-publish: author-change records a Change, publishes a revision of its record, and splits a Leaf, each from a Change Draft, and writes each part of the record to its home in the GitHub issue, as the github-store Mapping of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states them.
 - author-trace: Before each publish at Framed or Sliced, author-change traces each result the Verification part of the Statement of Intent names to the Declarations line that carries it, and repairs the record for each result no line carries.
 - author-audit-dispatch: author-change dispatches change-auditor for a Sliced Leaf, with the issue reference of its record and the checkout root, and the holder advances the Leaf to Applicable only when the sealed run of that audit holds no finding at the current Base of the record.
@@ -64,6 +69,7 @@ CAN write, check, and audit every Change record in one form
 
 ### Audit: manage-change
 
+- manage-work-decision: manage-change records a decision to work on a Submitted Change only on the explicit direction of the Operator or of a delegate: it writes Lifecycle Available, keeps the assignee, posts no Transition comment, and refuses a Change that is not open and Submitted, naming the state it found.
 - manage-transitions: manage-change makes each of the seven Transitions on one Change, one subcommand per Transition, as the transitions Mapping of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) states them.
 - manage-requires: manage-change refuses a Transition on a Change that does not stand in the state the transitions Mapping requires, and names the state it found.
 - manage-actors: manage-change makes a Transition only for the actor transition-actor of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) names for it, and refuses every other caller.
