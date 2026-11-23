@@ -29,7 +29,7 @@ Run the form check as `<form_check>` states before every publish it covers.
 - **Base**: the commit the `base` field names.
 - **Transition**: one of the seven moves of a Change: claim, release, submit, advance, lower, applied, and abandoned.
 - **Leaf** and **Parent**: a Change is a Parent when another record names it as its `parent`, and a Leaf otherwise.
-- **Operator**: the person who owns the Product's judgment; only the Operator makes the moves `<maturity>` and `<transitions>` reserve to the Operator.
+- **Operator**: the person who owns the Product's judgment; only the Operator makes the moves `<maturity>` and `<transitions>` reserve to the Operator, except an advance to Framed or Sliced, which the Operator or the delegate of that advance makes, as `transition-actor` states.
 - **Delegate**: a Position whose authorization grant in the grant record names an act for a Product, or for every Product of a Change Store, and which holds exactly that act; the delegate of an advance to Framed or Sliced makes that advance as the Operator would.
 - **Refiner**: the holder during Refinement. **Applier**: the holder during Application.
 - **Mechanical repair**: a fix of a finding that changes no behavior or decision: a path or link, a typo, a wording the finding states, or a renamed identifier, never Decision Record text.

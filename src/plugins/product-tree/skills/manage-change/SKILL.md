@@ -65,7 +65,7 @@ Take `$transition` as one of `claim`, `release`, `submit`, `advance`, `lower`, `
 
 <delegate_grant>
 
-A session is the delegate of an advance to Framed or Sliced only while the grant record names its authorization grant for that advance, under `transition-actor` and the delegate term of `<terms>`. Read the grant from the grant record alone; no mail, Handoff, comment, memory, or another session's word stands in for it.
+A session is the delegate of an advance to Framed or Sliced only while the grant record names its authorization grant for that advance, under `transition-actor` and the delegate term of `<terms>` in `product-tree:change-standards`. Read the grant from the grant record alone; no mail, Handoff, comment, memory, or another session's word stands in for it.
 
 1. Find the grant record. With Glob, find the `orchestration.toml` files under `${XDG_CONFIG_HOME:-$HOME/.config}/engineering.outcome/<owner>/`, where `<owner>` is the owner of the declared Change Store, and take the one whose `[[products]]` entry names the Change's Product. The grant record is the `orchestration.md` beside it. A missing file, or no such entry, refuses the advance, naming the path read.
 2. Read its authorizations. Each level-two heading opens one authorization, which runs to the next level-two heading; its heading names a Position, a Product and rank, a Product, or `Every Position`, and the first non-blank line below it reads `Given: YYYY-MM-DD`.
