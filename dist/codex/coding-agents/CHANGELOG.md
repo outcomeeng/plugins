@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.21.2
+
+### Added
+
+- **`/operate-agent-mail` lists the registrations of a mail project.** The `registrations` operation takes only the optional `repository` and returns `data.registrations`, one entry per registration with its stable `agent` name and its label as `displayName`, `null` when the registration has none. It changes no registration, record, or read state. A caller that resolves an agent's mail name to its registration reads it through this operation, without constructing an `am` command.
+
 ## 0.21.1
 
 ### Changed

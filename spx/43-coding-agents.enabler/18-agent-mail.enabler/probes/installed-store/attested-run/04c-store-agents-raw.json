@@ -1,0 +1,50 @@
+{
+  "step": "04c-store-agents-raw",
+  "startedUtc": "2026-11-23T07:37:20.203943+00:00",
+  "command": "am agents list --project /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo/.git --json",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo",
+  "request": null,
+  "exitCode": 0,
+  "result": [
+    {
+      "name": "AmberHeron",
+      "program": "claude-code",
+      "model": "opus-5-5",
+      "task_description": "installed-store probe",
+      "inception_ts": "2026-11-23T07:37:19.996915Z",
+      "last_active_ts": "2026-11-23T07:37:19.996915Z",
+      "contact_policy": "auto"
+    },
+    {
+      "name": "SilverOtter",
+      "program": "claude-code",
+      "model": "opus-5-5",
+      "task_description": "installed-store probe",
+      "inception_ts": "2026-11-23T07:37:19.781627Z",
+      "last_active_ts": "2026-11-23T07:37:19.781627Z",
+      "contact_policy": "auto",
+      "display_name": "Store Recipient Two"
+    },
+    {
+      "name": "SilverFinch",
+      "program": "claude-code",
+      "model": "opus-5-5",
+      "task_description": "installed-store probe",
+      "inception_ts": "2026-11-23T07:37:19.565293Z",
+      "last_active_ts": "2026-11-23T07:37:19.565293Z",
+      "contact_policy": "auto",
+      "display_name": "Store Recipient"
+    },
+    {
+      "name": "CopperFinch",
+      "program": "claude-code",
+      "model": "opus-5-5",
+      "task_description": "installed-store probe",
+      "inception_ts": "2026-11-23T07:37:19.388043Z",
+      "last_active_ts": "2026-11-23T07:37:19.388043Z",
+      "contact_policy": "auto",
+      "display_name": "Store Sender"
+    }
+  ],
+  "stderr": ""
+}

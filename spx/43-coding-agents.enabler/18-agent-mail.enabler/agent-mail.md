@@ -5,7 +5,7 @@ malleability: spec
 
 # Agent Mail
 
-PROVIDES a source-owned capability over the agent-mail store — registration, send, list, read, acknowledge, and wait — keyed by the repository itself
+PROVIDES a source-owned capability over the agent-mail store — registration, the registrations listing, send, list, read, acknowledge, and wait — keyed by the repository itself
 SO THAT coding-agent communication and orchestration workflows
 CAN deliver and read message records between positively identified agent sessions without constructing raw mail commands or resolving the project key themselves
 
@@ -17,6 +17,7 @@ This capability is an agent adapter: the configured way the agent harness lets o
 
 ### Mappings
 
+- [registrations-listed](tests/test_agent_mail.mapping.l1.py): A registrations request maps to the store's agent-listing command under the project key of the repository it names, and the store's captured agent listing maps to each registration's stable name and label verbatim, null included, and no label selects a target
 - Every operation accepts an optional `repository`; a request naming one maps to the same store command under that repository's project key, the result's project key equals that key, and the project-key form given a repository answers that repository's key ([test](tests/test_agent_mail.mapping.l1.py))
 - Registration, send, list, read, and acknowledge each map one source-owned request shape to one store command and checked result, and wait maps one source-owned request shape to listing commands bounded by its timeout and one checked result; a registration request carries an optional display name that maps to the store's display name, an absent display name passes no display-name argument, a blank display name passes through as an empty value that clears the label, and every checked result preserves the store's labels verbatim beside its message, thread, and agent identities ([test](tests/test_agent_mail.mapping.l1.py))
 - A wait request carrying an id and a timeout maps to the first record addressed to the requester whose store id exceeds that id, read or unread, carried as a listed record; to the named timeout result when no such record is present before the timeout; and to the named unreachable result when the listing cannot reach back to the id ([test](tests/test_agent_mail.mapping.l1.py))
@@ -33,6 +34,7 @@ This capability is an agent adapter: the configured way the agent harness lets o
 
 ### Scenarios
 
+- [registrations-reachability](tests/test_agent_mail.scenario.l1.py): Given the store's agent listing captured under outcomeeng_testing/fixtures/agent_mail/, when the registrations operation runs on a runner that answers with that capture, then its result lists each registration's stable name and label and no command it runs writes to the store, under the request and result names the adapter exports
 - Against the installed native `am` carrying position labels, a registration with a label followed by send, list, and doorbell shows the label on each surface, and a send right after startup and right after a label change authenticates ([probe](probes/position-labels/probe.md))
 - ALWAYS: for every operation, the argument vector the adapter builds is accepted by the installed store, and every response the adapter parses is a shape that store emits ([probe](probes/installed-store/probe.md))
 

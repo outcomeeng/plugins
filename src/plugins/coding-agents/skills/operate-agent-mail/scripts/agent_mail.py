@@ -29,6 +29,7 @@ AM_COMMAND = "am"
 GIT_COMMAND = "git"
 AGENTS_COMMAND = "agents"
 REGISTER_COMMAND = "register"
+LIST_COMMAND = "list"
 MAIL_COMMAND = "mail"
 SEND_COMMAND = "send"
 ACK_COMMAND = "ack"
@@ -113,6 +114,9 @@ STORE_ACK_REQUIRED_STATUSES = frozenset(
     }
 )
 STORE_INBOX_FIELD = "inbox"
+# The store answers its agent listing with a JSON array, and a result's
+# response is an object, so the result carries that array under this key.
+STORE_LISTING_FIELD = "listing"
 # The store's thread alphabet: an alphanumeric first character, then letters,
 # digits, `.`, `_`, or `-`, at most this many characters in all. A correlation
 # outside it, or beginning with the escape prefix, is written as the prefix
@@ -153,6 +157,7 @@ TASK_FIELD = "task"
 DISPLAY_NAME_FIELD = "displayName"
 RECORD_FIELD = "record"
 RECORDS_FIELD = "records"
+REGISTRATIONS_FIELD = "registrations"
 MESSAGE_ID_FIELD = "messageId"
 AFTER_ID_FIELD = "afterId"
 TIMEOUT_SECONDS_FIELD = "timeoutSeconds"
@@ -220,6 +225,7 @@ RECORD_TEXT_FIELDS = (
 
 class Operation(StrEnum):
     REGISTER = "register"
+    REGISTRATIONS = "registrations"
     SEND = "send"
     LIST = "list"
     READ = "read"
@@ -308,6 +314,9 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
             ),
         )
     ),
+    Operation.REGISTRATIONS: OperationContract(
+        (RequestShape(frozenset(), frozenset({REPOSITORY_FIELD})),)
+    ),
     Operation.SEND: OperationContract(
         (RequestShape(frozenset({RECORD_FIELD}), frozenset({REPOSITORY_FIELD})),)
     ),
@@ -353,6 +362,7 @@ OPERATION_CONTRACTS: Final[Mapping[Operation, OperationContract]] = {
 }
 PUBLIC_AM_COMMAND_PREFIXES: Final[Mapping[Operation, tuple[str, ...]]] = {
     Operation.REGISTER: (AM_COMMAND, AGENTS_COMMAND, REGISTER_COMMAND),
+    Operation.REGISTRATIONS: (AM_COMMAND, AGENTS_COMMAND, LIST_COMMAND),
     Operation.SEND: (AM_COMMAND, MAIL_COMMAND, SEND_COMMAND),
     Operation.LIST: (AM_COMMAND, ROBOT_COMMAND, INBOX_COMMAND),
     Operation.READ: (AM_COMMAND, MAIL_COMMAND, READ_COMMAND),
@@ -362,7 +372,13 @@ PUBLIC_AM_COMMAND_PREFIXES: Final[Mapping[Operation, tuple[str, ...]]] = {
 # Operations whose public command emits JSON on `--json`; read and acknowledge
 # print text.
 JSON_OPERATIONS = frozenset(
-    {Operation.REGISTER, Operation.SEND, Operation.LIST, Operation.WAIT}
+    {
+        Operation.REGISTER,
+        Operation.REGISTRATIONS,
+        Operation.SEND,
+        Operation.LIST,
+        Operation.WAIT,
+    }
 )
 PUBLIC_AM_ARGUMENT_OPTIONS: Final[Mapping[str, str]] = {
     AGENT_FIELD: AGENT_OPTION,
@@ -1230,7 +1246,9 @@ def command_for(request: object, project_key: str) -> tuple[str, ...]:
             )
         if fields[STORE_ACK_REQUIRED_FIELD] is True:
             command.append(PUBLIC_AM_RECORD_OPTIONS[ACK_REQUIRED_FIELD])
-    else:
+    elif operation is not Operation.REGISTRATIONS:
+        # The agent listing takes the project alone; every other operation
+        # names the agent it acts for.
         command.append(
             attached_option(
                 PUBLIC_AM_ARGUMENT_OPTIONS[AGENT_FIELD], arguments[AGENT_FIELD]
@@ -1400,12 +1418,49 @@ def _failure_result(
     return validate_operation_result(result)
 
 
-def _scrubbed(payload: dict[str, object]) -> dict[str, object]:
+def _without_token(entry: dict[str, object]) -> dict[str, object]:
     return {
         key: value
-        for key, value in payload.items()
+        for key, value in entry.items()
         if key != STORE_REGISTRATION_TOKEN_FIELD
     }
+
+
+def _scrubbed(payload: dict[str, object]) -> dict[str, object]:
+    """The store's response with the registration token removed from the
+    response itself and from every entry of an agent listing it carries."""
+    scrubbed = _without_token(payload)
+    listing = scrubbed.get(STORE_LISTING_FIELD)
+    if isinstance(listing, list):
+        scrubbed[STORE_LISTING_FIELD] = [
+            _without_token(entry) if isinstance(entry, dict) else entry
+            for entry in listing
+        ]
+    return scrubbed
+
+
+def _registration(entry: object, location: str) -> dict[str, object]:
+    """One registration of the store's agent listing: its stable name and its
+    label verbatim, null when the store records none."""
+    value = _object(entry, location)
+    label = value.get(STORE_DISPLAY_NAME_FIELD)
+    if label is not None:
+        label = _string(label, f"{location}.{STORE_DISPLAY_NAME_FIELD}")
+    return {
+        AGENT_FIELD: _text(
+            value.get(STORE_NAME_FIELD), f"{location}.{STORE_NAME_FIELD}"
+        ),
+        DISPLAY_NAME_FIELD: label,
+    }
+
+
+def _response_for(operation: Operation, stdout: str) -> dict[str, object]:
+    """The store's JSON answer as a result's response object: the agent listing's
+    array under its key, every other answer as the object the store printed."""
+    payload = json.loads(stdout)
+    if operation is Operation.REGISTRATIONS:
+        return {STORE_LISTING_FIELD: _array(payload, RESPONSE_FIELD)}
+    return _object(payload, RESPONSE_FIELD)
 
 
 def _data_for(
@@ -1417,6 +1472,15 @@ def _data_for(
         return {
             AGENT_FIELD: _text(response.get(STORE_NAME_FIELD), STORE_NAME_FIELD),
             RECORD_ID_FIELD: response.get(STORE_ID_FIELD),
+        }
+    if operation is Operation.REGISTRATIONS:
+        return {
+            REGISTRATIONS_FIELD: [
+                _registration(entry, f"{STORE_LISTING_FIELD}[{index}]")
+                for index, entry in enumerate(
+                    _array(response.get(STORE_LISTING_FIELD), STORE_LISTING_FIELD)
+                )
+            ]
         }
     if operation is Operation.SEND:
         record = validate_record(arguments[RECORD_FIELD], with_id=False)
@@ -1619,7 +1683,7 @@ def execute(
         )
     if operation in JSON_OPERATIONS:
         try:
-            response = _object(json.loads(result.stdout), RESPONSE_FIELD)
+            response = _response_for(operation, result.stdout)
         except (json.JSONDecodeError, AgentMailError) as error:
             return _failure_result(
                 operation.value,

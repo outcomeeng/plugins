@@ -1025,14 +1025,21 @@ def label_collision_variant(
 
 
 def _captured_stable_names(module: ModuleType) -> frozenset[str]:
-    """Every stable name the captured responses carry."""
+    """Every stable name the captured responses carry: an object response, the
+    rows of its inbox, and each registration of the agent listing, which the
+    store answers with an array."""
     names: set[str] = set()
     for path in sorted(RESPONSE_FIXTURE_ROOT.glob("*.json")):
-        payload = cast(dict[str, object], json.loads(path.read_text(encoding="utf-8")))
-        for entry in (
-            payload,
-            *cast(list[dict[str, object]], payload.get("inbox", [])),
-        ):
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        entries = (
+            cast(list[dict[str, object]], payload)
+            if isinstance(payload, list)
+            else [
+                cast(dict[str, object], payload),
+                *cast(list[dict[str, object]], payload.get("inbox", [])),
+            ]
+        )
+        for entry in entries:
             for field_name in (module.STORE_NAME_FIELD, module.STORE_FROM_FIELD):
                 if isinstance(entry.get(field_name), str):
                     names.add(cast(str, entry[field_name]))

@@ -1,27 +1,28 @@
 ---
 name: operate-agent-mail
 description: >-
-  ALWAYS invoke this skill when a workflow registers a mail identity, sends a message record, lists a recipient's records, reads or acknowledges one message, or waits for a later record in the agent-mail store. NEVER construct an `am` command or derive the mail project key without this skill.
+  ALWAYS invoke this skill when a workflow registers a mail identity, lists the registrations of a mail project, sends a message record, lists a recipient's records, reads or acknowledges one message, or waits for a later record in the agent-mail store. NEVER construct an `am` command or derive the mail project key without this skill.
 argument-hint: "<operation or JSON request>"
 allowed-tools: Write, Bash(python3 "${SKILL_DIR}/scripts/agent_mail.py":*)
 ---
 
 <objective>
-A versioned JSON agent-mail operation result — a registered identity, a delivered record with its store-assigned id, the recipient's listed records, the message a read or an acknowledgement judged, or the first later record or a named timeout or unreachable outcome of a bounded wait — under the project key of the store the operation acted on, or that key alone as an unversioned `projectKey` answer, with every store identity preserved verbatim.
+A versioned JSON agent-mail operation result — a registered identity, the project's registrations with their labels, a delivered record with its store-assigned id, the recipient's listed records, the message a read or an acknowledgement judged, or the first later record or a named timeout or unreachable outcome of a bounded wait — under the project key of the store the operation acted on, or that key alone as an unversioned `projectKey` answer, with every store identity preserved verbatim.
 </objective>
 
 <operation_surface>
 
 The source-owned request operations, each submitted as a JSON request to `run`:
 
-| Operation     | Arguments                                                   | Result data                                                               |
-| ------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `register`    | `agent`, `program`, `model`; optional `task`, `displayName` | the registered `agent` name and store id                                  |
-| `send`        | `record`                                                    | the `record` with its store-assigned `id`                                 |
-| `list`        | `agent`; optional `allRecords`, `includeBodies`, `limit`    | `records` listed for that recipient                                       |
-| `read`        | `agent`, `messageId`                                        | the `agent` and `messageId` the recipient judged                          |
-| `acknowledge` | `agent`, `messageId`                                        | the `agent` and `messageId` the sender can now see judged                 |
-| `wait`        | `agent`, `afterId`, `timeoutSeconds`                        | an `outcome` of `received` with the `record`, `timeout`, or `unreachable` |
+| Operation       | Arguments                                                   | Result data                                                               |
+| --------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `register`      | `agent`, `program`, `model`; optional `task`, `displayName` | the registered `agent` name and store id                                  |
+| `registrations` | none                                                        | `registrations`, each with its stable `agent` name and its `displayName`  |
+| `send`          | `record`                                                    | the `record` with its store-assigned `id`                                 |
+| `list`          | `agent`; optional `allRecords`, `includeBodies`, `limit`    | `records` listed for that recipient                                       |
+| `read`          | `agent`, `messageId`                                        | the `agent` and `messageId` the recipient judged                          |
+| `acknowledge`   | `agent`, `messageId`                                        | the `agent` and `messageId` the sender can now see judged                 |
+| `wait`          | `agent`, `afterId`, `timeoutSeconds`                        | an `outcome` of `received` with the `record`, `timeout`, or `unreachable` |
 
 One further form answers outside the request shape, so it takes no JSON request and the request-building steps of `<workflow>` do not reach it. A `run` request naming it is rejected as `operation-unavailable`; its command is in `<invocation_forms>`.
 
@@ -36,11 +37,11 @@ The record and its delivery rules:
 - **Fields.** A `record` carries exactly `schema` (`1`), `kind`, `correlation`, `sender`, `recipient`, `subject`, `body`, and `ackRequired`; the store assigns `id` on delivery.
 - **Kinds a sender writes.** `order`, `fact`, `question`, `answer`, `delegation-request`, and the four terminal handbacks `delegation-completed`, `delegation-failed`, `delegation-rejected`, and `delegation-unavailable`. On read-back the adapter reports each record's kind as one of those or as `unclassified`, and `subject` carries the text to use in either case. Never derive a kind from a subject: the adapter owns the prefix it writes and the conditions a row meets to classify, and a row missing any of them reads as `unclassified` with its subject verbatim.
 - **Mapping.** The adapter maps `correlation` onto the store's thread, `kind` onto a subject prefix, and `ackRequired` onto the store's acknowledgement requirement, and reads each back; a store limit never shapes the record. A correlation the store's thread alphabet rejects — one with a character outside letters, digits, `.`, `_`, and `-`, a non-alphanumeric first character, or the prefix `xc-` — travels as an `xc-` escape the adapter writes and reads back to the original correlation, so any correlation round-trips. A correlation whose written thread id would exceed 128 characters is rejected as `invalid-schema` before any command runs, and so is any text argument carrying a NUL byte.
-- **Read state.** Only `read` and `acknowledge` change a record's read state. `list` and `wait` change none, so looking at records never judges them. `read` records, visibly to the recipient alone, that the recipient judged one message. `acknowledge` is a read the sender can observe. Neither stands in for the other: use `read` for a private judgment and `acknowledge` only when the sender is meant to see it.
+- **Read state.** Only `read` and `acknowledge` change a record's read state. `list`, `wait`, and `registrations` change none, so looking at records never judges them, and `registrations` changes no registration either. `read` records, visibly to the recipient alone, that the recipient judged one message. `acknowledge` is a read the sender can observe. Neither stands in for the other: use `read` for a private judgment and `acknowledge` only when the sender is meant to see it.
 - **List.** `list` returns the records the recipient has not yet judged; with `allRecords` true it returns every record, read or unread. A request carrying `unreadOnly` is rejected as `invalid-schema`.
 - **One recipient.** `recipient` names one agent. A value carrying the store's `,` separator is rejected with `invalid-schema` before any command runs.
 - **Foreign rows.** A row another sender wrote reads back rather than failing the listing: without a thread it reads with `correlation: null`, classified by the kind rule above, and `ackRequired` is true for an acknowledgement status of `required`, `pending`, or `acked` and false for every other status. A thread id that is no escape the adapter writes reads back verbatim as `correlation`. A row without the store's `id`, `from`, or `subject` key is a malformed store response and fails the read as `invalid-schema`.
-- **Labels.** A position label is the display name the store records for an agent. `register` passes an optional `displayName` to the store as the agent's label and registers only the `agent` name the request supplies. A listed record, with or without a body, and a send result carry the store's `sender_display_name` verbatim in `response` beside the message, `null` when the sender has no label; a send result also carries `to_display_names`, which maps each recipient's stable name visible to the reader to its label. No label enters the `record`. A label names no target: `agent`, `sender`, and `recipient` take the stable name, and `messageId` takes the store id.
+- **Labels.** A position label is the display name the store records for an agent. `register` passes an optional `displayName` to the store as the agent's label and registers only the `agent` name the request supplies. A listed record, with or without a body, and a send result carry the store's `sender_display_name` verbatim in `response` beside the message, `null` when the sender has no label; a send result also carries `to_display_names`, which maps each recipient's stable name visible to the reader to its label. No label enters the `record`. `registrations` lists every registration of the project with its stable `agent` name and its label as `displayName`, `null` when the store records none. A label names no target: `agent`, `sender`, and `recipient` take the stable name, and `messageId` takes the store id.
 - **Wait.** `wait` lists the records of `agent` in the complete form, read and unread records alike, until a record whose store id exceeds `afterId` is present or `timeoutSeconds` passes. Pass the id of the last record handled, or `0` for none, so a run that ends at any point loses no record. `data.outcome` is `received` with the first such `record`, `timeout` when none arrived in time, or `unreachable` when the listing cannot reach back to `afterId`; the store's labels reach the result in `response` as for `list`. A request without `timeoutSeconds` is `invalid-schema` before any store command runs, `timeoutSeconds` is a whole number from 1 to 3600, and no store command outlives it. A wait keeps no cursor, state file, or lock, and changes no record's read state; judge a record with `read` or `acknowledge`. An `unreachable` outcome means the record after `afterId` cannot be told from the listing, so a later record is never returned in its place; reconcile with `list` and `allRecords`.
 - **Liveness.** No operation reports liveness, staleness, or session state, because the store's per-agent activity timestamp moves for reasons unrelated to a session being alive.
 - **Credential.** A registration leaves the credential the store keeps for that name, and the next send from that name authenticates through it. The store offers no separate credential command, so the adapter makes none and no step of this skill refreshes it.
@@ -135,6 +136,7 @@ The bundled adapter is covered over generated request, record, and repository-lo
 - a wait returns the first record past its id, read or unread, as a `received` outcome, a `timeout` outcome when none arrives, and an `unreachable` outcome for a full listing that does not reach back to the id, under a controlled clock;
 - `list` maps to the store's non-marking listing in its unjudged form, or its complete form with `allRecords`, and `read` and `acknowledge` each map to their own store command, never to each other's;
 - a list, a wait, and every operation other than `read` and `acknowledge` leave read state unchanged;
+- the captured agent listing maps to each registration's stable name and label, `null` included, through the store's agent-listing command alone;
 - a wait without a timeout runs no store command, no store command inside a wait is given more time than remains, and a wait leaves no cursor, state file, or lock and runs neither a read nor an acknowledgement command;
 - generated records round-trip through the store field mapping, including correlations the store's thread alphabet rejects, which round-trip through the `xc-` escape;
 - a correlation whose written thread id exceeds 128 characters and a text argument carrying a NUL byte are rejected before any store command runs;
@@ -167,6 +169,6 @@ The bundled adapter is covered over generated request, record, and repository-lo
 - No registration result carries the store's registration token.
 - A wait ends with exactly one of the named outcomes `received`, `timeout`, or `unreachable`, never with a record at or below its `afterId`.
 - A label the store returns reaches the result verbatim beside its message, and no target is selected by it.
-- A `list`, a `wait`, or any operation other than `read` and `acknowledge` leaves every record's read state as it found it.
+- A `list`, a `wait`, a `registrations` listing, or any operation other than `read` and `acknowledge` leaves every record's read state as it found it.
 
 </success_criteria>
