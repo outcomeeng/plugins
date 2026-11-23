@@ -25,8 +25,8 @@ Severity in the table labels the defect: `blocking` for a merge-safety defect an
 
 | Identifier          | Severity          | Rule                                                                                              | Stated in               |
 | ------------------- | ----------------- | ------------------------------------------------------------------------------------------------- | ----------------------- |
-| `constraint-unmet`  | `blocking`/`debt` | The subject the assertion names holds the constraint the assertion states.                        | `audit_workflow` Step 4 |
-| `subject-not-found` | `blocking`/`debt` | Every subject the assertion's text names can be located in the product.                           | `audit_workflow` Step 4 |
-| `subject-unnamed`   | `blocking`/`debt` | The assertion's text names an identifiable artifact, behavior, or constraint to judge it against. | `audit_workflow` Step 4 |
+| `constraint-unmet`  | `blocking`/`debt` | The subject the assertion names holds the constraint the assertion states.                        | `audit_workflow` Step 5 |
+| `subject-not-found` | `blocking`/`debt` | Every subject the assertion's text names can be located in the product.                           | `audit_workflow` Step 5 |
+| `subject-unnamed`   | `blocking`/`debt` | The assertion's text names an identifiable artifact, behavior, or constraint to judge it against. | `audit_workflow` Step 5 |
 
 </assertion_rules>

@@ -99,6 +99,10 @@ When the audit rejects bare literals, the verdict reports the positive pattern a
 
 ## Assertions
 
+### Audit: run recording
+
+- record-as-judged: ALWAYS: `/audit-tests` records the root unit as soon as the run starts, each other unit as soon as its judgment completes, and each finding on touched text as soon as it is raised and its unit is recorded, so no unit or finding waits for the judgment of a later unit
+
 ### Compliance
 
 - ALWAYS: given successful required language-concern composition, the language-neutral `/audit-tests` methodology inspects every artifact in a non-Python evidence chain before approval, rejects unsourced protocol vocabulary in imported test infrastructure, and records the transitive artifact and required ownership target in a finding of its sealed audit run ([eval](evals/full-chain-ownership/eval.toml))
