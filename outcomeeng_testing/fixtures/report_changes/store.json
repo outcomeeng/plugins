@@ -520,6 +520,43 @@
                 }
               },
               {
+                "number": 43,
+                "url": "https://github.com/example-org/example-changes/issues/43",
+                "title": "A Child awaiting its own Priority",
+                "state": "OPEN",
+                "assignees": {
+                  "nodes": []
+                },
+                "issueFieldValues": {
+                  "nodes": [
+                    {
+                      "name": "example-product",
+                      "field": {
+                        "name": "Product"
+                      }
+                    },
+                    {
+                      "name": "Proposed",
+                      "field": {
+                        "name": "Maturity"
+                      }
+                    },
+                    {
+                      "name": "Submitted",
+                      "field": {
+                        "name": "Lifecycle"
+                      }
+                    },
+                    {
+                      "value": 12,
+                      "field": {
+                        "name": "Parent"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
                 "number": 13,
                 "url": "https://github.com/example-org/example-changes/issues/13",
                 "title": "Blocked by a merge into an open Change",
@@ -1474,6 +1511,24 @@
       "changeset": "none",
       "waiting": [
         "blockers: 20"
+      ],
+      "next_action": "none recorded"
+    },
+    {
+      "number": 43,
+      "url": "https://github.com/example-org/example-changes/issues/43",
+      "title": "A Child awaiting its own Priority",
+      "product": "example-product",
+      "maturity": "Proposed",
+      "lifecycle": "Submitted",
+      "priority": null,
+      "holder": [],
+      "parent": 12,
+      "root": 12,
+      "blockers": [],
+      "changeset": "none",
+      "waiting": [
+        "waiting: Priority"
       ],
       "next_action": "none recorded"
     }

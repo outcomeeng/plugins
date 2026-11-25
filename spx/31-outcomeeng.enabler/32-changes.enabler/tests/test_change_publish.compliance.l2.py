@@ -5,7 +5,9 @@ A Draft that fails the form check writes nothing to the Change Store. A Draft
 that passes writes its title, body, Product, Parent, Predecessors, Base and
 blockers, clears each of them the Draft empties or leaves out, and leaves
 Priority, Maturity and Lifecycle as the store holds them; recording a new Change
-also writes its Maturity and Lifecycle. Each case runs the command against a
+also writes its Maturity and Lifecycle, Submitted for a Child too, and no
+Priority. A Child Draft that records as Available fails ``draft-lifecycle`` and
+writes nothing. Each case runs the command against a
 recording store and a synthetic checkout under ``tmp_path``. The test is ``l2``
 because the form check spawns ``git``.
 """
@@ -113,24 +115,39 @@ def test_a_publish_brings_the_blockers_to_the_draft(tmp_path: pathlib.Path) -> N
     assert deletes[0][2].endswith("/blocked_by/9006")
 
 
-def test_recording_a_child_writes_its_parents_priority(
+def test_recording_a_child_writes_submitted_and_no_priority(
     tmp_path: pathlib.Path,
 ) -> None:
     store = RecordingStore()
     code, _ = run_publish(
+        tmp_path, INTENT, store, issue=None, edits={"parent": f"{STORE}#26"}
+    )
+    lifecycle_writes = [
+        call
+        for call in store.writes()
+        if "f=F_lifecycle" in call and "v=O_submitted" in call
+    ]
+    assert code == 0
+    assert len(lifecycle_writes) == 1
+    assert "F_priority" not in store.mutations("setIssueFieldValue")
+
+
+def test_recording_a_child_drafted_available_writes_nothing(
+    tmp_path: pathlib.Path,
+) -> None:
+    store = RecordingStore()
+    code, result = run_publish(
         tmp_path,
         INTENT,
         store,
         issue=None,
         edits={"parent": f"{STORE}#26", "lifecycle": "Available"},
     )
-    priority_writes = [
-        call
-        for call in store.writes()
-        if "f=F_priority" in call and "v=O_normal" in call
-    ]
-    assert code == 0
-    assert len(priority_writes) == 1
+    check = result["check"]
+    assert isinstance(check, dict)
+    assert (code, result["status"]) == (1, "refused")
+    assert [f["rule"] for f in check["findings"]] == ["draft-lifecycle"]
+    assert store.writes() == []
 
 
 def test_a_parents_draft_without_base_clears_the_base_field(

@@ -375,12 +375,11 @@ def check_keys(context: Context, draft: Draft, recorded: bool) -> bool:
             )
     if not recorded:
         lifecycle = scalar(values.get("lifecycle", ""))
-        expected_lifecycle = "Available" if parent else "Submitted"
-        if lifecycle != expected_lifecycle:
+        if lifecycle != "Submitted":
             context.add(
                 Rule.DRAFT_LIFECYCLE,
                 "lifecycle",
-                f"lifecycle is {lifecycle!r}; recording gives a Change {'with' if parent else 'with no'} Parent {expected_lifecycle}",
+                f"lifecycle is {lifecycle!r}; recording gives every Change, a Child included, Submitted",
             )
     return has_base
 

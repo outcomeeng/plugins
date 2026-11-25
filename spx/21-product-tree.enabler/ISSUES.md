@@ -231,3 +231,11 @@ Evidence: at `f83f39569`, `product-tree.md` (lines 33 to 35) declares `one-spec-
 Impact: the row's type promises validation against a contract that no file states, so no reader or Verifier can check the test against a contract, and the Assertion's type does not match its Evidence.
 
 Settlement condition: the Node keeps the contract file in its `contracts/` directory and the row links it, or the row is retyped and its test carries the type of its new heading.
+
+## DEBT [consistency]: understand's Change summary omits the decision to work `src/plugins/product-tree/skills/understand/SKILL.md` `change-summary` `consistency`
+
+Evidence: at head 47d39419b1b9c6732f2e13e12e6e9168f46644cb of https://github.com/outcomeeng/plugins/pull/810, line 356 of `src/plugins/product-tree/skills/understand/SKILL.md` lists the Lifecycle values and says that `/manage-change` makes every Transition. It does not say that recording a decision to work on a Submitted Change returns it to `Available` without a Transition, or that an advance takes an Available Change, as the `lifecycle`, `submit` and `advance` rows of [`spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md`](spx/31-outcomeeng.enabler/32-changes.enabler/54-change-record.pdr.md) state.
+
+Impact: a reader who learns the Change model from the foundation does not learn that a Change stays `Available` while it waits for an advance, or that manage-change records the decision to work with `work`.
+
+Settlement condition: the Change summary of the foundation states the decision to work and the advance from an Available Change, as the change-record PDR states them.

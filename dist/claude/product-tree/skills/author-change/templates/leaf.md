@@ -2,12 +2,12 @@
 title: <the intended Output, in at most 15 words>
 product: <one Product>
 maturity: Proposed
-lifecycle: <Submitted for a Change with no Parent, Available for a Child>
+lifecycle: Submitted
 parent: <owner/repo#N, or null>
 predecessors: []
 blockers: []
 base: <full head commit of the default branch the Declarations read>
-priority: <null, or the Parent's Priority for a Child>
+priority: null
 primary_value: null
 investment: null
 ---

@@ -7,7 +7,8 @@ writes the title and body, then the Product, Parent, Predecessors and Base
 fields and the native blockers from the Draft, clearing each of them the Draft
 empties or leaves out, and leaves every other field as the store holds it.
 Recording a new Change also writes its Maturity and Lifecycle, which the store
-does not yet hold, and recording a Child writes its Parent's stored Priority.
+does not yet hold, and writes no Priority, Value or Investment, a Child's
+included, which wait for the Change's own Priority decision.
 """
 
 from __future__ import annotations
@@ -37,11 +38,6 @@ FIELDS_QUERY = (
 ISSUE_QUERY = (
     "query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r)"
     "{issue(number:$n){id createdAt lastEditedAt}}}"
-)
-PRIORITY_QUERY = (
-    "query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){issue(number:$n)"
-    "{issueFieldValues(first:50){nodes{... on IssueFieldSingleSelectValue{name "
-    "field{... on IssueFieldSingleSelect{name}}}}}}}}"
 )
 SET_SELECT = (
     "mutation($i:ID!,$f:ID!,$v:ID!){setIssueFieldValue(input:{issueId:$i,"
@@ -115,17 +111,6 @@ class Store:
         if not node:
             raise PublishError(f"the store holds no issue {self.repo}#{number}")
         return dict(node)
-
-    def priority(self, number: int) -> str | None:
-        """Return the Priority issue ``number`` holds, or None when it holds none."""
-        data = self.graphql(PRIORITY_QUERY, o=self.owner, r=self.name, n=str(number))
-        issue = data.get("data", {}).get("repository", {}).get("issue")
-        if not issue:
-            raise PublishError(f"the store holds no issue {self.repo}#{number}")
-        for node in issue.get("issueFieldValues", {}).get("nodes", []):
-            if node.get("field", {}).get("name") == "Priority":
-                return str(node.get("name"))
-        return None
 
     def fields(self) -> dict[str, Any]:
         data = self.graphql(FIELDS_QUERY, l=self.owner)
@@ -263,8 +248,6 @@ def plan_fields(
     if recording:
         wanted["Maturity"] = fc.scalar(values.get("maturity", ""))
         wanted["Lifecycle"] = fc.scalar(values.get("lifecycle", ""))
-        if parent is not None:
-            wanted["Priority"] = store.priority(parent)
     for name, value in wanted.items():
         field = fields.get(name)
         if field is None:

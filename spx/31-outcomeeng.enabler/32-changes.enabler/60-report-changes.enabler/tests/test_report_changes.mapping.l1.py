@@ -7,8 +7,8 @@ closed issue, a Parent chain that runs through a closed issue to an open Change,
 refinement by another,
 a Change with no Handoff, a Handoff whose ``Branch or PR`` line reads ``none``, a Handoff that
 names a branch, a Handoff that names a pull request with a check that has not
-concluded success, a Submitted Change that waits for a Priority and one that
-waits for the Operator, a held Change, a reclaimed Change, an unheld Change
+concluded success, a Submitted Change that waits for a Priority, a Submitted
+Child of it that waits for its own Priority, and one that waits for the Operator, a held Change, a reclaimed Change, an unheld Change
 held back by an open blocker, by a blocker closed as a duplicate whose
 duplicate link ends at an open Change, by a blocker closed Abandoned, by
 blockers whose duplicate links end at an Abandoned Change, one merge away and
