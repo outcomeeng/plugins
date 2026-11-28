@@ -208,6 +208,8 @@ ownership.
 
 Judge the test strategy against `<type_level_permissions>` and `<assertion_type_litmus>` of `/test-evidence-standards` for the assertion type; a strategy those rules do not permit for that type is REJECT with rule `misaligned`.
 
+Judge the declared execution level against `<execution_levels>` of `/test-evidence-standards`: an `l1` test file that starts a process, runs Git, writes a file, or makes a temporary directory, directly or through the infrastructure it calls, is REJECT with rule `level-boundary` when the changeset adds or changes that file. An `l1` file the changeset leaves unchanged that crosses one of those boundaries is debt: classify it as a standing finding under `${CLAUDE_SKILL_DIR}/references/touched-text.md`, so it returns as `FILED` with the entry its Node's `ISSUES.md` holds, and a review labels it `TRACKED` until a rewrite removes the crossing.
+
 </step>
 
 <step name="audit_coverage">
