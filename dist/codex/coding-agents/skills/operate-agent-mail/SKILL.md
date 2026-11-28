@@ -140,7 +140,8 @@ The bundled adapter is covered over generated request, record, and repository-lo
 - `list` maps to the store's non-marking listing in its unjudged form, or its complete form with `allRecords`, and `read` and `acknowledge` each map to their own store command, never to each other's;
 - a list, a wait, and every operation other than `read` and `acknowledge` leave read state unchanged;
 - the captured agent listing maps to each registration's stable name and label, `null` included, through the store's agent-listing command alone;
-- a wait without a timeout runs no store command, no store command inside a wait is given more time than remains, and a wait leaves no cursor, state file, or lock past its own run and runs neither a read nor an acknowledgement command;- generated records round-trip through the store field mapping, including correlations the store's thread alphabet rejects, which round-trip through the `xc-` escape;
+- a wait without a timeout runs no store command, no store command inside a wait is given more time than remains, and a wait leaves no cursor, state file, or lock past its own run and runs neither `am mail read` nor `am mail ack`;
+- generated records round-trip through the store field mapping, including correlations the store's thread alphabet rejects, which round-trip through the `xc-` escape;
 - a correlation whose written thread id exceeds 128 characters and a text argument carrying a NUL byte are rejected before any store command runs;
 - every emitted result, including the failure of unparseable input, carries the versioned shape, and a runner error of any class maps to `store-unavailable` or `command-failed`, except a wait command that reaches its bound while time remains, which ends the wait as a `timeout` at its deadline;
 - a second terminal handback of the same kind with different content is rejected as a conflicting handback naming the difference;
