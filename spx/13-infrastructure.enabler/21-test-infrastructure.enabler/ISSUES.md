@@ -22,8 +22,9 @@ Standing finding on `spx/13-infrastructure.enabler/21-test-infrastructure.enable
 
 ## `l1` tests cross an `l2` boundary
 
-**Evidence:** A run of every `l1` test file of the Product Tree at commit `744cf8cf23`, traced through the Python audit events of each test's setup, call and teardown, records that these `l1` files cross a boundary [`l1-boundaries`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) places at `l2`:
+**Evidence:** A run of every `l1` test file of the Product Tree at commit `744cf8cf23`, and of `tests/test_hypothesis_profiles.compliance.l1.py` at commit `e33f02b421`, which adds it, traced through the Python audit events of each test's setup, call and teardown, records that these `l1` files cross a boundary [`l1-boundaries`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) places at `l2`:
 
+- `tests/test_hypothesis_profiles.compliance.l1.py`: write a file, start a process, make a temporary directory
 - `tests/test_infra_placement.compliance.l1.py`: start a process
 - `tests/test_l3_tests.compliance.l1.py`: start a process
 - `tests/test_l3_tests.mapping.l1.py`: write a file, start a process, make a temporary directory
