@@ -193,7 +193,7 @@ The taxonomy is closed: `spx/` admits no artifact outside this table, the canoni
 
 ADR versus PDR is decided by content: an ADR governs architecture the product's users cannot observe; a PDR governs behavior they can. A decision record is a file inside the node whose subtree it governs, at the position every later reader loads it from; a lower-index record constrains higher-index siblings and their descendants. When a decision's owner is unclear, decompose the structure first and author the record afterwards. Tree position determines reach, so broad reach never determines type, and a root record is one every subtree obeys.
 
-Read `${CLAUDE_SKILL_DIR}/references/artifact-placement.md` when placing a harness, generator, or fixture, or when a placement might fall outside this taxonomy.
+Read `${CLAUDE_SKILL_DIR}/references/artifact-placement.md` before placing any artifact, a harness, generator, or fixture included, or answering where an artifact goes.
 
 </artifact_placement>
 
@@ -427,7 +427,13 @@ Continue through `/merge` unless the operator explicitly limited the request to 
 
 1. Load this complete inline foundation on every invocation. A marker in a compaction summary, Handoff, or prior-run statement does not count. After compaction, treat the marker as absent until this workflow emits it again.
 2. Check internal consistency across every foundation section and surface any contradiction immediately. No mandatory foundation reference read follows this step.
-3. Locate these operational references and list their paths without reading them: `${CLAUDE_SKILL_DIR}/references/kind-decision.md`, `${CLAUDE_SKILL_DIR}/references/grammar.md`, `${CLAUDE_SKILL_DIR}/references/artifact-placement.md`, `${CLAUDE_SKILL_DIR}/references/status-claims.md`, `${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md`, and `spx/local/*.md`.
+3. Locate these operational references and list their resolved paths without reading them. Read each one later in the session before the answer or decision its condition names:
+   - `${CLAUDE_SKILL_DIR}/references/kind-decision.md`: before fixing or changing a node's kind, or answering which kind a node or scope takes.
+   - `${CLAUDE_SKILL_DIR}/references/grammar.md`: before writing or checking a node directory, a file name, an index, front matter, an assertion row, or a link, or answering what shape the tree accepts.
+   - `${CLAUDE_SKILL_DIR}/references/artifact-placement.md`: before placing any artifact, or answering where an artifact goes.
+   - `${CLAUDE_SKILL_DIR}/references/status-claims.md`: before reading, deriving, or explaining a node's state or status claim, or the merge composition a claim feeds.
+   - `${CLAUDE_SKILL_DIR}/references/product-domain-shapes.md`: before shaping a Product's top-level domains, or answering whether a concern is an aggregate domain, a first concrete behavior, or a code-shaped area.
+   - `spx/local/*.md`: each overlay when the skill that declares it reads it.
 4. Read `spx/local/merging.md` when present. Changes destined for the default branch route through `/merge`; absence of the overlay applies the default lifecycle.
 5. Locate templates under `${CLAUDE_SKILL_DIR}/templates/` — `product/product-name.spec.md`, `decisions/decision-name.{adr,pdr}.md`, `nodes/{substrate,capability,domain,interface,surface,variant}-name.spec.md`, `records/node-name.outcome.md`, `probes/probe.md` — and `${CLAUDE_SKILL_DIR}/examples/*.md`. Record the resolved absolute template directory as `Template root` in the marker.
 6. Read the complete root `CLAUDE.md` from disk only when the live conversation does not already carry it complete; a harness that injects the whole file satisfies this step, and a truncated or absent injection requires the read. It routes skill invocation, names the repository's methodology declaration, and carries product commands.
@@ -436,7 +442,8 @@ Continue through `/merge` unless the operator explicitly limited the request to 
 ```text
 <PRODUCT_TREE_FOUNDATION>
 Loaded inline: truth-hierarchy, node-model, artifact-placement, assertion-model, ordering-model, verification-model, change-model, imperfection-protocol
-Operational references available: kind-decision, grammar, artifact-placement, status-claims, product-domain-shapes
+Operational references located: <resolved absolute path of each file under references/>
+Operational references read: <resolved absolute path of each reference this session read before emitting the marker, or none>
 Local lifecycle route: /merge, refined by spx/local/merging.md when present
 Default-branch completion: /merge delivers to origin's default branch; local work continues unless explicitly limited or a gate blocks every remaining action
 Routing guide: CLAUDE.md carried complete by the harness | read from disk | absent

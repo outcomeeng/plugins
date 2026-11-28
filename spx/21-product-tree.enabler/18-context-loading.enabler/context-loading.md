@@ -11,6 +11,11 @@ CAN operate with complete, verified context before any work begins
 
 ## Assertions
 
+### Audit: foundation references
+
+- reference-triggers: The `/understand` skill states, for each reference under its `references/` directory, the condition under which a session reads that reference before it answers or decides, and the condition of `references/artifact-placement.md` covers every answer or decision about where an artifact goes. A reference with no stated condition, or an artifact-placement condition that leaves out an answer about where an artifact goes, fails the audit.
+- marker-names-reads: The `<PRODUCT_TREE_FOUNDATION>` marker the `/understand` skill emits lists the path of each reference under its `references/` directory that the skill located, and names each of those references the session read before it emitted the marker, or none. A marker that lists a reference by name without its path, or names as read a reference the session did not read, fails the audit.
+
 ### Conformance
 
 - The product-tree plugin package ships the foundation-resource manifest governed by [`spx/21-product-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md`](spx/21-product-tree.enabler/18-context-loading.enabler/15-foundation-manifest.adr.md) at `skills/understand/manifest.json` in every generated tree, naming exactly one core foundation document and the ordered references, templates, and examples catalogs as package-relative paths ([test](tests/test_foundation_manifest.conformance.l1.py))
