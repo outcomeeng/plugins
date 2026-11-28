@@ -6,8 +6,8 @@ Every `[test]` assertion's evidence occupies one cell of a cross-product: its as
 
 Execution level measures execution pain and environment dependence. It is an axis independent of assertion type and of tooling.
 
-- `l1` — deterministic local evidence: pure logic, cheap temporary filesystem work, standard repository-required tools and subprocesses, and dependency-injected controlled implementations under a recorded Stage 5 exception case.
-- `l2` — real local infrastructure: local services, containers, browsers against local services, product-specific binaries, and other heavier local dependencies.
+- l1-level: `l1` — deterministic in-process evidence: pure logic, read-only reads of committed repository files, and dependency-injected controlled implementations under a recorded Stage 5 exception case. An `l1` test starts no process, runs no Git, writes no file, and makes no temporary directory.
+- l2-level: `l2` — local boundaries: a process of any executable the run starts, Git, a file write or temporary directory, local services, containers, browsers against local services, and other heavier local dependencies.
 - `l3` — remote, shared, credentialed, or network-dependent systems, selected only when equivalent evidence cannot be produced with local real infrastructure.
 
 A controlled implementation enters evidence only under the `/test` methodology's Stage 5 exception set — the seven named cases from failure simulation through contract probes — and the exception is recorded by naming the matching case in the evidence. The Stage 5 combinatorial-cost exception is that set's member for broad evidence a real dependency makes prohibitively expensive.
@@ -18,9 +18,9 @@ Three rules govern level selection:
 - A runner, framework, or implementation layer never determines the level; dependency class does.
 - A case's level floor is the heaviest dependency class among the behavior under test, the oracle, and the enforcement mechanism.
 
-One ordered discriminator classifies the exact executable the evidence exercises, and its two steps are disjoint. First, an artifact of the product under test: `l1` when the suite exercises the form the checkout carries — the binary the declared toolchain builds within the ordinary deterministic test cycle, that build's own cache-restored output among its forms, or a product artifact executed directly from the checkout, executable source scripts among them; `l2` for every other acquired form of the product's artifact — installed, bootstrapped, preinstalled, downloaded, copied, mounted, restored from a cache outside the ordinary build, or otherwise obtained — so the two arms are a complement pair over acquisition provenance, and environment supply never reclassifies the product's own artifact as repository-standard. Second, every other executable: `l1` when the declared development environment supplies it or the declared toolchain produces it in-cycle, `l2` when obtaining it requires installation, bootstrap, download, or a service lifecycle outside that cycle. In both steps the level floor stays `l3` where the evidence run itself must reach a remote, shared, credentialed, or network-dependent system to obtain or exercise the executable; acquisition completed before the ordinary test cycle — a bootstrap download among its forms — keeps the acquired-form classification above. The same discriminator classifies oracles and enforcement mechanisms.
+Every executable an evidence run starts as a process places the run at `l2` at least, whatever its provenance: the product's own checkout scripts and in-cycle builds, a tool the declared development environment supplies, and an installed or bootstrapped artifact alike. The level floor is `l3` where the run must reach a remote, shared, credentialed, or network-dependent system to obtain or exercise the executable. The same rule classifies oracles and enforcement mechanisms.
 
-Harness obligations follow the level's dependency class, identically for every assertion type: at `l1`, framework resource handles and standard-subprocess harnesses suffice; at `l2`, a harness owns the lifecycle — start, health, teardown — of each heavy local dependency; at `l3`, credential, isolation, and cleanup harnesses are required.
+Harness obligations follow the level's dependency class, identically for every assertion type: at `l1`, framework handles that start no process and write no file suffice; at `l2`, a standard-subprocess harness suffices for an executable the declared environment supplies or the checkout carries, a temporary-directory handle suffices for a file write, and a harness owns the lifecycle — start, health, teardown — of each heavy local dependency; at `l3`, credential, isolation, and cleanup harnesses are required.
 
 Unavailable required evidence never passes: a missing mandatory credential, endpoint, binary, or local service fails loudly, or skips only where the suite declares that evidence optional.
 
@@ -38,9 +38,9 @@ Valid:
 
 1. `l1` — the spec declares an interaction; the test transcribes it, calls the production API directly, and asserts the declared outcome with the case literal at the call site.
 2. `l1` — the case is a complete artifact; an inert fixture is read by path and never imported.
-3. `l1` — the interaction writes into a framework-provided temporary directory using a generated incidental filename; neither binding introduces data or policy.
-4. `l1` — a command-line interaction runs through a standard-subprocess harness against a repository-standard binary — one the declared environment supplies or the declared toolchain builds within the ordinary test cycle, including the repository's own CLI built in-cycle; the harness exposes exit code and captured output, and the test owns every predicate.
-5. `l2` — the same interaction runs against a product-specific binary — one whose installation or bootstrap lies outside that cycle, including the same repository CLI when the claim requires the installed artifact even where the declared environment ships it preinstalled; the level moves because the dependency class moved, not because a subprocess is involved.
+3. `l2` — the interaction writes into a framework-provided temporary directory using a generated incidental filename; neither binding introduces data or policy, and the write places the run at `l2`.
+4. `l2` — a command-line interaction runs through a standard-subprocess harness against an executable the declared environment supplies or the checkout carries, the repository's own CLI among them; the harness exposes exit code and captured output, and the test owns every predicate.
+5. `l2` — the same interaction runs against the installed form of the product's CLI where the claim requires the installed artifact; its level equals that of the checkout form, since both start a process.
 6. `l3` — a credentialed end-to-end interaction runs through credential, isolation, and cleanup harnesses and remains one existential case.
 
 Rejected:
@@ -51,7 +51,7 @@ Rejected:
 10. A harness method that accepts the expected outcome or returns a verdict — the predicate crossed the seam (the seam assertions in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`).
 11. Reusable setup policy hand-rolled inside the test file — test-owned configuration (the binding assertion in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`).
 12. The test imports the orchestrator, then replaces its dispatch with a monkeypatch while asserting dispatch behavior — the harness-replacement `NEVER` assertion in `spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/test-verification.md`.
-13. A cheap temporary-file scenario promoted to `l2` because it touches the filesystem — the level rules above reject tool- and resource-name promotion.
+13. A temporary-file scenario declared `l1` — a file write places the run at `l2`, however cheap.
 
 ## Mapping
 
@@ -63,7 +63,7 @@ Valid:
 
 14. `l1` — the domain is imported from a production enum; expectations derive from an independent construction law; the test parameterizes over every member.
 15. `l1` — a generated finite domain composes two source-owned option sets; expectations derive per input independently of production.
-16. `l2` — every command in a source-owned command registry maps to its dispatch action through a product-binary harness against an installed or bootstrapped artifact per the executable discriminator; the same mapping against the in-cycle checkout build classifies `l1`.
+16. `l2` — every command in a source-owned command registry maps to its dispatch action through a product-binary harness; the same mapping through the in-process dispatch API classifies `l1`.
 17. `l1` — boundary validation over a closed, finite, source-owned invalid set, every member exercised.
 18. A broad domain against an expensive real dependency runs through a configurable controlled implementation preserving the boundary, under a recorded Stage 5 combinatorial-cost exception.
 
@@ -85,9 +85,9 @@ A spec-declared value and the source complying with it admit no conformance evid
 
 Valid:
 
-26. `l1` — generated output validated against a separately owned schema by a repository-standard validator — one the declared environment supplies or the declared toolchain builds in-cycle.
-27. `l1` — a compile-fail harness passes a violating source fixture by path to the standard compiler; the compiler is the oracle.
-28. `l2` — an emitted artifact is validated by a product-specific binary's validator — an installed or bootstrapped artifact per the executable discriminator.
+26. `l1` — generated output validated against a separately owned schema by a validator library the test calls in process.
+27. `l2` — a compile-fail harness passes a violating source fixture by path to the standard compiler; the compiler is the oracle, and starting it places the run at `l2`.
+28. `l2` — an emitted artifact is validated by a product-specific binary's validator, started as a process.
 29. `l1` — captured whole-payload protocol fixtures, read by path, validated against the separately owned protocol schema.
 30. `l3` — the contract is verified against a remote reference implementation through credentialed harnesses, selected by necessity.
 
@@ -131,7 +131,7 @@ Valid:
 47. `l1` — an enforcement rule runs against a violating source fixture by path; the test asserts detection with the rule identifier imported from the rule's registry.
 48. `l1` — a NEVER-rule exercised with a real violating input; disabling the enforcement fails the test.
 49. `l1` — violating and conforming fixtures together, the conforming cases proving no false positive alongside the required violating cases.
-50. `l2` — enforcement shipped in a product-specific binary — an installed or bootstrapped artifact per the executable discriminator — exercised against a violating fixture.
+50. `l2` — enforcement shipped in a product binary, exercised against a violating fixture through a standard-subprocess harness.
 
 Rejected:
 
@@ -164,7 +164,10 @@ Per-type and per-level permission decided once, language-neutrally, is what keep
 - ALWAYS: each executed test file declares exactly one assertion type and one execution level through the canonical filename model `<subject>.<evidence>.<level>[.<runner>]` ([audit])
 - ALWAYS: each language test-standards node declares exactly one filename instantiation of the canonical model as part of its language delta, citing this decision by full path, and declares or deterministically derives the default runner an omitted runner token names ([audit])
 - ALWAYS: evidence level derives from the heaviest dependency class among the behavior under test, the oracle, and the enforcement mechanism, and evidence uses the lowest level that proves the assertion ([audit])
-- NEVER: a runner, framework, resource name, or implementation layer determines an execution level ([audit])
+- runner-not-level: NEVER: a runner, framework, or implementation layer determines an execution level; the dependency class and the boundaries a run crosses do
+- l1-boundaries: NEVER: an `l1` test file starts a process, runs Git, writes a file, or makes a temporary directory; it reads committed repository files only, and a test that crosses one of those boundaries is `l2`
+- l1-boundary-debt: ALWAYS: an audit rejects an `l1` file that crosses one of those boundaries when the Changeset adds or changes that file; an unchanged crossing file is debt, which its Node's `ISSUES.md` records once, and a review labels it `TRACKED` until a rewrite removes the crossing
+- level-guidance: ALWAYS: the shipped level guidance — the test-evidence standards, the test-authoring and test-evidence audit skills, and each language test-standards skill — places each boundary at the level this decision states
 - ALWAYS: evidence for a cell satisfies the artifact permissions this decision states for its assertion type at its execution level ([audit])
 - ALWAYS: each corpus case in this decision decides acceptance identically in every language rendering ([audit])
 - NEVER: a language test-standards node narrows or widens the source and artifact categories this decision permits — a category a language cannot realize is an amendment to this decision ([audit])
