@@ -8,8 +8,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Final, cast
 
-from hypothesis import given, seed, settings
 import yaml
+from hypothesis import given, seed, settings
 
 from outcomeeng.distribution.contracts import (
     CLAUDE_DIST_RELATIVE,
@@ -32,7 +32,6 @@ from outcomeeng.distribution.contracts import (
     SKILL_NAME_FIELD,
     SKILLS_SUBDIR_NAME,
     SOURCE_ROOT_NAME,
-    Target,
     WORKFLOW_DISTRIBUTION_JOB,
     WORKFLOW_JOBS_FIELD,
     WORKFLOW_ON_FIELD,
@@ -43,6 +42,7 @@ from outcomeeng.distribution.contracts import (
     WORKFLOW_STEP_NAME_FIELD,
     WORKFLOW_STEPS_FIELD,
     WORKFLOW_WITH_FIELD,
+    Target,
 )
 from outcomeeng.distribution.distribute import (
     clean_description,
@@ -65,6 +65,7 @@ from outcomeeng_testing.generators.distribution import (
     plugin_skill_mapping_strategy,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 CANONICAL_SOURCE_ROOT = REPOSITORY_ROOT / SOURCE_ROOT_NAME
@@ -241,7 +242,7 @@ def distribution_workflow_uses_project_python() -> bool:
 
 @seed(DISTRIBUTION_PROPERTY_SEED)
 @settings(
-    max_examples=DISTRIBUTION_PROPERTY_EXAMPLES,
+    max_examples=profile_examples(DISTRIBUTION_PROPERTY_EXAMPLES),
     deadline=None,
     print_blob=True,
 )

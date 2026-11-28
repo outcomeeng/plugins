@@ -31,6 +31,7 @@ from outcomeeng_testing.harnesses.reviewing_changes import (
     citation_checkout,
     load_review_result_module,
 )
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 
 @pytest.fixture(scope="module")
@@ -106,7 +107,7 @@ class TestRoundTripProperty:
     ``ReviewResult`` value."""
 
     @given(document=_conforming_review_result_dicts())
-    @settings(max_examples=100, deadline=None)
+    @settings(max_examples=profile_examples(100), deadline=None)
     def test_round_trip_preserves_equality(
         self, checkout: pathlib.Path, document: dict[str, Any]
     ) -> None:

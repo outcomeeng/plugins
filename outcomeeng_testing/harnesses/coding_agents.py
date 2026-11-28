@@ -46,6 +46,7 @@ from outcomeeng_testing.harnesses.prowl_environment import (
     prowl_agents_command_result,
     prowl_send_command_result,
 )
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 ROOT = Path(__file__).parents[2]
 AGENT_MESSAGE_PATH = (
@@ -228,7 +229,7 @@ def run_handback_preservation_property(
 
     @seed(HANDBACK_PROPERTY_SEED)
     @settings(
-        max_examples=HANDBACK_PROPERTY_EXAMPLES,
+        max_examples=profile_examples(HANDBACK_PROPERTY_EXAMPLES),
         deadline=None,
         print_blob=True,
     )
@@ -444,7 +445,7 @@ def run_doorbell_roundtrip_property(
 
     @seed(DOORBELL_PROPERTY_SEED)
     @settings(
-        max_examples=DOORBELL_PROPERTY_EXAMPLES,
+        max_examples=profile_examples(DOORBELL_PROPERTY_EXAMPLES),
         deadline=None,
         print_blob=True,
     )
@@ -475,7 +476,7 @@ def run_doorbell_label_property(
 
     @seed(DOORBELL_LABEL_SEED)
     @settings(
-        max_examples=DOORBELL_LABEL_EXAMPLES,
+        max_examples=profile_examples(DOORBELL_LABEL_EXAMPLES),
         deadline=None,
         print_blob=True,
     )

@@ -6,12 +6,13 @@ import pytest
 
 from outcomeeng.validation import (
     CHECK_RECIPES,
+    LOCAL_CHECK_RECIPES,
+    LOCAL_PYTEST_ARGV,
     EVAL_LINKS_ARGV,
     EXECUTION_LEVELS,
     L3_LEVEL,
     PREFLIGHT_STEPS,
     PYTEST_ARGV,
-    TEST_STEPS,
     VALIDATION_STEPS,
 )
 from outcomeeng.validation.infrastructure_index import (
@@ -232,7 +233,7 @@ def test_deleted_assertion_tests_never_select_pytest() -> None:
         deleted_paths=(test_path,),
     )
     assert plan.selected_steps[-1].reason == TEST_REASON
-    assert plan.selected_steps[-1].step.argv == (*PYTEST_ARGV, PYTEST_TARGET_ARG)
+    assert plan.selected_steps[-1].step.argv == (*LOCAL_PYTEST_ARGV, PYTEST_TARGET_ARG)
 
 
 @pytest.mark.parametrize("path", PATH_CATEGORY_PATTERNS[PathCategory.FULL_GATE])
@@ -241,7 +242,7 @@ def test_full_gate_paths_select_the_complete_recipe_set(path: str) -> None:
 
     assert plan.full_gate is True
     assert tuple(step.argv for step in plan.steps) == tuple(
-        step.argv for step in (*VALIDATION_STEPS, *TEST_STEPS)
+        step.argv for recipe in LOCAL_CHECK_RECIPES for step in recipe.steps
     )
     assert set(_reasons(plan)) == {FULL_GATE_REASON}
 
@@ -317,7 +318,7 @@ def test_a_deleted_then_modified_test_still_runs_when_present() -> None:
     )
 
     assert run.exit_code == 0
-    assert run.spawn_calls[-1] == (*PYTEST_ARGV, SELECTED_GATE_PYTHON_TEST_PATH)
+    assert run.spawn_calls[-1] == (*LOCAL_PYTEST_ARGV, SELECTED_GATE_PYTHON_TEST_PATH)
 
 
 def test_a_copy_collects_both_sides() -> None:
@@ -340,7 +341,7 @@ def test_a_copied_test_selects_pytest_for_the_surviving_source() -> None:
     )
 
     assert run.exit_code == 0
-    assert (*PYTEST_ARGV, SELECTED_GATE_PYTHON_TEST_PATH) in run.spawn_calls
+    assert (*LOCAL_PYTEST_ARGV, SELECTED_GATE_PYTHON_TEST_PATH) in run.spawn_calls
 
 
 @pytest.mark.parametrize("kind", list(InfrastructureReach), ids=str)
@@ -361,25 +362,23 @@ def test_test_infrastructure_reach_maps_to_gate_steps(
 
     if kind is InfrastructureReach.NODE_LOCAL:
         assert plan.full_gate is False
-        assert [item.step.argv[: len(PYTEST_ARGV)] for item in pytest_steps] == [
-            PYTEST_ARGV
+        assert [item.step.argv[: len(LOCAL_PYTEST_ARGV)] for item in pytest_steps] == [
+            LOCAL_PYTEST_ARGV
         ]
-        assert [set(item.step.argv[len(PYTEST_ARGV) :]) for item in pytest_steps] == [
-            set(layout.tests)
-        ]
+        assert [
+            set(item.step.argv[len(LOCAL_PYTEST_ARGV) :]) for item in pytest_steps
+        ] == [set(layout.tests)]
         assert [item.reason for item in pytest_steps] == [REACHED_TESTS_REASON]
     elif kind is InfrastructureReach.SHARED:
         assert plan.full_gate is True
         assert tuple(step.argv for step in plan.steps) == (
-            *(step.argv for step in VALIDATION_STEPS),
-            *(step.argv for step in TEST_STEPS),
+            *(step.argv for recipe in LOCAL_CHECK_RECIPES for step in recipe.steps),
         )
         assert set(_reasons(plan)) == {SHARED_TEST_INFRASTRUCTURE_REASON}
     elif kind is InfrastructureReach.UNTRACEABLE:
         assert plan.full_gate is True
         assert tuple(step.argv for step in plan.steps) == (
-            *(step.argv for step in VALIDATION_STEPS),
-            *(step.argv for step in TEST_STEPS),
+            *(step.argv for recipe in LOCAL_CHECK_RECIPES for step in recipe.steps),
         )
         assert set(_reasons(plan)) == {UNTRACEABLE_TEST_INFRASTRUCTURE_REASON}
     else:
@@ -455,10 +454,10 @@ def test_step_fed_by_changed_and_reached_tests_names_both_reasons() -> None:
     ]
 
     assert plan.full_gate is False
-    assert [item.step.argv[: len(PYTEST_ARGV)] for item in pytest_steps] == [
-        PYTEST_ARGV
+    assert [item.step.argv[: len(LOCAL_PYTEST_ARGV)] for item in pytest_steps] == [
+        LOCAL_PYTEST_ARGV
     ]
-    assert [set(item.step.argv[len(PYTEST_ARGV) :]) for item in pytest_steps] == [
+    assert [set(item.step.argv[len(LOCAL_PYTEST_ARGV) :]) for item in pytest_steps] == [
         {layout.changed_test, *layout.reached_tests}
     ]
     assert TEST_REASON in pytest_steps[0].reason

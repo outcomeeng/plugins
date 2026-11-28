@@ -31,31 +31,30 @@ import io
 import os
 import pathlib
 import subprocess
-from tempfile import TemporaryDirectory
-from dataclasses import dataclass, field
-
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
+from tempfile import TemporaryDirectory
 
 from hypothesis import given, seed, settings
 from hypothesis import strategies as st
 
 from outcomeeng.distribution.bump import (
+    CLAUDE_MANIFEST,
+    CODEX_MANIFEST,
+    DIST_CODEX_PLUGINS_DIR,
+    REQUIRED_TOOLS,
+    SHARED_SOURCE_DIR,
+    SOURCE_PLUGINS_DIR,
     ChangedPath,
     ChangeProbe,
-    CODEX_MANIFEST,
-    CLAUDE_MANIFEST,
     ContentProbe,
-    DIST_CODEX_PLUGINS_DIR,
     FileStatus,
     ManifestReader,
     ManifestRecord,
     ManifestWriter,
     Mode,
-    SHARED_SOURCE_DIR,
-    SOURCE_PLUGINS_DIR,
-    ToolProbe,
-    REQUIRED_TOOLS,
     Segment,
+    ToolProbe,
     _real_change_probe,
     _real_content_probe,
     _real_include_index_probe,
@@ -73,18 +72,19 @@ from outcomeeng.distribution.contracts import (
 )
 from outcomeeng_testing.generators.bump import (
     arbitrary_diff_paths,
-    indexed_targets,
-    shared_include_indexes,
     distribution_roots,
+    indexed_targets,
+    malformed_manifest_cases,
     manifest_fixture_path,
     manifest_relpath,
     manifest_text,
-    malformed_manifest_cases,
     minor_change,
     patch_changes,
     plugin_names,
     relative_subpaths,
+    shared_include_indexes,
 )
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 TOOL_EVENT_PREFIX = "tool:"
 BUMP_PROPERTY_SEED = 20260704
@@ -1256,7 +1256,7 @@ def build_repo_with_cross_plugin_structural_rename(
 
 def bump_property(test_func: Callable[..., None]) -> Callable[[], None]:
     configured = seed(BUMP_PROPERTY_SEED)(
-        settings(max_examples=BUMP_PROPERTY_EXAMPLES)(test_func)
+        settings(max_examples=profile_examples(BUMP_PROPERTY_EXAMPLES))(test_func)
     )
 
     def wrapper() -> None:

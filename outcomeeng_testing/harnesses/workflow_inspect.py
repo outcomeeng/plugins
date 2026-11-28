@@ -24,6 +24,7 @@ from hypothesis import given, seed, settings
 from hypothesis.strategies import SearchStrategy
 
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 SCRIPT_PATH: Final = (
@@ -158,7 +159,7 @@ def workflow_inspect_property(
 
     def decorate(test_func: Callable[..., None]) -> Callable[[], None]:
         configured = seed(PROPERTY_SEED)(
-            settings(max_examples=PROPERTY_EXAMPLES, deadline=None)(
+            settings(max_examples=profile_examples(PROPERTY_EXAMPLES), deadline=None)(
                 given(**{argument: strategy})(test_func)
             )
         )

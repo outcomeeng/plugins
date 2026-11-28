@@ -36,7 +36,7 @@ python-preference = "only-managed"
 testpaths = ["spx", "tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short --import-mode=importlib"
+addopts = "-v --tb=short --import-mode=importlib -p outcomeeng_testing.hypothesis_profiles"
 pythonpath = ["."]
 markers = ["live_subagent_discovery: fresh authenticated model session reads installed subagent names"]
 

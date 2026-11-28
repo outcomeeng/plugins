@@ -29,12 +29,12 @@ import itertools
 import os
 import pathlib
 import subprocess
+import sys
+import traceback
 from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
-import sys
 from tempfile import TemporaryDirectory
-import traceback
 from types import ModuleType
 from typing import Final, cast
 
@@ -45,17 +45,30 @@ from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng_testing.generators.instruction_block import (
     DelegationCandidateCase,
     InstructionBlockCases,
-    build_macro as generate_build_macro,
-    build_template as generate_template,
-    adopted_body_heading as generate_adopted_body_heading,
-    delegating_root_body as generate_delegating_root_body,
-    delegation_candidate_cases as generate_delegation_candidate_cases,
-    harness_line as generate_harness_line,
     instruction_block_cases,
     unsupported_language_tokens,
 )
+from outcomeeng_testing.generators.instruction_block import (
+    adopted_body_heading as generate_adopted_body_heading,
+)
+from outcomeeng_testing.generators.instruction_block import (
+    build_macro as generate_build_macro,
+)
+from outcomeeng_testing.generators.instruction_block import (
+    build_template as generate_template,
+)
+from outcomeeng_testing.generators.instruction_block import (
+    delegating_root_body as generate_delegating_root_body,
+)
+from outcomeeng_testing.generators.instruction_block import (
+    delegation_candidate_cases as generate_delegation_candidate_cases,
+)
+from outcomeeng_testing.generators.instruction_block import (
+    harness_line as generate_harness_line,
+)
 from outcomeeng_testing.harnesses.agent_tokens import stage_agent_tokens_file
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 REPO_ROOT: Final = pathlib.Path(__file__).resolve().parents[2]
 INSTRUCTION_BLOCK_MODULE_PATH = distribution.GENERATOR_PATH
@@ -96,7 +109,7 @@ def run_instruction_block_property(
     """Run a generated property with harness-owned settings and replay diagnostics."""
     configured_assertion = seed(INSTRUCTION_BLOCK_PROPERTY_SEED)(
         settings(
-            max_examples=INSTRUCTION_BLOCK_PROPERTY_EXAMPLES,
+            max_examples=profile_examples(INSTRUCTION_BLOCK_PROPERTY_EXAMPLES),
             deadline=None,
             print_blob=True,
         )(assertion)

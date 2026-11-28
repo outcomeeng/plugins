@@ -18,6 +18,8 @@ from outcomeeng.validation._model import ProcessSpawner, Recipe, Step
 from outcomeeng.validation._steps import (
     ACTIONLINT_ARGV,
     CHECK_RECIPES,
+    LOCAL_CHECK_RECIPES,
+    LOCAL_PYTEST_ARGV,
     EVAL_LINKS_ARGV,
     EVAL_PROMPTS_ARGV,
     FMT_CHECK_ARGV,
@@ -26,7 +28,6 @@ from outcomeeng.validation._steps import (
     L3_LEVEL,
     PREFLIGHT_STEPS,
     PYRIGHT_ARGV,
-    PYTEST_ARGV,
     RECIPE_CHECK,
     RUFF_CHECK_ARGV,
     RUFF_FORMAT_ARGV,
@@ -522,7 +523,7 @@ def build_selected_gate_plan(
             SelectedGateStep(
                 step=Step(
                     label=TEST_RECIPE.steps[0].label,
-                    argv=(*PYTEST_ARGV, *test_paths),
+                    argv=(*LOCAL_PYTEST_ARGV, *test_paths),
                 ),
                 reason=REASON_SEPARATOR.join(test_reasons),
             )
@@ -542,7 +543,9 @@ def build_full_gate_plan(changed_paths: tuple[str, ...]) -> SelectedGatePlan:
     """
 
     normalized = tuple(sorted(set(changed_paths)))
-    return _full_surface_plan(normalized, reason=FULL_CHECK_REASON)
+    return _full_surface_plan(
+        normalized, reason=FULL_CHECK_REASON, recipes=CHECK_RECIPES
+    )
 
 
 def changed_path_categories(paths: Sequence[str]) -> frozenset[PathCategory]:
@@ -560,12 +563,13 @@ def _full_surface_plan(
     changed_paths: tuple[str, ...],
     *,
     reason: str,
+    recipes: tuple[Recipe, ...] = LOCAL_CHECK_RECIPES,
 ) -> SelectedGatePlan:
     return SelectedGatePlan(
         changed_paths=changed_paths,
         selected_steps=tuple(
             SelectedGateStep(step=step, reason=reason)
-            for recipe in CHECK_RECIPES
+            for recipe in recipes
             for step in recipe.steps
         ),
         full_gate=True,
@@ -610,7 +614,7 @@ def run_selected_check(
     )
     _write_plan(sink, plan)
     if plan.full_gate:
-        return run_check(spawner=spawner, sink=sink, recipes=CHECK_RECIPES)
+        return run_check(spawner=spawner, sink=sink, recipes=LOCAL_CHECK_RECIPES)
     return run_recipe(
         spawner=spawner,
         sink=sink,

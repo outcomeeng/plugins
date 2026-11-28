@@ -252,6 +252,13 @@ def _malformed_values(
                 lambda text: not runner.ISSUE_IDENTITY_PATTERN.fullmatch(text)
             ),
         )
+    if field == fields.REF:
+        return st.one_of(
+            _not_non_empty_strings(),
+            _text_without_system_form(runner),
+            st.text().map(lambda text: f"-{text}"),
+            st.builds(lambda head, tail: f"{head} {tail}", st.text(), st.text()),
+        )
     raise ValueError(f"no declared form for request field {field!r}")
 
 

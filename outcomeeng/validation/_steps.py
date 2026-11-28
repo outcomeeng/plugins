@@ -129,6 +129,16 @@ PYTEST_ARGV: Final = (
     "pytest",
     *L3_SKIP_ARGV,
 )
+# The Hypothesis profiles `outcomeeng_testing.hypothesis_profiles` registers for
+# every pytest run: `just check` loads `local`, and `just check-full`, CI's run
+# included, loads `full`, which a run that names no profile loads as well.
+HYPOTHESIS_PROFILE_OPTION: Final = "--hypothesis-profile"
+LOCAL_HYPOTHESIS_PROFILE: Final = "local"
+FULL_HYPOTHESIS_PROFILE: Final = "full"
+LOCAL_PROFILE_ARGV: Final = (f"{HYPOTHESIS_PROFILE_OPTION}={LOCAL_HYPOTHESIS_PROFILE}",)
+FULL_PROFILE_ARGV: Final = (f"{HYPOTHESIS_PROFILE_OPTION}={FULL_HYPOTHESIS_PROFILE}",)
+LOCAL_PYTEST_ARGV: Final = (*PYTEST_ARGV, *LOCAL_PROFILE_ARGV)
+FULL_PYTEST_ARGV: Final = (*PYTEST_ARGV, *FULL_PROFILE_ARGV)
 
 # Generated eval artifacts. The prompts derive from `eval.toml` definitions and
 # the producers those definitions name; the gate fails when a committed prompt
@@ -343,7 +353,26 @@ TEST_RECIPE: Final = Recipe(
     steps=TEST_STEPS,
 )
 
-CHECK_RECIPES: Final = (VALIDATION_RECIPE, TEST_RECIPE)
+FULL_TEST_RECIPE: Final = Recipe(
+    name=RECIPE_TEST,
+    verification_type=VERIFICATION_TYPE_TESTING,
+    purpose=PURPOSE_CORRECTNESS,
+    preflight_steps=PREFLIGHT_STEPS,
+    steps=(Step(label="pytest", argv=FULL_PYTEST_ARGV),),
+)
+
+LOCAL_TEST_RECIPE: Final = Recipe(
+    name=RECIPE_TEST,
+    verification_type=VERIFICATION_TYPE_TESTING,
+    purpose=PURPOSE_CORRECTNESS,
+    preflight_steps=PREFLIGHT_STEPS,
+    steps=(Step(label="pytest", argv=LOCAL_PYTEST_ARGV),),
+)
+
+# The recipes of `just check-full`, which load the `full` Hypothesis profile.
+CHECK_RECIPES: Final = (VALIDATION_RECIPE, FULL_TEST_RECIPE)
+# The recipes a full-surface `just check` runs, which load the `local` profile.
+LOCAL_CHECK_RECIPES: Final = (VALIDATION_RECIPE, LOCAL_TEST_RECIPE)
 
 
 def test_recipe(pytest_args: Sequence[str] = ()) -> Recipe:

@@ -39,6 +39,7 @@ from outcomeeng_testing.generators.link_conversion import (
     link_conversion_trees,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 CONVERSION_SCRIPT_PATH: Final = (
@@ -209,7 +210,7 @@ def exercise_generated_trees(
 
     @seed(LINK_CONVERSION_PROPERTY_SEED)
     @settings(
-        max_examples=LINK_CONVERSION_PROPERTY_EXAMPLES,
+        max_examples=profile_examples(LINK_CONVERSION_PROPERTY_EXAMPLES),
         deadline=None,
         print_blob=True,
     )

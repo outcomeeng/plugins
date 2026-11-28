@@ -33,3 +33,8 @@ CAN run the deterministic gate steps that prove the current slice without spendi
 - ALWAYS: when the canonical changeset-scope helper cannot resolve the remote default branch, the selected gate returns its structured git-discovery failure instead of propagating the helper exception ([test](tests/test_selected_gate.compliance.l1.py))
 - NEVER: building the static import index imports, executes, or reloads a test-infrastructure or test module — a module whose import has an observable side effect leaves no trace after the index is built ([test](tests/test_infrastructure_index.compliance.l1.py))
 - NEVER: the planner classifies a changed test-infrastructure path without the reach index — a plan built with none supplied raises the source-owned error naming the paths it cannot classify ([test](tests/test_selected_gate.compliance.l1.py))
+
+### Test.Compliance: Hypothesis profile
+
+- [check-local-profile](tests/test_selected_gate.compliance.l1.py): ALWAYS: every pytest step `just check` plans, a full-surface plan's included, loads the Hypothesis profile `local`
+- [check-full-profile](tests/test_selected_gate.compliance.l1.py): ALWAYS: every pytest step `just check-full` runs, on a workstation and in CI, loads the Hypothesis profile `full`

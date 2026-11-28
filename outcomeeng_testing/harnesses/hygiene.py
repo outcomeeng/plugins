@@ -17,6 +17,7 @@ from outcomeeng_testing.generators.hygiene import (
     XmlSpacingWorkspaceCase,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 HYGIENE_EVIDENCE_SEED = 20260728
 HYGIENE_EVIDENCE_EXAMPLES = 40
@@ -101,7 +102,7 @@ def hygiene_generated_evidence(
     def configure(evidence_run: Callable[[], None]) -> Callable[[], None]:
         configured = seed(HYGIENE_EVIDENCE_SEED)(
             settings(
-                max_examples=HYGIENE_EVIDENCE_EXAMPLES,
+                max_examples=profile_examples(HYGIENE_EVIDENCE_EXAMPLES),
                 deadline=None,
                 print_blob=True,
             )(evidence_run)

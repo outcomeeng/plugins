@@ -34,6 +34,7 @@ from outcomeeng_testing.harnesses.product_tree import (
     marketplace_root_for_product_tree_root_test,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 # A shell variable name the harness may safely interpolate into a sourced script.
 _ENV_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
@@ -81,7 +82,7 @@ def hook_generated_evidence(
     """Apply reproducible Hypothesis policy to agent-hook evidence."""
     configured = seed(HOOK_EVIDENCE_SEED)(
         settings(
-            max_examples=HOOK_EVIDENCE_EXAMPLES,
+            max_examples=profile_examples(HOOK_EVIDENCE_EXAMPLES),
             deadline=None,
             print_blob=True,
         )(evidence_run)

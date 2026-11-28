@@ -19,6 +19,7 @@ from hypothesis import given, seed, settings
 from outcomeeng_testing.generators.review_thread_resolver import (
     malformed_resolver_argvs,
 )
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = (
@@ -236,7 +237,7 @@ def review_thread_discovery_pages_comments_until_comment_is_found() -> bool:
 
 def malformed_inputs_fail_before_github_calls() -> bool:
     @seed(MALFORMED_INPUT_PROPERTY_SEED)
-    @settings(max_examples=MALFORMED_INPUT_PROPERTY_EXAMPLES)
+    @settings(max_examples=profile_examples(MALFORMED_INPUT_PROPERTY_EXAMPLES))
     @given(argv=malformed_resolver_argvs())
     def assertion(argv: tuple[str, ...]) -> None:
         run = _run_resolver(
