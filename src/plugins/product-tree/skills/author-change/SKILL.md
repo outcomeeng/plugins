@@ -95,7 +95,7 @@ For a Sliced Leaf, after a publish that writes its body and the readback, launch
 <operations>
 
 - `record`: draft a new Change at Proposed and publish it. Every Change, a Child included, records as Submitted for its own Priority decision, with no Priority, Value, or Investment.
-- `publish`: revise a stored record from its Draft and publish it. Keep `predecessors` and `parent` as stored; `base` moves only with a body write under `base-on-body`.
+- `publish`: revise a stored record from its Draft and publish it. The revision writes `parent` and `predecessors` from the Draft and clears each one the Draft empties or leaves out; `base` moves only with a body write under `base-on-body`.
 - `split`: below Applicable only, under `split`, record each Child from its own Draft with `parent` naming the source, then publish the source as a Parent: its body only the Statement of Intent and its Draft without `base`, so the publish clears its Base.
 - `merge`: on the Operator's direction only, under `merge-direction`, append the absorbed Change to the survivor's `predecessors`, publish the survivor, and close the absorbed Change through `product-tree:manage-change` with `abandoned` and the survivor's reference, which closes the absorbed issue as a duplicate of the survivor's issue.
 - `reframe`: edit the record in place, publish it, and make the `lower` Transition to Proposed through `product-tree:manage-change`.
