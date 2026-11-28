@@ -41,6 +41,7 @@ from outcomeeng_testing.generators.herdr_environment import agent_item_variant
 from outcomeeng_testing.harnesses.agent_mail import (
     captured_inbox_responses_with_bodies,
     common_dir_reply,
+    event_page_with_ids,
     inbox_response_with_ids,
     load_agent_mail,
     wait_request,
@@ -160,9 +161,11 @@ class RoutingRunner:
     """Failure-simulation and interaction-protocol collaborator for every command
     boundary the shipped script crosses.
 
-    Each program answers with its scripted reaction. A hung command consumes the
-    whole bound it was given on the scripted clock and times out. Every argv,
-    bound, and start instant is recorded.
+    Each program answers with its scripted reaction; a reaction keyed by the
+    program and its first command word answers that command ahead of the
+    program's own. A hung command consumes the whole bound it was given on the
+    scripted clock and times out. Every argv, bound, and start instant is
+    recorded.
     """
 
     clock: ScriptedClock
@@ -178,7 +181,7 @@ class RoutingRunner:
         timeout_seconds: float | None = None,
     ) -> Any:
         self.calls.append(RoutedCall(tuple(argv), timeout_seconds, self.clock.current))
-        reaction = self.reactions.get(argv[0])
+        reaction = self.reactions.get(" ".join(argv[:2]), self.reactions.get(argv[0]))
         if reaction is None:
             raise UnexpectedCommandError(argv)
         if reaction.kind == "absent":
@@ -324,6 +327,14 @@ def _arrange_mail(
                 list(range(after_id + 1, after_id + 1 + am.WAIT_LISTING_LIMIT)),
             )
             inbox = reply(cut_off.result)
+            # The delivery events end without a record past the id either, so
+            # the wait reaches back to it through neither surface.
+            events = event_page_with_ids(
+                am, [after_id - 1, after_id], cursor_offset=0, next_cursor=None
+            )
+            arrangement.reactions[" ".join(am.WAIT_EVENTS_COMMAND_PREFIX)] = reply(
+                events.result
+            )
         elif reading is MailReading.UNAVAILABLE:
             inbox = ABSENT
         else:
