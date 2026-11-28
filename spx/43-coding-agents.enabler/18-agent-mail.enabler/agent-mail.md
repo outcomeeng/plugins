@@ -60,3 +60,9 @@ This capability is an agent adapter: the configured way the agent harness lets o
 - NEVER: a list, a wait, or any operation other than the read and the acknowledgement changes a record's read state ([test](tests/test_agent_mail.compliance.l1.py))
 - A read records, visibly to the recipient alone, that the recipient judged one message; it establishes nothing about the message's content ([audit:read-semantics])
 - An acknowledgement is a read the sender can observe; it establishes no agreement, ownership, authorization, or acceptance of a proposal ([audit:acknowledgement-semantics])
+- [list-bodies](tests/test_agent_mail.compliance.l1.py): ALWAYS: a list request that omits `includeBodies` maps to the store's listing with bodies, in its unjudged and its complete form alike, and a list request carrying `includeBodies` false maps to the same listing without bodies
+- [wait-interval](tests/test_agent_mail.compliance.l1.py): ALWAYS: a wait lists at its start and then at most once per the adapter's wait interval until its first record or its timeout, so a wait whose timeout is shorter than that interval lists once
+
+### Audit: wait interval
+
+- wait-interval-value: ALWAYS: the adapter's wait interval is 30 seconds

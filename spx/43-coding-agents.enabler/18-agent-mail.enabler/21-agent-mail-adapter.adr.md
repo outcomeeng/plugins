@@ -141,6 +141,7 @@ Public `am` responses map to versioned source-owned results or named failures, a
 - nul-rejected: NEVER: a text argument carrying a NUL byte reaches a store command; the request is rejected as an invalid schema first.
 - thread-length: NEVER: a send whose correlation's written thread id exceeds 128 characters reaches a store command; the request is rejected as an invalid schema first.
 - versioned-result: ALWAYS: every emitted result carries the versioned result shape, including the failure whose input does not parse, and a runner error of any class maps to the named store-unavailable or command-failed result.
+- list-bodies: ALWAYS: a list request that omits `includeBodies` maps to the listing command with `--include-bodies`, and only a list request carrying `includeBodies` false maps to the form without it.
 
 ### Test.Compliance: identity
 
@@ -155,6 +156,7 @@ Public `am` responses map to versioned source-owned results or named failures, a
 - registrations-read-only: NEVER: a registrations request changes a registration, a record, or a read state.
 - wait-timeout: NEVER: a wait request without a timeout runs a store command, and no store command inside a wait outlives the time that remains.
 - wait-stateless: NEVER: a wait keeps a cursor, state file, or lock; the caller passes the last id it handled.
+- wait-interval: ALWAYS: a wait lists at its start and then at most once per the adapter's wait interval until its first record or its timeout.
 
 ### Test.Compliance: boundary
 
@@ -187,3 +189,4 @@ Public `am` responses map to versioned source-owned results or named failures, a
 - skill-surface-access: ALWAYS: `/operate-agent-mail` owns all bundled-script access, and composing skills invoke the capability through the skill surface rather than manufacturing a cross-skill filesystem path.
 - read-semantics: ALWAYS: a read records, visibly to the recipient alone, that the recipient judged one message, and establishes nothing about the message's content.
 - acknowledgement-semantics: ALWAYS: an acknowledgement is a read the sender can observe, and establishes no agreement, ownership, authorization, or acceptance of a proposal.
+- wait-interval-value: ALWAYS: the adapter's wait interval is 30 seconds.
