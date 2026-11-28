@@ -61,6 +61,11 @@ CAN project the sealed journal into the surface they own without duplicating rev
   - Given `review_run.py finish --unread-file <path>` naming a file that lists one changed path per line
   - When `finish` runs
   - Then it marks each listed path as unread exactly as one `--unread` argument per path does, so an unread set of any size reaches the runner through one argument
+- [checkout-root-run](tests/test_review_run_checkout_root.scenario.l2.py):
+  - Given a target repository and a decoy repository, each in its own directory under a fresh scratch directory and each on branch `work` with one commit over `main` that changes `sample.txt`, the target's commit writing "target edit" and the decoy's writing "decoy edit", and a third directory there that is no repository
+  - When `review_run.py start --checkout` the target's root runs in the third directory with `SPX_VERIFY_BASE_REF=main`, `append-scope` for `sample.txt` runs in the decoy, `append-finding` runs in the third directory, and `finish` runs in the decoy
+  - Then the run's base and head commits are the target's `main` and `work` commits, its branch is `work`, its diff holds the "target edit" change to `sample.txt` and nothing of the decoy, and its diff digest and changed-file entries equal those of the same run started and finished in the target
+  - And exactly one sealed review journal exists, in the target, and the decoy holds none
 
 ### Test.Scenario: generated extents
 
@@ -208,6 +213,8 @@ Each review severity maps to one severity of the shared run-journal projection, 
 - [scratch-only-writes](tests/test_reviewing_changes.compliance.l1.py): ALWAYS: scripts under `plugins/product-tree/skills/review-changes/scripts/` write no durable review state directly; `compute_diff.py` writes only the caller-owned scratch review-input bundle files, and `review_run.py` writes and removes only runner-owned scratch state
 - [stdlib-only](tests/test_reviewing_changes.compliance.l1.py): NEVER: any script under `plugins/product-tree/skills/review-changes/scripts/` imports a third-party package, depends on `uv` at runtime, or imports any `outcomeeng_*` module — stdlib only per the Plugin Portability Constraints in `AGENTS.md`
 - token-only-output: NEVER: the live `review-changes` skill path renders, summarizes, counts, or restates findings for the caller; caller-facing output is the raw run token
+- [checkout-root-state](tests/test_review_run_checkout_root.compliance.l2.py): ALWAYS: `review_run.py start` records the checkout root it receives in the run state, and `start`, `append-scope`, `append-finding` and `finish` run every git and `spx journal` command with that root as the working directory and read no repository from the working directory of the process
+- [checkout-root-refused](tests/test_review_run_checkout_root.compliance.l2.py): ALWAYS: `review_run.py start` refuses a run whose `--checkout` is absent or names no repository checkout with one stderr diagnostic naming the value and a nonzero exit, and writes no run state
 
 ### Test.Compliance: identity and citations
 
@@ -247,3 +254,4 @@ Each review severity maps to one severity of the shared run-journal projection, 
 - stale-eval-history: No review raises a finding on the sole ground that an eval's `history.jsonl` records a run on an earlier commit than the head, because evaluate runs in CI only on an operator's dispatch, so the history file is a trend record and never a result the changeset owes, per `scope-by-type` in [`spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md`](spx/31-outcomeeng.enabler/31-verification.enabler/14-verification.pdr.md).
 - known-diffs: Known-clean diffs yield zero `blocking` findings, and known-broken diffs yield at least one `blocking` finding.
 - journal-only-state: The wrapper agent writes no review artifact outside `spx journal`; durable review state is the sealed review journal prefix.
+- checkout-root-input: The `review-changes` skill takes the absolute root of the checkout under review as its input and passes it unchanged to `review_run.py start` as `--checkout`, and the `changes-reviewer` agent and every other caller supply it; a caller that omits the root, or a skill step that passes another value, fails the audit.
