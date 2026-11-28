@@ -65,17 +65,28 @@ The touched-scope principle is `/merging-standards` `<local_deterministic_scope>
 
 - Spec-only (specs, decisions, `ISSUES.md` files, Markdown): `spx validation markdown`, `just eval-links`, and `spx spec status --format json`.
 - Skill/doc Markdown under `src/plugins/` or `dist/`: `just check-skills` and `just docs-check`.
-- Implementation, test, validation-config, or broad changes: the focused node/package/module tests plus the narrow validation lane that covers the changed files, widening to full `just check-full` for shared validation or test infrastructure, package-manager files, generated catalog output, distribution build machinery, or another escalation the governing node or risk evidence requires per `/merging-standards` `<local_deterministic_scope>`. Test infrastructure is shared when a test under more than one node, or `conftest.py`, imports it; a harness or generator imported only by the tests of the node whose changeset carries it is covered by that node's tests. Distribution build machinery is the generator the `dist/` relation in `spx/local/generated-sources.toml` names, `outcomeeng/distribution/`; regenerated `dist/` output that follows a `src/plugins/` edit belongs to the skill/doc Markdown lane above, with source-to-output parity established by the pre-commit `build-skills` run and the gate's `dist-diff` step. Generated catalog output is the marker-bounded plugin catalog section of `README.md`, the output of the README relation `spx/local/generated-sources.toml` declares; its sources are the ones that relation lists. The automatic `just check` selector applies this same boundary through the static import index [`spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/21-test-infrastructure-reach.adr.md`](spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/21-test-infrastructure-reach.adr.md) declares: a change under `outcomeeng_testing/` selects the tests that import it when they sit under one node, and the full surface when they span nodes, when `conftest.py` imports it, or when the artifact is reached by path rather than import.
+- Implementation, test, validation-config, or broad changes: the focused node/package/module tests plus the narrow validation lane that covers the changed files, widening to the full surface, which the one local `just check` and CI's Quality Gate run below cover, for shared validation or test infrastructure, package-manager files, generated catalog output, distribution build machinery, or another escalation the governing node or risk evidence requires per `/merging-standards` `<local_deterministic_scope>`. Test infrastructure is shared when a test under more than one node, or `conftest.py`, imports it; a harness or generator imported only by the tests of the node whose changeset carries it is covered by that node's tests. Distribution build machinery is the generator the `dist/` relation in `spx/local/generated-sources.toml` names, `outcomeeng/distribution/`; regenerated `dist/` output that follows a `src/plugins/` edit belongs to the skill/doc Markdown lane above, with source-to-output parity established by the pre-commit `build-skills` run and the gate's `dist-diff` step. Generated catalog output is the marker-bounded plugin catalog section of `README.md`, the output of the README relation `spx/local/generated-sources.toml` declares; its sources are the ones that relation lists. The automatic `just check` selector applies this same boundary through the static import index [`spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/21-test-infrastructure-reach.adr.md`](spx/15-validation.enabler/65-gate.enabler/21-selected-gate.enabler/21-test-infrastructure-reach.adr.md) declares: a change under `outcomeeng_testing/` selects the tests that import it when they sit under one node, and the full surface when they span nodes, when `conftest.py` imports it, or when the artifact is reached by path rather than import.
 
 Marketplace installation changes include `just verify-marketplace-installation` in the focused deterministic scope. This command runs the repository-installation node's pytest-discovered evidence other than the L3 tests in disposable homes, runs none of the node's `l3` files, and performs no persistent installation.
 
-When the full `just check-full` bundle is required, it is the terminal local deterministic gate. Run the focused lane first, then exactly the evidence Auditors and the review that the merge composition in `merging-standards` `<authority_gates>` selects for the changeset, to convergence — none for a changeset whose touched nodes are all `spec`-malleable — then run `just check-full` once against the clean committed head. Never run `just check-full` before those agentic checks, inside an agent, or concurrently with another heavy command. Any change after it invalidates the result and reopens the affected agentic gates before the next full-gate run.
+A plugins Changeset takes its deterministic results in this order:
+
+1. Run the focused lane, then exactly the evidence Auditors and the review that the merge composition in `merging-standards` `<authority_gates>` selects for the changeset, to convergence — none for a changeset whose touched nodes are all `spec`-malleable — and make the last fix.
+2. Make the version commit `## GitHub PR version finalization` states, where the changeset lies within the distribution boundary.
+3. Run `just check` once, under `spx orchestration lock`, on that exact clean committed head. It selects the full surface itself where a changed path calls for one.
+4. Push that head.
+5. Take the pull request's Quality Gate run, the `check` job CI runs on the pushed head through `just check-full`, as the changeset's full run that gates the merge, in place of a local `just check-full`. No plugins Changeset runs `just check-full` locally.
+6. Have the Plugins Advisor review that same head before the merge.
+
+Any change after the local `just check` invalidates it, together with the affected agentic gates, and repeats the order from step 1. Never run a gate inside an agent or concurrently with another heavy command.
 
 ## GitHub PR version finalization
 
-The PR opens without a version commit. `/manage-pr` applies this entry once the
-PR's content is final: every valid finding is fixed and no content push is
-pending, and before the mutation-point guard for the merge. Read the
+The version commit follows the changeset's last fix and precedes its one local
+`just check`, its push, and the Plugins Advisor's Review of the pushed head, so
+the head CI's Quality Gate and that Review judge carries it. Apply this entry
+once the content is final: every valid finding is fixed and no content change
+is pending. Read the
 `Plugin version policy` section in `spx/local/open-pr.md` for the distribution
 boundary, segment selection, and recipe argument convention; this entry adds
 the managing workflow's execution point without restating that policy.
@@ -108,15 +119,18 @@ this order:
    the generated output together through `/commit-changes`.
 4. Run `just bump-check "$version_base_ref"` on the clean committed head; a
    nonzero exit blocks the push.
-5. Push the version commit under `/merging-standards` `<push_semantics>` and
-   return to the check wait. The push fires the required checks and the CI
-   review on the new head, and `MERGE_READINESS` reads that head.
+5. Run `just check` once, under `spx orchestration lock`, on that head, then
+   push it under `/merging-standards` `<push_semantics>` and return to the
+   check wait. The push fires the required checks and the CI review on the
+   new head, and `MERGE_READINESS` reads that head.
 
 The head the mutation-point guard reads carries the version commit as its last
 commit, so the merged diff includes the bump. A version commit changes only
-manifests, changelog headings, and generated output, so it re-runs no evidence Auditor and no local review; its local lane
-is the generated-output parity of step 2, the heading comparison of step 3,
-and the check of step 4. A rebase or
+manifests, changelog headings, and generated output, so it re-runs no evidence
+Auditor; the Plugins Advisor's Review of the pushed head judges it with the rest
+of the changeset. Its local lane is the generated-output parity of step 2, the
+heading comparison of step 3, the check of step 4, and the `just check` of
+step 5. A rebase or
 retarget after the version commit, or base advancement before the merge,
 repeats steps 1 to 5 from the new base. If review changes the required
 segment for an already-bumped plugin, restore only its source manifests to the
