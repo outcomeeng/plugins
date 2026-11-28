@@ -832,3 +832,75 @@ def test_only_read_and_acknowledge_reach_a_command_that_changes_read_state() -> 
     run_operation_mapping(assert_operation)
 
     assert seen == set(module.Operation)
+
+
+def test_a_list_request_carries_bodies_unless_it_declines_them() -> None:
+    module = load_agent_mail()
+    contract = usage_contract_for(module, module.Operation.LIST)
+    forms: set[bool] = set()
+
+    def assert_list(
+        module: ModuleType, request: dict[str, object], project_key: str
+    ) -> None:
+        if module.Operation(request[module.OPERATION_FIELD]) is not (
+            module.Operation.LIST
+        ):
+            return
+        arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+        for choice in (None, True, False):
+            variant_arguments = {
+                name: value
+                for name, value in arguments.items()
+                if name != module.INCLUDE_BODIES_FIELD
+            }
+            if choice is not None:
+                variant_arguments[module.INCLUDE_BODIES_FIELD] = choice
+            variant = {**request, module.ARGUMENTS_FIELD: variant_arguments}
+            reading = read_argv(contract, module.command_for(variant, project_key))
+            forms.add(variant_arguments.get(module.ALL_RECORDS_FIELD) is True)
+
+            assert reading.unknown_options == ()
+            assert (module.INCLUDE_BODIES_OPTION in reading.options_seen) is (
+                choice is not False
+            ), variant_arguments
+
+    run_operation_mapping(assert_list)
+
+    assert forms == {False, True}
+
+
+def test_a_wait_lists_at_most_once_per_wait_interval() -> None:
+    def assert_case(
+        module: ModuleType, agent: str, project_key: str, timeout_seconds: int
+    ) -> None:
+        interval = module.WAIT_POLL_INTERVAL_SECONDS
+        for capture in captured_inbox_responses_with_bodies(module):
+            after_id = max(
+                cast(int, row[module.STORE_ID_FIELD])
+                for row in cast(
+                    list[dict[str, object]], capture.payload[module.STORE_INBOX_FIELD]
+                )
+            )
+            for timeout in (timeout_seconds, timeout_seconds + 2 * interval):
+                clock = ScriptedClock()
+                runner = wait_store_runner(
+                    module, project_key, clock, repeating=capture.result
+                )
+
+                result = module.execute(
+                    wait_request(module, agent, after_id, timeout), runner, clock
+                )
+
+                data = cast(dict[str, object], result[module.DATA_FIELD])
+                listings = runner.started[1:]
+                gaps = [
+                    later - earlier for earlier, later in zip(listings, listings[1:])
+                ]
+                assert data[module.OUTCOME_FIELD] == module.WaitOutcome.TIMEOUT
+                assert listings[0] == 0, capture.capture
+                assert all(gap >= interval for gap in gaps), listings
+                assert timeout - listings[-1] <= interval, listings
+                if timeout < interval:
+                    assert len(listings) == 1, listings
+
+    run_wait_cases(assert_case)

@@ -25,6 +25,7 @@ CAN wake on the first event any named source yields without a standing watcher, 
 - A clock source carrying an instant before the timeout maps the arrival of that instant to a clock event line ([test](tests/test_event_wait.mapping.l1.py))
 - A request is one JSON document on standard input naming its sources and its timeout, the request form the agent-mail and herdr adapters take; a document that is not one JSON object, or that names an unknown source kind, maps to the invalid-request line ([test](tests/test_event_wait.mapping.l1.py))
 - The event line, the unreadable-source line, the timeout line, and the invalid-request line map to distinct source-owned line forms, each one JSON object on one line whose `kind` field names its form, the event and timeout lines exiting zero and the other two exiting nonzero ([test](tests/test_event_wait.mapping.l1.py))
+- [mail-interval](tests/test_event_wait.mapping.l1.py): A run reads each mail source at most once per its mail interval: a run whose one source is a mail source waits on it once for the time that remains, and a run with other sources waits on each mail source for its pass wait at its first pass and then only once the mail interval has passed since that source's last wait, while it reads every other source on each pass
 
 ### Compliance
 
@@ -36,3 +37,7 @@ CAN wake on the first event any named source yields without a standing watcher, 
 - ALWAYS: the Codex rendering of `/wait-for-event` instructs the caller to arm one run at a time with one explicit timeout, as the owner that collects its line, in the foreground, collected within the active turn or moved to the next step boundary, and to arm the next run after it handles the line ([audit])
 - ALWAYS: the Claude rendering of `/wait-for-event` instructs the caller to arm one run at a time with one explicit timeout, as the owner that collects its line, and lets the run go to the background, where its exit re-invokes the session and the owner collects the line on the completion notice, and to arm the next run after it handles the line ([audit])
 - NEVER: the Codex rendering of `/wait-for-event` instructs the caller to arm a run in the background ([audit])
+
+### Audit: mail interval
+
+- mail-interval-values: ALWAYS: the mail interval of `wait_event` is 30 seconds, and its pass wait on a mail source is one second

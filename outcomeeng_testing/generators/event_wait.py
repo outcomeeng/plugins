@@ -168,6 +168,34 @@ def world_cases(
     ).filter(carries_a_source)
 
 
+def mail_interval_cases(mail_interval_seconds: float) -> st.SearchStrategy[WorldCase]:
+    """A quiet mail source, alone or beside a spend source whose detector holds
+    no alert, under a timeout of up to three mail intervals."""
+
+    def build(timeout_seconds: int, agent: str, beside: bool) -> WorldCase:
+        return WorldCase(
+            timeout_seconds,
+            agent,
+            None,
+            MailReading.QUIET,
+            None,
+            (),
+            SpendReading.RECORDED if beside else None,
+            (),
+            0,
+            None,
+        )
+
+    return st.builds(
+        build,
+        timeout_seconds=st.integers(
+            min_value=1, max_value=3 * math.ceil(mail_interval_seconds)
+        ),
+        agent=agent_names(),
+        beside=st.booleans(),
+    )
+
+
 @dataclass(frozen=True)
 class TimeoutDefect:
     """A request's timeout that is absent, not a number, or not a positive finite one."""
