@@ -893,7 +893,9 @@ def test_a_wait_lists_at_most_once_per_wait_interval() -> None:
 
                 data = cast(dict[str, object], result[module.DATA_FIELD])
                 listings = runner.started[1:]
-                gaps = [later - earlier for earlier, later in zip(listings, listings[1:])]
+                gaps = [
+                    later - earlier for earlier, later in zip(listings, listings[1:])
+                ]
                 assert data[module.OUTCOME_FIELD] == module.WaitOutcome.TIMEOUT
                 assert listings[0] == 0, capture.capture
                 assert all(gap >= interval for gap in gaps), listings
@@ -902,4 +904,3 @@ def test_a_wait_lists_at_most_once_per_wait_interval() -> None:
                     assert len(listings) == 1, listings
 
     run_wait_cases(assert_case)
-
