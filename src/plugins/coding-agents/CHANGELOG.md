@@ -6,6 +6,13 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.21.4
+
+### Fixed
+
+- **A mail wait returns the next record over an inbox of any size.** When the recipient holds more than 1000 records past `afterId`, `/operate-agent-mail`'s `wait` pages the recipient's delivery events from their start and returns the first record past `afterId`, read through the store's single-message read, which changes no read state. Before this change, such a wait ended `unreachable`. `unreachable` now means that neither the listing nor the delivery events reach back to `afterId`.
+- **A slow store command no longer fails a mail wait.** A listing or a page of delivery events that reaches its 30-second bound while time remains ends no wait: the wait reads again at its next interval and ends as a `timeout` only at its deadline. Before this change, such a wait ended `command-failed`.
+
 ## 0.21.3
 
 ### Changed
