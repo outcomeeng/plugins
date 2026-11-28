@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.28.5
+
+### Changed
+
+- **`/typescript-test-standards`, `/author-typescript-test`, and `/typescript-architecture-standards` place temp dirs, Git, and every process at `l2`.** An `l1` test runs in process and reads committed files only. The temp-dir patterns move from the `l1` references to `levels/l2-local-infrastructure.md` and `references/l2-patterns.md`.
+
 ## 0.28.4
 
 ### Changed

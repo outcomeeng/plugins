@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.4.4
+
+### Changed
+
+- **`/go-test-standards`, `/author-go-test`, and `/go-architecture-standards` place `t.TempDir()`, Git, and every process at Level 2.** A Level 1 test runs in process under `go test` and reads committed files only, so `go build`, `go vet`, and a binary built in-cycle are Level 2. The tempdir and compile-time patterns move from `references/level-1.md` to `references/level-2.md`.
+
 ## 0.4.3
 
 ### Changed
