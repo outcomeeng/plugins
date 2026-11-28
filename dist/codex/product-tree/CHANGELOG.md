@@ -10,6 +10,12 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.20
+
+### Changed
+
+- **A review reads the checkout it names, from any working directory.** `review_run.py start` takes `--checkout <absolute checkout root>`, records that root in the run state, and runs every git and `spx journal` command of `start`, `append-scope`, `append-finding` and `finish` there. The run's refs, branch, diff and journal therefore come from that checkout whatever the session's working directory. `start` refuses a run whose `--checkout` is absent or names no checkout root, with one diagnostic naming the value and no run state. `/review-changes` takes the checkout root as its input and passes it unchanged, and the `changes-reviewer` agent resolves it with `git rev-parse --show-toplevel`. Before this change, the runner read its repository from the process's working directory, so a reviewer session in another directory reviewed another repository or stopped. A caller that runs `start` directly passes `--checkout`.
+
 ## 0.115.19
 
 ### Changed

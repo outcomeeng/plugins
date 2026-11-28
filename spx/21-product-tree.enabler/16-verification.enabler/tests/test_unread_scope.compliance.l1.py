@@ -43,7 +43,9 @@ def _start_run(tmp_path: pathlib.Path) -> _StartedRun:
     base_ref = init_repo_with_branch(repo)
     env, journal_path = runner_env(tmp_path, repo, base_ref)
 
-    started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+    started = run_script(
+        REVIEW_RUN_SCRIPT, "start", "--checkout", str(repo), env=env, cwd=repo
+    )
     assert started.returncode == 0, started.stderr
     state_path = json.loads(started.stdout)["statePath"]
     changed_files = json.loads(pathlib.Path(state_path).read_text(encoding="utf-8"))[

@@ -108,6 +108,7 @@ FAKE_JOURNAL_EVENTS = "events"
 FAKE_JOURNAL_SEALED = "sealed"
 FAKE_JOURNAL_NAMESPACE = "namespace"
 FAKE_JOURNAL_RUN_TOKEN = "runToken"
+FAKE_JOURNAL_CWDS = "cwds"
 
 WRAPPER_AGENT_PATH = (
     REPO_ROOT / "src" / "plugins" / "product-tree" / "agents" / "changes-reviewer.md"
@@ -381,6 +382,23 @@ def init_repo_with_branch(repo: pathlib.Path) -> str:
     return "main"
 
 
+def init_work_branch_repo(repo: pathlib.Path, edit: str) -> None:
+    """Create a repository whose ``work`` branch has one commit over ``main``.
+
+    The commit writes ``edit`` to ``sample.txt``, which ``main`` holds with
+    other content.
+    """
+    run_git("init", "-q", "-b", "main", str(repo), cwd=pathlib.Path.cwd())
+    run_git("config", "commit.gpgsign", "false", cwd=repo)
+    (repo / "sample.txt").write_text("base\n", encoding="utf-8")
+    run_git("add", "sample.txt", cwd=repo)
+    run_git("commit", "-q", "-m", "initial", cwd=repo)
+    run_git("switch", "-q", "-c", "work", cwd=repo)
+    (repo / "sample.txt").write_text(f"{edit}\n", encoding="utf-8")
+    run_git("add", "sample.txt", cwd=repo)
+    run_git("commit", "-q", "-m", "edit sample", cwd=repo)
+
+
 def isolated_git_env(cwd: pathlib.Path) -> dict[str, str]:
     """Return a subprocess environment whose git reads no workstation config."""
     return {
@@ -421,7 +439,9 @@ def open_scoped_review_run(
     later verb starts from an opened, fully covered run. A non-zero exit is a
     setup failure and raises with the runner's stderr.
     """
-    started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+    started = run_script(
+        REVIEW_RUN_SCRIPT, "start", "--checkout", str(repo), env=env, cwd=repo
+    )
     if started.returncode != 0:
         raise RuntimeError(f"review_run.py start failed: {started.stderr}")
     state_path = str(
@@ -486,7 +506,9 @@ def start_review_run_exporting(
     }[export]
     if exported is not None:
         env[str(load_review_run_module().ENV_BRANCH)] = exported
-    started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+    started = run_script(
+        REVIEW_RUN_SCRIPT, "start", "--checkout", str(repo), env=env, cwd=repo
+    )
     if started.returncode != 0:
         raise RuntimeError(f"review_run.py start failed: {started.stderr}")
     review_run = load_review_run_module()
@@ -530,6 +552,7 @@ class FakeJournal(NamedTuple):
     sealed: bool
     namespace: dict[str, str] | None
     run_token: str | None
+    cwds: list[str]
 
 
 def read_fake_journal(journal_path: pathlib.Path) -> FakeJournal:
@@ -541,6 +564,7 @@ def read_fake_journal(journal_path: pathlib.Path) -> FakeJournal:
         sealed=bool(journal[FAKE_JOURNAL_SEALED]),
         namespace=journal.get(FAKE_JOURNAL_NAMESPACE),
         run_token=journal.get(FAKE_JOURNAL_RUN_TOKEN),
+        cwds=list(journal.get(FAKE_JOURNAL_CWDS, [])),
     )
 
 
@@ -594,6 +618,7 @@ if len(args) < 2 or args[0] != "journal":
 command = args[1]
 current_namespace = namespace()
 state[$commands].append(command)
+state.setdefault($cwds, []).append(os.getcwd())
 if command == "open":
     state[$namespace] = current_namespace
     state[$run_token_key] = $run_token
@@ -635,6 +660,7 @@ else:
             namespace=json.dumps(FAKE_JOURNAL_NAMESPACE),
             run_token_key=json.dumps(FAKE_JOURNAL_RUN_TOKEN),
             run_token=json.dumps(FAKE_RUN_TOKEN),
+            cwds=json.dumps(FAKE_JOURNAL_CWDS),
         ),
         encoding="utf-8",
     )

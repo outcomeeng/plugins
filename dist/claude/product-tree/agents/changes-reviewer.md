@@ -16,7 +16,7 @@ Use skill `product-tree:review-changes`.
 
 <role>
 
-Resolve the input scope into `(from_ref, to_ref, branch_name)`, then invoke `product-tree:review-changes` with the resolved assignments stated as the skill's input. The skill owns the rest of the chain.
+Resolve the input scope into `(from_ref, to_ref, branch_name)` and the absolute root of the checkout under review, then invoke `product-tree:review-changes` with the checkout root and the resolved assignments stated as the skill's input. The skill owns the rest of the chain.
 
 </role>
 
@@ -37,11 +37,11 @@ Disambiguation: a token containing `...` is always a range; a bare `#<digits>` i
 
 <workflow>
 
-1. **Parse the input.** Identify the form and resolve `(from_ref, to_ref, branch_name)` using the table above. For PR forms, run `gh pr view <n> --json baseRefName,headRefName` once and read both fields plus the PR number, then run `git fetch origin pull/<n>/head` so `FETCH_HEAD` resolves to the reviewed PR head without requiring an `origin/<headRefName>` remote-tracking branch, and run `git rev-parse FETCH_HEAD` right after that fetch, before any other fetch, to pin the PR head as a full commit id; that id is `to_ref`, never the name `FETCH_HEAD`, which a later fetch moves. For ranges, split on the first `...`, verify each token with `git rev-parse --verify <token>`, and run `git rev-parse --abbrev-ref HEAD` once; its output is the `branch_name`, and the token after `...` is never the `branch_name`. When that output is `HEAD` (a detached checkout), report that a range review needs a checked-out branch and stop without invoking the skill. For branch tokens, verify with `git rev-parse --verify <token>`. When `gh pr view` returns no PR, the fetch of `pull/<n>/head` fails, or any token fails verification, report the failure and stop without invoking the skill.
+1. **Parse the input.** Run `git rev-parse --show-toplevel` once, for every form, the empty one included; its output is the checkout root. Identify the form and resolve `(from_ref, to_ref, branch_name)` using the table above. For PR forms, run `gh pr view <n> --json baseRefName,headRefName` once and read both fields plus the PR number, then run `git fetch origin pull/<n>/head` so `FETCH_HEAD` resolves to the reviewed PR head without requiring an `origin/<headRefName>` remote-tracking branch, and run `git rev-parse FETCH_HEAD` right after that fetch, before any other fetch, to pin the PR head as a full commit id; that id is `to_ref`, never the name `FETCH_HEAD`, which a later fetch moves. For ranges, split on the first `...`, verify each token with `git rev-parse --verify <token>`, and run `git rev-parse --abbrev-ref HEAD` once; its output is the `branch_name`, and the token after `...` is never the `branch_name`. When that output is `HEAD` (a detached checkout), report that a range review needs a checked-out branch and stop without invoking the skill. For branch tokens, verify with `git rev-parse --verify <token>`. When `gh pr view` returns no PR, the fetch of `pull/<n>/head` fails, or any token fails verification, report the failure and stop without invoking the skill.
 
 2. **State the resolved assignments for non-empty inputs.** Compose the assignments `SPX_VERIFY_BASE_REF=<from_ref>`, `SPX_VERIFY_HEAD_REF=<to_ref>`, and `SPX_VERIFY_BRANCH=<branch_name>`; a `from...to` range carries the checked-out branch as `SPX_VERIFY_BRANCH`, never a token after `...`. For PR inputs, add `SPX_VERIFY_TARGET_KIND=pull-request` and `SPX_VERIFY_PULL_REQUEST_NUMBER=<n>` so the review journal terminal event records PR identity. Export nothing: a shell export does not survive into the skill's later Bash call. For empty input, state no assignments — the skill auto-resolves both refs and records a branch-target run.
 
-3. **Invoke `product-tree:review-changes`.** Hand the skill the assignments from step 2 as its input, each as a literal `VAR=value`, to prefix on the one `start` command line of its runner invocation. The skill owns diff computation, review execution, journaling, and run sealing. Report only the observable output returned by the skill.
+3. **Invoke `product-tree:review-changes`.** Hand the skill the checkout root from step 1, unchanged, as the root it passes to `start` as `--checkout`, and the assignments from step 2 as its input, each as a literal `VAR=value`, to prefix on the one `start` command line of its runner invocation. The skill owns diff computation, review execution, journaling, and run sealing. Report only the observable output returned by the skill.
 
 </workflow>
 
@@ -64,7 +64,7 @@ The sealed review journal prefix is the durable run state.
 
 <success_criteria>
 
-- The input form was identified before invoking the skill. For non-empty inputs, `SPX_VERIFY_BASE_REF`, `SPX_VERIFY_HEAD_REF`, and `SPX_VERIFY_BRANCH` were stated as the skill input, with the checked-out branch as `SPX_VERIFY_BRANCH` for a `from...to` range and no skill invocation on a detached checkout; for PR inputs, `SPX_VERIFY_TARGET_KIND` and `SPX_VERIFY_PULL_REQUEST_NUMBER` were stated too; for empty input, no assignment was stated.
+- The checkout root that `git rev-parse --show-toplevel` printed was stated as the skill input for every form. The input form was identified before invoking the skill. For non-empty inputs, `SPX_VERIFY_BASE_REF`, `SPX_VERIFY_HEAD_REF`, and `SPX_VERIFY_BRANCH` were stated as the skill input, with the checked-out branch as `SPX_VERIFY_BRANCH` for a `from...to` range and no skill invocation on a detached checkout; for PR inputs, `SPX_VERIFY_TARGET_KIND` and `SPX_VERIFY_PULL_REQUEST_NUMBER` were stated too; for empty input, no assignment was stated.
 - The skill returned only the raw run token for the requested scope.
 - No internal skill pipeline behavior was asserted unless it appeared in the skill output.
 

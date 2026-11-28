@@ -260,7 +260,9 @@ class TestReviewRunnerBoundary:
         for key in review_run_journal_env_keys():
             later_env[key] = "contaminating-later-env"
 
-        started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+        started = run_script(
+            REVIEW_RUN_SCRIPT, "start", "--checkout", str(repo), env=env, cwd=repo
+        )
         assert started.returncode == 0, started.stderr
         start_payload = json.loads(started.stdout)
 
@@ -350,7 +352,9 @@ class TestReviewRunnerBoundary:
         base_ref = init_repo_with_branch(repo)
         env, journal_path = runner_env(tmp_path, repo, base_ref)
 
-        started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+        started = run_script(
+            REVIEW_RUN_SCRIPT, "start", "--checkout", str(repo), env=env, cwd=repo
+        )
         assert started.returncode == 0, started.stderr
         start_payload = json.loads(started.stdout)
 
@@ -385,7 +389,9 @@ class TestReviewRunnerBoundary:
         base_ref = init_repo_with_branch(repo)
         env, _journal_path = runner_env(tmp_path, repo, base_ref)
 
-        started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+        started = run_script(
+            REVIEW_RUN_SCRIPT, "start", "--checkout", str(repo), env=env, cwd=repo
+        )
         assert started.returncode == 0, started.stderr
         start_payload = json.loads(started.stdout)
         assert pathlib.Path(start_payload[review_run.START_STATE_PATH]).exists() is True

@@ -41,7 +41,14 @@ def test_a_head_behind_the_fetched_base_is_refused_before_any_journal_opens(
             CHANGESET_SCOPE.remote_tracking_ref(advanced.base_ref),
         )
 
-        started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=advanced.repo)
+        started = run_script(
+            REVIEW_RUN_SCRIPT,
+            "start",
+            "--checkout",
+            str(advanced.repo),
+            env=env,
+            cwd=advanced.repo,
+        )
 
         assert started.returncode == CHANGESET_SCOPE.EXIT_STALE_BASE
         assert not started.stdout
@@ -69,7 +76,14 @@ def test_an_unfetchable_base_is_reported_as_a_diagnostic_line(
             CHANGESET_SCOPE.remote_tracking_ref(advanced.base_ref),
         )
 
-        started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=advanced.repo)
+        started = run_script(
+            REVIEW_RUN_SCRIPT,
+            "start",
+            "--checkout",
+            str(advanced.repo),
+            env=env,
+            cwd=advanced.repo,
+        )
 
         assert started.returncode == 1
         assert not started.stdout
@@ -96,7 +110,14 @@ def test_a_symbolic_origin_head_base_is_refused_against_the_remote_tip(
             CHANGESET_SCOPE.remote_tracking_ref(CHANGESET_SCOPE.HEAD_REF),
         )
 
-        started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=lagging.repo)
+        started = run_script(
+            REVIEW_RUN_SCRIPT,
+            "start",
+            "--checkout",
+            str(lagging.repo),
+            env=env,
+            cwd=lagging.repo,
+        )
 
         assert started.returncode == CHANGESET_SCOPE.EXIT_STALE_BASE
         diagnostic = json.loads(started.stderr.strip().splitlines()[-1])

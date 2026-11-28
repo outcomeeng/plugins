@@ -49,7 +49,14 @@ def test_a_pull_request_head_survives_the_base_fetch_the_runner_makes(
         )
         env[str(compute_diff.ENV_HEAD_REF)] = FETCH_HEAD_REF
 
-        started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=pull_request.repo)
+        started = run_script(
+            REVIEW_RUN_SCRIPT,
+            "start",
+            "--checkout",
+            str(pull_request.repo),
+            env=env,
+            cwd=pull_request.repo,
+        )
 
         assert started.returncode == 0, started.stderr
         run_state = json.loads(started.stdout)

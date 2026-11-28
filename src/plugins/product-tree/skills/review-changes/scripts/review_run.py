@@ -97,6 +97,7 @@ START_RENAMES = "renames"
 # payload and the runner state, the declaration's path in the review record.
 DECLARATION_CHANGED_KEY = "generatedDeclarationChanged"
 STATE_METADATA = "metadata"
+CHECKOUT_ROOT_KEY = "checkoutRoot"
 
 # Keys of the review record the run-completed event's data carries.
 REVIEW_KEY = "review"
@@ -842,8 +843,67 @@ def _cleanup_state(state_path: pathlib.Path) -> None:
         shutil.rmtree(scratch_dir)
 
 
+def _checkout_root(value: str | None) -> pathlib.Path:
+    """The root of the repository checkout ``value`` names, or ValueError.
+
+    The value is the absolute root of a checkout: Git's top level for that
+    directory resolves to the directory itself.
+    """
+    if value is None or value.strip() == "":
+        raise ValueError(
+            "start: --checkout is required and names the absolute root of the "
+            f"checkout under review; got {value!r}. Pass "
+            "`--checkout <absolute checkout root>` and rerun "
+            "`review_run.py start`."
+        )
+    candidate = pathlib.Path(value)
+    if not candidate.is_absolute() or not candidate.is_dir():
+        raise ValueError(
+            f"start: --checkout {value!r} names no repository checkout: it is "
+            "not an absolute path to a directory. Pass the absolute root of "
+            "the checkout under review and rerun `review_run.py start`."
+        )
+    top = subprocess.run(  # noqa: S603,S607
+        ["git", "rev-parse", "--show-toplevel"],
+        cwd=candidate,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    toplevel = top.stdout.strip()
+    if top.returncode != 0 or os.path.realpath(toplevel) != os.path.realpath(candidate):
+        detail = " | ".join(
+            line.strip() for line in top.stderr.splitlines() if line.strip()
+        ) or (f"its top level is {toplevel}" if toplevel else "git reported nothing")
+        raise ValueError(
+            f"start: --checkout {value!r} names no repository checkout root "
+            f"({detail}). Pass the absolute root of the checkout under review "
+            "and rerun `review_run.py start`."
+        )
+    return candidate
+
+
+def _enter_checkout(state: dict[str, Any], *, path: pathlib.Path) -> None:
+    """Make the run's checkout root the working directory of every command."""
+    root = state.get(CHECKOUT_ROOT_KEY)
+    if not isinstance(root, str) or not pathlib.Path(root).is_dir():
+        raise ValueError(
+            f"review runner state {path} key {CHECKOUT_ROOT_KEY!r} must name "
+            f"the checkout root directory, got {root!r}. Pass the statePath "
+            "that `review_run.py start` printed, or start a new run."
+        )
+    os.chdir(root)
+
+
 def _start(args: argparse.Namespace) -> int:
     started_at = _utc_now()
+    try:
+        checkout = _checkout_root(args.checkout)
+    except ValueError as exc:
+        sys.stderr.write(f"{exc}\n")
+        return 2
+    # Every git and `spx journal` command of the run runs in the checkout.
+    os.chdir(checkout)
     # A head behind the fetched base is refused before any journal exists, so
     # no run records a review of a tree that cannot merge. Every other
     # resolution failure reports through the runner's diagnostic line.
@@ -956,6 +1016,7 @@ def _start(args: argparse.Namespace) -> int:
             START_DIFF_PATH: diff_path,
             START_MANIFEST_PATH: str(manifest_path),
             STATE_METADATA: metadata,
+            CHECKOUT_ROOT_KEY: str(checkout),
             "journalEnv": journal_env,
             START_GENERATED_EXTENTS: generated_extents,
             DECLARATION_CHANGED_KEY: declaration_changed,
@@ -997,6 +1058,7 @@ def _start(args: argparse.Namespace) -> int:
 def _append_scope(args: argparse.Namespace) -> int:
     try:
         state = _read_state(args.state)
+        _enter_checkout(state, path=args.state)
         journal_env = _journal_env_from_state(state, path=args.state)
         event = jp.scope_advanced_event(args.unit, now=_utc_now())
     except (OSError, TypeError, ValueError) as exc:
@@ -1017,6 +1079,7 @@ def _append_scope(args: argparse.Namespace) -> int:
 def _append_finding(args: argparse.Namespace) -> int:
     try:
         state = _read_state(args.state)
+        _enter_checkout(state, path=args.state)
         journal_env = _journal_env_from_state(state, path=args.state)
         event = _finding_event_from_stdin(now=_utc_now(), attempt=1)
     except (OSError, TypeError, ValueError) as exc:
@@ -1054,6 +1117,7 @@ def _unread_from_files(paths: list[pathlib.Path]) -> set[str]:
 def _finish(args: argparse.Namespace) -> int:
     try:
         state = _read_state(args.state)
+        _enter_checkout(state, path=args.state)
         journal_env = _journal_env_from_state(state, path=args.state)
         run_token = str(state[START_RUN_TOKEN])
         code, prefix_value, _raw = _journal_json(
@@ -1152,6 +1216,11 @@ def main(argv: list[str] | None = None) -> int:
 
     start = subparsers.add_parser("start", help="start a review run")
     start.add_argument("--target", default=_DEFAULT_TARGET)
+    start.add_argument(
+        "--checkout",
+        default=None,
+        help="the absolute root of the checkout under review; required",
+    )
 
     append_scope = subparsers.add_parser(
         "append-scope", help="append one examined scope unit"
@@ -1184,6 +1253,12 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     args = parser.parse_args(argv)
+    # Paths the caller passes read against its own working directory, before a
+    # verb moves into the run's checkout.
+    if hasattr(args, "state"):
+        args.state = args.state.absolute()
+    if hasattr(args, "unread_file"):
+        args.unread_file = [path.absolute() for path in args.unread_file]
     if args.command == "start":
         return _start(args)
     handlers = {
