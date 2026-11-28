@@ -1,12 +1,8 @@
 {
   "step": "09c-ack-status-before-judging",
-  "startedUtc": "2026-11-23T07:37:25.982739+00:00",
-  "command": "am list-acks --project /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo/.git --agent SilverFinch",
-  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo",
-  "request": null,
+  "startedUtc": "2026-11-28T06:44:57.826002+00:00",
+  "command": "am list-acks --project /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo/.git --agent SilverLynx",
   "exitCode": 0,
-  "result": {
-    "text": "ID     FROM         SUBJECT                         STATUS   CREATED\n33375  CopperFinch  [fact] outside alphabet record  pending  2026-11-23T07:37:21\n33374  CopperFinch  [fact] ack required record      pending  2026-11-23T07:37:20\n"
-  },
-  "stderr": ""
+  "stderr": "",
+  "output": "ID     FROM        SUBJECT                  STATUS   CREATED\n36656  CopperLynx  [fact] outside alphabet  pending  2026-11-28T06:31:36\n36655  CopperLynx  [fact] ack required      pending  2026-11-28T06:31:35\n"
 }

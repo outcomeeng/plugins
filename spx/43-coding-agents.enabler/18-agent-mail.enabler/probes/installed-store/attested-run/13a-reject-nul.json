@@ -1,30 +1,20 @@
 {
   "step": "13a-reject-nul",
-  "startedUtc": "2026-11-23T07:37:28.015505+00:00",
-  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
-  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo",
+  "startedUtc": "2026-11-28T06:45:00.346764+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-4/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo",
   "request": {
     "schemaVersion": 1,
-    "operation": "send",
+    "operation": "list",
     "arguments": {
-      "record": {
-        "schema": 1,
-        "kind": "fact",
-        "correlation": "installed-store-probe",
-        "sender": "CopperFinch",
-        "recipient": "SilverFinch",
-        "subject": "nul subject",
-        "body": "a\u0000b",
-        "ackRequired": false
-      }
+      "agent": "Nul\u0000Agent"
     }
   },
   "exitCode": 1,
   "result": {
     "schemaVersion": 1,
-    "operation": "send",
+    "operation": "list",
     "status": "invalid-schema",
-    "detail": "Reading request.arguments.record.body failed: text 'a\\x00b' carries a NUL byte, which cannot cross a process boundary. Remove the NUL byte from that text."
-  },
-  "stderr": ""
+    "detail": "Reading request.arguments.agent failed: text 'Nul\\x00Agent' carries a NUL byte, which cannot cross a process boundary. Remove the NUL byte from that text."
+  }
 }

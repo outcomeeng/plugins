@@ -1,50 +1,48 @@
 {
   "step": "04c-store-agents-raw",
-  "startedUtc": "2026-11-23T07:37:20.203943+00:00",
-  "command": "am agents list --project /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo/.git --json",
-  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo",
-  "request": null,
+  "startedUtc": "2026-11-28T06:31:34.757632+00:00",
+  "command": "am agents list --project /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo/.git --json",
   "exitCode": 0,
-  "result": [
+  "stderr": "",
+  "output": [
     {
-      "name": "AmberHeron",
-      "program": "claude-code",
-      "model": "opus-5-5",
-      "task_description": "installed-store probe",
-      "inception_ts": "2026-11-23T07:37:19.996915Z",
-      "last_active_ts": "2026-11-23T07:37:19.996915Z",
+      "name": "IvoryLynx",
+      "program": "claude",
+      "model": "probe",
+      "task_description": "",
+      "inception_ts": "2026-11-28T06:31:34.533532Z",
+      "last_active_ts": "2026-11-28T06:31:34.533532Z",
       "contact_policy": "auto"
     },
     {
-      "name": "SilverOtter",
-      "program": "claude-code",
-      "model": "opus-5-5",
-      "task_description": "installed-store probe",
-      "inception_ts": "2026-11-23T07:37:19.781627Z",
-      "last_active_ts": "2026-11-23T07:37:19.781627Z",
+      "name": "AmberLynx",
+      "program": "claude",
+      "model": "probe",
+      "task_description": "",
+      "inception_ts": "2026-11-28T06:31:34.386786Z",
+      "last_active_ts": "2026-11-28T06:31:34.386786Z",
       "contact_policy": "auto",
       "display_name": "Store Recipient Two"
     },
     {
-      "name": "SilverFinch",
-      "program": "claude-code",
-      "model": "opus-5-5",
-      "task_description": "installed-store probe",
-      "inception_ts": "2026-11-23T07:37:19.565293Z",
-      "last_active_ts": "2026-11-23T07:37:19.565293Z",
+      "name": "SilverLynx",
+      "program": "claude",
+      "model": "probe",
+      "task_description": "",
+      "inception_ts": "2026-11-28T06:31:34.225782Z",
+      "last_active_ts": "2026-11-28T06:31:34.225782Z",
       "contact_policy": "auto",
       "display_name": "Store Recipient"
     },
     {
-      "name": "CopperFinch",
-      "program": "claude-code",
-      "model": "opus-5-5",
-      "task_description": "installed-store probe",
-      "inception_ts": "2026-11-23T07:37:19.388043Z",
-      "last_active_ts": "2026-11-23T07:37:19.388043Z",
+      "name": "CopperLynx",
+      "program": "claude",
+      "model": "probe",
+      "task_description": "",
+      "inception_ts": "2026-11-28T06:31:34.040803Z",
+      "last_active_ts": "2026-11-28T06:31:34.040803Z",
       "contact_policy": "auto",
       "display_name": "Store Sender"
     }
-  ],
-  "stderr": ""
+  ]
 }

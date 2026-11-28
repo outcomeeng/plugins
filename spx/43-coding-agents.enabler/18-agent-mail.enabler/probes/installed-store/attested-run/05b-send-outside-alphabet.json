@@ -1,8 +1,8 @@
 {
   "step": "05b-send-outside-alphabet",
-  "startedUtc": "2026-11-23T07:37:20.939943+00:00",
-  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
-  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo",
+  "startedUtc": "2026-11-28T06:31:35.937878+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-4/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo",
   "request": {
     "schemaVersion": 1,
     "operation": "send",
@@ -11,10 +11,10 @@
         "schema": 1,
         "kind": "fact",
         "correlation": "Odd Correlation/outside alphabet:1",
-        "sender": "CopperFinch",
-        "recipient": "SilverFinch",
-        "subject": "outside alphabet record",
-        "body": "Body of outside alphabet record",
+        "sender": "CopperLynx",
+        "recipient": "SilverLynx",
+        "subject": "outside alphabet",
+        "body": "Probe body for outside alphabet.",
         "ackRequired": true
       }
     }
@@ -25,22 +25,22 @@
     "operation": "send",
     "status": "succeeded",
     "commandExitCode": 0,
-    "projectKey": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo/.git",
+    "projectKey": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo/.git",
     "response": {
-      "id": 33375,
-      "subject": "[fact] outside alphabet record",
-      "body_md": "Body of outside alphabet record",
+      "id": 36656,
+      "subject": "[fact] outside alphabet",
+      "body_md": "Probe body for outside alphabet.",
       "importance": "normal",
       "ack_required": true,
       "thread_id": "xc-Odd_20Correlation_2foutside_20alphabet_3a1",
-      "created_ts": "2026-11-23T07:37:21.238070Z",
-      "from": "CopperFinch",
+      "created_ts": "2026-11-28T06:31:36.564757Z",
+      "from": "CopperLynx",
       "sender_display_name": "Store Sender",
       "to": [
-        "SilverFinch"
+        "SilverLynx"
       ],
       "to_display_names": {
-        "SilverFinch": "Store Recipient"
+        "SilverLynx": "Store Recipient"
       }
     },
     "data": {
@@ -49,13 +49,12 @@
         "kind": "fact",
         "ackRequired": true,
         "correlation": "Odd Correlation/outside alphabet:1",
-        "sender": "CopperFinch",
-        "recipient": "SilverFinch",
-        "subject": "outside alphabet record",
-        "body": "Body of outside alphabet record",
-        "id": 33375
+        "sender": "CopperLynx",
+        "recipient": "SilverLynx",
+        "subject": "outside alphabet",
+        "body": "Probe body for outside alphabet.",
+        "id": 36656
       }
     }
-  },
-  "stderr": ""
+  }
 }

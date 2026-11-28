@@ -10,16 +10,16 @@ SO THAT one script carries every store command and record mapping, every checkou
 
 Each source-owned operation maps a valid versioned request to one store command under the resolved project key, and no operation maps to another operation's command.
 
-| Case             | Store command                                                                                      |
-| ---------------- | -------------------------------------------------------------------------------------------------- |
-| register         | the store's registration command, with `display_name` only when the request carries a display name |
-| registrations    | the store's agent-listing command                                                                  |
-| send             | the store's send command carrying the record's mapped fields                                       |
-| list             | the store's non-marking listing surface in its unjudged form, `am robot inbox --unread`            |
-| list-all-records | the complete form of the same surface, `am robot inbox --all`                                      |
-| read             | the store's recipient-only read command for one message id, `am mail read`                         |
-| acknowledge      | the store's acknowledgement command for one message id, `am mail ack`                              |
-| wait             | the complete form of the listing surface, `am robot inbox --all`, repeated until the wait ends     |
+| Case             | Store command                                                                                                                                                                                                                                                                                                                          |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| register         | the store's registration command, with `display_name` only when the request carries a display name                                                                                                                                                                                                                                     |
+| registrations    | the store's agent-listing command                                                                                                                                                                                                                                                                                                      |
+| send             | the store's send command carrying the record's mapped fields                                                                                                                                                                                                                                                                           |
+| list             | the store's non-marking listing surface in its unjudged form, `am robot inbox --unread`                                                                                                                                                                                                                                                |
+| list-all-records | the complete form of the same surface, `am robot inbox --all`                                                                                                                                                                                                                                                                          |
+| read             | the store's recipient-only read command for one message id, `am mail read`                                                                                                                                                                                                                                                             |
+| acknowledge      | the store's acknowledgement command for one message id, `am mail ack`                                                                                                                                                                                                                                                                  |
+| wait             | the complete form of the listing surface, `am robot inbox --all`, repeated until the wait ends, and, when a full listing does not reach back to the id, the recipient's delivery events, `am inbox-events`, paged forward from their start, with the record found read through the non-marking single-message read, `am robot message` |
 
 ### Test.Mapping: repository-key
 
@@ -97,12 +97,12 @@ The store's position labels pass through verbatim beside the message record, nul
 
 A wait request carrying an id and a timeout maps to the first record addressed to the requester whose store id exceeds that id, read or unread, or to a named outcome.
 
-| Case                | Outcome                                         |
-| ------------------- | ----------------------------------------------- |
-| unread-record-above | `received`, with that record as a listed record |
-| read-record-above   | `received`, with that record as a listed record |
-| none-before-timeout | `timeout`                                       |
-| listing-short       | `unreachable`, never a later record             |
+| Case                | Outcome                                                                                                                                                                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| unread-record-above | `received`, with that record as a listed record                                                                                                                                                                                         |
+| read-record-above   | `received`, with that record as a listed record                                                                                                                                                                                         |
+| none-before-timeout | `timeout`                                                                                                                                                                                                                               |
+| listing-short       | `received`, with the first record past the id that the delivery events, paged forward from their start, name, as a listed record; `unreachable`, never a later record, only when the delivery events do not reach back to the id either |
 
 ### Test.Mapping: ack-required
 
@@ -155,7 +155,9 @@ Public `am` responses map to versioned source-owned results or named failures, a
 - read-state: NEVER: a list, a registrations listing, a wait, or any operation other than the read and the acknowledgement changes a record's read state.
 - registrations-read-only: NEVER: a registrations request changes a registration, a record, or a read state.
 - wait-timeout: NEVER: a wait request without a timeout runs a store command, and no store command inside a wait outlives the time that remains.
-- wait-stateless: NEVER: a wait keeps a cursor, state file, or lock; the caller passes the last id it handled.
+- wait-stateless: NEVER: a wait keeps a cursor, state file, or lock past its own run; it pages the delivery events from their start, and the caller passes the last id it handled.
+- wait-command-bound: ALWAYS: a listing or a page of delivery events that reaches the per-command bound while time remains ends no wait; the wait reads again at its next interval and ends as a timeout only at its deadline.
+- wait-event-fields: ALWAYS: the wait pages `am inbox-events --json` with no `--after` for its first page and the `next_cursor` of the page before for each later one, one page after another inside the time that remains, reads each event's `message_id`, and reads the record it finds through `am robot message`, which changes no read state.
 - wait-interval: ALWAYS: a wait lists at its start and then at most once per the adapter's wait interval until its first record or its timeout.
 
 ### Test.Compliance: boundary

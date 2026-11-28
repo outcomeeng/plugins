@@ -1,55 +1,55 @@
 {
   "step": "14-store-inbox-raw-after-run",
-  "startedUtc": "2026-11-23T07:37:28.164947+00:00",
-  "command": "am mail inbox --project /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo/.git --agent SilverFinch --json --include-bodies",
-  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo",
+  "startedUtc": "2026-11-28T06:48:43.146089+00:00",
+  "command": "am mail inbox --project /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo/.git --agent SilverLynx --json --include-bodies",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo",
   "request": null,
   "exitCode": 0,
   "result": [
     {
-      "id": 33375,
-      "subject": "[fact] outside alphabet record",
-      "from": "CopperFinch",
+      "id": 36656,
+      "subject": "[fact] outside alphabet",
+      "from": "CopperLynx",
       "sender_display_name": "Store Sender",
       "to_display_names": {
-        "SilverFinch": "Store Recipient"
+        "SilverLynx": "Store Recipient"
       },
       "importance": "normal",
       "ack_required": true,
-      "created_ts": "2026-11-23T07:37:21.238070Z",
+      "created_ts": "2026-11-28T06:31:36.564757Z",
       "kind": "to",
       "thread_id": "xc-Odd_20Correlation_2foutside_20alphabet_3a1",
-      "body_md": "Body of outside alphabet record"
+      "body_md": "Probe body for outside alphabet."
     },
     {
-      "id": 33374,
-      "subject": "[fact] ack required record",
-      "from": "CopperFinch",
+      "id": 36655,
+      "subject": "[fact] ack required",
+      "from": "CopperLynx",
       "sender_display_name": "Store Sender",
       "to_display_names": {
-        "SilverFinch": "Store Recipient"
+        "SilverLynx": "Store Recipient"
       },
       "importance": "normal",
       "ack_required": true,
-      "created_ts": "2026-11-23T07:37:20.809882Z",
+      "created_ts": "2026-11-28T06:31:35.745074Z",
       "kind": "to",
-      "thread_id": "installed-store-probe",
-      "body_md": "Body of ack required record"
+      "thread_id": "probe-ack",
+      "body_md": "Probe body for ack required."
     },
     {
-      "id": 33373,
-      "subject": "Contact approved: CopperFinch -> SilverFinch",
-      "from": "CopperFinch",
+      "id": 36654,
+      "subject": "Contact approved: CopperLynx -> SilverLynx",
+      "from": "CopperLynx",
       "sender_display_name": "Store Sender",
       "to_display_names": {
-        "SilverFinch": "Store Recipient"
+        "SilverLynx": "Store Recipient"
       },
       "importance": "normal",
       "ack_required": false,
-      "created_ts": "2026-11-23T07:37:20.695506Z",
+      "created_ts": "2026-11-28T06:31:35.531210Z",
       "kind": "to",
       "thread_id": null,
-      "body_md": "CopperFinch requested permission to contact SilverFinch; the request was approved on CopperFinch's behalf (auto_accept), so no action is required.\n\nApproved link: CopperFinch (project /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo/.git) -> SilverFinch (project /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo/.git).\n\nTo revoke it, call respond_contact(project_key='/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo/.git', to_agent='SilverFinch', from_agent='CopperFinch', from_project='/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo/.git', accept=false)."
+      "body_md": "CopperLynx requested permission to contact SilverLynx; the request was approved on CopperLynx's behalf (auto_accept), so no action is required.\n\nApproved link: CopperLynx (project /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo/.git) -> SilverLynx (project /private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo/.git).\n\nTo revoke it, call respond_contact(project_key='/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo/.git', to_agent='SilverLynx', from_agent='CopperLynx', from_project='/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo/.git', accept=false)."
     }
   ],
   "stderr": ""

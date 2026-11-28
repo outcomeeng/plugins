@@ -1,6 +1,6 @@
 {
   "step": "01-build",
-  "startedUtc": "2026-11-23T07:37:19.113670+00:00",
+  "startedUtc": "2026-11-28T06:31:33.729118+00:00",
   "executableOnPath": "/Users/shz/.local/bin/am",
   "amVersion": "am 0.3.36",
   "capabilitiesVersion": "0.3.36",
@@ -8,5 +8,6 @@
   "sourceCommit": null,
   "sourceCommitNote": "Neither am --version nor am capabilities reports a source commit.",
   "sha256": null,
-  "sha256Note": "Not taken: the executable resolves into a directory outside the boundary the run may read."
+  "sha256Note": "Not taken: the executable resolves into a directory outside the boundary the run may read.",
+  "capabilitiesSchemaNote": "am capabilities --json reports the schema under schema_version; the run read the key schema and recorded null, so the value was read again from the same build after the run."
 }

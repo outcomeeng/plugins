@@ -1,8 +1,8 @@
 {
   "step": "04b-list-registrations",
-  "startedUtc": "2026-11-23T07:37:20.060751+00:00",
-  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
-  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo",
+  "startedUtc": "2026-11-28T06:31:34.610133+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-4/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo",
   "request": {
     "schemaVersion": 1,
     "operation": "registrations",
@@ -14,45 +14,45 @@
     "operation": "registrations",
     "status": "succeeded",
     "commandExitCode": 0,
-    "projectKey": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo/.git",
+    "projectKey": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo/.git",
     "response": {
       "listing": [
         {
-          "name": "AmberHeron",
-          "program": "claude-code",
-          "model": "opus-5-5",
-          "task_description": "installed-store probe",
-          "inception_ts": "2026-11-23T07:37:19.996915Z",
-          "last_active_ts": "2026-11-23T07:37:19.996915Z",
+          "name": "IvoryLynx",
+          "program": "claude",
+          "model": "probe",
+          "task_description": "",
+          "inception_ts": "2026-11-28T06:31:34.533532Z",
+          "last_active_ts": "2026-11-28T06:31:34.533532Z",
           "contact_policy": "auto"
         },
         {
-          "name": "SilverOtter",
-          "program": "claude-code",
-          "model": "opus-5-5",
-          "task_description": "installed-store probe",
-          "inception_ts": "2026-11-23T07:37:19.781627Z",
-          "last_active_ts": "2026-11-23T07:37:19.781627Z",
+          "name": "AmberLynx",
+          "program": "claude",
+          "model": "probe",
+          "task_description": "",
+          "inception_ts": "2026-11-28T06:31:34.386786Z",
+          "last_active_ts": "2026-11-28T06:31:34.386786Z",
           "contact_policy": "auto",
           "display_name": "Store Recipient Two"
         },
         {
-          "name": "SilverFinch",
-          "program": "claude-code",
-          "model": "opus-5-5",
-          "task_description": "installed-store probe",
-          "inception_ts": "2026-11-23T07:37:19.565293Z",
-          "last_active_ts": "2026-11-23T07:37:19.565293Z",
+          "name": "SilverLynx",
+          "program": "claude",
+          "model": "probe",
+          "task_description": "",
+          "inception_ts": "2026-11-28T06:31:34.225782Z",
+          "last_active_ts": "2026-11-28T06:31:34.225782Z",
           "contact_policy": "auto",
           "display_name": "Store Recipient"
         },
         {
-          "name": "CopperFinch",
-          "program": "claude-code",
-          "model": "opus-5-5",
-          "task_description": "installed-store probe",
-          "inception_ts": "2026-11-23T07:37:19.388043Z",
-          "last_active_ts": "2026-11-23T07:37:19.388043Z",
+          "name": "CopperLynx",
+          "program": "claude",
+          "model": "probe",
+          "task_description": "",
+          "inception_ts": "2026-11-28T06:31:34.040803Z",
+          "last_active_ts": "2026-11-28T06:31:34.040803Z",
           "contact_policy": "auto",
           "display_name": "Store Sender"
         }
@@ -61,23 +61,22 @@
     "data": {
       "registrations": [
         {
-          "agent": "AmberHeron",
+          "agent": "IvoryLynx",
           "displayName": null
         },
         {
-          "agent": "SilverOtter",
+          "agent": "AmberLynx",
           "displayName": "Store Recipient Two"
         },
         {
-          "agent": "SilverFinch",
+          "agent": "SilverLynx",
           "displayName": "Store Recipient"
         },
         {
-          "agent": "CopperFinch",
+          "agent": "CopperLynx",
           "displayName": "Store Sender"
         }
       ]
     }
-  },
-  "stderr": ""
+  }
 }

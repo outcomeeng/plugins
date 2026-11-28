@@ -36,6 +36,8 @@ def test_a_run_crosses_only_read_commands_and_leaves_no_file_or_state_change() -
         reads = (
             tuple(am.common_dir_command(observed.case.repository)),
             am.PUBLIC_AM_COMMAND_PREFIXES[am.Operation.WAIT],
+            am.WAIT_EVENTS_COMMAND_PREFIX,
+            am.WAIT_MESSAGE_COMMAND_PREFIX,
             hm.PUBLIC_HERDR_COMMAND_PREFIXES[hm.Operation.INVENTORY],
         )
         for call in observed.calls:

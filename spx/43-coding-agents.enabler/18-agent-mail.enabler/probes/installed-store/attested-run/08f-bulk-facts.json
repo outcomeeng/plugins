@@ -1,0 +1,9 @@
+{
+  "step": "08f-bulk-facts",
+  "firstBulkId": 36661,
+  "bulkCount": 1001,
+  "failedSendAttemptsRetried": [],
+  "fullListingCount": 1000,
+  "fullListingOldestId": 36662,
+  "fullListingNewestId": 37712
+}
