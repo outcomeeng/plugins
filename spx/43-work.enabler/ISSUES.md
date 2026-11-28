@@ -34,3 +34,15 @@ The extraction is a cross-repo port into `@outcomeeng/spx`, a separate product, 
 `/skill-standards` `<progressive_disclosure>` requires a table of contents at the top of every reference file over 100 lines, so partial reads still see the full scope. In this node's skills, `src/plugins/work/skills/draw-excalidraw/references/element-templates.md` (202 lines) and `visual-patterns.md` (128), and `src/plugins/work/skills/sanitize-powerpoint/references/audit-and-fix.md` (137) and `opc-structure.md` (134), have none.
 
 **Settlement condition.** Each file opens with a table of contents in the form its skill uses, listing every top-level section, and `instructions:skill-auditor` approves each affected skill afterward.
+
+## `l1` tests cross an `l2` boundary
+
+**Evidence:** A run of every `l1` test file of the Product Tree at commit `744cf8cf23`, traced through the Python audit events of each test's setup, call and teardown, records that these `l1` files cross a boundary [`l1-boundaries`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) places at `l2`:
+
+- `tests/test_pptx_audit.scenario.l1.py`: write a file
+- `tests/test_pptx_repack.conformance.l1.py`: write a file
+- `tests/test_pptx_repack.scenario.l1.py`: write a file
+
+**Impact:** Each run of these files starts processes or writes into temporary trees on the host every Position shares, so local and CI gates spend that load on every run.
+
+**Settlement condition:** Each listed file covers the same linked Assertions in process, with no lower line or branch coverage of this Node's code, or the evidence that needs the boundary stands in an `l2` file written for it.

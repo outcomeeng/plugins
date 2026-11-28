@@ -131,3 +131,14 @@ Finding: `outcomeeng_testing/harnesses/build_orchestration.py` around line 110 b
 Remediation target: the harness. A shared formatter-boundary harness in `outcomeeng_testing/harnesses`, beside the existing `build_orchestration` harness, returns the observation (recorded runner calls and the captured build error) so each scenario states only its own case.
 
 Settlement condition: the three scenarios consume one formatter-boundary harness, and no formatter-probe stub or call-recording runner setup repeats across them.
+
+## `l1` tests cross an `l2` boundary
+
+**Evidence:** A run of every `l1` test file of the Product Tree at commit `744cf8cf23`, traced through the Python audit events of each test's setup, call and teardown, records that these `l1` files cross a boundary [`l1-boundaries`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) places at `l2`:
+
+- `tests/test_build_orchestration.compliance.l1.py`: write a file, start a process, make a temporary directory
+- `tests/test_build_orchestration.scenario.l1.py`: write a file, start a process, make a temporary directory
+
+**Impact:** Each run of these files starts processes or writes into temporary trees on the host every Position shares, so local and CI gates spend that load on every run.
+
+**Settlement condition:** Each listed file covers the same linked Assertions in process, with no lower line or branch coverage of this Node's code, or the evidence that needs the boundary stands in an `l2` file written for it.

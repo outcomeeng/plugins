@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.25.4
+
+### Changed
+
+- **`/python-test-standards` and `/python-architecture-standards` place `tmp_path` writes, Git, and every `subprocess` run at `l2`.** An `l1` test runs in process and reads committed files only. Before this change, temporary directories, Git, and repository development tools stood at `l1`.
+
 ## 0.25.3
 
 ### Changed

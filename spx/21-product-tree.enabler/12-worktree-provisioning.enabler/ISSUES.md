@@ -72,3 +72,14 @@ Provisioning a fresh pool needs no migration: a bare clone and one `git worktree
 **Settlement condition.** `spx` decides the lifecycle, the `SPX_COMMIT` pin in `.github/workflows/check.yml` advances to a commit that contains it per `CLAUDE.md`, and the assertions, the skill and the tests follow it. No skill or script here invokes a lifecycle verb before then.
 
 **Related.** `outcomeeng/changes#206` declares the worktree lifecycle every conforming pool follows in a decision.
+
+## `l1` tests cross an `l2` boundary
+
+**Evidence:** A run of every `l1` test file of the Product Tree at commit `744cf8cf23`, traced through the Python audit events of each test's setup, call and teardown, records that these `l1` files cross a boundary [`l1-boundaries`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) places at `l2`:
+
+- `tests/test_worktree_provisioning.property.l1.py`: write a file, start a process, make a temporary directory
+- `tests/test_worktree_provisioning.scenario.l1.py`: write a file, start a process, make a temporary directory
+
+**Impact:** Each run of these files starts processes or writes into temporary trees on the host every Position shares, so local and CI gates spend that load on every run.
+
+**Settlement condition:** Each listed file covers the same linked Assertions in process, with no lower line or branch coverage of this Node's code, or the evidence that needs the boundary stands in an `l2` file written for it.

@@ -83,16 +83,16 @@ Product specs or decisions may restrict which levels the product supports. Follo
 <level_tooling>
 Choose the level from execution pain and dependency availability:
 
-| Level | Infrastructure                                                                 | Typical mechanisms                                              |
-| ----- | ------------------------------------------------------------------------------ | --------------------------------------------------------------- |
-| 1     | Rust stdlib, `cargo test`, temp dirs, repo-required dev tools                  | `#[test]`, pure functions, trait seams, `tempfile`, `rstest`    |
-| 2     | Workspace binaries, local services, Docker, databases, local browser harnesses | `assert_cmd`, real adapters, `tokio::test`, `testcontainers`    |
-| 3     | External network, deployed systems, SaaS APIs, browser UI, shared environments | live API probes, browser automation, deployed CLI/API workflows |
+| Level | Infrastructure                                                                     | Typical mechanisms                                                       |
+| ----- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| 1     | In-process Rust under `cargo test`, read-only reads of committed files             | `#[test]`, pure functions, trait seams, `rstest`                         |
+| 2     | Temp dirs, Git, any process, workspace binaries, local services, Docker, databases | `tempfile`, `assert_cmd`, real adapters, `tokio::test`, `testcontainers` |
+| 3     | External network, deployed systems, SaaS APIs, browser UI, shared environments     | live API probes, browser automation, deployed CLI/API workflows          |
 
 Level rules:
 
-- Pure computation, parsing, serialization, config loading, command building, and cheap temp-dir filesystem behavior belong at Level 1
-- Real workspace binaries, local DBs, local queues, local HTTP services, and containerized collaborators belong at Level 2
+- Pure computation, parsing, serialization, config loading from committed files, and command building belong at Level 1; a Level 1 test starts no process, runs no Git, writes no file, and makes no temporary directory
+- Temp-dir filesystem behavior, Git, any process, real workspace binaries, local DBs, local queues, local HTTP services, and containerized collaborators belong at Level 2
 - Remote APIs, deployed systems, SaaS collaborators, browser UI, and shared environments belong at Level 3
 - Product specs or decisions may disable Level 3 when the suite cannot safely stand up or isolate those collaborators; repo-local overlays only route skills to those declarations
 
@@ -103,8 +103,8 @@ After `/test` chooses the evidence and level, implement it with these Rust patte
 
 | Router Decision                            | Rust implementation                                                                  |
 | ------------------------------------------ | ------------------------------------------------------------------------------------ |
-| Stage 2 -> Level 1                         | `#[test]`, pure functions, `tempfile`, hand-written trait impls                      |
-| Stage 2 -> Level 2                         | `assert_cmd`, real local adapters, `tokio::test`, local services                     |
+| Stage 2 -> Level 1                         | `#[test]`, pure functions, hand-written trait impls                                  |
+| Stage 2 -> Level 2                         | `tempfile`, `assert_cmd`, real local adapters, `tokio::test`, local services         |
 | Stage 2 -> Level 3                         | live API probes, deployed workflow tests, browser automation, remote contract checks |
 | Stage 3A: pure computation                 | direct function tests with structural assertions                                     |
 | Stage 3B: extract pure part                | pure function at Level 1, boundary at the outer level                                |
@@ -294,11 +294,11 @@ Match test strategy to assertion type:
 
 Property claims about parsers, serializers, math, ordering, or invariants require property-based tests unless the spec itself narrows the claim to a finite example set.
 
-Compile-time contracts such as trait bounds, derive behavior, or diagnostic guarantees require `trybuild` or equivalent compile-fail evidence.
+Compile-time contracts such as trait bounds, derive behavior, or diagnostic guarantees require `trybuild` or equivalent compile-fail evidence, which starts the compiler and is Level 2.
 </alignment_rules>
 
 <level_1_patterns>
-Use Level 1 when the governed logic can run with Rust stdlib, normal developer tooling, and temporary local fixtures.
+Use Level 1 when the governed logic runs in process under `cargo test` and reads only committed files.
 
 Pure function example:
 
@@ -326,7 +326,7 @@ fn command_builder_reports_success() {
 }
 ```
 
-Tempdir example. The harness owns the temporary product and its cleanup; the fixture arrives by path; the `#[test]` calls the governed function and asserts:
+Tempdir example, at Level 2 because it writes a temporary product. The harness owns the temporary product and its cleanup; the fixture arrives by path; the `#[test]` calls the governed function and asserts:
 
 ```rust
 use <product>_testing::fixtures::configs::valid_site_config_path;

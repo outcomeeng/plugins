@@ -172,16 +172,16 @@ Correct ADR language: "Use dependency injection to isolate X from Y" or "Accept 
 
 The architect needs enough testing context to write effective Verification rules. The auditor uses the same context to check whether those rules actually enable the right tests.
 
-| Level | Name        | Rust Infrastructure                                     | When to Use                                             |
-| ----- | ----------- | ------------------------------------------------------- | ------------------------------------------------------- |
-| 1     | Unit        | Rust stdlib, `cargo test`, temp dirs, git               | Pure logic, parsing, validation, command building       |
-| 2     | Integration | workspace binaries, local services, Docker, databases   | Real CLI binaries, real DB adapters, local worker flows |
-| 3     | E2E         | external network, SaaS APIs, browsers, deployed systems | Full workflows with remote systems or browser UI        |
+| Level | Name        | Rust Infrastructure                                                                | When to Use                                                          |
+| ----- | ----------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| 1     | Unit        | in-process Rust under `cargo test`, committed files                                | Pure logic, parsing, validation, command building                    |
+| 2     | Integration | temp dirs, git, any process, workspace binaries, local services, Docker, databases | File writes, real CLI binaries, real DB adapters, local worker flows |
+| 3     | E2E         | external network, SaaS APIs, browsers, deployed systems                            | Full workflows with remote systems or browser UI                     |
 
 **Key rules:**
 
-- Git, filesystem, tempdirs, and standard Rust tooling are Level 1
-- Real workspace binaries, codegen tools, and local services that require setup are Level 2
+- In-process Rust that reads only committed files is Level 1
+- Git, a file write or tempdir, any process, standard Rust tooling included, real workspace binaries, codegen tools, and local services that require setup are Level 2
 - External APIs, SaaS systems, browsers, and deployed environments are Level 3
 - Product specs or decisions may disable Level 3 when the suite cannot safely stand up, isolate, or clean up the external collaborator; `spx/local/rust-tests.md` may point the skill to that declaration
 

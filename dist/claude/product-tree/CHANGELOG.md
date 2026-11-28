@@ -10,6 +10,13 @@ A version missing below shipped without an entry. Read the gap as an absent entr
 
 An entry is written by the changeset that ships the change. A later changeset adds one only for a release its own diff modifies or reverses, and names that release's commit — the entry is then checkable against the diff carrying it. The entry covers that commit whole, because checkability comes from naming a commit a reader can open rather than from matching lines; a commit large enough that this reaches unfamiliar content is a commit whose entry belongs to whoever shipped it. Any other backfill reconstructs what a release's consumers needed from commits and diffs alone, which produces a guess, and a guess in this file is indistinguishable from a record. A gap not reachable that way stays open.
 
+## 0.115.21
+
+### Changed
+
+- **An `l1` test runs in process; a process, Git, a file write, or a temporary directory makes it `l2`.** `/test-evidence-standards`, `/test` and its execution-level lookup place every executable an evidence run starts at `l2`, whatever its provenance, the checkout's own scripts and in-cycle builds included; an `l1` test reads committed files only. Before this change, cheap temporary-filesystem work and standard subprocesses stood at `l1`.
+- **`/audit-tests` rejects a changed `l1` file that crosses one of those boundaries.** The rule `level-boundary` rejects an `l1` file the changeset adds or changes that starts a process, runs Git, writes a file, or makes a temporary directory, directly or through the infrastructure it calls. An unchanged crossing file returns as a `FILED` standing finding, which its Node's `ISSUES.md` records and a review labels `TRACKED`.
+
 ## 0.115.20
 
 ### Changed

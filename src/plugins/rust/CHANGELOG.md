@@ -6,6 +6,12 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.11.4
+
+### Changed
+
+- **`/rust-test-standards`, `/author-rust-test`, and `/rust-architecture-standards` place temp dirs, Git, and every process at Level 2.** A Level 1 test runs in process under `cargo test` and reads committed files only, so `tempfile`, `trybuild`, and workspace binaries are Level 2.
+
 ## 0.11.3
 
 ### Changed

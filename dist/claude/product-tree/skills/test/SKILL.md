@@ -113,7 +113,7 @@ Keep evidence, execution pain, and tool choice independent:
 - **Execution level** describes how painful the test is to run.
 - **Runner** describes which tool executes the test.
 
-A temporary-directory test can be `L1` when the filesystem is available, setup is trivial, and runtime is cheap. A Playwright test can be `L2` or `L3` depending on whether it uses local infrastructure or remote systems and credentials. Runner never defines level, and level never defines runner.
+A temporary-directory test is `L2`, however cheap: an `L1` test starts no process, runs no Git, writes no file, and makes no temporary directory, and reads committed files only. A Playwright test can be `L2` or `L3` depending on whether it uses local infrastructure or remote systems and credentials. Runner never defines level, and level never defines runner.
 
 Classify each assertion from its own quantifier before composing its level with the dependency it exercises.
 
@@ -182,7 +182,7 @@ Choose the level from operational reality. Read `${CLAUDE_SKILL_DIR}/references/
 
 Test product-owned algorithms, parsers, and rules thoroughly at `L1`. Trust mature library behavior and test product-owned wiring, mappings, invariants, failure handling, and boundaries. Add lower-level evidence when it materially narrows diagnosis. Place confidence where it is achievable: math at `L1`, SQL against a database at `L2`, and live user flows at `L3`.
 
-Filesystem, Git, and standard subprocess availability at `L1` permits finite real-boundary evidence there.
+A file write, Git, and a subprocess of any executable are `L2` boundaries; keep `L1` evidence in process, and put finite real-boundary evidence at `L2`.
 
 When evidence lives at `L2` or `L3`, use real dependencies there and stop. Continue to Stage 3 only for `L1` evidence.
 
@@ -243,7 +243,8 @@ When choosing how much evidence an assertion needs beyond its first case, read `
 
 - Writing tests because a layer or file class “should have tests”
 - Choosing a label first and searching for evidence to fit it
-- Promoting cheap local-real tests into slower schedules because they touch the filesystem, git, or subprocesses
+- Declaring a test `L1` that writes a file, makes a temporary directory, runs Git, or starts a process
+- Renaming a level-violating test's level instead of rewriting it at less cost
 - Treating browser coverage as inherently remote or credentialed
 - Treating runner choice as a proxy for cost or realism
 - Adding doubles when the real dependency is cheap, deterministic, and observable

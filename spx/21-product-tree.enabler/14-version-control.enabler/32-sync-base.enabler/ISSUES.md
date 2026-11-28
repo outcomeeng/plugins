@@ -71,3 +71,16 @@ capability publishes.
 **Impact.** The primitive's contract that every run yields a structured status holds for this case only by implementation; a change that turns it back into a traceback or another exit code passes every linked test.
 
 **Settlement condition.** `spx/21-product-tree.enabler/14-version-control.enabler/32-sync-base.enabler/sync-base.md` carries an assertion for the missing-provider-script case with a linked test.
+
+## `l1` tests cross an `l2` boundary
+
+**Evidence:** A run of every `l1` test file of the Product Tree at commit `744cf8cf23`, traced through the Python audit events of each test's setup, call and teardown, records that these `l1` files cross a boundary [`l1-boundaries`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) places at `l2`:
+
+- `tests/test_sync_base.compliance.l1.py`: write a file, start a process, make a temporary directory
+- `tests/test_sync_base.scenario.l1.py`: write a file, start a process, make a temporary directory
+- `tests/test_sync_base_preservation.compliance.l1.py`: write a file, start a process, make a temporary directory
+- `tests/test_sync_base_preservation.scenario.l1.py`: write a file, start a process, make a temporary directory
+
+**Impact:** Each run of these files starts processes or writes into temporary trees on the host every Position shares, so local and CI gates spend that load on every run.
+
+**Settlement condition:** Each listed file covers the same linked Assertions in process, with no lower line or branch coverage of this Node's code, or the evidence that needs the boundary stands in an `l2` file written for it.

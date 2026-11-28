@@ -35,11 +35,13 @@ Do not use `.unit.py`, `.integration.py`, `.e2e.py`, or `.spec.py` as the signal
 <execution_levels>
 Choose the level from execution pain and dependency availability:
 
-| Level | Infrastructure                                    | Default runner | Typical runtime |
-| ----- | ------------------------------------------------- | -------------- | --------------- |
-| `l1`  | Python stdlib, temp dirs, repository dev tools    | pytest         | milliseconds    |
-| `l2`  | Docker, browsers, dev servers, product binaries   | pytest         | seconds         |
-| `l3`  | Remote services, credentials, shared environments | pytest         | seconds/minutes |
+| Level | Infrastructure                                                                             | Default runner | Typical runtime |
+| ----- | ------------------------------------------------------------------------------------------ | -------------- | --------------- |
+| `l1`  | In-process Python, read-only reads of committed files                                      | pytest         | milliseconds    |
+| `l2`  | `tmp_path` writes, `subprocess` runs of any executable, Git, Docker, browsers, dev servers | pytest         | seconds         |
+| `l3`  | Remote services, credentials, shared environments                                          | pytest         | seconds/minutes |
+
+An `l1` test starts no process, runs no Git, writes no file, and makes no temporary directory; a test that crosses one of those boundaries is `l2`.
 
 Use a runner token when a non-default runner owns execution. Browser execution can be `l2` or `l3`; the runner does not decide the level.
 </execution_levels>

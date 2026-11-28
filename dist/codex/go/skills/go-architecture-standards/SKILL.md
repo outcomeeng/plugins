@@ -163,16 +163,16 @@ Correct ADR language: "Use dependency injection to isolate X from Y" or "Accept 
 
 The architect needs enough testing context to write effective Verification rules. The auditor uses the same context to check whether those rules actually enable the right tests.
 
-| Level | Name        | Go Infrastructure                                                 | When to Use                                                     |
-| ----- | ----------- | ----------------------------------------------------------------- | --------------------------------------------------------------- |
-| 1     | Unit        | Go stdlib, `go test`, `t.TempDir()`, git, a binary built in-cycle | Pure logic, parsing, validation, command building, in-cycle CLI |
-| 2     | Integration | local services, containers, databases, an installed binary        | Real DB adapters, local worker flows, released CLI              |
-| 3     | E2E         | external network, SaaS APIs, browsers, deployed systems           | Full workflows with remote systems or browser UI                |
+| Level | Name        | Go Infrastructure                                                      | When to Use                                                                 |
+| ----- | ----------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| 1     | Unit        | in-process Go under `go test`, committed files read by path            | Pure logic, parsing, validation, command building                           |
+| 2     | Integration | `t.TempDir()`, git, any process, local services, containers, databases | File writes, in-cycle or released CLI, real DB adapters, local worker flows |
+| 3     | E2E         | external network, SaaS APIs, browsers, deployed systems                | Full workflows with remote systems or browser UI                            |
 
 **Key rules:**
 
-- Git, filesystem, `t.TempDir()`, the toolchain, and a product binary the harness builds in-cycle are Level 1
-- Local services, containers, and an installed or downloaded binary are Level 2
+- In-process Go that reads only committed files is Level 1
+- Git, a file write or `t.TempDir()`, any process — the toolchain, a binary built in-cycle, an installed or downloaded binary — local services, and containers are Level 2
 - External APIs, SaaS systems, browsers, and deployed environments are Level 3
 - Product specs or decisions may disable Level 3 when the suite cannot safely stand up, isolate, or clean up the external collaborator; `spx/local/go-tests.md` may point the skill to that declaration
 
