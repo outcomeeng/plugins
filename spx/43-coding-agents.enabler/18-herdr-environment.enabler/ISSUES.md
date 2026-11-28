@@ -53,3 +53,13 @@ The adapter gates a prompt as it gates stop only when the prompt's text, strippe
 **Settlement condition**: a live `herdr` 0.9.1 capture of `open-worktree` for a checkout herdr already has open joins the fixture family with its provenance, and the `/operate-herdr` skill text and the decision's open-worktree invariant state what that capture shows.
 
 **Evidence**: `product-tree:changes-reviewer` run `2026-09-29_08-45-32-122-cb34c99a7af7` on head `bf03df3c772699d0d467b0883e923222389b3aee`, finding `D1`, against `src/plugins/coding-agents/skills/operate-herdr/SKILL.md:34` and `:145`; line numbers are taken at that head.
+
+## `l1` tests cross an `l2` boundary
+
+**Evidence:** A run of every `l1` test file of the Product Tree at commit `744cf8cf23`, traced through the Python audit events of each test's setup, call and teardown, records that these `l1` files cross a boundary [`l1-boundaries`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) places at `l2`:
+
+- `tests/test_herdr_environment.compliance.l1.py`: write a file, start a process, make a temporary directory
+
+**Impact:** Each run of these files starts processes or writes into temporary trees on the host every Position shares, so local and CI gates spend that load on every run.
+
+**Settlement condition:** Each listed file covers the same linked Assertions in process, with no lower line or branch coverage of this Node's code, or the evidence that needs the boundary stands in an `l2` file written for it.

@@ -115,3 +115,15 @@ Local review run `2026-10-11_07-31-47-634-135100d3b226` at head `c75b66dd5d90908
 **Why it is a separate larger concern**: which placeholder forms exist is a ruling for the spec and the decision, as the expression-end rule above is. The guard recognizes the forms the spec and the decision name, and neither names a set. Widening the pattern without that ruling would move the set from one undeclared extent to another.
 
 **Settlement condition.** The spec and the decision list the placeholder forms the guard recognizes, the guard matches that list, and the generator drives every listed form and the boundary forms named above; a focused run of the node's tests passes.
+
+## `l1` tests cross an `l2` boundary
+
+**Evidence:** A run of every `l1` test file of the Product Tree at commit `744cf8cf23`, traced through the Python audit events of each test's setup, call and teardown, records that these `l1` files cross a boundary [`l1-boundaries`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) places at `l2`:
+
+- `tests/test_profile_configuration.compliance.l1.py`: write a file, make a temporary directory
+- `tests/test_runtime_token.compliance.l1.py`: write a file, make a temporary directory
+- `tests/test_runtime_token.mapping.l1.py`: write a file, make a temporary directory
+
+**Impact:** Each run of these files starts processes or writes into temporary trees on the host every Position shares, so local and CI gates spend that load on every run.
+
+**Settlement condition:** Each listed file covers the same linked Assertions in process, with no lower line or branch coverage of this Node's code, or the evidence that needs the boundary stands in an `l2` file written for it.

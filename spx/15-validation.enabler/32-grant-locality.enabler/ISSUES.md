@@ -11,3 +11,13 @@ Finding: `test_escaping_grant_outside_the_frontmatter_is_not_a_violation` at `sp
 Remediation target: the test file. The test drives the real command over the body-mention files through `observe_body_mention_files` and asserts that no violation is reported.
 
 Settlement condition: removing the `frontmatter()` call from `scan_file` fails the compliance test, and `observe_body_mention_files` has a consuming test.
+
+## `l1` tests cross an `l2` boundary
+
+**Evidence:** A run of every `l1` test file of the Product Tree at commit `744cf8cf23`, traced through the Python audit events of each test's setup, call and teardown, records that these `l1` files cross a boundary [`l1-boundaries`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) places at `l2`:
+
+- `tests/test_grant_locality.scenario.l1.py`: write a file, make a temporary directory
+
+**Impact:** Each run of these files starts processes or writes into temporary trees on the host every Position shares, so local and CI gates spend that load on every run.
+
+**Settlement condition:** Each listed file covers the same linked Assertions in process, with no lower line or branch coverage of this Node's code, or the evidence that needs the boundary stands in an `l2` file written for it.

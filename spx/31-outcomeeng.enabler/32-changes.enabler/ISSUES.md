@@ -116,3 +116,15 @@ Evidence: methodology 4.0 `application/application.md`, "Transition log", reads:
 Impact: each holder of such a Leaf picks its own key for the run, or breaks `log-closed` to name it, so no reader finds the run of an applied close that merged no Changeset under one key.
 
 Settlement condition: `log-extras` names the key that carries the Verification Run of the audit at close for an applied Leaf that merges no Changeset, and change-standards, github-store.md and manage-change write and read that key.
+
+## `l1` tests cross an `l2` boundary
+
+**Evidence:** A run of every `l1` test file of the Product Tree at commit `744cf8cf23`, traced through the Python audit events of each test's setup, call and teardown, records that these `l1` files cross a boundary [`l1-boundaries`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) places at `l2`:
+
+- `tests/test_audit_change_published.compliance.l1.py`: write a file, make a temporary directory
+- `tests/test_audit_change_record.compliance.l1.py`: write a file, start a process, make a temporary directory
+- `tests/test_audit_change_run.compliance.l1.py`: write a file, start a process, make a temporary directory
+
+**Impact:** Each run of these files starts processes or writes into temporary trees on the host every Position shares, so local and CI gates spend that load on every run.
+
+**Settlement condition:** Each listed file covers the same linked Assertions in process, with no lower line or branch coverage of this Node's code, or the evidence that needs the boundary stands in an `l2` file written for it.

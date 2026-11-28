@@ -19,3 +19,13 @@ The node's specs and evidence speak of a "per-runtime session directory" where [
 `outcomeeng_testing/harnesses/hooks.py` raises `AssertionError` when a resource fails to start or a process fails to announce itself. The predicate-seam rule in `/test-evidence-standards` reserves assertion failures for the linked test; infrastructure raises only setup, dependency, lifecycle or execution errors, so raising `AssertionError` from infrastructure reports a failure away from every `assert` site and can read as a verdict the harness owns. Other harnesses carry the same shape, each recorded in the `ISSUES.md` of the node whose tests import it.
 
 **Settlement condition.** Each infrastructure `AssertionError` in the harnesses this node's tests import becomes a lifecycle or dependency error type the harness owns, with every behavioral predicate left in the linked tests, and the node passes its test-evidence audit. The `RuntimeError` subclass that the harness of `spx/13-infrastructure.enabler/13-host-readiness.enabler` raises from a harness-owned horizon is the model.
+
+## `l1` tests cross an `l2` boundary
+
+**Evidence:** A run of every `l1` test file of the Product Tree at commit `744cf8cf23`, traced through the Python audit events of each test's setup, call and teardown, records that these `l1` files cross a boundary [`l1-boundaries`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) places at `l2`:
+
+- `tests/test_agent_environment.scenario.l1.py`: write a file, start a process
+
+**Impact:** Each run of these files starts processes or writes into temporary trees on the host every Position shares, so local and CI gates spend that load on every run.
+
+**Settlement condition:** Each listed file covers the same linked Assertions in process, with no lower line or branch coverage of this Node's code, or the evidence that needs the boundary stands in an `l2` file written for it.

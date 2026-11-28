@@ -109,3 +109,24 @@ The same pattern holds in six further linked tests of this node. The isolated te
 - **`f-007`**, key `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_eval-harness.compliance.l1.py:assertion-seam`. Evidence: the harness `outcomeeng_testing/harnesses/eval_harness.py` owns every `assert` and expected value, and every test function delegates to an `assert_*` function. Settlement condition: each `assert_*` function returns the observed result, every linked test owns its comparison, and the node passes its test-evidence audit.
 - **`f-008`**, key `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_eval-just-recipes.compliance.l1.py:assertion-seam`. Evidence: the harness `outcomeeng_testing/evals/just_recipes.py` owns the `assert` calls and expected values for seven of eight tests, and only the materialize-prompts writing test keeps its predicate in the test. Settlement condition: the seven delegating `assert_*` functions return the observed results, their linked tests own the comparisons, and the node passes its test-evidence audit.
 - **`f-009`**, key `spx/13-infrastructure.enabler/25-eval-harness.enabler/tests/test_definition.property.l1.py:assertion-seam`. Evidence: the harness `outcomeeng_testing/harnesses/evals.py` owns the invariant, so the property invariant is not lexically in the linked test. Settlement condition: the property invariant is stated in the linked test over values the harness generates or returns, and the node passes its test-evidence audit.
+
+## `l1` tests cross an `l2` boundary
+
+**Evidence:** A run of every `l1` test file of the Product Tree at commit `744cf8cf23`, traced through the Python audit events of each test's setup, call and teardown, records that these `l1` files cross a boundary [`l1-boundaries`](spx/31-outcomeeng.enabler/31-verification.enabler/31-test-verification.enabler/21-evidence-types.pdr.md) places at `l2`:
+
+- `tests/test_cli.mapping.l1.py`: write a file, start a process, make a temporary directory
+- `tests/test_definition.conformance.l1.py`: write a file, make a temporary directory
+- `tests/test_definition.property.l1.py`: write a file, make a temporary directory
+- `tests/test_eval-harness.compliance.l1.py`: write a file, make a temporary directory
+- `tests/test_eval-just-recipes.compliance.l1.py`: write a file, start a process, make a temporary directory
+- `tests/test_history.compliance.l1.py`: write a file, start a process, make a temporary directory
+- `tests/test_link_integrity.conformance.l1.py`: write a file, make a temporary directory
+- `tests/test_producer-files-prompt.conformance.l1.py`: write a file, start a process, make a temporary directory
+- `tests/test_producer-prompt.conformance.l1.py`: write a file, make a temporary directory
+- `tests/test_producer-prompt.property.l1.py`: write a file, make a temporary directory
+- `tests/test_report.compliance.l1.py`: write a file, start a process, make a temporary directory
+- `tests/test_run_exit.mapping.l1.py`: write a file, start a process, make a temporary directory
+
+**Impact:** Each run of these files starts processes or writes into temporary trees on the host every Position shares, so local and CI gates spend that load on every run.
+
+**Settlement condition:** Each listed file covers the same linked Assertions in process, with no lower line or branch coverage of this Node's code, or the evidence that needs the boundary stands in an `l2` file written for it.
