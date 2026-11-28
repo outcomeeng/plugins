@@ -84,16 +84,16 @@ Product specs or decisions may restrict which levels the product supports. Follo
 <level_tooling>
 Choose the level from the heaviest dependency class among the behavior under test, the oracle, and the enforcement mechanism:
 
-| Level | Infrastructure                                                                                          | Typical mechanisms                                                  |
-| ----- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| 1     | Go stdlib, `go test`, `t.TempDir()`, the toolchain itself, a product binary the harness builds in-cycle | `testing`, pure functions, interface seams, `httptest`, `os/exec`   |
-| 2     | Local services, containers, databases, an installed or downloaded product binary, local browsers        | `testcontainers-go`, real adapters, harness-owned service lifecycle |
-| 3     | External network, deployed systems, SaaS APIs, browser UI, shared environments                          | live API probes, browser automation, deployed CLI/API workflows     |
+| Level | Infrastructure                                                                                                                                  | Typical mechanisms                                                     |
+| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 1     | In-process Go under `go test`, read-only reads of committed files                                                                               | `testing`, pure functions, interface seams, `httptest`                 |
+| 2     | `t.TempDir()`, Git, any process — `go build`, `go vet`, an in-cycle or installed binary — local services, containers, databases, local browsers | `os/exec`, `testcontainers-go`, real adapters, harness-owned lifecycle |
+| 3     | External network, deployed systems, SaaS APIs, browser UI, shared environments                                                                  | live API probes, browser automation, deployed CLI/API workflows        |
 
 Level rules:
 
-- Pure computation, parsing, encoding, config loading, command building, and cheap temp-dir filesystem behavior belong at Level 1
-- A product binary the harness builds with `go build` inside the ordinary test cycle stays at Level 1; the same binary obtained by install, download, or bootstrap is Level 2
+- Pure computation, parsing, encoding, config loading from committed files, and command building belong at Level 1; a Level 1 test starts no process, runs no Git, writes no file, and makes no temporary directory
+- A test that writes into `t.TempDir()`, runs Git, or starts any process — `go build`, `go vet`, or a product binary built in-cycle or obtained by install, download, or bootstrap — is Level 2
 - Local databases, queues, HTTP services, and containerized collaborators belong at Level 2
 - Remote APIs, deployed systems, SaaS collaborators, browser UI, and shared environments belong at Level 3
 - `l2` and `l3` files carry the matching `//go:build` constraint, so `go test ./...` runs Level 1 alone and `go test -tags l2 ./...` adds Level 2
@@ -106,8 +106,8 @@ After `/test` chooses the evidence and level, implement it with these Go pattern
 
 | Router Decision                            | Go implementation                                                                    |
 | ------------------------------------------ | ------------------------------------------------------------------------------------ |
-| Stage 2 -> Level 1                         | `testing`, pure functions, `t.TempDir()`, hand-written interface implementations     |
-| Stage 2 -> Level 2                         | container and service harnesses, real local adapters, installed binaries             |
+| Stage 2 -> Level 1                         | `testing`, pure functions, hand-written interface implementations                    |
+| Stage 2 -> Level 2                         | `t.TempDir()`, `os/exec`, container and service harnesses, real local adapters       |
 | Stage 2 -> Level 3                         | live API probes, deployed workflow tests, browser automation, remote contract checks |
 | Stage 3A: pure computation                 | direct function tests with structural assertions                                     |
 | Stage 3B: extract pure part                | pure function at Level 1, boundary at the outer level                                |
@@ -299,11 +299,11 @@ Match test strategy to assertion type:
 
 Property claims about parsers, encoders, math, ordering, or invariants require property-based tests unless the spec itself narrows the claim to a finite example set.
 
-Compile-time contracts such as interface satisfaction, `go vet` diagnostics, or build-constraint behavior require toolchain-oracle evidence: the executed test runs `go vet` or `go build` on an inert fixture package and asserts on the diagnostic.
+Compile-time contracts such as interface satisfaction, `go vet` diagnostics, or build-constraint behavior require toolchain-oracle evidence at Level 2: the executed test runs `go vet` or `go build` on an inert fixture package and asserts on the diagnostic.
 </alignment_rules>
 
 <level_1_patterns>
-Use Level 1 when the governed logic can run with the Go stdlib, normal developer tooling, a product binary built in-cycle, and temporary local fixtures. The pure-function, dependency-seam, and tempdir examples are worked in `${CLAUDE_SKILL_DIR}/references/level-1.md`: the harness owns the temporary product and `t.TempDir()` owns cleanup, the fixture arrives by path, and the `Test*` function calls the governed function and asserts.
+Use Level 1 when the governed logic runs in process under `go test` and reads only committed files. The pure-function and dependency-seam examples are worked in `${CLAUDE_SKILL_DIR}/references/level-1.md`; the tempdir and compile-time examples, which write a temporary product or start the toolchain, are Level 2 and are worked in `${CLAUDE_SKILL_DIR}/references/level-2.md`.
 </level_1_patterns>
 
 <property_and_compile_time_patterns>
@@ -366,7 +366,7 @@ Do not require `spx validation literal` for Go tests. The literal validator is T
 <reference_guides>
 The skill body states the rules; the reference files carry the only worked examples for every level.
 
-- `${CLAUDE_SKILL_DIR}/references/level-1.md` - the worked pure-function, dependency-seam, recorder, tempdir, property, and compile-time examples
+- `${CLAUDE_SKILL_DIR}/references/level-1.md` - the worked pure-function, dependency-seam, recorder, and property examples
 - `${CLAUDE_SKILL_DIR}/references/level-2.md` - the worked installed-binary, database-adapter, and containerized collaborator examples
 - `${CLAUDE_SKILL_DIR}/references/level-3.md` - the worked remote API, sandboxed CLI, and browser workflow examples, with credentials, isolation, and cleanup
 

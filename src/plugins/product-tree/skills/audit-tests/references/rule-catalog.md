@@ -57,6 +57,7 @@ Severity in the tables below labels the defect on touched text. A finding whose 
 | `prose-coupling`     | REJECT   | The test's evidence is executable behavior, never the content of an authored prose or documentation body.                                                   | `audit_workflow` Step 3b                                                                      |
 | `unfalsifiable`      | REJECT   | A concrete mutation to every imported module the test depends on makes the test fail.                                                                       | `product-tree:test-evidence-standards` `<mutation_litmus>`, `<common_litmus_questions>`       |
 | `misaligned`         | REJECT   | The test exercises the exact behavior the assertion states, with the strategy its assertion type requires, and fails whenever the assertion is unfulfilled. | `product-tree:test-evidence-standards` `<assertion_type_litmus>`, `<common_litmus_questions>` |
+| `level-boundary`     | REJECT   | An `l1` test file starts no process, runs no Git, writes no file, and makes no temporary directory, directly or through the infrastructure it calls.        | `product-tree:test-evidence-standards` `<execution_levels>`                                   |
 | `no-coverage`        | REJECT   | The test drives execution into the assertion-relevant path of the governed source.                                                                          | `product-tree:test-evidence-standards` `<mutation_litmus>`; `audit_workflow` Step 3e          |
 
 </evidence_property_rules>

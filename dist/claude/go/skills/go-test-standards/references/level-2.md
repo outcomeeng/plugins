@@ -4,6 +4,8 @@
 - `<what_belongs_here>` — concern-to-tooling table
 - `<harness_rule>` — what to identify before writing the test
 - `<file_placement>` — co-located spec test path and build constraint
+- `<tempdir_pattern>` — harness-owned temporary product, fixture by path
+- `<compile_time_pattern>` — the toolchain as the oracle
 - `<installed_binary_pattern>` — an acquired binary through a command harness
 - `<database_adapter_pattern>` — real database through a container harness
 - `<containerized_collaborator_pattern>` — real queue through a container harness
@@ -12,17 +14,19 @@
 </contents>
 
 <overview>
-Level 2 covers behavior that needs a local service, container, or an installed product binary. The code under test still runs on the developer machine; the difference is that the boundary is real and obtained outside the ordinary `go test` cycle.
+Level 2 covers behavior that crosses a local boundary: a file write or `t.TempDir()`, Git, any process — the toolchain, a binary built in-cycle, or an installed product binary — a local service, or a container. The code under test still runs on the developer machine; the difference is that the boundary is real.
 </overview>
 
 <what_belongs_here>
 
-| Concern                           | Typical tooling                          |
-| --------------------------------- | ---------------------------------------- |
-| an installed or downloaded binary | harness-resolved binary, `os/exec`       |
-| local databases or queues         | `testcontainers-go`, repo-native harness |
-| protocol adapters                 | real local server, local sockets         |
-| local browsers                    | a browser harness against a local server |
+| Concern                              | Typical tooling                          |
+| ------------------------------------ | ---------------------------------------- |
+| tempdir-backed filesystem logic      | `t.TempDir()`                            |
+| the toolchain as the oracle          | `go vet`, `go build` through a harness   |
+| a binary built in-cycle or installed | harness-resolved binary, `os/exec`       |
+| local databases or queues            | `testcontainers-go`, repo-native harness |
+| protocol adapters                    | real local server, local sockets         |
+| local browsers                       | a browser harness against a local server |
 
 </what_belongs_here>
 
@@ -40,6 +44,51 @@ When the harness cannot be described precisely, stop and ask.
 <file_placement>
 Level 2 evidence belongs in `spx/.../tests/<subject>.<evidence>.l2_test.go`, whose first line is `//go:build l2`, so `go test ./...` skips it and `go test -tags l2 ./...` runs it.
 </file_placement>
+
+<tempdir_pattern>
+The harness owns the temporary product and `t.TempDir()` owns cleanup; the fixture arrives by path; the `Test*` function calls the governed function and asserts:
+
+```go
+import (
+    "<module>/internal/testinfra/fixtures"
+    "<module>/internal/testinfra/harnesses"
+)
+
+func TestLoadsYAMLFromTempDir(t *testing.T) {
+    product := harnesses.NewTempProduct(t).SeededFrom(fixtures.ValidSiteConfigPath())
+
+    cfg, err := config.Load(product.Path())
+    if err != nil {
+        t.Fatalf("Load: %v", err)
+    }
+
+    if cfg.BaseURL != config.DefaultBaseURL {
+        t.Errorf("BaseURL: got %q, want %q", cfg.BaseURL, config.DefaultBaseURL)
+    }
+}
+```
+
+</tempdir_pattern>
+
+<compile_time_pattern>
+The toolchain is the oracle: the executed test runs `go vet` on an inert fixture package under `internal/testinfra/fixtures/testdata/` and asserts on the diagnostic:
+
+```go
+import "<module>/internal/testinfra/fixtures"
+
+func TestBuilderRejectsUntypedField(t *testing.T) {
+    out, err := harnesses.GoVet(t, fixtures.CompileCasePath("builder_rejects_untyped_field"))
+
+    if err == nil {
+        t.Fatalf("go vet: got success, want a diagnostic")
+    }
+    if !strings.Contains(out, "cannot use") {
+        t.Errorf("diagnostic: got %q, want it to name the type mismatch", out)
+    }
+}
+```
+
+</compile_time_pattern>
 
 <installed_binary_pattern>
 
@@ -127,7 +176,7 @@ func TestWorkerConsumesRealQueueMessages(t *testing.T) {
 <anti_patterns>
 
 - marking a test as L2 when a hand-written Level 1 seam would give stronger evidence
-- marking a binary the harness builds with `go build` in-cycle as L2 — that is Level 1
+- marking a test Level 1 that writes into `t.TempDir()`, runs Git, or starts any process, a binary built in-cycle included
 - shelling out from the test to inspect source text
 - reaching real network services from a Level 2 test
 - missing `t.Cleanup` for containers or local service state

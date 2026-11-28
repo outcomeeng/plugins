@@ -1,7 +1,7 @@
 <l2_local_infrastructure>
 
 <purpose>
-Use `l2` when the assertion needs real local infrastructure: Docker containers, local databases or queues, local dev servers, browser execution against local services, or product binaries installed during bootstrap.
+Use `l2` when the assertion crosses a local boundary: a temp dir or other file write, Git, a process of any executable, Docker containers, local databases or queues, local dev servers, or browser execution against local services.
 </purpose>
 
 <source_shape>
@@ -42,6 +42,25 @@ This is `l2` because the evidence depends on a real local database. The harness 
 `createGeneratedUser()` is a single-sample generator function backed by a fast-check arbitrary. Use that form when infrastructure setup cost makes a full property loop inappropriate, and keep pure `fc.Arbitrary<T>` factories for tests that should search a variable domain.
 
 </example>
+
+<temp_dir_example>
+
+```typescript
+import { writeNormalizedSourceManifest } from "@/manifest";
+import { createManifestScenario } from "@testing/generators/manifests";
+import { assertWritesNormalizedSourceManifest } from "@testing/harnesses/manifest";
+import { describe, it } from "vitest";
+
+describe("writeNormalizedSourceManifest", () => {
+  it("writes normalized source paths in a temp product", async () => {
+    await assertWritesNormalizedSourceManifest(createManifestScenario(), writeNormalizedSourceManifest);
+  });
+});
+```
+
+This is `l2` because it writes into a temp dir. The harness owns the temp-dir lifecycle, the generator owns the manifest case and expected output, and the test calls source code directly.
+
+</temp_dir_example>
 
 <migration_note>
 Older projects may have harnesses shaped like `new PostgresHarness()` plus `start()`. Migrate the harness when the test itself is being rewritten, rather than making harness migration a prerequisite for unrelated fixes. When migrating, move toward a typed factory plus `startOrThrow(setupMessage)` so missing local infrastructure fails with the diagnostic at the call site. If a product already has a documented equivalent API, keep the local name while preserving the same contract: typed handle, explicit setup failure message, and cleanup method.

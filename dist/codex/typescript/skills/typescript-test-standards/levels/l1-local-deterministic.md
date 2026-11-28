@@ -1,7 +1,7 @@
 <l1_local_deterministic>
 
 <purpose>
-Use `l1` when evidence is available through deterministic local execution: pure functions, cheap temp-dir filesystem work, standard repo-required tools, or dependency-injected collaborators that represent a Stage 5 exception.
+Use `l1` when evidence is available through deterministic in-process execution: pure functions, read-only reads of committed files, or dependency-injected collaborators that represent a Stage 5 exception. An `l1` test starts no process, runs no Git, writes no file, and makes no temporary directory.
 </purpose>
 
 <source_shape>
@@ -11,7 +11,6 @@ Existing code often needs to change before `l1` evidence is possible. Extract pu
 <test_shape>
 
 - Call source functions directly.
-- Use Node temp dirs for cheap filesystem state.
 - Use typed Stage 5 doubles only when the product-tree testing router selected an exception.
 - Import source-owned singleton values directly.
 - Use generators for variable inputs such as paths, names, option sets, and file contents.
@@ -60,28 +59,9 @@ This remains `l1` because the test calls deterministic source logic directly and
 
 </generated_domain_example>
 
-<temp_dir_example>
-
-```typescript
-import { writeNormalizedSourceManifest } from "@/manifest";
-import { createManifestScenario } from "@testing/generators/manifests";
-import { assertWritesNormalizedSourceManifest } from "@testing/harnesses/manifest";
-import { describe, it } from "vitest";
-
-describe("writeNormalizedSourceManifest", () => {
-  it("writes normalized source paths in a temp product", async () => {
-    await assertWritesNormalizedSourceManifest(createManifestScenario(), writeNormalizedSourceManifest);
-  });
-});
-```
-
-This remains `l1` because the harness owns local temp-dir lifecycle, the generator owns the manifest case and expected output, and the test calls source code directly. Filesystem work becomes `l2` only when it needs heavyweight local infrastructure, product binaries, or shared services.
-
-</temp_dir_example>
-
 <reject>
 
-- Moving a filesystem test to `l2` only because it touches temp dirs
+- Declaring a test `l1` that writes a temp dir, runs Git, or starts a process
 - Mocking the dependency under test instead of improving injection seams
 - Constant-only generators for singleton source protocols
 - Handwritten example values that claim to cover a domain
@@ -89,7 +69,7 @@ This remains `l1` because the harness owns local temp-dir lifecycle, the generat
 </reject>
 
 <success_criteria>
-An `l1` TypeScript test is correct when it proves the selected assertion without remote services, shared state, heavyweight local setup, or framework mocks.
+An `l1` TypeScript test is correct when it proves the selected assertion in process, without a file write, a temp dir, Git, a process, or framework mocks.
 </success_criteria>
 
 </l1_local_deterministic>

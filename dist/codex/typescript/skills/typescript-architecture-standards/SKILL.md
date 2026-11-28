@@ -161,18 +161,17 @@ Correct ADR language: "Use dependency injection to isolate X from Y" or "Accept 
 
 The architect needs to understand testing levels to write effective Verification rules. The auditor needs them to verify that Verification rules enable the right levels. These definitions come from `/test`.
 
-| Level | TypeScript infrastructure               | When to use                                   |
-| ----- | --------------------------------------- | --------------------------------------------- |
-| `l1`  | Node.js built-ins + Git + temp fixtures | Pure logic, FS operations, git operations     |
-| `l2`  | Product-specific binaries/tools         | Hugo, Caddy, Claude Code, Docker, TS compiler |
-| `l3`  | External deps (GitHub, network, Chrome) | Full workflows with external services         |
+| Level | TypeScript infrastructure               | When to use                                      |
+| ----- | --------------------------------------- | ------------------------------------------------ |
+| `l1`  | In-process Node.js + committed files    | Pure logic, reads of committed files             |
+| `l2`  | Temp dirs, Git, any process             | FS writes, git, Hugo, Caddy, Docker, TS compiler |
+| `l3`  | External deps (GitHub, network, Chrome) | Full workflows with external services            |
 
 **Key rules:**
 
-- Git is `l1` (standard dev tool, always available in CI)
-- Product-specific tools require installation/setup (`l2`)
+- Git, a temp dir or other file write, and a process of any executable are `l2`; an `l1` test runs in process and reads committed files only
 - Network dependencies and external services are `l3`
-- SaaS services jump `l1` to `l3` (no `l2`)
+- SaaS services are `l3`
 
 **How levels relate to ADRs:** The ADR does not assign levels. It establishes Verification rules that determine what levels are *achievable*. "ALWAYS accept runner as parameter" makes `l1` possible for the logic around the tool. "NEVER call external API directly" means `l3` for the real call, `l1` for the business logic.
 

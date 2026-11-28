@@ -7,28 +7,24 @@
 - `<dependency_seam_pattern>` — the `sync` package seam the seam example calls
 - `<seam_consumer_pattern>` — the executed test through a controlled runner
 - `<recorder_pattern>` — recording collaborator that exposes calls
-- `<tempdir_pattern>` — harness-owned temporary product, fixture by path
 - `<property_pattern>` — generator domain, harness run policy, test-owned invariant
-- `<compile_time_pattern>` — the toolchain as the oracle
 - `<anti_patterns>` — Level 1 rejections
 
 </contents>
 
 <overview>
-Level 1 covers logic that can run with the Go stdlib, normal developer tooling, a product binary built in-cycle, and temporary local fixtures. The goal is fast, deterministic evidence with direct coupling to the governed code.
+Level 1 covers logic that runs in process under `go test` and reads only committed files: it starts no process, runs no Git, writes no file, and makes no temporary directory. The goal is fast, deterministic evidence with direct coupling to the governed code.
 </overview>
 
 <what_belongs_here>
 
-| Concern                                 | Typical tooling                                      |
-| --------------------------------------- | ---------------------------------------------------- |
-| parsing, validation, encoding           | `testing`, `cmp.Diff`                                |
-| tempdir-backed filesystem logic         | `t.TempDir()`                                        |
-| deterministic command building          | hand-written interface seams                         |
-| finite input/output mappings            | table-driven `t.Run` over a source-owned enumeration |
-| universal invariants                    | property harness wrapper over `rapid`                |
-| HTTP client behavior                    | `httptest.Server`                                    |
-| a binary built with `go build` in-cycle | harness-owned build, `os/exec`                       |
+| Concern                        | Typical tooling                                      |
+| ------------------------------ | ---------------------------------------------------- |
+| parsing, validation, encoding  | `testing`, `cmp.Diff`                                |
+| deterministic command building | hand-written interface seams                         |
+| finite input/output mappings   | table-driven `t.Run` over a source-owned enumeration |
+| universal invariants           | property harness wrapper over `rapid`                |
+| HTTP client behavior           | `httptest.Server`                                    |
 
 </what_belongs_here>
 
@@ -148,31 +144,6 @@ The recorder exposes `Calls`; the executed test asserts on them. It never compar
 
 </recorder_pattern>
 
-<tempdir_pattern>
-The harness owns the temporary product and `t.TempDir()` owns cleanup; the fixture arrives by path; the `Test*` function calls the governed function and asserts:
-
-```go
-import (
-    "<module>/internal/testinfra/fixtures"
-    "<module>/internal/testinfra/harnesses"
-)
-
-func TestLoadsYAMLFromTempDir(t *testing.T) {
-    product := harnesses.NewTempProduct(t).SeededFrom(fixtures.ValidSiteConfigPath())
-
-    cfg, err := config.Load(product.Path())
-    if err != nil {
-        t.Fatalf("Load: %v", err)
-    }
-
-    if cfg.BaseURL != config.DefaultBaseURL {
-        t.Errorf("BaseURL: got %q, want %q", cfg.BaseURL, config.DefaultBaseURL)
-    }
-}
-```
-
-</tempdir_pattern>
-
 <property_pattern>
 The harness runs the domain through `rapid.Check` and owns check count, seed, and replay; the invariant and its `t.Fatalf` stay in the closure:
 
@@ -201,32 +172,12 @@ func TestConfigRoundTrips(t *testing.T) {
 
 </property_pattern>
 
-<compile_time_pattern>
-The toolchain is the oracle: the executed test runs `go vet` on an inert fixture package under `internal/testinfra/fixtures/testdata/` and asserts on the diagnostic:
-
-```go
-import "<module>/internal/testinfra/fixtures"
-
-func TestBuilderRejectsUntypedField(t *testing.T) {
-    out, err := harnesses.GoVet(t, fixtures.CompileCasePath("builder_rejects_untyped_field"))
-
-    if err == nil {
-        t.Fatalf("go vet: got success, want a diagnostic")
-    }
-    if !strings.Contains(out, "cannot use") {
-        t.Errorf("diagnostic: got %q, want it to name the type mismatch", out)
-    }
-}
-```
-
-</compile_time_pattern>
-
 <anti_patterns>
 
 - generated mocks for the primary seam
 - a real database or container when a pure seam would give stronger evidence
 - golden files of hand-written fixtures instead of asserting structure
-- filesystem writes outside `t.TempDir()`
+- a file write, `t.TempDir()`, Git, or a process, `go build` and `go vet` included
 - a package-level function variable reassigned in the test to intercept the function under test
 
 </anti_patterns>

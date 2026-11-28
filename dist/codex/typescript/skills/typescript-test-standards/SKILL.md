@@ -26,7 +26,7 @@ Every TypeScript test file name encodes three independent axes:
 Evidence, level, and runner are orthogonal:
 
 - A Playwright test can be `l2` or `l3`
-- A filesystem test can be `l1` when it uses cheap temp dirs
+- A test that writes a temp dir, runs Git, or starts a process is `l2`, however cheap
 - A `scenario` test can run at any level
 - A runner token appears only when the runner is not the default
 
@@ -56,11 +56,11 @@ Do not use legacy file suffixes such as `.unit.test.ts`, `.integration.test.ts`,
 <level_tooling>
 Choose the level from execution pain and dependency availability:
 
-| Level | Infrastructure                                     | Default runner | Typical runtime |
-| ----- | -------------------------------------------------- | -------------- | --------------- |
-| `l1`  | Node.js stdlib, temp dirs, repo-required dev tools | Vitest         | milliseconds    |
-| `l2`  | Docker, browsers, dev servers, product binaries    | Vitest         | seconds         |
-| `l3`  | Remote services, credentials, shared environments  | Vitest         | seconds/minutes |
+| Level | Infrastructure                                                             | Default runner | Typical runtime |
+| ----- | -------------------------------------------------------------------------- | -------------- | --------------- |
+| `l1`  | In-process Node.js, read-only reads of committed files                     | Vitest         | milliseconds    |
+| `l2`  | Temp dirs, processes of any executable, Git, Docker, browsers, dev servers | Vitest         | seconds         |
+| `l3`  | Remote services, credentials, shared environments                          | Vitest         | seconds/minutes |
 
 Use `playwright` as the runner token when Playwright is the non-default runner:
 
@@ -96,25 +96,25 @@ export default defineConfig({
 <router_mapping>
 After `/test` chooses the evidence and level, implement it with these TypeScript patterns:
 
-| Router Decision                            | TypeScript implementation                                  |
-| ------------------------------------------ | ---------------------------------------------------------- |
-| Stage 2 -> `l1`                            | Vitest, test harnesses, typed factories, temp dirs         |
-| Stage 2 -> `l2`                            | Vitest or Playwright with locally available real APIs      |
-| Stage 2 -> `l3`                            | Vitest or Playwright with credentials or remote real APIs  |
-| Stage 3A: pure computation                 | Direct tests of typed pure functions                       |
-| Stage 3B: extract pure part                | Pure function at `l1`, boundary at outer level             |
-| Stage 5 exception 1: failure simulation    | Interface implementation that throws/errors                |
-| Stage 5 exception 2: interaction protocols | Spy function or class with typed call recording            |
-| Stage 5 exception 3: time/concurrency      | Injected clock or `vi.useFakeTimers()`                     |
-| Stage 5 exception 4: safety                | Function or class that records intent without side effects |
-| Stage 5 exception 5: combinatorial cost    | Configurable fake with real-shaped behavior                |
-| Stage 5 exception 6: observability         | Spy that captures hidden boundary details                  |
-| Stage 5 exception 7: contract probes       | Stub validated against the contract schema                 |
+| Router Decision                            | TypeScript implementation                                          |
+| ------------------------------------------ | ------------------------------------------------------------------ |
+| Stage 2 -> `l1`                            | Vitest, test harnesses, typed factories, in-process calls          |
+| Stage 2 -> `l2`                            | Vitest or Playwright with temp dirs, processes, or local real APIs |
+| Stage 2 -> `l3`                            | Vitest or Playwright with credentials or remote real APIs          |
+| Stage 3A: pure computation                 | Direct tests of typed pure functions                               |
+| Stage 3B: extract pure part                | Pure function at `l1`, boundary at outer level                     |
+| Stage 5 exception 1: failure simulation    | Interface implementation that throws/errors                        |
+| Stage 5 exception 2: interaction protocols | Spy function or class with typed call recording                    |
+| Stage 5 exception 3: time/concurrency      | Injected clock or `vi.useFakeTimers()`                             |
+| Stage 5 exception 4: safety                | Function or class that records intent without side effects         |
+| Stage 5 exception 5: combinatorial cost    | Configurable fake with real-shaped behavior                        |
+| Stage 5 exception 6: observability         | Spy that captures hidden boundary details                          |
+| Stage 5 exception 7: contract probes       | Stub validated against the contract schema                         |
 
 </router_mapping>
 
 <l1_patterns>
-Pure computation and filesystem tests at `l1` use direct function calls, typed factories, and Node.js temp dirs. Read `${SKILL_DIR}/references/l1-patterns.md` for full examples of each pattern.
+Pure computation at `l1` uses direct function calls and typed factories; a test that writes a temp dir, runs Git, or starts a process is `l2`. Read `${SKILL_DIR}/references/l1-patterns.md` for full examples of each pattern.
 </l1_patterns>
 
 <exception_implementations>
@@ -459,7 +459,7 @@ test("API returns flag-gated payload", async () => {
 
 | File                                                   | When to read                                                  |
 | ------------------------------------------------------ | ------------------------------------------------------------- |
-| `${SKILL_DIR}/references/l1-patterns.md`               | Writing pure function, typed factory, or temp dir tests       |
+| `${SKILL_DIR}/references/l1-patterns.md`               | Writing pure function or typed factory tests                  |
 | `${SKILL_DIR}/references/exception-implementations.md` | Implementing a Stage 5 exception from `/test`                 |
 | `${SKILL_DIR}/references/l2-patterns.md`               | Writing tests that require real infrastructure (Docker, etc.) |
 

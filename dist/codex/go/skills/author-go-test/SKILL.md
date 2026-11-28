@@ -70,16 +70,16 @@ Map each rejecting finding's property to the remediation it implies before editi
 <router_mapping>
 After running through `/test`, use the canonical mapping in `/go-test-standards`:
 
-| Router Decision       | Go implementation summary                                                                |
-| --------------------- | ---------------------------------------------------------------------------------------- |
-| Stage 2 -> Level 1    | pure functions, `t.TempDir()`, hand-written interface implementations, in-cycle binaries |
-| Stage 2 -> Level 2    | local services, containers, installed binaries                                           |
-| Stage 2 -> Level 3    | remote APIs, deployed workflows, browser automation, shared environments                 |
-| Stage 3A              | direct pure-function tests                                                               |
-| Stage 3B              | extracted pure function plus outer boundary evidence                                     |
-| Stage 5 exceptions    | controlled implementations that preserve the real seam                                   |
-| compile-time contract | toolchain-oracle evidence                                                                |
-| universal invariant   | property-based evidence through the `rapid` harness                                      |
+| Router Decision       | Go implementation summary                                                                     |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| Stage 2 -> Level 1    | pure functions, hand-written interface implementations                                        |
+| Stage 2 -> Level 2    | `t.TempDir()`, Git, in-cycle or installed binaries, the toolchain, local services, containers |
+| Stage 2 -> Level 3    | remote APIs, deployed workflows, browser automation, shared environments                      |
+| Stage 3A              | direct pure-function tests                                                                    |
+| Stage 3B              | extracted pure function plus outer boundary evidence                                          |
+| Stage 5 exceptions    | controlled implementations that preserve the real seam                                        |
+| compile-time contract | toolchain-oracle evidence                                                                     |
+| universal invariant   | property-based evidence through the `rapid` harness                                           |
 
 </router_mapping>
 

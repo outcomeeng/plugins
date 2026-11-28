@@ -5,7 +5,7 @@ Two lookup tables for Stage 2 execution-level selection: the first maps a spec p
 | Spec promise                                      | Minimum level | Reason                          |
 | ------------------------------------------------- | ------------- | ------------------------------- |
 | Prices are calculated correctly                   | `L1`          | Pure calculation                |
-| User can export data as CSV                       | `L1`          | File I/O with temporary folders |
+| User can export data as CSV                       | `L2`          | File I/O with temporary folders |
 | CLI processes a product-specific site             | `L2`          | Product-specific binary         |
 | Database query returns users                      | `L2`          | Real database required          |
 | User completes checkout with a live provider      | `L3`          | Remote provider required        |
@@ -14,8 +14,10 @@ Two lookup tables for Stage 2 execution-level selection: the first maps a spec p
 | Dependency                        | Minimum level |
 | --------------------------------- | ------------- |
 | None, pure function               | `L1`          |
-| Filesystem with temporary folders | `L1`          |
-| Standard development tools        | `L1`          |
+| Committed files read by path      | `L1`          |
+| Filesystem with temporary folders | `L2`          |
+| Git                               | `L2`          |
+| Standard development tools        | `L2`          |
 | Database                          | `L2`          |
 | Product-specific binary           | `L2`          |
 | External HTTP API or browser API  | `L2` or `L3`  |

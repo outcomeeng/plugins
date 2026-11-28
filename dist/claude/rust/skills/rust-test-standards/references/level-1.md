@@ -7,12 +7,12 @@
 - `<recorder_pattern>` — recording collaborator that exposes calls
 - `<anti_patterns>` — Level 1 rejections
 
-The tempdir and property patterns are worked inline in `SKILL.md` and are not repeated here.
+The property pattern, and the Level 2 tempdir pattern, are worked inline in `SKILL.md` and are not repeated here.
 
 </contents>
 
 <overview>
-Level 1 covers logic that can run with Rust stdlib, normal developer tooling, and temporary local fixtures. The goal is fast, deterministic evidence with direct coupling to the governed code.
+Level 1 covers logic that runs in process under `cargo test` and reads only committed files: it starts no process, runs no Git, writes no file, and makes no temporary directory. The goal is fast, deterministic evidence with direct coupling to the governed code.
 </overview>
 
 <what_belongs_here>
@@ -20,7 +20,6 @@ Level 1 covers logic that can run with Rust stdlib, normal developer tooling, an
 | Concern                            | Typical tooling                |
 | ---------------------------------- | ------------------------------ |
 | parsing, validation, serialization | `#[test]`, `assert_eq!`        |
-| tempdir-backed filesystem logic    | `tempfile`                     |
 | deterministic command building     | hand-written trait seams       |
 | finite input/output mappings       | `rstest` or table-driven tests |
 | universal invariants               | property harness wrapper       |
@@ -91,6 +90,6 @@ impl CommandRunner for RecordingRunner {
 - generated mocks for the primary seam
 - async runtimes or real binaries when a pure seam would give stronger evidence
 - snapshotting hand-written fixtures instead of asserting structure
-- filesystem writes outside a tempdir
+- a file write, a tempdir, Git, or a process
 
 </anti_patterns>

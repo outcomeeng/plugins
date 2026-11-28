@@ -41,16 +41,16 @@ Before writing or revising tests, also check:
 <router_mapping>
 After running through `/test`, use the canonical mapping in `/rust-test-standards`:
 
-| Router Decision       | Rust implementation summary                                              |
-| --------------------- | ------------------------------------------------------------------------ |
-| Stage 2 -> Level 1    | pure functions, temp dirs, hand-written trait impls                      |
-| Stage 2 -> Level 2    | real binaries, local adapters, async runtimes, local services            |
-| Stage 2 -> Level 3    | remote APIs, deployed workflows, browser automation, shared environments |
-| Stage 3A              | direct pure-function tests                                               |
-| Stage 3B              | extracted pure function plus outer boundary evidence                     |
-| Stage 5 exceptions    | controlled implementations that preserve the real seam                   |
-| compile-time contract | compile-fail evidence                                                    |
-| universal invariant   | property-based evidence                                                  |
+| Router Decision       | Rust implementation summary                                                   |
+| --------------------- | ----------------------------------------------------------------------------- |
+| Stage 2 -> Level 1    | pure functions, hand-written trait impls                                      |
+| Stage 2 -> Level 2    | temp dirs, Git, real binaries, local adapters, async runtimes, local services |
+| Stage 2 -> Level 3    | remote APIs, deployed workflows, browser automation, shared environments      |
+| Stage 3A              | direct pure-function tests                                                    |
+| Stage 3B              | extracted pure function plus outer boundary evidence                          |
+| Stage 5 exceptions    | controlled implementations that preserve the real seam                        |
+| compile-time contract | compile-fail evidence                                                         |
+| universal invariant   | property-based evidence                                                       |
 
 </router_mapping>
 

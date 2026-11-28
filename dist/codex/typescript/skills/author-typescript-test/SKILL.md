@@ -76,8 +76,9 @@ For each assertion, apply the `/test` methodology:
 | Evidence location               | Minimum level |
 | ------------------------------- | ------------- |
 | Pure computation/algorithm      | `l1`          |
-| File I/O with temp dirs         | `l1`          |
-| Standard dev tools (git, curl)  | `l1`          |
+| Committed files read by path    | `l1`          |
+| File I/O with temp dirs         | `l2`          |
+| Standard dev tools (git, curl)  | `l2`          |
 | Product-specific binary         | `l2`          |
 | Database, Docker                | `l2`          |
 | Real credentials, external APIs | `l3`          |
@@ -273,7 +274,7 @@ See `/typescript-test-standards` for:
 - **File naming** - Evidence, level, and runner axes
 - **Level tooling** - Vitest vs Playwright, l1/l2/l3 infrastructure
 - **Router mapping** - `/test` Stage decisions to TypeScript patterns
-- **l1 patterns** - Pure functions, typed factories, temp dirs
+- **l1 patterns** - Pure functions, typed factories
 - **Exception implementations** - The 6 exception cases in TypeScript
 - **l2 patterns** - Typed harness factory and usage
 - **l3 patterns** - Credential management, fail-loudly policy
@@ -284,7 +285,7 @@ See `/typescript-test-standards` for:
 
 Read the matching level guide from `/typescript-test-standards` after choosing a level:
 
-- `/typescript-test-standards` `levels/l1-local-deterministic.md` - pure functions, temp dirs, standard local tools, Stage 5 doubles
+- `/typescript-test-standards` `levels/l1-local-deterministic.md` - pure functions, committed files read by path, Stage 5 doubles
 - `/typescript-test-standards` `levels/l2-local-infrastructure.md` - Docker, local services, browsers, and product binaries
 - `/typescript-test-standards` `levels/l3-remote-credentialed.md` - remote services, shared environments, and credentials
 

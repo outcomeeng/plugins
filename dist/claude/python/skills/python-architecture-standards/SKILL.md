@@ -175,18 +175,17 @@ Correct ADR language: "Use dependency injection to isolate X from Y", "Accept X 
 
 The architect needs to understand testing levels to write effective Verification rules. The auditor needs them to verify that Verification rules enable the right levels. These definitions come from `/test`.
 
-| Level | Python infrastructure                                | When to use                           |
-| ----- | ---------------------------------------------------- | ------------------------------------- |
-| `l1`  | Python stdlib + Git + standard tools + temp fixtures | Pure logic, command building, parsing |
-| `l2`  | Product-specific binaries/tools (Docker, ZFS, etc.)  | Real binaries with local backend      |
-| `l3`  | Network services + external APIs + test accounts     | Real services, OAuth, rate limits     |
+| Level | Python infrastructure                                  | When to use                                |
+| ----- | ------------------------------------------------------ | ------------------------------------------ |
+| `l1`  | In-process Python + committed files read by path       | Pure logic, command building, parsing      |
+| `l2`  | Temp dirs, Git, any process, Docker, ZFS, and the like | File writes, real binaries, local backends |
+| `l3`  | Network services + external APIs + test accounts       | Real services, OAuth, rate limits          |
 
 **Key rules:**
 
-- Git is `l1` (standard dev tool, always available in CI)
-- Product-specific tools require installation/setup (`l2`)
+- Git, a temp dir or other file write, and a process of any executable are `l2`; an `l1` test runs in process and reads committed files only
 - Network dependencies and external services are `l3`
-- SaaS services (Trakt, GitHub API, Stripe, Auth0) jump `l1` to `l3` (no `l2`)
+- SaaS services (Trakt, GitHub API, Stripe, Auth0) are `l3`
 
 **How levels relate to ADRs:** The ADR does not assign levels. It establishes Verification rules that determine what levels are *achievable*. "ALWAYS accept runner as Protocol parameter" makes `l1` possible for the logic around the tool. "NEVER call external API directly" means `l3` for the real call, `l1` for the business logic.
 

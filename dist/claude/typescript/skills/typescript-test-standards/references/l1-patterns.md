@@ -1,6 +1,6 @@
 <l1_patterns>
 
-Table of contents: [pure_function](#pure_function) · [typed_factory](#typed_factory) · [temp_dirs](#temp_dirs)
+Table of contents: [pure_function](#pure_function) · [typed_factory](#typed_factory)
 
 <pure_function>
 
@@ -39,22 +39,5 @@ describe("analyzeResults", () => {
 ```
 
 </typed_factory>
-
-<temp_dirs>
-
-Temp dirs are not external dependencies -- use them freely at `l1`.
-
-```typescript
-import { assertLoadsTempConfig } from "@testing/harnesses/config";
-import { describe, it } from "vitest";
-
-describe("loadConfig", () => {
-  it("loads YAML config file", async () => {
-    await assertLoadsTempConfig(loadConfig);
-  });
-});
-```
-
-</temp_dirs>
 
 </l1_patterns>

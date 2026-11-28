@@ -12,13 +12,14 @@
 </contents>
 
 <overview>
-Level 2 covers behavior that needs a real binary, async runtime, local service, or containerized collaborator. The code under test still runs on the developer machine; the difference is that the boundary is real.
+Level 2 covers behavior that crosses a local boundary: a file write or tempdir, Git, any process, a real binary, an async runtime, a local service, or a containerized collaborator. The code under test still runs on the developer machine; the difference is that the boundary is real.
 </overview>
 
 <what_belongs_here>
 
 | Concern                          | Typical tooling                        |
 | -------------------------------- | -------------------------------------- |
+| tempdir-backed filesystem logic  | `tempfile`                             |
 | CLI binary behavior              | `assert_cmd`, `Output` to the test     |
 | async adapters with real runtime | `#[tokio::test]`                       |
 | local databases or queues        | repo-native harness, `testcontainers`  |
