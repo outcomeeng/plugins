@@ -19,7 +19,7 @@ RECORD_SCHEMA_VERSION = 1
 COMMAND_TIMEOUT_SECONDS = 30
 # A wait lists the requester's records at this interval until a record arrives
 # or its timeout passes, and each listing reads at most this many records.
-WAIT_POLL_INTERVAL_SECONDS = 2
+WAIT_POLL_INTERVAL_SECONDS = 30
 WAIT_LISTING_LIMIT = 1_000
 WAIT_TIMEOUT_MAXIMUM_SECONDS = 3_600
 
@@ -1269,7 +1269,7 @@ def command_for(request: object, project_key: str) -> tuple[str, ...]:
                 if arguments.get(ALL_RECORDS_FIELD) is True
                 else UNREAD_OPTION
             )
-            if arguments.get(INCLUDE_BODIES_FIELD) is True:
+            if arguments.get(INCLUDE_BODIES_FIELD) is not False:
                 command.append(INCLUDE_BODIES_OPTION)
             if LIMIT_FIELD in arguments:
                 command.extend(

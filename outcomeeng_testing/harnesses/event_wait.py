@@ -31,6 +31,7 @@ from outcomeeng_testing.generators.event_wait import (
     SpendReading,
     TimeoutDefect,
     WorldCase,
+    mail_interval_cases,
     non_object_documents,
     timeout_defects,
     unknown_source_kinds,
@@ -78,6 +79,7 @@ WORLD_SEEDS = {
     "timeout-defect": 2026101706,
     "unknown-kind": 2026101707,
     "document": 2026101708,
+    "mail-interval": 2026112801,
 }
 REPLAY_PATHS = {
     "composed": f"{SPEC_TESTS}/test_event_wait.property.l1.py",
@@ -88,6 +90,7 @@ REPLAY_PATHS = {
     "timeout-defect": f"{SPEC_TESTS}/test_event_wait.compliance.l1.py",
     "unknown-kind": f"{SPEC_TESTS}/test_event_wait.mapping.l1.py",
     "document": f"{SPEC_TESTS}/test_event_wait.mapping.l1.py",
+    "mail-interval": f"{SPEC_TESTS}/test_event_wait.mapping.l1.py",
 }
 SKIPPED_RUNTIME_ENV = "PYTHONDONTWRITEBYTECODE"
 REAL_RUN_TIMEOUT_SECONDS = 1
@@ -572,6 +575,17 @@ def run_single_source_worlds(
     _run_cases(
         kind,
         _worlds(_kind_token(kind), mandatory=(_kind_token(kind),)),
+        lambda case: check(observe(case)),
+        WORLD_EXAMPLES,
+    )
+
+
+def run_mail_interval_worlds(check: Callable[[WorldObservation], None]) -> None:
+    """Drive a quiet mail source, alone and beside a source that yields no event,
+    over timeouts spanning several of the script's mail intervals."""
+    _run_cases(
+        "mail-interval",
+        mail_interval_cases(load_wait_event().MAIL_INTERVAL_SECONDS),
         lambda case: check(observe(case)),
         WORLD_EXAMPLES,
     )

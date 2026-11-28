@@ -21,6 +21,8 @@ A request is one JSON object naming a required `timeoutSeconds`, a positive numb
 | `spend` | `after`; optional `root`                                    | the consumption-control detector recorded an alert after the instant `after`                |
 | `clock` | `at`                                                        | the instant `at`, an ISO 8601 instant ending in `Z` that falls before the timeout, arrives  |
 
+A `mail` source alone is one wait on the agent-mail capability for the whole timeout, which lists once every 30 seconds. Beside other sources, the run waits on each `mail` source for one second at its first pass and again only once 30 seconds have passed, while it reads every other source on each pass, so a mail event can reach the line up to 30 seconds after the record arrives.
+
 Each value comes from the last event handled:
 
 - `id` is the store id of the last mail record handled, `0` for none, so a run that ends at any point loses no record.

@@ -8,6 +8,7 @@ from outcomeeng_testing.harnesses.event_wait import (
     DefectObservation,
     WorldObservation,
     line_form_runs,
+    run_mail_interval_worlds,
     run_non_object_documents,
     run_single_source_worlds,
     run_unknown_source_kinds,
@@ -233,3 +234,35 @@ def test_each_line_form_is_one_json_object_on_one_line_with_its_own_kind_and_exi
     for form, run in observed.executions.items():
         assert only_line(run.stdout)[we.KIND_FIELD] == form
         assert (run.exit_code == 0) == (form in zero_exit), form
+
+
+def test_each_mail_source_is_read_at_most_once_per_mail_interval() -> None:
+    def check(observed: WorldObservation) -> None:
+        we = observed.contracts.wait_event
+        am = observed.contracts.agent_mail
+        line = only_line(observed.stdout)
+        assert line[we.KIND_FIELD] == we.LINE_TIMEOUT
+        listings = [
+            call.started for call in observed.calls if call.argv[0] == am.AM_COMMAND
+        ]
+        waits = [
+            request[am.ARGUMENTS_FIELD][am.TIMEOUT_SECONDS_FIELD]
+            for request in observed.mail_requests
+        ]
+        assert listings, observed.calls
+        assert listings[0] == 0
+        if observed.case.spend is None:
+            assert waits == [
+                min(observed.case.timeout_seconds, we.MAIL_WAIT_MAXIMUM_SECONDS)
+            ]
+            interval = am.WAIT_POLL_INTERVAL_SECONDS
+        else:
+            assert waits, observed.calls
+            assert all(wait == we.MAIL_PASS_WAIT_SECONDS for wait in waits)
+            assert len(listings) == len(waits)
+            interval = we.MAIL_INTERVAL_SECONDS
+        gaps = [later - earlier for earlier, later in zip(listings, listings[1:])]
+        assert all(gap >= interval for gap in gaps), listings
+        assert observed.case.timeout_seconds - listings[-1] <= interval, listings
+
+    run_mail_interval_worlds(check)

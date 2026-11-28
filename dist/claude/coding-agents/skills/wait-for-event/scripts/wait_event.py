@@ -30,6 +30,10 @@ ADAPTER_SPEND = ("control-token-spend", "usage_accounting")
 SCHEMA_VERSION = 1
 POLL_INTERVAL_SECONDS = 1.0
 MAIL_WAIT_MAXIMUM_SECONDS = 3_600
+# Beside other sources, a run waits on each mail source for this pass wait,
+# and waits on it again only once this mail interval has passed.
+MAIL_PASS_WAIT_SECONDS = 1
+MAIL_INTERVAL_SECONDS = 30.0
 
 KIND_FIELD = "kind"
 SOURCES_FIELD = "sources"
@@ -521,6 +525,8 @@ def wait_event(
 
     mail = [s for s in request.sources if isinstance(s, MailSource)]
     others = [s for s in request.sources if not isinstance(s, MailSource)]
+    only_mail = not others and len(mail) == 1
+    last_mail_wait: dict[int, float] = {}
     while True:
         unreadable: list[Unreadable] = []
         for source in others:
@@ -541,14 +547,19 @@ def wait_event(
             if isinstance(outcome, Unreadable):
                 unreadable.append(outcome)
         waited = False
-        for source in mail:
-            # With other sources to read, wait one second so each pass reads them again.
-            seconds = min(
-                math.floor(remaining()),
-                MAIL_WAIT_MAXIMUM_SECONDS if not others and len(mail) == 1 else 1,
-            )
+        for index, source in enumerate(mail):
+            # With other sources to read, wait one pass wait so each pass reads
+            # them again, and wait on this mail source once per mail interval.
+            if only_mail:
+                seconds = min(math.floor(remaining()), MAIL_WAIT_MAXIMUM_SECONDS)
+            else:
+                last = last_mail_wait.get(index)
+                if last is not None and clock.now() - last < MAIL_INTERVAL_SECONDS:
+                    continue
+                seconds = min(math.floor(remaining()), MAIL_PASS_WAIT_SECONDS)
             if seconds < 1:
                 continue
+            last_mail_wait[index] = clock.now()
             waited = True
             outcome = _poll_mail(source, seconds, runner, clock)
             if isinstance(outcome, Event):
