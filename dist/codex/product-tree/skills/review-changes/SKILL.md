@@ -16,7 +16,7 @@ The raw run token that `finish` prints for a sealed `spx journal --type review` 
 
 <inputs>
 
-Review scope is discovered from the current worktree. Reusable gate evidence requires the exact current version to be committed and the worktree to be clean. Explicit advisory feedback may include staged, unstaged, or untracked work, and the resulting review supplies no reusable gate evidence. The input may supply the resolved scope as literal `SPX_VERIFY_BASE_REF`, `SPX_VERIFY_HEAD_REF`, `SPX_VERIFY_BRANCH`, `SPX_VERIFY_TARGET_KIND`, and `SPX_VERIFY_PULL_REQUEST_NUMBER` assignments, each written as a prefix on the single `review_run.py start` command line, because a shell export does not persist across Bash calls. `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` select a non-default range; the other three record branch and target identity.
+The input names the absolute root of the checkout under review; pass it unchanged to `start` as `--checkout`, and pass no other value. A caller that supplies no root gets no review: `start` refuses a run without one. Review scope is discovered from that checkout, whatever the working directory of the session. Reusable gate evidence requires the exact current version to be committed and the worktree to be clean. Explicit advisory feedback may include staged, unstaged, or untracked work, and the resulting review supplies no reusable gate evidence. The input may supply the resolved scope as literal `SPX_VERIFY_BASE_REF`, `SPX_VERIFY_HEAD_REF`, `SPX_VERIFY_BRANCH`, `SPX_VERIFY_TARGET_KIND`, and `SPX_VERIFY_PULL_REQUEST_NUMBER` assignments, each written as a prefix on the single `review_run.py start` command line, because a shell export does not persist across Bash calls. `SPX_VERIFY_BASE_REF` and `SPX_VERIFY_HEAD_REF` select a non-default range; the other three record branch and target identity.
 
 </inputs>
 
@@ -25,14 +25,14 @@ Review scope is discovered from the current worktree. Reusable gate evidence req
 Invoke only the bundled runner:
 
 ```bash
-[SPX_VERIFY_*=<value> ...] python3 "${SKILL_DIR}/scripts/review_run.py" start
+[SPX_VERIFY_*=<value> ...] python3 "${SKILL_DIR}/scripts/review_run.py" start --checkout "<checkout-root>"
 python3 "${SKILL_DIR}/scripts/review_run.py" append-scope --state "<statePath>" "<changed-file>"
 python3 "${SKILL_DIR}/scripts/review_run.py" append-finding --state "<statePath>" < "<finding-file>"
 python3 "${SKILL_DIR}/scripts/review_run.py" finish --state "<statePath>" --unread "<unread-path>"
 python3 "${SKILL_DIR}/scripts/review_run.py" finish --state "<statePath>" --unread-file "<unread-list-file>"
 ```
 
-The bracketed `SPX_VERIFY_*=<value>` assignments are optional and appear only when the input supplies them, each as a literal prefix on the `start` command line; omit the brackets. Pass `--unread "<unread-path>"` once for each changed file Claude did not read, and omit it when Claude read every changed file. When the unread set is large, write one changed path per line to a payload file with the file-write tool, in the scratch directory `<finding_payload>` names, under a file name unique to this agent and run such as `unread-<runToken>.txt`, and pass that file once as `--unread-file "<unread-list-file>"` with the path exactly as the file-write result reports it; `--unread-file` marks each listed path unread exactly as one `--unread` argument does, and the two forms combine.
+`<checkout-root>` is the absolute checkout root the input names, written out literally. `start` records it in the run state, and every verb runs its git and `spx journal` commands there, so `append-scope`, `append-finding`, and `finish` give the same result from any working directory. The bracketed `SPX_VERIFY_*=<value>` assignments are optional and appear only when the input supplies them, each as a literal prefix on the `start` command line; omit the brackets. Pass `--unread "<unread-path>"` once for each changed file Claude did not read, and omit it when Claude read every changed file. When the unread set is large, write one changed path per line to a payload file with the file-write tool, in the scratch directory `<finding_payload>` names, under a file name unique to this agent and run such as `unread-<runToken>.txt`, and pass that file once as `--unread-file "<unread-list-file>"` with the path exactly as the file-write result reports it; `--unread-file` marks each listed path unread exactly as one `--unread` argument does, and the two forms combine.
 
 `start` fetches a git-derived or `origin/` base and refuses a head behind the fetched `origin/<base>` tip before any journal exists — the dedicated stale-base exit code with a `stale-base` JSON diagnostic on stderr and no run state; a supplied local ref or commit is compared as given — and otherwise computes the diff bundle, opens the review journal, appends the scope-entered event, and returns JSON containing `statePath`, `runToken`, `diffPath`, `manifestPath`, `changedFiles`, `generatedExtents`, `generatedDeclarationChanged`, and `renames`. Report the refusal as a `stale-base` block carrying the diagnostic verbatim and stop.
 
@@ -63,7 +63,7 @@ Use `manifestPath` and `changedFiles` for navigation, but treat the diff file as
 
 <workflow>
 
-1. Run `start` and parse the returned JSON.
+1. Run `start` with `--checkout` set to the input's checkout root, and parse the returned JSON.
 2. Load the prompt reference and diff bundle.
 3. Examine every changed file and every emitted diff section, applying the prompt's `<adversarial_probes>` before treating a file as clean. After Claude has read a changed file, call `append-scope` for that file; never call it for a file Claude sampled or skipped. Judge a declared generated extent through its relation's `sources` and `generator` and never read it as authored work; call neither `append-scope` nor `--unread` for it, and call neither for a pure rename. When a `generatedExtents` entry is `flagged` with `changed_sources` or `changed_generator`, the changeset changes the relation's sources or generator, so Claude may read that relation's extents as evidence of the generator change, and a defect they show resolves to the named `changed_sources` or `changed_generator`. When an entry carries a `flagged_reason`, its files are ordinary changed files: examine each and call `append-scope` after reading it.
 4. For each changed governing declaration, discover and read its unchanged consumers per the prompt's `<review_scope>` consumers-of-changed-truth item. A contradiction there is a finding cited at the consumer's location; consumers are not `append-scope` units — the journal's scope coverage remains the changed-file set.

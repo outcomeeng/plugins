@@ -189,7 +189,9 @@ def start_changeset_review(
     """Run ``review_run.py start`` in ``repo`` under a fresh ``scratch`` directory."""
     scratch.mkdir(parents=True)
     env, journal_path = runner_env(scratch, repo, base_ref)
-    started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=repo)
+    started = run_script(
+        REVIEW_RUN_SCRIPT, "start", "--checkout", str(repo), env=env, cwd=repo
+    )
     if started.returncode != 0:
         raise RuntimeError(f"review_run.py start failed: {started.stderr}")
     payload = json.loads(started.stdout)

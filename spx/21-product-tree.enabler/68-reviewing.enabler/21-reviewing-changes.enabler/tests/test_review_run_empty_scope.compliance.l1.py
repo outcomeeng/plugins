@@ -37,7 +37,14 @@ def test_a_scope_with_no_changed_path_opens_no_journal_and_names_both_commits(
         head_commit = git_commit_oid(empty.repo, CHANGESET_SCOPE.HEAD_REF)
         env, journal_path = runner_env(tmp_path, empty.repo, base_ref)
 
-        started = run_script(REVIEW_RUN_SCRIPT, "start", env=env, cwd=empty.repo)
+        started = run_script(
+            REVIEW_RUN_SCRIPT,
+            "start",
+            "--checkout",
+            str(empty.repo),
+            env=env,
+            cwd=empty.repo,
+        )
 
         assert base_commit != head_commit
         assert started.returncode != 0
