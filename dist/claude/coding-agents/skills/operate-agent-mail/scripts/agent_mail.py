@@ -12,15 +12,18 @@ import sys
 import time
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Final, Mapping, Protocol, TextIO, cast
+from typing import Callable, Final, Mapping, Protocol, TextIO, cast
 
 SCHEMA_VERSION = 1
 RECORD_SCHEMA_VERSION = 1
 COMMAND_TIMEOUT_SECONDS = 30
 # A wait lists the requester's records at this interval until a record arrives
-# or its timeout passes, and each listing reads at most this many records.
+# or its timeout passes, and each listing reads at most this many records. When
+# a full listing does not reach back to the id, the wait pages the requester's
+# delivery events from their start, at most this many events a page.
 WAIT_POLL_INTERVAL_SECONDS = 30
 WAIT_LISTING_LIMIT = 1_000
+WAIT_EVENT_PAGE_LIMIT = 1_000
 WAIT_TIMEOUT_MAXIMUM_SECONDS = 3_600
 
 # Public command grammar of the store and of the repository lookup that names
@@ -36,6 +39,8 @@ ACK_COMMAND = "ack"
 READ_COMMAND = "read"
 ROBOT_COMMAND = "robot"
 INBOX_COMMAND = "inbox"
+INBOX_EVENTS_COMMAND = "inbox-events"
+MESSAGE_COMMAND = "message"
 REV_PARSE_COMMAND = "rev-parse"
 PROJECT_OPTION = "--project"
 PROGRAM_OPTION = "--program"
@@ -54,6 +59,8 @@ UNREAD_OPTION = "--unread"
 ALL_OPTION = "--all"
 INCLUDE_BODIES_OPTION = "--include-bodies"
 LIMIT_OPTION = "--limit"
+# The delivery cursor a page of delivery events starts after; never a message id.
+AFTER_OPTION = "--after"
 JSON_OPTION = "--json"
 PATH_FORMAT_ABSOLUTE_OPTION = "--path-format=absolute"
 GIT_COMMON_DIR_OPTION = "--git-common-dir"
@@ -114,6 +121,12 @@ STORE_ACK_REQUIRED_STATUSES = frozenset(
     }
 )
 STORE_INBOX_FIELD = "inbox"
+# Fields of a page of the store's delivery events and of its single-message read.
+STORE_EVENTS_FIELD = "events"
+STORE_EVENT_MESSAGE_ID_FIELD = "message_id"
+STORE_NEXT_CURSOR_FIELD = "next_cursor"
+STORE_HAS_MORE_FIELD = "has_more"
+STORE_MESSAGE_BODY_FIELD = "body"
 # The store answers its agent listing with a JSON array, and a result's
 # response is an object, so the result carries that array under this key.
 STORE_LISTING_FIELD = "listing"
@@ -369,6 +382,15 @@ PUBLIC_AM_COMMAND_PREFIXES: Final[Mapping[Operation, tuple[str, ...]]] = {
     Operation.ACKNOWLEDGE: (AM_COMMAND, MAIL_COMMAND, ACK_COMMAND),
     Operation.WAIT: (AM_COMMAND, ROBOT_COMMAND, INBOX_COMMAND),
 }
+# The two further store commands a wait runs when a full listing does not reach
+# back to its id: a page of the requester's delivery events, and the store's
+# single-message read, which changes no read state.
+WAIT_EVENTS_COMMAND_PREFIX: Final[tuple[str, ...]] = (AM_COMMAND, INBOX_EVENTS_COMMAND)
+WAIT_MESSAGE_COMMAND_PREFIX: Final[tuple[str, ...]] = (
+    AM_COMMAND,
+    ROBOT_COMMAND,
+    MESSAGE_COMMAND,
+)
 # Operations whose public command emits JSON on `--json`; read and acknowledge
 # print text.
 JSON_OPERATIONS = frozenset(
@@ -434,7 +456,7 @@ ARGUMENT_NAMES: Final[Mapping[str, str]] = {
 # groups inside a string.
 RAW_MAIL_COMMAND_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"\bAM_COMMAND\b|[\[(]['\"]am['\"]"),
-    re.compile(r"(?<![\w.-])am\s+(?:mail|agents|robot)\b"),
+    re.compile(r"(?<![\w.-])am\s+(?:mail|agents|robot|inbox-events)\b"),
 )
 GIT_PROJECT_KEY_PATTERNS: Final[tuple[re.Pattern[str], ...]] = (
     re.compile(r"[\[(]['\"]git['\"]\s*,"),
@@ -1285,6 +1307,45 @@ def command_for(request: object, project_key: str) -> tuple[str, ...]:
     return tuple(command)
 
 
+def wait_events_command(
+    project_key: str, agent: str, cursor: int | None
+) -> tuple[str, ...]:
+    """One page of the requester's delivery events: the first page from their
+    start, with no `--after`, and each later page after the cursor the page
+    before reported."""
+    command = [
+        *WAIT_EVENTS_COMMAND_PREFIX,
+        PROJECT_OPTION,
+        project_key,
+        attached_option(PUBLIC_AM_ARGUMENT_OPTIONS[AGENT_FIELD], agent),
+    ]
+    if cursor is not None:
+        command.append(attached_option(AFTER_OPTION, cursor))
+    command.extend(
+        (
+            PUBLIC_AM_ARGUMENT_OPTIONS[LIMIT_FIELD],
+            str(WAIT_EVENT_PAGE_LIMIT),
+            JSON_OPTION,
+        )
+    )
+    return tuple(command)
+
+
+def wait_message_command(
+    project_key: str, agent: str, message_id: int
+) -> tuple[str, ...]:
+    """The store's single-message read of one record for the requester, which
+    changes no read state."""
+    return (
+        *WAIT_MESSAGE_COMMAND_PREFIX,
+        PROJECT_OPTION,
+        project_key,
+        attached_option(PUBLIC_AM_ARGUMENT_OPTIONS[AGENT_FIELD], agent),
+        str(message_id),
+        JSON_OPTION,
+    )
+
+
 def raw_mail_command_violations(sources: Mapping[str, str]) -> list[str]:
     return sorted(
         name
@@ -1531,82 +1592,279 @@ def _wait_selection(
     return min(later, key=lambda record: cast(int, record[RECORD_ID_FIELD])), True
 
 
+@dataclass(frozen=True)
+class _EventPage:
+    """One page of the requester's delivery events: the message id of each
+    event in delivery order, and the cursor the next page starts after while
+    the store reports more."""
+
+    message_ids: tuple[int, ...]
+    next_cursor: int | None
+
+
+class _WaitDeadline(Exception):
+    """The wait's deadline passed before or during a store command."""
+
+
+class _WaitBound(Exception):
+    """A store command reached its per-command bound while time remains."""
+
+
+class _WaitFailure(Exception):
+    """A store command of a wait failed; `result` is its named failure result."""
+
+    def __init__(self, result: dict[str, object]) -> None:
+        super().__init__(str(result.get(DETAIL_FIELD)))
+        self.result = result
+
+
+def _event_page(response: dict[str, object]) -> _EventPage:
+    """Read one page of delivery events: each event's `message_id`, and the
+    `next_cursor` a later page starts after while the store reports more."""
+    events = _array(response.get(STORE_EVENTS_FIELD), STORE_EVENTS_FIELD)
+    message_ids = tuple(
+        _integer(
+            _object(event, f"{STORE_EVENTS_FIELD}[{index}]").get(
+                STORE_EVENT_MESSAGE_ID_FIELD
+            ),
+            f"{STORE_EVENTS_FIELD}[{index}].{STORE_EVENT_MESSAGE_ID_FIELD}",
+            minimum=INTEGER_BOUNDS[MESSAGE_ID_FIELD][0],
+            maximum=INTEGER_BOUNDS[MESSAGE_ID_FIELD][1],
+        )
+        for index, event in enumerate(events)
+    )
+    if response.get(STORE_HAS_MORE_FIELD) is not True:
+        return _EventPage(message_ids, None)
+    next_cursor = response.get(STORE_NEXT_CURSOR_FIELD)
+    if isinstance(next_cursor, bool) or not isinstance(next_cursor, int):
+        raise AgentMailError(
+            ExecutionStatus.INVALID_SCHEMA,
+            STORE_NEXT_CURSOR_FIELD,
+            f"a page that reports more delivery events carries no integer "
+            f"`{STORE_NEXT_CURSOR_FIELD}`",
+            "Check that the installed store pages its delivery events by cursor.",
+        )
+    return _EventPage(message_ids, next_cursor)
+
+
+def _record_from_message(
+    response: dict[str, object], message_id: int, recipient: str
+) -> dict[str, object]:
+    """Map the store's single-message read onto a listed record for its
+    recipient: the fields an inbox row carries, the body under the read's own
+    key."""
+    if response.get(STORE_ID_FIELD) != message_id:
+        raise AgentMailError(
+            ExecutionStatus.INVALID_SCHEMA,
+            STORE_ID_FIELD,
+            f"the single-message read of {message_id} answered id "
+            f"{response.get(STORE_ID_FIELD)!r}",
+            "Check that the installed store reads the message the id names.",
+        )
+    item = {
+        key: value for key, value in response.items() if key != STORE_MESSAGE_BODY_FIELD
+    }
+    body = response.get(STORE_MESSAGE_BODY_FIELD)
+    if isinstance(body, str):
+        item[STORE_BODY_FIELD] = body
+    return record_from_inbox_item(item, recipient=recipient)
+
+
+def _wait_read[T](
+    command: tuple[str, ...],
+    runner: CommandRunner,
+    clock: Clock,
+    deadline: float,
+    parse: Callable[[dict[str, object]], T],
+) -> T:
+    """Run one store command of a wait inside the per-command bound and the
+    time that remains, and parse its JSON answer.
+
+    Raises `_WaitDeadline` when the deadline passes, `_WaitBound` when the
+    command reaches its bound while time remains, and `_WaitFailure` with the
+    named result for every other failure.
+    """
+    operation = Operation.WAIT.value
+    remaining = deadline - clock.now()
+    if remaining <= 0:
+        raise _WaitDeadline
+    try:
+        result = runner.run(
+            command, timeout_seconds=min(COMMAND_TIMEOUT_SECONDS, remaining)
+        )
+    except OSError as error:
+        raise _WaitFailure(
+            _failure_result(
+                operation,
+                ExecutionStatus.STORE_UNAVAILABLE,
+                _run_error_detail(command, error),
+            )
+        ) from error
+    except subprocess.TimeoutExpired as error:
+        if deadline - clock.now() <= 0:
+            raise _WaitDeadline from error
+        raise _WaitBound from error
+    except Exception as error:
+        raise _WaitFailure(
+            _failure_result(
+                operation,
+                ExecutionStatus.COMMAND_FAILED,
+                _run_error_detail(command, error),
+            )
+        ) from error
+    if result.returncode != 0:
+        raise _WaitFailure(
+            _failure_result(
+                operation,
+                ExecutionStatus.COMMAND_FAILED,
+                _store_failure_detail(command, result),
+                result.returncode,
+            )
+        )
+    try:
+        return parse(_object(json.loads(result.stdout), RESPONSE_FIELD))
+    except (json.JSONDecodeError, AgentMailError) as error:
+        raise _WaitFailure(
+            _failure_result(
+                operation,
+                ExecutionStatus.INVALID_SCHEMA,
+                _response_error_detail(command, error),
+                result.returncode,
+            )
+        ) from error
+
+
+def _wait_events(
+    recipient: str,
+    after_id: int,
+    project_key: str,
+    runner: CommandRunner,
+    clock: Clock,
+    deadline: float,
+) -> tuple[WaitOutcome, dict[str, object], dict[str, object]]:
+    """Page the requester's delivery events forward from their start to the
+    first event past `after_id`, and read its record through the store's
+    single-message read.
+
+    The pages run one after another inside the time that remains. The outcome
+    is `received` with that record, or `unreachable` when the events end
+    without one past the id.
+    """
+    cursor: int | None = None
+    while True:
+        response, page = _wait_read(
+            wait_events_command(project_key, recipient, cursor),
+            runner,
+            clock,
+            deadline,
+            lambda payload: (payload, _event_page(payload)),
+        )
+        later = next(
+            (message_id for message_id in page.message_ids if message_id > after_id),
+            None,
+        )
+        if later is not None:
+            found = later
+            message, record = _wait_read(
+                wait_message_command(project_key, recipient, found),
+                runner,
+                clock,
+                deadline,
+                lambda payload: (
+                    payload,
+                    _record_from_message(payload, found, recipient),
+                ),
+            )
+            return WaitOutcome.RECEIVED, message, {RECORD_FIELD: record}
+        if (
+            page.next_cursor is None
+            or not page.message_ids
+            or (cursor is not None and page.next_cursor <= cursor)
+        ):
+            return WaitOutcome.UNREACHABLE, response, {}
+        cursor = page.next_cursor
+
+
+def _wait_pass(
+    recipient: str,
+    after_id: int,
+    project_key: str,
+    listing_command: tuple[str, ...],
+    runner: CommandRunner,
+    clock: Clock,
+    deadline: float,
+) -> tuple[WaitOutcome | None, dict[str, object], dict[str, object]]:
+    """One pass of a wait: list the inbox and, when a full listing does not
+    reach back to the id, page the delivery events. The outcome is None while
+    no record past the id is present."""
+    response, (record, reaches) = _wait_read(
+        listing_command,
+        runner,
+        clock,
+        deadline,
+        lambda payload: (
+            payload,
+            _wait_selection(
+                _array(payload.get(STORE_INBOX_FIELD), STORE_INBOX_FIELD),
+                after_id,
+                recipient,
+            ),
+        ),
+    )
+    if record is not None:
+        return WaitOutcome.RECEIVED, response, {RECORD_FIELD: record}
+    if reaches:
+        return None, response, {}
+    return _wait_events(recipient, after_id, project_key, runner, clock, deadline)
+
+
 def _execute_wait(
     arguments: dict[str, object],
     project_key: str,
     runner: CommandRunner,
     clock: Clock,
 ) -> dict[str, object]:
-    """Poll the requester's inbox until a later record arrives or the timeout passes.
+    """Read the requester's records until a later record arrives or the timeout passes.
 
-    The wait holds no cursor, state file, or lock, and neither reads nor
-    acknowledges a record: it only lists. Every listing is bounded by the time
-    that remains.
+    Each pass lists the inbox and, when a full listing does not reach back to
+    the id, pages the delivery events from their start. A store command that
+    reaches its per-command bound while time remains ends the pass, and the
+    wait reads again at its next interval. The wait keeps no cursor, state
+    file, or lock past its own run, and changes no read state: it lists, pages
+    events, and reads one record through the non-marking single-message read.
+    Every store command is bounded by the time that remains.
     """
-    operation = Operation.WAIT.value
     recipient = str(arguments[AGENT_FIELD])
     after_id = cast(int, arguments[AFTER_ID_FIELD])
-    started = clock.now()
-    deadline = started + cast(int, arguments[TIMEOUT_SECONDS_FIELD])
-    command = command_for(
+    deadline = clock.now() + cast(int, arguments[TIMEOUT_SECONDS_FIELD])
+    listing_command = command_for(
         {
             SCHEMA_VERSION_FIELD: SCHEMA_VERSION,
-            OPERATION_FIELD: operation,
+            OPERATION_FIELD: Operation.WAIT.value,
             ARGUMENTS_FIELD: arguments,
         },
         project_key,
     )
     response: dict[str, object] = {}
     while True:
-        remaining = deadline - clock.now()
-        if remaining <= 0:
+        try:
+            outcome, response, data = _wait_pass(
+                recipient,
+                after_id,
+                project_key,
+                listing_command,
+                runner,
+                clock,
+                deadline,
+            )
+        except _WaitDeadline:
             return _wait_result(WaitOutcome.TIMEOUT, project_key, response, {})
-        try:
-            result = runner.run(command, timeout_seconds=remaining)
-        except OSError as error:
-            return _failure_result(
-                operation,
-                ExecutionStatus.STORE_UNAVAILABLE,
-                _run_error_detail(command, error),
-            )
-        except subprocess.TimeoutExpired as error:
-            if deadline - clock.now() <= 0:
-                return _wait_result(WaitOutcome.TIMEOUT, project_key, response, {})
-            return _failure_result(
-                operation,
-                ExecutionStatus.COMMAND_FAILED,
-                _run_error_detail(command, error),
-            )
-        except Exception as error:
-            return _failure_result(
-                operation,
-                ExecutionStatus.COMMAND_FAILED,
-                _run_error_detail(command, error),
-            )
-        if result.returncode != 0:
-            return _failure_result(
-                operation,
-                ExecutionStatus.COMMAND_FAILED,
-                _store_failure_detail(command, result),
-                result.returncode,
-            )
-        try:
-            response = _object(json.loads(result.stdout), RESPONSE_FIELD)
-            items = _array(response.get(STORE_INBOX_FIELD), STORE_INBOX_FIELD)
-            record, reaches = _wait_selection(items, after_id, recipient)
-        except (json.JSONDecodeError, AgentMailError) as error:
-            return _failure_result(
-                operation,
-                ExecutionStatus.INVALID_SCHEMA,
-                _response_error_detail(command, error),
-                result.returncode,
-            )
-        if not reaches:
-            return _wait_result(WaitOutcome.UNREACHABLE, project_key, response, {})
-        if record is not None:
-            return _wait_result(
-                WaitOutcome.RECEIVED, project_key, response, {RECORD_FIELD: record}
-            )
+        except _WaitBound:
+            outcome, data = None, {}
+        except _WaitFailure as failure:
+            return failure.result
+        if outcome is not None:
+            return _wait_result(outcome, project_key, response, data)
         remaining = deadline - clock.now()
         if remaining <= 0:
             return _wait_result(WaitOutcome.TIMEOUT, project_key, response, {})

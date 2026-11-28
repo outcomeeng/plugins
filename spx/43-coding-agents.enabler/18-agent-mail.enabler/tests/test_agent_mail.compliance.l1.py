@@ -743,13 +743,30 @@ def test_every_result_carries_the_versioned_shape_and_a_runner_error_is_named() 
             (RuntimeError("broken"), module.ExecutionStatus.COMMAND_FAILED),
             (ValueError("odd"), module.ExecutionStatus.COMMAND_FAILED),
         ):
+            clock = ScriptedClock()
             result = module.execute(
                 request,
                 store_error_runner(module, project_key, error),
-                ScriptedClock(),
+                clock,
             )
 
-            assert result[module.STATUS_FIELD] == status, (request, error)
+            if module.Operation(request[module.OPERATION_FIELD]) is (
+                module.Operation.WAIT
+            ) and isinstance(error, subprocess.TimeoutExpired):
+                # A wait command that reaches its bound while time remains ends
+                # no wait: the wait reads again and ends as a timeout at its
+                # deadline (wait-command-bound).
+                arguments = cast(dict[str, object], request[module.ARGUMENTS_FIELD])
+                data = cast(dict[str, object], result[module.DATA_FIELD])
+                assert result[module.STATUS_FIELD] == (
+                    module.ExecutionStatus.SUCCEEDED
+                ), request
+                assert data[module.OUTCOME_FIELD] == module.WaitOutcome.TIMEOUT
+                assert clock.current >= cast(
+                    int, arguments[module.TIMEOUT_SECONDS_FIELD]
+                )
+            else:
+                assert result[module.STATUS_FIELD] == status, (request, error)
             assert module.validate_operation_result(result) == result
             assert result[module.SCHEMA_VERSION_FIELD] == module.SCHEMA_VERSION
 
