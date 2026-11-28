@@ -6,6 +6,13 @@ What changed in **this plugin**, for a consumer repository. An entry appears whe
 
 Sections are `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Requires`. `Breaking` is separate from `Changed` because a renamed skill breaks invocation outright rather than behaving differently.
 
+## 0.21.3
+
+### Changed
+
+- **`/operate-agent-mail` lists bodies unless a request declines them.** A `list` request that omits `includeBodies` now returns each record's `body`, and only `includeBodies` `false` lists without bodies. Before this change, a `list` request listed bodies only when it set `includeBodies` to `true`. A caller that sets the field gets the same listing as before.
+- **A mail wait lists every 30 seconds.** `/operate-agent-mail`'s `wait` lists the records at its start and then once every 30 seconds until a record arrives or its timeout passes, where it listed every 2 seconds. Beside other sources, `/wait-for-event` waits on each `mail` source for one second at its first pass and again only after 30 seconds, while it reads every other source on each pass. A mail event can therefore reach the caller up to 30 seconds after the record arrives.
+
 ## 0.21.2
 
 ### Added
