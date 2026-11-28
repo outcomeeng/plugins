@@ -19,6 +19,7 @@ from hypothesis import given, seed, settings
 from outcomeeng.distribution.bump import Segment, Version
 from outcomeeng_testing.generators.bump_mapping import segments, versions
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 BUMP_SEGMENT_PROPERTY_EXAMPLES: Final = 100
 BUMP_SEGMENT_PROPERTY_SEED: Final = 20260714
@@ -33,7 +34,7 @@ def run_segment_increment_property(check: Callable[[Version, Segment], None]) ->
 
     @seed(BUMP_SEGMENT_PROPERTY_SEED)
     @settings(
-        max_examples=BUMP_SEGMENT_PROPERTY_EXAMPLES,
+        max_examples=profile_examples(BUMP_SEGMENT_PROPERTY_EXAMPLES),
         deadline=None,
         print_blob=True,
     )

@@ -37,6 +37,7 @@ from outcomeeng_testing.harnesses.hooks import (
     worktree_occupancy,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 ROOT = Path(__file__).parents[2]
 HERDR_ENVIRONMENT_PATH = (
@@ -841,7 +842,11 @@ def run_inventory_mapping(
     ]
 
     @seed(INVENTORY_SEED)
-    @settings(max_examples=INVENTORY_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(INVENTORY_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(
         agents=inventories(module, template),
         absent_name=agent_names(),
@@ -901,7 +906,11 @@ def run_option_prefix_rejections(
     module = _load()
 
     @seed(OPTION_PREFIX_SEED)
-    @settings(max_examples=OPTION_PREFIX_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(OPTION_PREFIX_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(text=agent_names())
     def generated_prefix(text: str) -> None:
         for request, field_name in option_prefixed_requests(module, text):
@@ -920,7 +929,11 @@ def run_unknown_operation_mapping(
     module = _load()
 
     @seed(UNKNOWN_OPERATION_SEED)
-    @settings(max_examples=UNKNOWN_OPERATION_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(UNKNOWN_OPERATION_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(name=unknown_operation_names(module))
     def generated_unknown(name: str) -> None:
         assert_unknown(module, name)

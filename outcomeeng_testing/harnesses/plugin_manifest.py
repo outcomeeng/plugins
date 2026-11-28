@@ -24,8 +24,8 @@ from outcomeeng.distribution.orchestration import (
 )
 from outcomeeng.validation.audit_artifacts import PRODUCT_TREE_PLUGIN_NAME
 from outcomeeng.validation.plugins import (
-    CATALOGS,
     CATALOG_PLUGINS_FIELD,
+    CATALOGS,
     CLAUDE_PLUGIN_MANIFEST_PATH,
     CLAUDE_PLUGIN_VALIDATE_ARGV,
     CODEX_PLUGIN_MANIFEST_PATH,
@@ -37,6 +37,7 @@ from outcomeeng.validation.plugins import (
     main,
     run_validate,
 )
+from outcomeeng_testing.generators.plugin_manifest import distinct_version_pairs
 from outcomeeng_testing.harnesses.capturing_runner import (
     DESCENDANT_SLEEP_SECONDS,
     PROMPT_RETURN_CEILING_SECONDS,
@@ -44,8 +45,8 @@ from outcomeeng_testing.harnesses.capturing_runner import (
     child_exiting_with_lingering_descendant,
     never_returning_executable,
 )
-from outcomeeng_testing.generators.plugin_manifest import distinct_version_pairs
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 PARITY_PROPERTY_EXAMPLES: Final = 100
@@ -255,7 +256,7 @@ def manifest_version_parity_is_symmetric() -> bool:
 
 @seed(PARITY_PROPERTY_SEED)
 @settings(
-    max_examples=PARITY_PROPERTY_EXAMPLES,
+    max_examples=profile_examples(PARITY_PROPERTY_EXAMPLES),
     deadline=None,
     print_blob=True,
 )

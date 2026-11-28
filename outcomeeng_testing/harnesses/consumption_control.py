@@ -5,7 +5,6 @@ from __future__ import annotations
 import datetime as dt
 import fcntl
 import hashlib
-from html.parser import HTMLParser
 import json
 import os
 import plistlib
@@ -15,8 +14,9 @@ import sys
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import astuple, dataclass, replace
-from enum import StrEnum
 from decimal import Decimal
+from enum import StrEnum
+from html.parser import HTMLParser
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import ModuleType
@@ -28,27 +28,28 @@ from hypothesis import strategies as st
 
 from outcomeeng.distribution.shipped_scripts import load_shipped_module
 from outcomeeng_testing.generators.consumption_control import (
-    spending_cases,
-    invalid_amounts,
-    invalid_rates,
-    override_rates,
-    growing_contexts,
-    usage_snapshots,
-    unsupported_models,
-    duration_snapshots,
     alert_reads,
     differing_texts,
     distinct_namespace_pairs,
-    namespace_histories,
-    invalid_namespaces,
+    duration_snapshots,
     foreign_job_labels,
+    growing_contexts,
+    invalid_amounts,
+    invalid_namespaces,
+    invalid_rates,
+    namespace_histories,
     non_list_retained_values,
-    non_string_namespace_values,
     non_mapping_retained_entries,
+    non_string_namespace_values,
     nonconforming_plist_paths,
+    override_rates,
+    spending_cases,
+    unsupported_models,
+    usage_snapshots,
     valid_namespaces,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 ROOT = Path(__file__).parents[2]
 SCRIPTS = ROOT / "dist/claude/coding-agents/skills/control-token-spend/scripts"
@@ -172,7 +173,7 @@ def accounting_observation(
 
 def accounting_property(check: Callable[[AccountingObservation], None]) -> None:
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(duration_snapshots())
     def run(snapshots: tuple[tuple[int, ...], tuple[int, ...]]) -> None:
         check(accounting_observation(snapshots))
@@ -258,7 +259,7 @@ def signal_observation(case: tuple[int, int, int]) -> SignalObservation:
 
 def signal_property(check: Callable[[SignalObservation], None]) -> None:
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(spending_cases())
     def run(case: tuple[int, int, int]) -> None:
         check(signal_observation(case))
@@ -272,7 +273,7 @@ def configuration_property(check: Callable[[list[tuple[str, str]]], None]) -> No
     accounting, _, _, _ = modules()
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(invalid_amounts())
     def run(amount: str) -> None:
         diagnostics = []
@@ -300,7 +301,7 @@ def valid_namespace_property(check: Callable[[str, str, str], None]) -> None:
     accounting, _, _, _ = modules()
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(valid_namespaces())
     def run(namespace: str) -> None:
         environment = {
@@ -325,7 +326,7 @@ def invalid_namespace_property(check: Callable[[tuple[str, str]], None]) -> None
     accounting, _, _, _ = modules()
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(invalid_namespaces(accounting.NAMESPACE_MAX_CHARS))
     def run(namespace: str) -> None:
         environment = {
@@ -396,7 +397,7 @@ def valid_routed_namespace_property(
     accounting, _, _, _ = modules()
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(valid_namespaces())
     def run(namespace: str) -> None:
         for route in NamespaceRoute:
@@ -416,7 +417,7 @@ def invalid_routed_namespace_property(
     accounting, _, _, _ = modules()
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(invalid_namespaces(accounting.NAMESPACE_MAX_CHARS))
     def run(namespace: str) -> None:
         for route in NamespaceRoute:
@@ -466,7 +467,7 @@ def price_override_property(check: Callable[[PriceOverrideObservation], None]) -
     bundled = accounting.bundled_prices()
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(st.sampled_from(sorted(bundled)), override_rates())
     def run(model: str, rates: tuple[str, ...]) -> None:
         with TemporaryDirectory(prefix="price-override-") as temporary:
@@ -503,7 +504,7 @@ def invalid_price_override_property(
     bundled = accounting.bundled_prices()
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(
         st.sampled_from(sorted(bundled)),
         override_rates(),
@@ -1134,7 +1135,7 @@ def context_property(check: Callable[[ContextObservation], None]) -> None:
     with workspace() as work, accounting.Evidence(work.config) as evidence:
 
         @seed(SEED)
-        @settings(max_examples=EXAMPLES, deadline=None)
+        @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
         @given(growing_contexts())
         def run(factors: list[int]) -> None:
             with evidence.db:
@@ -1311,7 +1312,7 @@ def unknown_pricing_property(
         ordinal = 0
 
         @seed(SEED)
-        @settings(max_examples=EXAMPLES, deadline=None)
+        @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
         @given(unsupported_models(), usage_snapshots())
         def run(model: str, snapshots: tuple[tuple[int, ...], tuple[int, ...]]) -> None:
             nonlocal ordinal
@@ -1509,7 +1510,7 @@ def alert_read_observation(
 
 def alert_read_property(check: Callable[[AlertReadObservation], None]) -> None:
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(alert_reads())
     def run(case: tuple[list[tuple[str, int, int]], int]) -> None:
         check(alert_read_observation(case))
@@ -1610,7 +1611,7 @@ def namespace_scope_property(
     _, _, schedule, _ = modules()
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(distinct_namespace_pairs())
     def run(namespaces: tuple[str, str]) -> None:
         namespace, foreign = namespaces
@@ -1669,7 +1670,7 @@ def namespace_return_property(
     accounting, _, schedule, _ = modules()
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(distinct_namespace_pairs())
     def run(namespaces: tuple[str, str]) -> None:
         first, second = namespaces
@@ -1739,7 +1740,7 @@ def namespace_reinstall_property(
     accounting, _, schedule, _ = modules()
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(distinct_namespace_pairs())
     def run(namespaces: tuple[str, str]) -> None:
         first, second = namespaces
@@ -1819,7 +1820,7 @@ def retained_bound_property(
     namespaces = schedule.RETAINED_NAMESPACES
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(namespace_histories(namespaces + 2))
     def run(history: list[str]) -> None:
         with workspace() as work:
@@ -1876,7 +1877,7 @@ def retention_plan_property(
     namespaces = schedule.RETAINED_NAMESPACES
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(namespace_histories(namespaces + 2))
     def run(history: list[str]) -> None:
         with workspace() as work:
@@ -1942,7 +1943,7 @@ def _retained_record_property(
     _, _, schedule, _ = modules()
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(distinct_namespace_pairs(), st.data())
     def run(namespaces: tuple[str, str], data: st.DataObject) -> None:
         first, second = namespaces
@@ -2151,7 +2152,7 @@ def outside_retention_property(
     namespaces = schedule.RETAINED_NAMESPACES
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(namespace_histories(namespaces + 2))
     def run(history: list[str]) -> None:
         with workspace() as work:
@@ -2246,7 +2247,7 @@ def retention_gap_property(
     namespaces = schedule.RETAINED_NAMESPACES
 
     @seed(SEED)
-    @settings(max_examples=EXAMPLES, deadline=None)
+    @settings(max_examples=profile_examples(EXAMPLES), deadline=None)
     @given(namespace_histories(namespaces + 2))
     def run(history: list[str]) -> None:
         with workspace() as work:

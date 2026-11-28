@@ -50,7 +50,11 @@ from outcomeeng_testing.harnesses.agent_mail import (
 )
 from outcomeeng_testing.harnesses.consumption_control import (
     AccountingField,
+)
+from outcomeeng_testing.harnesses.consumption_control import (
     fixture as consumption_fixture,
+)
+from outcomeeng_testing.harnesses.consumption_control import (
     modules as consumption_modules,
 )
 from outcomeeng_testing.harnesses.herdr_environment import (
@@ -62,6 +66,7 @@ from outcomeeng_testing.harnesses.herdr_environment import (
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 from outcomeeng_testing.harnesses.prowl_environment import load_prowl_environment
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 ROOT = Path(__file__).parents[2]
 WAIT_EVENT_PATH = (
@@ -546,7 +551,7 @@ def _run_cases(
     name: str, strategy: Any, check: Callable[..., None], examples: int
 ) -> None:
     @seed(WORLD_SEEDS[name])
-    @settings(max_examples=examples, deadline=None, print_blob=True)
+    @settings(max_examples=profile_examples(examples), deadline=None, print_blob=True)
     @given(strategy)
     def generated(case: Any) -> None:
         check(case)

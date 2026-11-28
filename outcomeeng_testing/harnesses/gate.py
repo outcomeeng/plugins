@@ -36,8 +36,8 @@ from hypothesis import given, seed, settings
 from outcomeeng import validation as validation_pkg
 from outcomeeng.validation import (
     POST_KILL_REAP_ATTEMPTS,
-    PURPOSE_CONFORMANCE,
     PREFLIGHT_STEPS,
+    PURPOSE_CONFORMANCE,
     SIGNAL_GRACE_SECONDS,
     SIGNAL_POLL_INTERVAL_SECONDS,
     STATIC_ANALYSIS_ARGVS,
@@ -63,20 +63,22 @@ from outcomeeng.validation.infrastructure_index import (
 )
 from outcomeeng.validation.selected_gate import (
     DEFAULT_BASE_REF,
-    GIT_DISCOVERY_FAILURE_EXIT_CODE,
     GIT_DIFF_BRANCH_ARGV_PREFIX,
     GIT_DIFF_STAGED_ARGV,
     GIT_DIFF_UNSTAGED_ARGV,
+    GIT_DISCOVERY_FAILURE_EXIT_CODE,
     GIT_LS_UNTRACKED_ARGV,
     collect_changed_paths,
+)
+from outcomeeng.validation.selected_gate import (
     run_selected_check as production_run_selected_check,
 )
 from outcomeeng_testing.generators.gate import (
-    GeneratedTestFile,
     SELECTED_GATE_PYTHON_SOURCE_PATH,
     SELECTED_GATE_PYTHON_TEST_PATH,
     SELECTED_GATE_SKILL_PATH,
     SELECTED_GATE_WORKFLOW_PATH,
+    GeneratedTestFile,
     category_patterns,
     clock_increments,
     generated_test_file_sets,
@@ -89,6 +91,7 @@ from outcomeeng_testing.harnesses.changeset_scope import (
     build_repo_without_origin,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 SELECTED_GATE_PROPERTY_SEED = 20260705
 SELECTED_GATE_PROPERTY_REPLAY_PATH = (
@@ -404,9 +407,10 @@ def selected_gate_property(
     """Run the selected-gate property with reproducible failure diagnostics."""
 
     configured = seed(SELECTED_GATE_PROPERTY_SEED)(
-        settings(max_examples=SELECTED_GATE_PROPERTY_EXAMPLES, deadline=None)(
-            given(paths=selected_gate_changed_paths())(test_func)
-        )
+        settings(
+            max_examples=profile_examples(SELECTED_GATE_PROPERTY_EXAMPLES),
+            deadline=None,
+        )(given(paths=selected_gate_changed_paths())(test_func))
     )
 
     def wrapper() -> None:
@@ -436,9 +440,9 @@ def l3_tests_property(
     """Run the L3 tests property with reproducible failure diagnostics."""
 
     configured = seed(L3_TESTS_PROPERTY_SEED)(
-        settings(max_examples=L3_TESTS_PROPERTY_EXAMPLES, deadline=None)(
-            given(test_files=generated_test_file_sets())(test_func)
-        )
+        settings(
+            max_examples=profile_examples(L3_TESTS_PROPERTY_EXAMPLES), deadline=None
+        )(given(test_files=generated_test_file_sets())(test_func))
     )
 
     def wrapper() -> None:
@@ -457,9 +461,9 @@ def step_list_property(
     """Run a gate step-list property with reproducible failure diagnostics."""
 
     configured = seed(STEP_LIST_PROPERTY_SEED)(
-        settings(max_examples=STEP_LIST_PROPERTY_EXAMPLES, deadline=None)(
-            given(steps=step_lists())(test_func)
-        )
+        settings(
+            max_examples=profile_examples(STEP_LIST_PROPERTY_EXAMPLES), deadline=None
+        )(given(steps=step_lists())(test_func))
     )
 
     def wrapper() -> None:
@@ -478,9 +482,9 @@ def timed_step_list_property(
     """Run a gate step-list property over generated controlled-clock advances."""
 
     configured = seed(STEP_LIST_PROPERTY_SEED)(
-        settings(max_examples=STEP_LIST_PROPERTY_EXAMPLES, deadline=None)(
-            given(steps=step_lists(), increments=clock_increments())(test_func)
-        )
+        settings(
+            max_examples=profile_examples(STEP_LIST_PROPERTY_EXAMPLES), deadline=None
+        )(given(steps=step_lists(), increments=clock_increments())(test_func))
     )
 
     def wrapper() -> None:

@@ -54,6 +54,7 @@ from outcomeeng_testing.harnesses import audit_change_run_observer as observer
 from outcomeeng_testing.harnesses.audit_change_authority import REPLAYED_ISSUE
 from outcomeeng_testing.harnesses.audit_change_run import REPO_ROOT, load_runner
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 _FIXTURES_DIR: Final = (
     REPO_ROOT / "outcomeeng_testing" / "fixtures" / "audit_change_published"
@@ -240,7 +241,10 @@ def exercise_malformed_published_requests(
     respond = _replaying(PUBLISHED_BODY_ANSWER)
 
     @seed(MALFORMED_PUBLISHED_PROPERTY_SEED)
-    @settings(max_examples=MALFORMED_PUBLISHED_PROPERTY_EXAMPLES, print_blob=True)
+    @settings(
+        max_examples=profile_examples(MALFORMED_PUBLISHED_PROPERTY_EXAMPLES),
+        print_blob=True,
+    )
     @given(request=malformed_published_requests(_runner))
     def run_cases(request: dict[str, object]) -> None:
         assert_case(request, _call(json.dumps(request), respond))

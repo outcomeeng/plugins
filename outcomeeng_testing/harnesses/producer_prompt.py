@@ -18,10 +18,10 @@ from outcomeeng_evals.producer_prompt import (
     KIND_FIELD,
     MATERIALIZED_PROMPT_FILENAME,
     PRODUCER_FIELD,
-    PRODUCERS_FIELD,
     PRODUCER_FILES_KIND,
     PRODUCER_FILES_PLACEHOLDER,
     PRODUCER_PATHS_PLACEHOLDER,
+    PRODUCERS_FIELD,
     PROMPT_FIELD,
     PROMPT_SOURCE_TABLE,
     SECTION_FIELD,
@@ -31,6 +31,7 @@ from outcomeeng_testing.generators.producer_prompt import (
     MalformedProducerFilesDefinition,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 PROMPT_TEMPLATE_FILENAME = "prompt.template.md"
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -188,7 +189,9 @@ def with_duplicate_producer_files_placeholder_workspace() -> Iterator[
 def producer_prompt_property(property_run: Callable[[], None]) -> Callable[[], None]:
     """Apply the shared Hypothesis policy for producer-prompt properties."""
     configured = seed(PRODUCER_PROMPT_PROPERTY_SEED)(
-        settings(max_examples=PRODUCER_PROMPT_PROPERTY_EXAMPLES)(property_run)
+        settings(max_examples=profile_examples(PRODUCER_PROMPT_PROPERTY_EXAMPLES))(
+            property_run
+        )
     )
 
     def run_property() -> None:

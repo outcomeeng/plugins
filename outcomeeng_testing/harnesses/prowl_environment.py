@@ -25,6 +25,7 @@ from outcomeeng_testing.generators.prowl_environment import (
     unsupported_delegation_fields,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 ROOT = Path(__file__).parents[2]
 PROWL_ENVIRONMENT_PATH = (
@@ -200,7 +201,7 @@ def run_subprocess_input_property(assert_input: Callable[[str], None]) -> None:
 
     @seed(SUBPROCESS_INPUT_PROPERTY_SEED)
     @settings(
-        max_examples=SUBPROCESS_INPUT_PROPERTY_EXAMPLES,
+        max_examples=profile_examples(SUBPROCESS_INPUT_PROPERTY_EXAMPLES),
         deadline=None,
         print_blob=True,
     )
@@ -235,7 +236,9 @@ def run_terminal_property(
     recipient = agent_identity(module, ordinal=2)
 
     @seed(PROPERTY_SEED)
-    @settings(max_examples=PROPERTY_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(PROPERTY_EXAMPLES), deadline=None, print_blob=True
+    )
     @given(
         property_text=delegation_text_cases(),
         reference=correlations(),
@@ -272,7 +275,11 @@ def run_terminal_mapping(
     module = _load()
 
     @seed(TERMINAL_MAPPING_SEED)
-    @settings(max_examples=TERMINAL_MAPPING_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(TERMINAL_MAPPING_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(content=delegation_text_cases())
     def generated_terminal_mapping(content: DelegationTextCase) -> None:
         assert_terminal(module, content)
@@ -292,7 +299,7 @@ def run_terminal_result_compliance(
 
     @seed(TERMINAL_RESULT_COMPLIANCE_SEED)
     @settings(
-        max_examples=TERMINAL_RESULT_COMPLIANCE_EXAMPLES,
+        max_examples=profile_examples(TERMINAL_RESULT_COMPLIANCE_EXAMPLES),
         deadline=None,
         print_blob=True,
     )
@@ -315,7 +322,7 @@ def run_delegation_cli_compliance(
 
     @seed(DELEGATION_CLI_COMPLIANCE_SEED)
     @settings(
-        max_examples=DELEGATION_CLI_COMPLIANCE_EXAMPLES,
+        max_examples=profile_examples(DELEGATION_CLI_COMPLIANCE_EXAMPLES),
         deadline=None,
         print_blob=True,
     )
@@ -340,7 +347,9 @@ def run_checked_send_mapping(assert_send: Callable[[str], None]) -> None:
 
     @seed(CHECKED_SEND_MAPPING_SEED)
     @settings(
-        max_examples=CHECKED_SEND_MAPPING_EXAMPLES, deadline=None, print_blob=True
+        max_examples=profile_examples(CHECKED_SEND_MAPPING_EXAMPLES),
+        deadline=None,
+        print_blob=True,
     )
     @given(message_text=message_texts())
     def generated_checked_send_mapping(message_text: str) -> None:

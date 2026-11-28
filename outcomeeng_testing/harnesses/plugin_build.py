@@ -14,12 +14,13 @@ from hypothesis import given, seed, settings
 
 from outcomeeng.distribution.build import (
     FORMATTER_COMMAND_NAME,
-    BuildError,
     IMPLEMENTED,
     SHARED_DIR_NAME,
     SHARED_FRAGMENT_FILENAME,
-    IncludeDirective,
+    TEMPLATES_DIR_NAME,
+    BuildError,
     FormatterProbe,
+    IncludeDirective,
     build,
     format_directive,
     formatter_version_command,
@@ -30,8 +31,8 @@ from outcomeeng.distribution.contracts import (
     AGENT_TOKEN_OWNER_PATH,
     DIST_DIR_NAME,
     MARKDOWN_FILE_SUFFIX,
-    PLUGINS_DIR_NAME,
     PLUGIN_SUBDIRS,
+    PLUGINS_DIR_NAME,
     SKILL_FILENAME,
     SKILLS_SUBDIR_NAME,
     Target,
@@ -41,14 +42,14 @@ from outcomeeng_testing.generators.plugin_build import (
     nonmatching_formatter_versions,
     plugin_build_sources,
 )
-from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
-from outcomeeng.distribution.build import TEMPLATES_DIR_NAME
 from outcomeeng_testing.harnesses.distribution import (
     CANONICAL_SOURCE_ROOT,
     REPOSITORY_ROOT,
     snapshot_files,
 )
+from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder, src_tree
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 PLUGIN_BUILD_PROPERTY_EXAMPLES: Final = 8
 PLUGIN_BUILD_PROPERTY_SEED: Final = 20260714
@@ -132,7 +133,7 @@ def canonical_build_rejects_formatter_version_drift() -> bool:
 
 @seed(PLUGIN_BUILD_PROPERTY_SEED)
 @settings(
-    max_examples=PLUGIN_BUILD_PROPERTY_EXAMPLES,
+    max_examples=profile_examples(PLUGIN_BUILD_PROPERTY_EXAMPLES),
     deadline=None,
     print_blob=True,
 )
@@ -160,7 +161,7 @@ def _generated_build_is_deterministic(source: PluginBuildSource) -> None:
 
 @seed(PLUGIN_BUILD_PROPERTY_SEED)
 @settings(
-    max_examples=PLUGIN_BUILD_PROPERTY_EXAMPLES,
+    max_examples=profile_examples(PLUGIN_BUILD_PROPERTY_EXAMPLES),
     deadline=None,
     print_blob=True,
 )
@@ -177,7 +178,7 @@ def _generated_build_is_idempotent(source: PluginBuildSource) -> None:
 
 @seed(PLUGIN_BUILD_PROPERTY_SEED)
 @settings(
-    max_examples=PLUGIN_BUILD_PROPERTY_EXAMPLES,
+    max_examples=profile_examples(PLUGIN_BUILD_PROPERTY_EXAMPLES),
     deadline=None,
     print_blob=True,
 )

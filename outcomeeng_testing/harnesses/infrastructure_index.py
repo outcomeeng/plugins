@@ -26,8 +26,8 @@ from outcomeeng.validation.infrastructure_index import (
     CONFTEST_FILENAME,
     EXECUTED_TEST_PREFIX,
     PACKAGE_INIT_FILENAME,
-    PYTHON_SUFFIX,
     PRODUCT_TREE_ROOT,
+    PYTHON_SUFFIX,
     TEST_INFRASTRUCTURE_PACKAGE,
     TESTS_DIRECTORY_NAME,
     InfrastructureIndex,
@@ -36,6 +36,7 @@ from outcomeeng.validation.infrastructure_index import (
 )
 from outcomeeng_testing.generators.infrastructure_index import import_chains
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 HARNESSES_SUBPACKAGE: Final = "harnesses"
 GENERATORS_SUBPACKAGE: Final = "generators"
@@ -293,9 +294,11 @@ def index_property(test_func: Callable[..., None]) -> Callable[[], None]:
     """Bind the chain domain and run configuration to a property test."""
 
     configured = seed(INDEX_PROPERTY_SEED)(
-        settings(max_examples=INDEX_PROPERTY_EXAMPLES, deadline=None, print_blob=True)(
-            given(chain=import_chains())(test_func)
-        )
+        settings(
+            max_examples=profile_examples(INDEX_PROPERTY_EXAMPLES),
+            deadline=None,
+            print_blob=True,
+        )(given(chain=import_chains())(test_func))
     )
 
     def wrapper() -> None:

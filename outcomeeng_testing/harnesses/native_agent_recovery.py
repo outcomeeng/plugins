@@ -29,6 +29,7 @@ from outcomeeng_testing.generators.native_agent_recovery import (
     roster_cases,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 ROOT = Path(__file__).parents[2]
 RECOVERY_PATH = (
@@ -476,7 +477,11 @@ def verify_native_agent_recovery_properties() -> list[str]:
     failures: list[str] = []
 
     @seed(RECOVERY_PROPERTY_SEED)
-    @settings(max_examples=RECOVERY_PROPERTY_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(RECOVERY_PROPERTY_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @example(roster=OPERATIONAL_RECOVERY_ROSTER)
     @given(roster=roster_cases())
     def generated_idempotence(roster: RecoveryRosterCase) -> None:
@@ -507,7 +512,11 @@ def verify_native_agent_recovery_properties() -> list[str]:
     )
 
     @seed(RECOVERY_PROPERTY_SEED)
-    @settings(max_examples=RECOVERY_PROPERTY_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(RECOVERY_PROPERTY_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(
         evidence=invalid_recovery_evidence(
             tuple(source.value for source in module.EvidenceSource)

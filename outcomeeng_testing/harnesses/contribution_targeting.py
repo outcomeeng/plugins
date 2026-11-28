@@ -30,6 +30,7 @@ from outcomeeng_testing.generators.contribution_targeting import (
     unrecognized_permissions,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SKILLS_DIR = REPO_ROOT / "src" / "plugins" / "contribute" / "skills"
@@ -289,7 +290,7 @@ def run_unrecognized_permission_property(check: Callable[[bool, str], None]) -> 
 
     @seed(TARGETING_PROPERTY_SEED)
     @settings(
-        max_examples=TARGETING_PROPERTY_EXAMPLES,
+        max_examples=profile_examples(TARGETING_PROPERTY_EXAMPLES),
         deadline=None,
         print_blob=True,
     )

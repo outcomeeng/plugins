@@ -28,20 +28,20 @@ from outcomeeng.distribution.build import (
     CyclicIncludeError,
     Directive,
     DirectiveSyntaxError,
+    EmissionAction,
     IncludeDirective,
+    ProjectedEmission,
     RequireSkillDirective,
     SourceFormatError,
     build,
-    EmissionAction,
-    ProjectedEmission,
     emit_skill,
     expand_include,
     expand_require_skill,
     format_directive,
     make_jinja_environment,
     parse_directives,
-    project_emissions,
     plugin_source_files,
+    project_emissions,
     render_text,
     resolve_runtime_token,
     runtime_token_resolver_cases,
@@ -58,6 +58,12 @@ from outcomeeng.distribution.contracts import (
     SOURCE_ROOT_NAME,
     Target,
 )
+from outcomeeng_testing.generators.directives import directives, standard_jinja_syntax
+from outcomeeng_testing.generators.fragments import (
+    fragment_bodies,
+    include_chain_indices,
+    inert_fragment_bodies,
+)
 from outcomeeng_testing.generators.source_and_templating import (
     RawDirectiveCase,
     SourceScenario,
@@ -65,15 +71,10 @@ from outcomeeng_testing.generators.source_and_templating import (
     source_scenarios,
     unrecognized_plugin_subdirectory_names,
 )
-from outcomeeng_testing.generators.directives import directives, standard_jinja_syntax
-from outcomeeng_testing.generators.fragments import (
-    fragment_bodies,
-    include_chain_indices,
-    inert_fragment_bodies,
-)
 from outcomeeng_testing.harnesses.dist_tree import DistTreeReader
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
 from outcomeeng_testing.harnesses.src_tree import SrcTreeBuilder
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 SOURCE_PROPERTY_EXAMPLES: Final = 20
 SOURCE_PROPERTY_SEED: Final = 20260714
@@ -148,7 +149,7 @@ def run_rendered_include_property(
 
     @seed(SOURCE_PROPERTY_SEED)
     @settings(
-        max_examples=SOURCE_PROPERTY_EXAMPLES,
+        max_examples=profile_examples(SOURCE_PROPERTY_EXAMPLES),
         deadline=None,
         print_blob=True,
     )
@@ -215,7 +216,7 @@ def property_failure_notes_include_seed_and_replay() -> bool:
 
 @seed(SOURCE_PROPERTY_SEED)
 @settings(
-    max_examples=SOURCE_PROPERTY_EXAMPLES,
+    max_examples=profile_examples(SOURCE_PROPERTY_EXAMPLES),
     deadline=None,
     print_blob=True,
 )
@@ -226,7 +227,7 @@ def _directive_roundtrip_property(directive: Directive) -> None:
 
 @seed(SOURCE_PROPERTY_SEED)
 @settings(
-    max_examples=SOURCE_PROPERTY_EXAMPLES,
+    max_examples=profile_examples(SOURCE_PROPERTY_EXAMPLES),
     deadline=None,
     print_blob=True,
 )
@@ -240,7 +241,7 @@ def _standard_jinja_syntax_property(text: str) -> None:
 
 @seed(SOURCE_PROPERTY_SEED)
 @settings(
-    max_examples=SOURCE_PROPERTY_EXAMPLES,
+    max_examples=profile_examples(SOURCE_PROPERTY_EXAMPLES),
     deadline=None,
     print_blob=True,
 )
@@ -255,7 +256,7 @@ def _include_body_property(case: SourceScenario, body: str) -> None:
 
 @seed(SOURCE_PROPERTY_SEED)
 @settings(
-    max_examples=SOURCE_PROPERTY_EXAMPLES,
+    max_examples=profile_examples(SOURCE_PROPERTY_EXAMPLES),
     deadline=None,
     print_blob=True,
 )

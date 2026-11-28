@@ -17,6 +17,7 @@ from outcomeeng_testing.harnesses.worktree_provisioning import (
     load_init_worktrees_module,
     provisioning_env,
 )
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 _module = load_init_worktrees_module()
 provision = _module.provision
@@ -34,7 +35,7 @@ POOL_NAMES = st.lists(WORKTREE_NAME, min_size=0, max_size=MAX_POOL_SIZE, unique=
 
 
 @given(names=POOL_NAMES)
-@settings(max_examples=MAX_EXAMPLES, deadline=None)
+@settings(max_examples=profile_examples(MAX_EXAMPLES), deadline=None)
 def test_every_worktree_resolves_the_one_spx_beside_the_common_dir(
     names: list[str],
 ) -> None:

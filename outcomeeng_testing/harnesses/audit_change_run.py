@@ -75,6 +75,7 @@ from outcomeeng_testing.generators.audit_change_run import (
 )
 from outcomeeng_testing.harnesses import audit_change_run_observer as observer
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 PLUGINS_DIR: Final = REPO_ROOT / "src" / "plugins"
@@ -710,7 +711,10 @@ def exercise_malformed_request_objects(
     runner = load_runner()
 
     @seed(MALFORMED_REQUEST_PROPERTY_SEED)
-    @settings(max_examples=MALFORMED_REQUEST_PROPERTY_EXAMPLES, print_blob=True)
+    @settings(
+        max_examples=profile_examples(MALFORMED_REQUEST_PROPERTY_EXAMPLES),
+        print_blob=True,
+    )
     @given(request=malformed_request_objects(runner))
     def run_cases(request: dict[str, object]) -> None:
         assert_case(request, _call_entry_point(runner, json.dumps(request)))
@@ -734,7 +738,10 @@ def exercise_unparseable_request_texts(
     runner = load_runner()
 
     @seed(MALFORMED_REQUEST_PROPERTY_SEED)
-    @settings(max_examples=MALFORMED_REQUEST_PROPERTY_EXAMPLES, print_blob=True)
+    @settings(
+        max_examples=profile_examples(MALFORMED_REQUEST_PROPERTY_EXAMPLES),
+        print_blob=True,
+    )
     @given(request_text=unparseable_request_texts(runner))
     def run_cases(request_text: str) -> None:
         assert_case(_call_entry_point(runner, request_text))

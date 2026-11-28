@@ -55,6 +55,7 @@ from outcomeeng_testing.generators.report_changes import (
 )
 from outcomeeng_testing.harnesses import audit_change_run_observer as observer
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[2]
 SCRIPT: Final = (
@@ -664,7 +665,10 @@ def exercise_generated_stores(
     script = load_script()
 
     @seed(GENERATED_STORE_PROPERTY_SEED)
-    @settings(max_examples=GENERATED_STORE_PROPERTY_EXAMPLES, print_blob=True)
+    @settings(
+        max_examples=profile_examples(GENERATED_STORE_PROPERTY_EXAMPLES),
+        print_blob=True,
+    )
     @given(generated=stores(script))
     def run_cases(generated: GeneratedStore) -> None:
         replayed = render_generated(generated)

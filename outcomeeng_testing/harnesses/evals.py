@@ -25,6 +25,7 @@ from outcomeeng_testing.generators.evals import (
     eval_plan_items,
     owned_paths_violating_alphabet,
 )
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 CI_COMMAND_PROPERTY_SEED = 20260708
 CI_COMMAND_PROPERTY_EXAMPLES = 60
@@ -58,7 +59,10 @@ def ci_command_property(
         test_func: Callable[[EvalPlanItem, CiRunSettings], None],
     ) -> Callable[[], None]:
         configured = seed(CI_COMMAND_PROPERTY_SEED)(
-            settings(max_examples=CI_COMMAND_PROPERTY_EXAMPLES, deadline=None)(
+            settings(
+                max_examples=profile_examples(CI_COMMAND_PROPERTY_EXAMPLES),
+                deadline=None,
+            )(
                 given(item=eval_plan_items(), runtime_settings=ci_run_settings())(
                     test_func
                 )
@@ -137,7 +141,9 @@ def assert_owned_path_outside_the_alphabet_is_rejected() -> None:
     """
 
     configured = seed(OWNED_PATH_PROPERTY_SEED)(
-        settings(max_examples=OWNED_PATH_PROPERTY_EXAMPLES, deadline=None)(
+        settings(
+            max_examples=profile_examples(OWNED_PATH_PROPERTY_EXAMPLES), deadline=None
+        )(
             given(owned_path=owned_paths_violating_alphabet())(
                 _assert_owned_path_rejected
             )

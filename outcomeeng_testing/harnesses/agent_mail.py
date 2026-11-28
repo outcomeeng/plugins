@@ -25,25 +25,25 @@ from outcomeeng_testing.generators.agent_mail import (
     COMMON_DIR_EXACT,
     COMMON_DIR_SHAPES,
     agent_names,
-    common_dir_output,
     capture_row_ordinals,
+    common_dir_output,
+    correlations,
     distinct_stable_names,
     escape_prefixed_correlations,
-    fitting_correlations,
-    thread_alphabet_thread_ids,
-    position_labels,
-    correlations,
     expected_project_key,
+    fitting_correlations,
     message_records,
     message_texts,
     non_path_repository_values,
     operation_requests,
+    position_labels,
     program_names,
     project_key_paths,
     sent_record_kinds,
     store_exit_codes,
     store_message_ids,
     terminal_record_kinds,
+    thread_alphabet_thread_ids,
     unsupported_operation_names,
     wait_timeouts,
 )
@@ -52,6 +52,7 @@ from outcomeeng_testing.harnesses.cli_usage import (
     usage_contract_from_path,
 )
 from outcomeeng_testing.harnesses.property_evidence import run_replayable_property
+from outcomeeng_testing.hypothesis_profiles import profile_examples
 
 ROOT = Path(__file__).parents[2]
 AGENT_MAIL_PATH = (
@@ -518,7 +519,11 @@ def run_record_roundtrip_property(
     module = _load()
 
     @seed(RECORD_ROUNDTRIP_SEED)
-    @settings(max_examples=RECORD_ROUNDTRIP_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(RECORD_ROUNDTRIP_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(
         record=message_records(module),
         message_id=store_message_ids(),
@@ -550,7 +555,9 @@ def run_correlation_encoding_property(
 
     @seed(CORRELATION_ENCODING_SEED)
     @settings(
-        max_examples=CORRELATION_ENCODING_EXAMPLES, deadline=None, print_blob=True
+        max_examples=profile_examples(CORRELATION_ENCODING_EXAMPLES),
+        deadline=None,
+        print_blob=True,
     )
     @given(
         correlation=st.one_of(
@@ -588,7 +595,11 @@ def run_delegation_chain_property(
     module = _load()
 
     @seed(DELEGATION_CHAIN_SEED)
-    @settings(max_examples=DELEGATION_CHAIN_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(DELEGATION_CHAIN_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(
         reference=correlations(),
         terminal_kind=terminal_record_kinds(module),
@@ -651,7 +662,11 @@ def run_terminal_property(
     module = _load()
 
     @seed(TERMINAL_PROPERTY_SEED)
-    @settings(max_examples=TERMINAL_PROPERTY_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(TERMINAL_PROPERTY_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(
         reference=correlations(),
         first_kind=terminal_record_kinds(module),
@@ -695,7 +710,9 @@ def run_project_key_mapping(
     def drive(shape: str) -> Callable[[], None]:
         @seed(PROJECT_KEY_MAPPING_SEED)
         @settings(
-            max_examples=PROJECT_KEY_MAPPING_EXAMPLES, deadline=None, print_blob=True
+            max_examples=profile_examples(PROJECT_KEY_MAPPING_EXAMPLES),
+            deadline=None,
+            print_blob=True,
         )
         @given(path=project_key_paths(), agent=agent_names())
         def generated_key_mapping(path: str, agent: str) -> None:
@@ -720,7 +737,11 @@ def run_operation_mapping(
     requests = operation_requests(module)
 
     @seed(OPERATION_MAPPING_SEED)
-    @settings(max_examples=OPERATION_MAPPING_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(OPERATION_MAPPING_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(project_key=project_key_paths())
     def generated_mapping(project_key: str) -> None:
         for request in requests:
@@ -815,7 +836,11 @@ def run_attested_ack_mapping(
     listings = attested_listings(module)
 
     @seed(ACK_STATUS_SEED)
-    @settings(max_examples=ACK_STATUS_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(ACK_STATUS_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(project_key=project_key_paths())
     def generated_listings(project_key: str) -> None:
         for listing in listings:
@@ -846,7 +871,11 @@ def run_inbox_row_mapping(
         raise CaptureError("no captured inbox response with bodies exists")
 
     @seed(INBOX_ROW_SEED)
-    @settings(max_examples=INBOX_ROW_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(INBOX_ROW_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(project_key=project_key_paths())
     def generated_rows(project_key: str) -> None:
         for response in responses:
@@ -958,7 +987,11 @@ def run_label_response_mapping(
     responses = captured_label_responses(module)
 
     @seed(LABEL_RESPONSE_SEED)
-    @settings(max_examples=LABEL_RESPONSE_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(LABEL_RESPONSE_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(project_key=project_key_paths())
     def generated_case(project_key: str) -> None:
         for response in responses:
@@ -1063,7 +1096,11 @@ def run_label_targeting_cases(
     excluded = _captured_stable_names(module)
 
     @seed(LABEL_TARGETING_SEED)
-    @settings(max_examples=LABEL_TARGETING_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(LABEL_TARGETING_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(
         project_key=project_key_paths(),
         label=position_labels(),
@@ -1094,7 +1131,11 @@ def run_recipient_boundary(
     module = _load()
 
     @seed(RECIPIENT_BOUNDARY_SEED)
-    @settings(max_examples=RECIPIENT_BOUNDARY_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(RECIPIENT_BOUNDARY_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(
         kind=sent_record_kinds(module),
         first=agent_names(),
@@ -1143,7 +1184,11 @@ def run_generated_identities(
     module = _load()
 
     @seed(COMPLIANCE_SEED)
-    @settings(max_examples=COMPLIANCE_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(COMPLIANCE_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(
         agent=agent_names(),
         program=program_names(),
@@ -1169,7 +1214,11 @@ def run_store_response_cases(
     module = _load()
 
     @seed(STORE_RESPONSE_SEED)
-    @settings(max_examples=STORE_RESPONSE_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(STORE_RESPONSE_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(
         agent=agent_names(),
         project_key=project_key_paths(),
@@ -1987,7 +2036,9 @@ def run_wait_cases(
     module = _load()
 
     @seed(WAIT_SEED)
-    @settings(max_examples=WAIT_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(WAIT_EXAMPLES), deadline=None, print_blob=True
+    )
     @given(
         agent=agent_names(),
         project_key=project_key_paths(),
@@ -2163,7 +2214,11 @@ def run_named_repository_cases(
     module = _load()
 
     @seed(NAMED_REPOSITORY_SEED)
-    @settings(max_examples=NAMED_REPOSITORY_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(NAMED_REPOSITORY_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(
         repository=project_key_paths(),
         project_key=project_key_paths(),
@@ -2205,7 +2260,11 @@ def run_invalid_repository_cases(
     module = _load()
 
     @seed(INVALID_REPOSITORY_SEED)
-    @settings(max_examples=INVALID_REPOSITORY_EXAMPLES, deadline=None, print_blob=True)
+    @settings(
+        max_examples=profile_examples(INVALID_REPOSITORY_EXAMPLES),
+        deadline=None,
+        print_blob=True,
+    )
     @given(value=non_path_repository_values())
     def generated_case(value: object) -> None:
         assert_case(module, value)
