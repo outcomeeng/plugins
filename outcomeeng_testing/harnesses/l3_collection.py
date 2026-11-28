@@ -29,7 +29,10 @@ from typing import Final
 from outcomeeng.validation import L3_LEVEL, PREFLIGHT_STEPS, PYTEST_ARGV, TEST_STEPS
 from outcomeeng.validation import VALIDATION_ENTRY_COMMAND
 from outcomeeng.validation.__main__ import main as validation_main
-from outcomeeng.validation._steps import PYTEST_NODE_ID_SEPARATOR
+from outcomeeng.validation._steps import (
+    HYPOTHESIS_PROFILE_OPTION,
+    PYTEST_NODE_ID_SEPARATOR,
+)
 from outcomeeng.validation.selected_gate import SelectedGatePlan
 from outcomeeng_testing.generators.gate import GeneratedTestFile, l3_fixture_files
 from outcomeeng_testing.harnesses.gate import RecordingSpawner
@@ -53,6 +56,10 @@ COLLECTION_ARGV: Final = (
     "-p",
     "no:cacheprovider",
     "--import-mode=importlib",
+    # The repository registers its Hypothesis profiles through `addopts`; the
+    # fixture's own configuration does not, so the collection loads the module.
+    "-p",
+    "outcomeeng_testing.hypothesis_profiles",
     "-c",
     FIXTURE_PYTEST_CONFIG_NAME,
 )
@@ -79,10 +86,17 @@ def pytest_argvs(argvs: Iterable[Sequence[str]]) -> tuple[tuple[str, ...], ...]:
 
 
 def plan_pytest_arguments(plan: SelectedGatePlan) -> tuple[tuple[str, ...], ...]:
-    """Return the pytest arguments of each planned pytest step, in plan order."""
+    """Return the pytest targets of each planned pytest step, in plan order.
+
+    The Hypothesis profile option every planned pytest step carries is no target.
+    """
 
     return tuple(
-        argv[len(PYTEST_ARGV) :]
+        tuple(
+            argument
+            for argument in argv[len(PYTEST_ARGV) :]
+            if not argument.startswith(HYPOTHESIS_PROFILE_OPTION)
+        )
         for argv in pytest_argvs(step.argv for step in plan.steps)
     )
 

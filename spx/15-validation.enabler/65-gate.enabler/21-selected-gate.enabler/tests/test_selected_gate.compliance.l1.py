@@ -11,6 +11,7 @@ import pytest
 from outcomeeng.validation import (
     CHECK_RECIPES,
     L3_SKIP_ARGV,
+    LOCAL_CHECK_RECIPES,
     PREFLIGHT_STEPS,
     PYTEST_ARGV,
     RECIPE_CHECK,
@@ -18,6 +19,7 @@ from outcomeeng.validation import (
     RECIPE_TEST,
     RECIPE_VALIDATION,
     SUMMARY_PATH_LABEL,
+    Recipe,
     recipe_header,
 )
 from outcomeeng.validation.infrastructure_index import (
@@ -25,19 +27,19 @@ from outcomeeng.validation.infrastructure_index import (
     index_test_infrastructure,
 )
 from outcomeeng.validation.selected_gate import (
+    CHANGESET_BASE_LABEL,
+    FIRST_PARENT_BASE_REF,
     FULL_GATE_REASON,
     GIT_DISCOVERY_ERROR_PREFIX,
     GIT_DISCOVERY_FAILURE_EXIT_CODE,
     GIT_DISCOVERY_STDERR_LABEL,
     GIT_DISCOVERY_STDOUT_LABEL,
-    GitDiscoveryError,
-    InfrastructureIndexRequired,
-    CHANGESET_BASE_LABEL,
-    FIRST_PARENT_BASE_REF,
     L3_SKIPPED_REASON,
     PATH_CATEGORY_PATTERNS,
-    PathCategory,
     TEST_REASON,
+    GitDiscoveryError,
+    InfrastructureIndexRequired,
+    PathCategory,
     build_full_gate_plan,
     build_selected_gate_plan,
 )
@@ -84,8 +86,10 @@ from outcomeeng_testing.harnesses.real_agent_selection import (
 )
 
 
-def _full_surface_steps() -> tuple[tuple[str, ...], ...]:
-    return tuple(step.argv for recipe in CHECK_RECIPES for step in recipe.steps)
+def _full_surface_steps(
+    recipes: tuple[Recipe, ...] = LOCAL_CHECK_RECIPES,
+) -> tuple[tuple[str, ...], ...]:
+    return tuple(step.argv for recipe in recipes for step in recipe.steps)
 
 
 def test_an_empty_changeset_selects_no_steps() -> None:
@@ -153,7 +157,7 @@ def test_a_full_gate_path_runs_the_complete_wrapper() -> None:
     assert run.exit_code == 0
     assert run.spawn_calls == tuple(
         step.argv
-        for recipe in CHECK_RECIPES
+        for recipe in LOCAL_CHECK_RECIPES
         for step in (*PREFLIGHT_STEPS, *recipe.steps)
     )
     assert FULL_GATE_REASON in run.output
@@ -246,7 +250,7 @@ def test_no_changed_path_category_selects_an_l3_test(
             )
         full = build_full_gate_plan(changed)
 
-        for plan in (local, full):
+        for plan, recipes in ((local, LOCAL_CHECK_RECIPES), (full, CHECK_RECIPES)):
             assert not l3_fixture_paths() & plan_pytest_targets(plan), path
             assert all(
                 step.argv[: len(PYTEST_ARGV)] == PYTEST_ARGV
@@ -254,7 +258,9 @@ def test_no_changed_path_category_selects_an_l3_test(
                 if "pytest" in step.argv
             ), path
             if plan.full_gate:
-                assert tuple(step.argv for step in plan.steps) == _full_surface_steps()
+                assert tuple(step.argv for step in plan.steps) == _full_surface_steps(
+                    recipes
+                )
 
 
 def test_a_node_local_reach_of_an_l3_test_selects_no_l3_target() -> None:
@@ -416,4 +422,48 @@ def test_ci_full_verification_without_a_default_branch_selects_by_the_first_pare
     assert run.output.index(L3_SKIPPED_REASON) < plan_end
     assert (
         run.output.index(f"{CHANGESET_BASE_LABEL}: {FIRST_PARENT_BASE_REF}") < plan_end
+    )
+
+
+# The profile options the `check-local-profile` and `check-full-profile`
+# Assertions name, spelled as pytest receives them.
+LOCAL_PROFILE_OPTION = "--hypothesis-profile=local"
+FULL_PROFILE_OPTION = "--hypothesis-profile=full"
+
+
+def _profile_options(argv: tuple[str, ...]) -> tuple[str, ...]:
+    return tuple(
+        argument for argument in argv if argument.startswith("--hypothesis-profile")
+    )
+
+
+def test_every_pytest_step_of_check_loads_the_local_profile() -> None:
+    targeted = build_selected_gate_plan((SELECTED_GATE_PYTHON_TEST_PATH,))
+    full_surface = run_check_observation(branch_path=SELECTED_GATE_FULL_GATE_PATH)
+
+    targeted_steps = pytest_argvs(step.argv for step in targeted.steps)
+    full_surface_steps = pytest_argvs(full_surface.spawn_calls)
+
+    assert full_surface.exit_code == 0
+    assert targeted_steps
+    assert full_surface_steps
+    assert all(
+        _profile_options(argv) == (LOCAL_PROFILE_OPTION,)
+        for argv in (*targeted_steps, *full_surface_steps)
+    )
+
+
+def test_every_pytest_step_of_check_full_loads_the_full_profile() -> None:
+    plan = build_full_gate_plan((SELECTED_GATE_PYTHON_TEST_PATH,))
+    run = run_full_check_observation(branch_path=unrelated_validation_source_path())
+
+    planned = pytest_argvs(step.argv for step in plan.steps)
+    spawned = pytest_argvs(run.spawn_calls)
+
+    assert run.exit_code == 0
+    assert planned
+    assert spawned
+    assert all(
+        _profile_options(argv) == (FULL_PROFILE_OPTION,)
+        for argv in (*planned, *spawned)
     )
