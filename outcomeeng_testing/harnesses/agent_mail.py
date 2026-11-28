@@ -784,6 +784,10 @@ def attested_listings(module: ModuleType) -> list[AttestedListing]:
             continue
         if request.get(module.OPERATION_FIELD) != module.Operation.LIST.value:
             continue
+        if module.RESPONSE_FIELD not in outcome:
+            # A list request rejected before any store command carries no
+            # store response.
+            continue
         response = cast(dict[str, object], outcome[module.RESPONSE_FIELD])
         listings.append(
             AttestedListing(
@@ -1732,6 +1736,9 @@ class WaitStoreRunner:
     clock: ScriptedClock
     replies: list[CommandResultContract | None]
     repeating: CommandResultContract | None = None
+    # A store that never answers again once the replies run out: every further
+    # command consumes the whole bound it was given.
+    repeating_hangs: bool = False
     calls: list[tuple[tuple[str, ...], str | None]] = field(default_factory=list)
     timeouts: list[float | None] = field(default_factory=list)
     started: list[float] = field(default_factory=list)
@@ -1750,6 +1757,8 @@ class WaitStoreRunner:
             reply = self.replies.pop(0)
         elif self.repeating is not None:
             reply = self.repeating
+        elif self.repeating_hangs:
+            reply = None
         else:
             raise RuntimeError(f"Unexpected command: {argv}")
         if reply is not None:
@@ -1766,6 +1775,7 @@ def wait_store_runner(
     clock: ScriptedClock,
     *replies: CommandResultContract | None,
     repeating: CommandResultContract | None = None,
+    repeating_hangs: bool = False,
 ) -> WaitStoreRunner:
     """A wait runner whose first reply is the repository lookup printing
     `project_key`, followed by the store replies in order."""
@@ -1778,6 +1788,7 @@ def wait_store_runner(
             *replies,
         ],
         repeating,
+        repeating_hangs,
     )
 
 
@@ -1834,6 +1845,138 @@ def inbox_response_with_ids(
         cast(CommandResultContract, module.CommandResult(0, json.dumps(payload), "")),
         payload,
     )
+
+
+@dataclass(frozen=True)
+class CapturedStoreObject:
+    """One captured JSON object the store printed, or a named variant of one,
+    replayable as a command result."""
+
+    capture: str
+    result: CommandResultContract
+    payload: dict[str, object]
+
+
+def _captured_object(path: Path) -> dict[str, object]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise CaptureError(f"{path} holds no JSON object")
+    return cast(dict[str, object], payload)
+
+
+def _store_object_variant(
+    module: ModuleType, capture: str, payload: dict[str, object]
+) -> CapturedStoreObject:
+    return CapturedStoreObject(
+        capture,
+        cast(CommandResultContract, module.CommandResult(0, json.dumps(payload), "")),
+        payload,
+    )
+
+
+def event_usage_contract(module: ModuleType) -> UsageContract:
+    """The captured usage of the store's delivery-events command a wait pages."""
+    return usage_contract_from_path(
+        USAGE_FIXTURE_ROOT / f"{'-'.join(module.WAIT_EVENTS_COMMAND_PREFIX[1:])}.txt"
+    )
+
+
+def message_usage_contract(module: ModuleType) -> UsageContract:
+    """The captured usage of the store's single-message read a wait runs."""
+    return usage_contract_from_path(
+        USAGE_FIXTURE_ROOT / f"{'-'.join(module.WAIT_MESSAGE_COMMAND_PREFIX[1:])}.txt"
+    )
+
+
+def _event_capture_path(module: ModuleType) -> Path:
+    return (
+        RESPONSE_FIXTURE_ROOT
+        / f"{'-'.join(module.WAIT_EVENTS_COMMAND_PREFIX[1:])}.json"
+    )
+
+
+def _message_capture_path(module: ModuleType) -> Path:
+    return (
+        RESPONSE_FIXTURE_ROOT
+        / f"{'-'.join(module.WAIT_MESSAGE_COMMAND_PREFIX[1:])}.json"
+    )
+
+
+def event_page_with_ids(
+    module: ModuleType,
+    message_ids: list[int],
+    *,
+    cursor_offset: int,
+    next_cursor: int | None,
+) -> CapturedStoreObject:
+    """The captured page of delivery events whose events are its first event
+    repeated with each of `message_ids` as its message id and that id plus
+    `cursor_offset` as its cursor, so a cursor never equals its message id
+    unless the offset is 0. The page reports more events, with `next_cursor`,
+    when one is given, and none otherwise."""
+    path = _event_capture_path(module)
+    captured = _captured_object(path)
+    events = cast(list[dict[str, object]], captured[module.STORE_EVENTS_FIELD])
+    template = events[0]
+    for key in (module.STORE_EVENT_MESSAGE_ID_FIELD, "cursor"):
+        if key not in template:
+            raise CaptureError(f"{path} carries no event field {key}")
+    for key in (module.STORE_HAS_MORE_FIELD, module.STORE_NEXT_CURSOR_FIELD):
+        if key not in captured:
+            raise CaptureError(f"{path} carries no page field {key}")
+    page = {
+        **captured,
+        module.STORE_EVENTS_FIELD: [
+            {
+                **template,
+                module.STORE_EVENT_MESSAGE_ID_FIELD: message_id,
+                "cursor": message_id + cursor_offset,
+            }
+            for message_id in message_ids
+        ],
+        module.STORE_HAS_MORE_FIELD: next_cursor is not None,
+        module.STORE_NEXT_CURSOR_FIELD: (
+            next_cursor
+            if next_cursor is not None
+            else (message_ids[-1] + cursor_offset if message_ids else 0)
+        ),
+    }
+    return _store_object_variant(
+        module,
+        f"{path.name} ({len(message_ids)} events, cursor offset {cursor_offset}, "
+        f"next cursor {next_cursor})",
+        page,
+    )
+
+
+def single_message_with_id(module: ModuleType, message_id: int) -> CapturedStoreObject:
+    """The captured single-message read with `message_id` as its id."""
+    path = _message_capture_path(module)
+    captured = _captured_object(path)
+    if module.STORE_ID_FIELD not in captured:
+        raise CaptureError(f"{path} carries no {module.STORE_ID_FIELD}")
+    return _store_object_variant(
+        module,
+        f"{path.name} (id {message_id})",
+        {**captured, module.STORE_ID_FIELD: message_id},
+    )
+
+
+def full_listing_past(
+    module: ModuleType, response: CapturedInboxResponse, after_id: int
+) -> CapturedInboxResponse:
+    """A full listing whose every record lies past `after_id`: the requester
+    holds more than the listing limit of records past the id, and the record
+    right after the id falls outside the listing."""
+    limit = module.WAIT_LISTING_LIMIT
+    return inbox_response_with_ids(
+        module, response, list(range(after_id + 2, after_id + 2 + limit))
+    )
+
+
+def wait_store_commands(runner: WaitStoreRunner) -> list[tuple[str, ...]]:
+    """Every store command a wait ran, in order, after the repository lookup."""
+    return [argv for argv, _ in runner.calls[1:]]
 
 
 def run_wait_cases(

@@ -1,0 +1,13 @@
+Single message with thread position, adjacent messages, sender info
+
+Usage: am robot message [OPTIONS] <ID>
+
+Arguments:
+  <ID>  Message ID
+
+Options:
+      --format <FORMAT>    Output format: toon (default at TTY), json (default when piped), md (for thread/message)
+      --json               Output JSON (shorthand for --format json)
+      --project <PROJECT>  Project key (absolute path or slug). Falls back to AGENT_MAIL_PROJECT, then CWD
+      --agent <AGENT>      Agent name. Falls back to AGENT_MAIL_AGENT, then AGENT_NAME
+  -h, --help               Print help

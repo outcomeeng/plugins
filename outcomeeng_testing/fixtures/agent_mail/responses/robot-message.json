@@ -1,0 +1,26 @@
+{
+  "_meta": {
+    "command": "robot message",
+    "timestamp": "2026-11-28T06:44:56.841392+00:00",
+    "format": "json",
+    "version": "1.0",
+    "project": "private-tmp-claude-502-users-shz-code-outcomeeng-plugins-worktrees-contributor-4-ff0f6e06-7bb7-40f7-9a05-c22100d99849-scratchpad-probe-822-fresh-is-repo-git"
+  },
+  "id": 36661,
+  "from": "CopperLynx",
+  "from_program": "claude",
+  "from_model": "probe",
+  "to": [
+    "JadeLynx"
+  ],
+  "subject": "[fact] bulk 0",
+  "body": "Probe body for bulk 0.",
+  "thread": "probe-bulk",
+  "position": 1,
+  "total_in_thread": 1001,
+  "importance": "normal",
+  "ack_status": "none",
+  "created": "2026-11-28T06:31:44.735347Z",
+  "age": "13m ago",
+  "next": "#36662 CopperLynx: [fact] bulk 1"
+}

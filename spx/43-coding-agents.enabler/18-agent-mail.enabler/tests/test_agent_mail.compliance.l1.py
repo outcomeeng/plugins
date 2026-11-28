@@ -15,12 +15,17 @@ from outcomeeng_testing.harnesses.agent_mail import (
     common_dir_seeded_absent_store_runner,
     common_dir_seeded_runner,
     decoy_workspace,
+    event_page_with_ids,
+    event_usage_contract,
     failed_command_result,
+    full_listing_past,
     git_project_key_violation_source,
+    inbox_response_with_ids,
     label_collision_variant,
     load_agent_mail,
     mail_command_source_texts,
     mail_pool,
+    message_usage_contract,
     nul_tainted_requests,
     raw_mail_qualified_shell_violation_sources,
     raw_mail_shell_violation_source,
@@ -38,6 +43,7 @@ from outcomeeng_testing.harnesses.agent_mail import (
     run_named_repository_cases,
     run_operation_mapping,
     run_wait_cases,
+    single_message_with_id,
     unresolved_then_fallback_runner,
     store_error_runner,
     store_program_names,
@@ -48,6 +54,7 @@ from outcomeeng_testing.harnesses.agent_mail import (
     usage_contract_for,
     wait_request,
     wait_requests_without_valid_timeout,
+    wait_store_commands,
     wait_store_runner,
     wait_workspace,
     workspace_entries,
@@ -622,11 +629,21 @@ def test_a_store_command_that_outlives_its_bound_is_stopped_at_the_bound() -> No
     assert observation.elapsed_seconds < module.COMMAND_TIMEOUT_SECONDS
 
 
-def test_a_wait_keeps_no_state_and_issues_only_inbox_listings() -> None:
+def test_a_wait_keeps_no_state_past_its_run() -> None:
+    """wait-stateless: a wait leaves no file behind, runs only the listing, the
+    delivery-events page, and the single-message read, and every wait pages
+    the delivery events from their start, whatever an earlier wait read."""
+
     def assert_case(
         module: ModuleType, agent: str, project_key: str, timeout_seconds: int
     ) -> None:
         listing = module.PUBLIC_AM_COMMAND_PREFIXES[module.Operation.WAIT]
+        events_contract = event_usage_contract(module)
+        prefixes = (
+            listing,
+            module.WAIT_EVENTS_COMMAND_PREFIX,
+            module.WAIT_MESSAGE_COMMAND_PREFIX,
+        )
         for capture in captured_inbox_responses_with_bodies(module):
             ids = sorted(
                 cast(int, row[module.STORE_ID_FIELD])
@@ -634,12 +651,24 @@ def test_a_wait_keeps_no_state_and_issues_only_inbox_listings() -> None:
                     list[dict[str, object]], capture.payload[module.STORE_INBOX_FIELD]
                 )
             )
-            for after_id in (ids[0] - 1, ids[-1]):
+            last = ids[-1]
+            cut_off = full_listing_past(module, capture, last)
+            events = event_page_with_ids(
+                module, [last, last + 1], cursor_offset=3, next_cursor=None
+            )
+            message = single_message_with_id(module, last + 1)
+            scripts = (
+                ((), capture.result, ids[0] - 1),
+                ((), capture.result, last),
+                ((cut_off.result, events.result, message.result), None, last),
+                ((cut_off.result, events.result, message.result), None, last),
+            )
+            for replies, repeating, after_id in scripts:
                 with wait_workspace() as workspace:
                     before = workspace_entries(workspace)
                     clock = ScriptedClock()
                     runner = wait_store_runner(
-                        module, project_key, clock, repeating=capture.result
+                        module, project_key, clock, *replies, repeating=repeating
                     )
 
                     result = module.execute(
@@ -651,10 +680,221 @@ def test_a_wait_keeps_no_state_and_issues_only_inbox_listings() -> None:
                     after = workspace_entries(workspace)
                 assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
                 assert after == before, capture.capture
-                store_commands = [argv for argv, _ in runner.calls[1:]]
+                store_commands = wait_store_commands(runner)
                 assert store_commands
                 for argv in store_commands:
-                    assert argv[: len(listing)] == listing, argv
+                    assert any(argv[: len(prefix)] == prefix for prefix in prefixes)
+                pages = [
+                    argv
+                    for argv in store_commands
+                    if argv[: len(module.WAIT_EVENTS_COMMAND_PREFIX)]
+                    == module.WAIT_EVENTS_COMMAND_PREFIX
+                ]
+                if pages:
+                    first = read_argv(events_contract, pages[0])
+                    assert module.AFTER_OPTION not in first.options_seen, pages[0]
+
+    run_wait_cases(assert_case)
+
+
+def test_a_wait_past_more_than_a_full_listing_returns_the_first_record_past_its_id() -> (
+    None
+):
+    """wait-large-inbox: a requester holding more than 1000 records past the
+    id gets the first record past the id, read through the single-message
+    read, never through a command that changes read state."""
+    module = load_agent_mail()
+    judging = {
+        usage_contract_for(module, operation).command_path
+        for operation in (module.Operation.READ, module.Operation.ACKNOWLEDGE)
+    }
+    message_contract = message_usage_contract(module)
+
+    def assert_case(
+        module: ModuleType, agent: str, project_key: str, timeout_seconds: int
+    ) -> None:
+        for capture in captured_inbox_responses_with_bodies(module):
+            after_id = max(
+                cast(int, row[module.STORE_ID_FIELD])
+                for row in cast(
+                    list[dict[str, object]], capture.payload[module.STORE_INBOX_FIELD]
+                )
+            )
+            held = list(range(after_id + 1, after_id + 2 + module.WAIT_LISTING_LIMIT))
+            assert len(held) > module.WAIT_LISTING_LIMIT
+            listing = full_listing_past(module, capture, after_id)
+            events = event_page_with_ids(
+                module, [after_id, *held], cursor_offset=0, next_cursor=None
+            )
+            message = single_message_with_id(module, after_id + 1)
+            clock = ScriptedClock()
+            runner = wait_store_runner(
+                module,
+                project_key,
+                clock,
+                listing.result,
+                events.result,
+                message.result,
+            )
+
+            result = module.execute(
+                wait_request(module, agent, after_id, timeout_seconds), runner, clock
+            )
+
+            data = cast(dict[str, object], result[module.DATA_FIELD])
+            record = cast(dict[str, object], data[module.RECORD_FIELD])
+            assert data[module.OUTCOME_FIELD] == module.WaitOutcome.RECEIVED
+            assert record[module.RECORD_ID_FIELD] == after_id + 1, listing.capture
+            read = wait_store_commands(runner)[-1]
+            reading = read_argv(message_contract, read)
+            assert reading.command_path == (
+                module.AM_COMMAND,
+                *message_contract.command_path,
+            )
+            assert reading.command_path[1:] not in judging
+            for argv in wait_store_commands(runner):
+                assert tuple(argv[1:3]) not in judging, argv
+
+    run_wait_cases(assert_case)
+
+
+def test_a_wait_command_that_reaches_its_bound_with_time_left_ends_no_wait() -> None:
+    """wait-command-bound: a listing or an events page that reaches the
+    per-command bound while time remains ends no wait; the wait reads again at
+    its next interval and ends as a timeout only at its deadline."""
+
+    def assert_case(
+        module: ModuleType, agent: str, project_key: str, timeout_seconds: int
+    ) -> None:
+        bound = module.COMMAND_TIMEOUT_SECONDS
+        interval = module.WAIT_POLL_INTERVAL_SECONDS
+        timeout = timeout_seconds + 2 * (bound + interval)
+        for capture in captured_inbox_responses_with_bodies(module):
+            ids = sorted(
+                cast(int, row[module.STORE_ID_FIELD])
+                for row in cast(
+                    list[dict[str, object]], capture.payload[module.STORE_INBOX_FIELD]
+                )
+            )
+            after_id = ids[-1]
+            cut_off = full_listing_past(module, capture, after_id)
+            events = event_page_with_ids(
+                module, [after_id, after_id + 1], cursor_offset=5, next_cursor=None
+            )
+            message = single_message_with_id(module, after_id + 1)
+            later = inbox_response_with_ids(module, capture, [after_id, after_id + 1])
+            for replies in (
+                (None, later.result),
+                (cut_off.result, None, cut_off.result, events.result, message.result),
+            ):
+                clock = ScriptedClock()
+                runner = wait_store_runner(module, project_key, clock, *replies)
+
+                result = module.execute(
+                    wait_request(module, agent, after_id, timeout), runner, clock
+                )
+
+                data = cast(dict[str, object], result[module.DATA_FIELD])
+                record = cast(dict[str, object], data[module.RECORD_FIELD])
+                assert data[module.OUTCOME_FIELD] == module.WaitOutcome.RECEIVED
+                assert record[module.RECORD_ID_FIELD] == after_id + 1
+                assert clock.sleeps and clock.sleeps[0] == interval, clock.sleeps
+                for given in runner.timeouts[1:]:
+                    assert given is not None and given <= bound
+
+            clock = ScriptedClock()
+            runner = wait_store_runner(module, project_key, clock, repeating_hangs=True)
+            result = module.execute(
+                wait_request(module, agent, after_id, timeout), runner, clock
+            )
+            data = cast(dict[str, object], result[module.DATA_FIELD])
+            assert result[module.STATUS_FIELD] == module.ExecutionStatus.SUCCEEDED
+            assert data[module.OUTCOME_FIELD] == module.WaitOutcome.TIMEOUT
+            assert clock.current >= timeout
+            assert len(runner.calls[1:]) > 1
+            for started, given in list(zip(runner.started, runner.timeouts))[1:]:
+                assert given is not None and started + given <= timeout
+
+    run_wait_cases(assert_case)
+
+
+def test_a_wait_pages_delivery_events_by_next_cursor_and_reads_message_ids() -> None:
+    """wait-event-fields: the first events page carries no `--after`, each
+    later page the `next_cursor` of the page before, the pages run one after
+    another with no sleep, and the record read is the event's `message_id`,
+    never its cursor."""
+
+    def assert_case(
+        module: ModuleType, agent: str, project_key: str, timeout_seconds: int
+    ) -> None:
+        events_contract = event_usage_contract(module)
+        message_contract = message_usage_contract(module)
+        for capture in captured_inbox_responses_with_bodies(module):
+            after_id = max(
+                cast(int, row[module.STORE_ID_FIELD])
+                for row in cast(
+                    list[dict[str, object]], capture.payload[module.STORE_INBOX_FIELD]
+                )
+            )
+            cut_off = full_listing_past(module, capture, after_id)
+            offset = 1_000
+            first_cursor = after_id + offset + 17
+            second_cursor = first_cursor + 40
+            first = event_page_with_ids(
+                module,
+                [after_id - 2, after_id - 1],
+                cursor_offset=offset,
+                next_cursor=first_cursor,
+            )
+            second = event_page_with_ids(
+                module, [after_id], cursor_offset=offset, next_cursor=second_cursor
+            )
+            third = event_page_with_ids(
+                module,
+                [after_id + 1, after_id + 3],
+                cursor_offset=offset,
+                next_cursor=None,
+            )
+            message = single_message_with_id(module, after_id + 1)
+            clock = ScriptedClock()
+            runner = wait_store_runner(
+                module,
+                project_key,
+                clock,
+                cut_off.result,
+                first.result,
+                second.result,
+                third.result,
+                message.result,
+            )
+
+            result = module.execute(
+                wait_request(module, agent, after_id, timeout_seconds), runner, clock
+            )
+
+            data = cast(dict[str, object], result[module.DATA_FIELD])
+            assert data[module.OUTCOME_FIELD] == module.WaitOutcome.RECEIVED
+            commands = wait_store_commands(runner)
+            pages = [read_argv(events_contract, argv) for argv in commands[1:4]]
+            for page, argv in zip(pages, commands[1:4]):
+                assert page.command_path == (
+                    module.AM_COMMAND,
+                    *events_contract.command_path,
+                ), argv
+                assert page.unknown_options == ()
+                assert module.JSON_OPTION in page.options_seen
+            assert module.AFTER_OPTION not in pages[0].options_seen
+            assert (
+                module.attached_option(module.AFTER_OPTION, first_cursor)
+                in (commands[2])
+            )
+            assert (
+                module.attached_option(module.AFTER_OPTION, second_cursor)
+                in (commands[3])
+            )
+            read = read_argv(message_contract, commands[4])
+            assert read.positionals == (str(after_id + 1),), commands[4]
+            assert clock.sleeps == []
 
     run_wait_cases(assert_case)
 

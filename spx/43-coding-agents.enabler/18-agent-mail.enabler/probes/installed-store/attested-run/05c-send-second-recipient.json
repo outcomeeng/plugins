@@ -1,8 +1,8 @@
 {
   "step": "05c-send-second-recipient",
-  "startedUtc": "2026-11-23T07:37:21.382243+00:00",
-  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-2/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
-  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo",
+  "startedUtc": "2026-11-28T06:31:36.721919+00:00",
+  "command": "python3 /Users/shz/Code/outcomeeng/plugins/worktrees/contributor-4/src/plugins/coding-agents/skills/operate-agent-mail/scripts/agent_mail.py run",
+  "cwd": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo",
   "request": {
     "schemaVersion": 1,
     "operation": "send",
@@ -10,11 +10,11 @@
       "record": {
         "schema": 1,
         "kind": "fact",
-        "correlation": "installed-store-probe",
-        "sender": "CopperFinch",
-        "recipient": "SilverOtter",
-        "subject": "second recipient record",
-        "body": "Body of second recipient record",
+        "correlation": "probe-second",
+        "sender": "CopperLynx",
+        "recipient": "AmberLynx",
+        "subject": "second recipient",
+        "body": "Probe body for second recipient.",
         "ackRequired": false
       }
     }
@@ -25,22 +25,22 @@
     "operation": "send",
     "status": "succeeded",
     "commandExitCode": 0,
-    "projectKey": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-2/de8d7211-8a0e-47f2-96fe-39d0ce61e16f/scratchpad/probe-918/is-repo/.git",
+    "projectKey": "/private/tmp/claude-502/-Users-shz-Code-outcomeeng-plugins-worktrees-contributor-4/ff0f6e06-7bb7-40f7-9a05-c22100d99849/scratchpad/probe-822-fresh/is-repo/.git",
     "response": {
-      "id": 33377,
-      "subject": "[fact] second recipient record",
-      "body_md": "Body of second recipient record",
+      "id": 36658,
+      "subject": "[fact] second recipient",
+      "body_md": "Probe body for second recipient.",
       "importance": "normal",
       "ack_required": false,
-      "thread_id": "installed-store-probe",
-      "created_ts": "2026-11-23T07:37:21.815132Z",
-      "from": "CopperFinch",
+      "thread_id": "probe-second",
+      "created_ts": "2026-11-28T06:31:37.734531Z",
+      "from": "CopperLynx",
       "sender_display_name": "Store Sender",
       "to": [
-        "SilverOtter"
+        "AmberLynx"
       ],
       "to_display_names": {
-        "SilverOtter": "Store Recipient Two"
+        "AmberLynx": "Store Recipient Two"
       }
     },
     "data": {
@@ -48,14 +48,13 @@
         "schema": 1,
         "kind": "fact",
         "ackRequired": false,
-        "correlation": "installed-store-probe",
-        "sender": "CopperFinch",
-        "recipient": "SilverOtter",
-        "subject": "second recipient record",
-        "body": "Body of second recipient record",
-        "id": 33377
+        "correlation": "probe-second",
+        "sender": "CopperLynx",
+        "recipient": "AmberLynx",
+        "subject": "second recipient",
+        "body": "Probe body for second recipient.",
+        "id": 36658
       }
     }
-  },
-  "stderr": ""
+  }
 }

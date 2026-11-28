@@ -15,12 +15,16 @@ from outcomeeng_testing.harnesses.agent_mail import (
     captured_inbox_responses_with_bodies,
     common_dir_seeded_absent_store_runner,
     common_dir_seeded_runner,
+    event_page_with_ids,
+    event_usage_contract,
+    full_listing_past,
     failed_command_result,
     git_location_variables,
     inbox_response_up_to,
     inbox_response_with_ids,
     load_agent_mail,
     mail_pool,
+    message_usage_contract,
     request_naming_repository,
     requests_over_every_operation,
     run_cli_project_key,
@@ -33,11 +37,13 @@ from outcomeeng_testing.harnesses.agent_mail import (
     run_recipient_boundary,
     run_store_response_cases,
     run_wait_cases,
+    single_message_with_id,
     store_response_payload,
     store_response_result,
     text_command_result,
     usage_contract_for,
     wait_request,
+    wait_store_commands,
     wait_store_runner,
 )
 from outcomeeng_testing.harnesses.cli_usage import read_argv
@@ -788,10 +794,19 @@ def test_wait_returns_a_record_that_arrives_before_the_timeout() -> None:
     run_wait_cases(assert_case)
 
 
-def test_wait_names_a_listing_that_cannot_reach_back_to_the_id() -> None:
+def test_wait_reaches_past_a_full_listing_through_the_delivery_events() -> None:
+    """wait-result: a full listing that does not reach back to the id maps to
+    the first record past the id that the delivery events, paged from their
+    start, name, read through the single-message read; to unreachable only when
+    the events do not reach back either; a listing that reaches back maps to
+    its own record and pages no event."""
+
     def assert_case(
         module: ModuleType, agent: str, project_key: str, timeout_seconds: int
     ) -> None:
+        events_contract = event_usage_contract(module)
+        message_contract = message_usage_contract(module)
+        message = single_message_with_id(module, 1)
         for capture in captured_inbox_responses_with_bodies(module):
             after_id = max(
                 cast(int, row[module.STORE_ID_FIELD])
@@ -799,25 +814,43 @@ def test_wait_names_a_listing_that_cannot_reach_back_to_the_id() -> None:
                     list[dict[str, object]], capture.payload[module.STORE_INBOX_FIELD]
                 )
             )
-            cut_off = inbox_response_with_ids(
-                module,
-                capture,
-                list(range(after_id + 1, after_id + 1 + module.WAIT_LISTING_LIMIT)),
-            )
+            cut_off = full_listing_past(module, capture, after_id)
             reaching = inbox_response_with_ids(
                 module,
                 capture,
                 list(range(after_id, after_id + module.WAIT_LISTING_LIMIT)),
             )
-
-            clock = ScriptedClock()
-            cut_off_runner = wait_store_runner(
-                module, project_key, clock, cut_off.result
+            found = single_message_with_id(module, after_id + 1)
+            naming = event_page_with_ids(
+                module,
+                [after_id - 1, after_id, after_id + 1, after_id + 2],
+                cursor_offset=7,
+                next_cursor=None,
             )
-            cut_off_result = module.execute(
+            short = event_page_with_ids(
+                module, [after_id - 1, after_id], cursor_offset=7, next_cursor=None
+            )
+
+            received_runner = wait_store_runner(
+                module,
+                project_key,
+                ScriptedClock(),
+                cut_off.result,
+                naming.result,
+                found.result,
+            )
+            received = module.execute(
                 wait_request(module, agent, after_id, timeout_seconds),
-                cut_off_runner,
-                clock,
+                received_runner,
+                ScriptedClock(),
+            )
+            unreachable_runner = wait_store_runner(
+                module, project_key, ScriptedClock(), cut_off.result, short.result
+            )
+            unreachable = module.execute(
+                wait_request(module, agent, after_id, timeout_seconds),
+                unreachable_runner,
+                ScriptedClock(),
             )
             reaching_runner = wait_store_runner(
                 module, project_key, ScriptedClock(), reaching.result
@@ -828,16 +861,61 @@ def test_wait_names_a_listing_that_cannot_reach_back_to_the_id() -> None:
                 ScriptedClock(),
             )
 
-            cut_off_data = cast(dict[str, object], cut_off_result[module.DATA_FIELD])
+            received_data = cast(dict[str, object], received[module.DATA_FIELD])
+            assert received_data[module.OUTCOME_FIELD] == module.WaitOutcome.RECEIVED
+            record = cast(dict[str, object], received_data[module.RECORD_FIELD])
+            assert record[module.RECORD_ID_FIELD] == after_id + 1, naming.capture
+            assert (
+                record[module.SENDER_FIELD]
+                == (message.payload[module.STORE_FROM_FIELD])
+            )
+            assert (
+                record[module.BODY_FIELD]
+                == (message.payload[module.STORE_MESSAGE_BODY_FIELD])
+            )
+            assert (
+                record[module.CORRELATION_FIELD]
+                == (message.payload[module.STORE_THREAD_FIELD])
+            )
+            assert record[module.RECIPIENT_FIELD] == agent
+            listing, events, read = wait_store_commands(received_runner)
+            assert listing == wait_listing_command(module, agent, project_key)
+            events_reading = read_argv(events_contract, events)
+            assert events_reading.command_path == (
+                module.AM_COMMAND,
+                *events_contract.command_path,
+            )
+            assert events_reading.unknown_options == ()
+            assert module.JSON_OPTION in events_reading.options_seen
+            message_reading = read_argv(message_contract, read)
+            assert message_reading.command_path == (
+                module.AM_COMMAND,
+                *message_contract.command_path,
+            )
+            assert message_reading.unknown_options == ()
+            assert message_reading.positionals == (str(after_id + 1),)
+
+            unreachable_data = cast(dict[str, object], unreachable[module.DATA_FIELD])
+            assert unreachable_data[module.OUTCOME_FIELD] == (
+                module.WaitOutcome.UNREACHABLE
+            )
+            assert module.RECORD_FIELD not in unreachable_data, short.capture
+            assert len(wait_store_commands(unreachable_runner)) == 2
+
             reaching_data = cast(dict[str, object], reaching_result[module.DATA_FIELD])
-            assert cut_off_data[module.OUTCOME_FIELD] == module.WaitOutcome.UNREACHABLE
-            assert module.RECORD_FIELD not in cut_off_data, cut_off.capture
-            assert len(cut_off_runner.calls) == 2
             assert reaching_data[module.OUTCOME_FIELD] == module.WaitOutcome.RECEIVED
             record = cast(dict[str, object], reaching_data[module.RECORD_FIELD])
             assert record[module.RECORD_ID_FIELD] == after_id + 1, reaching.capture
+            assert len(wait_store_commands(reaching_runner)) == 1
 
     run_wait_cases(assert_case)
+
+
+def wait_listing_command(
+    module: ModuleType, agent: str, project_key: str
+) -> tuple[str, ...]:
+    """The complete listing a wait runs at the start of each pass."""
+    return module.command_for(wait_request(module, agent, 0, 1), project_key)
 
 
 def test_list_maps_to_the_non_marking_listing_in_its_unjudged_or_complete_form() -> (
